@@ -979,7 +979,7 @@ showTriggeredAbility = \case
   When listener -> go "When" listener
   where
     go consName eventListener = yesParens $ do
-      sEventListener <- dollar <$> showEventListener eventListener
+      sEventListener <- dollar <$> showElect eventListener
       pure $ pure (fromString consName) <> sEventListener
 
 showConditions :: [Condition] -> EnvM ParenItems
@@ -998,9 +998,6 @@ showCondition = \case
     sObjN <- parens <$> showAnyObjectN anyObj objN
     sReqs <- dollar <$> showRequirements reqs
     pure $ pure "Satisfies " <> sAnyObj <> pure " " <> sObjN <> sReqs
-  Unless cond -> yesParens $ do
-    sCond <- dollar <$> showCondition cond
-    pure $ pure "Unless" <> sCond
 
 showAnyObject :: AnyObject a -> EnvM ParenItems
 showAnyObject = \case
@@ -1027,10 +1024,9 @@ showAnyObjectN anyObj objN = case anyObj of
 
 showEventListener :: EventListener a -> EnvM ParenItems
 showEventListener = \case
-  Conditional cond listener -> yesParens $ do
-    sCond <- parens <$> showElect cond
-    sListener <- dollar <$> showEventListener listener
-    pure $ pure "Conditional " <> sCond <> sListener
+  Events listeners -> yesParens $ do
+    sListeners <- dollar <$> showListM showEventListener listeners
+    pure $ pure "Evenets" <> sListeners
   SpellIsCast withObject -> yesParens $ do
     sWithObject <- dollar <$> showWithObject showElect "spell" withObject
     pure $ pure "SpellIsCast" <> sWithObject
@@ -1097,6 +1093,14 @@ showElect = \case
   Effect effect -> yesParens $ do
     sEffect <- dollar <$> showEffects effect
     pure $ pure "Effect" <> sEffect
+  Event listener -> yesParens $ do
+    sListener <- dollar <$> showEventListener listener
+    pure $ pure "Event" <> sListener
+  If cond then_ else_ -> yesParens $ do
+    sCond <- parens <$> showCondition cond
+    sThen <- parens <$> showElect then_
+    sElse <- dollar <$> showElect else_
+    pure $ pure "If " <> sCond <> pure " " <> sThen <> sElse
 
 showWithObject :: (forall a. x a -> EnvM ParenItems) -> String -> WithObject x b -> EnvM ParenItems
 showWithObject showM memo = \case

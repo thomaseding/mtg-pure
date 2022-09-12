@@ -102,7 +102,6 @@ data Condition :: Type where
   CAnd :: [Condition] -> Condition
   COr :: [Condition] -> Condition
   Satisfies :: AnyObject a -> ObjectN a -> [Requirement a] -> Condition
-  Unless :: Condition -> Condition -- XXX: Remove this and add an `If` to `Elect`
 
 data Cost :: Type where
   AndCosts :: [Cost] -> Cost
@@ -133,11 +132,13 @@ data Elect :: forall e a. e -> a -> Type where
   ControllerOf :: OAny -> (OPlayer -> Elect e a) -> Elect e a
   Cost :: Cost -> Elect Cost a
   Effect :: [Effect e] -> Elect e a
+  Event :: EventListener a -> Elect EventListener a
+  If :: Condition -> Elect e a -> Elect e a -> Elect e a
 
 data EventListener :: forall a. a -> Type where
-  Conditional :: Elect Condition a -> EventListener a -> EventListener a
-  TimePoint :: TimePoint p -> Elect 'OneShot a -> EventListener a
+  Events :: [EventListener a] -> EventListener a
   SpellIsCast :: WithObject (Elect 'Continuous) a -> EventListener a
+  TimePoint :: TimePoint p -> Elect 'OneShot a -> EventListener a
 
 data Requirement :: forall a. a -> Type where
   ControlledBy :: OPlayer -> Requirement a
@@ -179,7 +180,7 @@ data Token :: forall a. a -> Type where
 -- https://www.mtgsalvation.com/forums/magic-fundamentals/magic-rulings/magic-rulings-archives/611601-whenever-what-does-it-mean?comment=3
 -- https://www.reddit.com/r/magicTCG/comments/asmecb/noob_question_difference_between_as_and_when/
 data TriggeredAbility :: forall a. a -> Type where
-  When :: EventListener a -> TriggeredAbility a
+  When :: Elect EventListener a -> TriggeredAbility a
 
 data WithObject :: forall o x. x -> o -> Type where
   O1 :: Inst1 IsObjectType a => [Requirement a] -> (ObjectN a -> x o) -> WithObject x o

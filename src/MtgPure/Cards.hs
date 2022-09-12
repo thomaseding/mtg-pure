@@ -298,17 +298,17 @@ conversion = Card1 "Conversion" $ \this ->
     cost
     [ Triggered $
         When $
-          Conditional
-            ( ActivePlayer $ \active -> controllerOf this $ \you ->
-                Condition $
-                  CAnd
-                    [ satisfies you [is active],
-                      Unless $ satisfies you [playerPays $ toManaCost (W, W)]
-                    ]
-            )
-            $ TimePoint (StepBegin UpkeepStep) $
-              controllerOf this $
-                \you -> effect $ sacrifice you [is this],
+          ActivePlayer $
+            \active -> controllerOf this $
+              \you ->
+                let cond =
+                      COr
+                        [ satisfies you [Not $ is active],
+                          satisfies you [is active, playerPays $ toManaCost (W, W)]
+                        ]
+                 in ifElse cond $
+                      event $
+                        TimePoint (StepBegin UpkeepStep) $ effect $ sacrifice you [is this],
       Static $
         ContinuousEffect $
           All $

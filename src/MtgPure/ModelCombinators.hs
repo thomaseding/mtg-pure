@@ -31,7 +31,9 @@ module MtgPure.ModelCombinators
     CoAny (..),
     CoPermanent (..),
     AsWithObject (..),
-    object,
+    event,
+    ifThen,
+    ifElse,
     tapCost,
     ofColors,
     playerPays,
@@ -55,25 +57,22 @@ import Data.Inst (Inst1, Inst2, Inst3, Inst4, Inst5)
 import MtgPure.Model
 
 class AsWithObject ot where
-  withObject :: [Requirement ot] -> (ObjectN ot -> x o) -> WithObject x o
+  object :: [Requirement ot] -> (ObjectN ot -> x o) -> WithObject x o
 
 instance Inst1 IsObjectType a => AsWithObject a where
-  withObject = O1
+  object = O1
 
 instance Inst2 IsObjectType a b => AsWithObject '(a, b) where
-  withObject = O2
+  object = O2
 
 instance Inst3 IsObjectType a b c => AsWithObject '(a, b, c) where
-  withObject = O3
+  object = O3
 
 instance Inst4 IsObjectType a b c d => AsWithObject '(a, b, c, d) where
-  withObject = O4
+  object = O4
 
 instance Inst5 IsObjectType a b c d e => AsWithObject '(a, b, c, d, e) where
-  withObject = O5
-
-object :: AsWithObject ot => [Requirement ot] -> (ObjectN ot -> x o) -> WithObject x o
-object = withObject
+  object = O5
 
 type AsActivatedOrTriggeredAbility a =
   ToObject2
@@ -307,3 +306,24 @@ instance ElectEffect (Effect e) (Elect e) where
 
 instance ElectEffect [Effect e] (Elect e) where
   effect = Effect
+
+event :: EventListener a -> Elect EventListener a
+event = Event
+
+class Branchable e where
+  branchEmpty :: Elect e a
+
+instance Branchable Cost where
+  branchEmpty = Cost $ AndCosts []
+
+instance Branchable EventListener where
+  branchEmpty = Event $ Events []
+
+instance Branchable (e :: EffectType) where
+  branchEmpty = Effect []
+
+ifThen :: Branchable e => Condition -> Elect e a -> Elect e a
+ifThen cond elect = If cond elect branchEmpty
+
+ifElse :: Branchable e => Condition -> Elect e a -> Elect e a
+ifElse cond = If cond branchEmpty
