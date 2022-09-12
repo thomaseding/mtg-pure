@@ -61,12 +61,6 @@ import MtgPure.Model.Toughness (Toughness)
 import MtgPure.Model.Tribal (Tribal (..))
 import MtgPure.Model.Variable (Variable)
 
-data AbilityType :: EffectType -> Type where
-  ActivatedAbility :: AbilityType 'OneShot
-  ManaAbility :: AbilityType 'OneShot
-  StaticAbility :: AbilityType 'Continuous
-  TriggeredAbility :: AbilityType 'OneShot
-
 data Ability :: forall a. a -> Type where
   Activated :: Elect Cost a -> Elect 'OneShot a -> Ability a
   Static :: StaticAbility a -> Ability a

@@ -23,6 +23,7 @@
 
 module MtgPure.ShowCard
   ( CardDepth,
+    runEnvM,
     showCard,
     showToken,
     showSetCard,
@@ -98,17 +99,53 @@ import MtgPure.Model
 defaultDepthLimit :: Maybe Int
 defaultDepthLimit = Nothing
 
-instance Show (Card a) where
-  show = showCard defaultDepthLimit
+instance Show (Ability ot) where
+  show = runEnvM defaultDepthLimit . showAbility
 
-instance Show (Token a) where
-  show = showToken defaultDepthLimit
+instance Show (Card a) where
+  show = runEnvM defaultDepthLimit . showCard
+
+instance Show (CardTypeDef t ot) where
+  show = runEnvM defaultDepthLimit . showCardTypeDef
+
+instance Show Condition where
+  show = runEnvM defaultDepthLimit . showCondition
+
+instance Show (Cost ot) where
+  show = runEnvM defaultDepthLimit . showCost
+
+instance Show (Effect e) where
+  show = runEnvM defaultDepthLimit . showEffect
+
+instance Show (Elect e a) where
+  show = runEnvM defaultDepthLimit . showElect
+
+instance Show (EventListener ot) where
+  show = runEnvM defaultDepthLimit . showEventListener
+
+instance Show (Requirement ot) where
+  show = runEnvM defaultDepthLimit . showRequirement
 
 instance Show (SetCard a) where
-  show = showSetCard defaultDepthLimit
+  show = runEnvM defaultDepthLimit . showSetCard
 
 instance Show (SetToken a) where
-  show = showSetToken defaultDepthLimit
+  show = runEnvM defaultDepthLimit . showSetToken
+
+instance Show (StaticAbility a) where
+  show = runEnvM defaultDepthLimit . showStaticAbility
+
+instance Show (Token a) where
+  show = runEnvM defaultDepthLimit . showToken
+
+instance Show (TriggeredAbility ot) where
+  show = runEnvM defaultDepthLimit . showTriggeredAbility
+
+instance Show (WithObject (Elect e) o) where
+  show = runEnvM defaultDepthLimit . showWithObject showElect "obj"
+
+instance Show (WithObject EventListener o) where
+  show = runEnvM defaultDepthLimit . showWithObject showEventListener "obj"
 
 type VariableId = Int
 
@@ -357,27 +394,15 @@ showODamageSource = showObject8
 showOAny :: OAny -> EnvM ParenItems
 showOAny = showObject12
 
-showSetToken :: CardDepth -> SetToken a -> String
-showSetToken depth (SetToken set rarity token) =
-  "SetToken " ++ show set
-    ++ " "
-    ++ show rarity
-    ++ " $ "
-    ++ showToken depth token
+showSetToken :: SetToken a -> EnvM ParenItems
+showSetToken (SetToken set rarity token) = yesParens $ do
+  sToken <- dollar <$> showToken token
+  pure $ pure (fromString $ "SetToken " ++ show set ++ " " ++ show rarity) <> sToken
 
-showSetCard :: CardDepth -> SetCard a -> String
-showSetCard depth (SetCard set rarity card) =
-  "SetCard " ++ show set
-    ++ " "
-    ++ show rarity
-    ++ " $ "
-    ++ showCard depth card
-
-showToken :: CardDepth -> Token a -> String
-showToken depth = runEnvM depth . showTokenM
-
-showCard :: CardDepth -> Card a -> String
-showCard depth = runEnvM depth . showCardM
+showSetCard :: SetCard a -> EnvM ParenItems
+showSetCard (SetCard set rarity card) = yesParens $ do
+  sCard <- dollar <$> showCard card
+  pure $ pure (fromString $ "SetCard " ++ show set ++ " " ++ show rarity) <> sCard
 
 runEnvM :: CardDepth -> EnvM ParenItems -> String
 runEnvM depth m = concat $ State.evalState strsM $ mkEnv depth
@@ -429,13 +454,13 @@ showItem used = \case
       False -> "_" ++ name
       True -> name
 
-showTokenM :: forall x. Token x -> EnvM ParenItems
-showTokenM (Token card) = yesParens $ do
-  sCard <- dollar <$> showCardM card
+showToken :: forall x. Token x -> EnvM ParenItems
+showToken (Token card) = yesParens $ do
+  sCard <- dollar <$> showCard card
   pure $ pure "Token" <> sCard
 
-showCardM :: forall x. Card x -> EnvM ParenItems
-showCardM = \case
+showCard :: forall x. Card x -> EnvM ParenItems
+showCard = \case
   Card1 (CardName name) cont -> yesParens $ do
     depth <- State.gets cardDepth
     State.modify' $ \st -> st {cardDepth = subtract 1 <$> depth}
@@ -467,25 +492,25 @@ showCardM = \case
                 pure $ pure "Card2 " <> sName <> pure " $ \\" <> sThis <> pure " -> " <> sDef
      in go card
   ArtifactCard card -> yesParens $ do
-    sCard <- dollar <$> showCardM card
+    sCard <- dollar <$> showCard card
     pure $ pure "Artifact" <> sCard
   CreatureCard card -> yesParens $ do
-    sCard <- dollar <$> showCardM card
+    sCard <- dollar <$> showCard card
     pure $ pure "Creature" <> sCard
   EnchantmentCard card -> yesParens $ do
-    sCard <- dollar <$> showCardM card
+    sCard <- dollar <$> showCard card
     pure $ pure "Enchantment" <> sCard
   InstantCard card -> yesParens $ do
-    sCard <- dollar <$> showCardM card
+    sCard <- dollar <$> showCard card
     pure $ pure "Instant" <> sCard
   LandCard card -> yesParens $ do
-    sCard <- dollar <$> showCardM card
+    sCard <- dollar <$> showCard card
     pure $ pure "Land" <> sCard
   PlaneswalkerCard card -> yesParens $ do
-    sCard <- dollar <$> showCardM card
+    sCard <- dollar <$> showCard card
     pure $ pure "Planeswalker" <> sCard
   SorceryCard card -> yesParens $ do
-    sCard <- dollar <$> showCardM card
+    sCard <- dollar <$> showCard card
     pure $ pure "Sorcery" <> sCard
 
 showCardTypeDef :: CardTypeDef t a -> EnvM ParenItems
@@ -1258,12 +1283,12 @@ showEffect = \case
   AddToBattlefield perm player token -> yesParens $ do
     sPerm <- parens <$> showPermanent perm
     sPlayer <- parens <$> showObject1 player
-    sCard <- dollar <$> showTokenM token
+    sCard <- dollar <$> showToken token
     pure $ pure "AddToBattlefield " <> sPlayer <> pure " " <> sPerm <> sCard
   ChangeTo perm before after -> yesParens $ do
     sPerm <- parens <$> showPermanent perm
     sBefore <- parens <$> showOPermanent before
-    sAfter <- dollar <$> showCardM after
+    sAfter <- dollar <$> showCard after
     pure $ pure "ChangeTo " <> sPerm <> pure " " <> sBefore <> sAfter
   CounterAbility obj -> yesParens $ do
     sObj <- dollar <$> showOActivatedOrTriggeredAbility obj
