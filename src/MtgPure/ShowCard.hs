@@ -56,12 +56,15 @@ import MtgPure.Model
     Elect (..),
     EventListener (..),
     GenericMana (..),
+    IsNonCreatureType,
     IsObjectType (..),
+    IsPermanentType,
     Loyalty,
     Mana (..),
     ManaCost (..),
     ManaPool (..),
     ManaSymbol (..),
+    NonCreature (..),
     OAny,
     OCreaturePlaneswalker,
     OCreaturePlayer,
@@ -443,20 +446,32 @@ showCardM = \case
     sCard <- dollar <$> showCardM card
     pure $ pure "Sorcery" <> sCard
 
-showCardTypeDef :: CardTypeDef a -> EnvM ParenItems
+showCardTypeDef :: CardTypeDef t a -> EnvM ParenItems
 showCardTypeDef = \case
-  Variable cont -> yesParens $ do
-    i <- State.gets nextVariableId
-    State.modify' $ \st -> st {nextVariableId = i + 1}
-    let var = ReifiedVariable i
-    let varName = getVarName var
-    s <- dropParens <$> showCardTypeDef (cont var)
-    pure $ pure "Variable $ \\" <> pure varName <> pure " -> " <> s
   ArtifactDef colors cost abilities -> yesParens $ do
     sColors <- parens <$> showColors colors
     sCost <- parens <$> showElect cost
     sAbilities <- dollar <$> showAbilities abilities
     pure $ pure "ArtifactDef " <> sColors <> pure " " <> sCost <> sAbilities
+  ArtifactCreatureDef colors cost creatureTypes power toughness abilities -> yesParens $ do
+    sColors <- parens <$> showColors colors
+    sCost <- parens <$> showElect cost
+    sCreatureTypes <- parens <$> showCreatureTypes creatureTypes
+    sPower <- parens <$> showPower power
+    sToughness <- parens <$> showToughness toughness
+    sAbilities <- dollar <$> showAbilities abilities
+    pure $
+      pure "ArtifactCreatureDef "
+        <> sColors
+        <> pure " "
+        <> sCost
+        <> pure " "
+        <> sCreatureTypes
+        <> pure " "
+        <> sPower
+        <> pure " "
+        <> sToughness
+        <> sAbilities
   CreatureDef colors cost creatureTypes power toughness abilities -> yesParens $ do
     sColors <- parens <$> showColors colors
     sCost <- parens <$> showElect cost
@@ -501,25 +516,18 @@ showCardTypeDef = \case
         <> sAbilities
   SorceryDef colors cost abilities electOneShot -> do
     showOneShot "SorceryDef " colors cost abilities electOneShot
-  ArtifactCreatureDef colors cost creatureTypes power toughness abilities -> yesParens $ do
-    sColors <- parens <$> showColors colors
-    sCost <- parens <$> showElect cost
-    sCreatureTypes <- parens <$> showCreatureTypes creatureTypes
-    sPower <- parens <$> showPower power
-    sToughness <- parens <$> showToughness toughness
-    sAbilities <- dollar <$> showAbilities abilities
-    pure $
-      pure "ArtifactCreatureDef "
-        <> sColors
-        <> pure " "
-        <> sCost
-        <> pure " "
-        <> sCreatureTypes
-        <> pure " "
-        <> sPower
-        <> pure " "
-        <> sToughness
-        <> sAbilities
+  TribalDef nonCreature cardDef -> yesParens $ do
+    sNonCreature <- parens <$> showNonCreature nonCreature
+    sCardDef <- dollar <$> showCardTypeDef cardDef
+    pure $ pure "TribalDef " <> sNonCreature <> sCardDef
+  VariableDef contCardDef -> yesParens $ do
+    i <- State.gets nextVariableId
+    State.modify' $ \st -> st {nextVariableId = i + 1}
+    let var = ReifiedVariable i
+        varName = getVarName var
+        cardDef = contCardDef var
+    sCardDef <- dropParens <$> showCardTypeDef cardDef
+    pure $ pure "Variable $ \\" <> pure varName <> pure " -> " <> sCardDef
   where
     showOneShot ::
       forall a.
@@ -833,8 +841,50 @@ showDamage =
       let varName = getVarName var
       pure $ DList.fromList [fromString "VariableDamage ", varName]
 
-showPermanent :: Permanent a -> EnvM ParenItems
-showPermanent = noParens . pure . pure . fromString . show
+showPermanent :: Permanent x -> EnvM ParenItems
+showPermanent permanent = case permanent of
+  PermanentArtifact -> noParens sPermanent
+  PermanentCreature -> noParens sPermanent
+  PermanentEnchantment -> noParens sPermanent
+  PermanentLand -> noParens sPermanent
+  PermanentPlaneswalker -> noParens sPermanent
+  Permanent -> noParens sPermanent
+  Permanent2 -> yesParens $ do
+    let go :: forall a b. Inst2 IsPermanentType a b => Permanent '(a, b) -> Item
+        go _ = fromString $ prettyObjectName (Proxy :: Proxy '(a, b))
+    pure $ pure "Permanent2 :: @" <> pure (go permanent)
+  Permanent3 -> yesParens $ do
+    let go :: forall a b c. Inst3 IsPermanentType a b c => Permanent '(a, b, c) -> Item
+        go _ = fromString $ prettyObjectName (Proxy :: Proxy '(a, b, c))
+    pure $ pure "Permanent3 :: @" <> pure (go permanent)
+  Permanent4 -> yesParens $ do
+    let go :: forall a b c d. Inst4 IsPermanentType a b c d => Permanent '(a, b, c, d) -> Item
+        go _ = fromString $ prettyObjectName (Proxy :: Proxy '(a, b, c, d))
+    pure $ pure "Permanent4 :: @" <> pure (go permanent)
+  where
+    sPermanent :: EnvM Items
+    sPermanent = pure $ pure $ fromString $ show permanent
+
+showNonCreature :: NonCreature a -> EnvM ParenItems
+showNonCreature nonCreature = case nonCreature of
+  NonCreatureArtifact -> noParens sNonCreature
+  NonCreatureEnchantment -> noParens sNonCreature
+  NonCreatureInstant -> noParens sNonCreature
+  NonCreatureLand -> noParens sNonCreature
+  NonCreaturePlaneswalker -> noParens sNonCreature
+  NonCreatureSorcery -> noParens sNonCreature
+  NonCreature -> noParens sNonCreature
+  NonCreature2 -> yesParens $ do
+    let go :: forall a b. Inst2 IsNonCreatureType a b => NonCreature '(a, b) -> Item
+        go _ = fromString $ prettyObjectName (Proxy :: Proxy '(a, b))
+    pure $ pure "NonCreature2 :: @" <> pure (go nonCreature)
+  NonCreature3 -> yesParens $ do
+    let go :: forall a b c. Inst3 IsNonCreatureType a b c => NonCreature '(a, b, c) -> Item
+        go _ = fromString $ prettyObjectName (Proxy :: Proxy '(a, b, c))
+    pure $ pure "NonCreature3 :: @" <> pure (go nonCreature)
+  where
+    sNonCreature :: EnvM Items
+    sNonCreature = pure $ pure $ fromString $ show nonCreature
 
 showTriggeredAbility :: TriggeredAbility a -> EnvM ParenItems
 showTriggeredAbility = \case
@@ -906,13 +956,7 @@ showEventListener = \case
     pure $ pure "TimePoint " <> sTimePoint <> sOneShot
 
 showTimePoint :: TimePoint p -> EnvM ParenItems
-showTimePoint timePoint = case timePoint of
-  PhaseBegin -> noParens sTimePoint
-  PhaseEnd -> noParens sTimePoint
-  StepBegin {} -> yesParens sTimePoint
-  StepEnd {} -> yesParens sTimePoint
-  where
-    sTimePoint = pure $ pure $ fromString $ show timePoint
+showTimePoint = yesParens . pure . pure . fromString . show
 
 showStaticAbility :: StaticAbility a -> EnvM ParenItems
 showStaticAbility = \case

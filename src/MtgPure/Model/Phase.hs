@@ -7,6 +7,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE Safe #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
@@ -15,6 +16,7 @@
 
 module MtgPure.Model.Phase
   ( Phase (..),
+    SPhase (..),
   )
 where
 
@@ -27,3 +29,12 @@ data Phase :: Type where
   PostCombatMainPhase :: Phase
   EndingPhase :: Phase
   deriving (Show)
+
+data SPhase :: Phase -> Type where
+  SBeginningPhase :: SPhase 'BeginningPhase
+  SPreCombatMainPhase :: SPhase 'PreCombatMainPhase
+  SCombatPhase :: SPhase 'CombatPhase
+  SPostCombatMainPhase :: SPhase 'PostCombatMainPhase
+  SEndingPhase :: SPhase 'EndingPhase
+
+deriving instance Show (SPhase a)

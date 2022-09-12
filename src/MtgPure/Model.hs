@@ -24,6 +24,7 @@ module MtgPure.Model
     module MtgPure.Model.ManaSymbol,
     module MtgPure.Model.ManaType,
     module MtgPure.Model.ManaTypeToColor,
+    module MtgPure.Model.NonCreature,
     module MtgPure.Model.Object,
     module MtgPure.Model.ObjectId,
     module MtgPure.Model.ObjectN,
@@ -42,6 +43,7 @@ module MtgPure.Model
     module MtgPure.Model.ToManaPool,
     module MtgPure.Model.ToObjectN,
     module MtgPure.Model.Toughness,
+    module MtgPure.Model.Tribal,
     module MtgPure.Model.Variable,
     module MtgPure.Model.VisitObjectN,
   )
@@ -75,6 +77,7 @@ import MtgPure.Model.ManaPool
 import MtgPure.Model.ManaSymbol
 import MtgPure.Model.ManaType
 import MtgPure.Model.ManaTypeToColor
+import MtgPure.Model.NonCreature
 import MtgPure.Model.Object
 import MtgPure.Model.ObjectId
 import MtgPure.Model.ObjectN
@@ -93,5 +96,6 @@ import MtgPure.Model.ToManaCost
 import MtgPure.Model.ToManaPool
 import MtgPure.Model.ToObjectN
 import MtgPure.Model.Toughness
+import MtgPure.Model.Tribal
 import MtgPure.Model.Variable
 import MtgPure.Model.VisitObjectN

@@ -29,6 +29,7 @@ import MtgPure.Model.IsObjectType (IsObjectType)
 import MtgPure.Model.Loyalty (Loyalty)
 import MtgPure.Model.ManaCost (ManaCost)
 import MtgPure.Model.ManaPool (ManaPool)
+import MtgPure.Model.NonCreature (NonCreature)
 import MtgPure.Model.ObjectN
   ( OAny,
     OCreaturePlayerPlaneswalker,
@@ -55,6 +56,7 @@ import MtgPure.Model.Rarity (Rarity)
 import MtgPure.Model.Selection (Selection)
 import MtgPure.Model.TimePoint (TimePoint)
 import MtgPure.Model.Toughness (Toughness)
+import MtgPure.Model.Tribal (Tribal (..))
 import MtgPure.Model.Variable (Variable)
 
 data Ability :: forall a. a -> Type where
@@ -64,8 +66,8 @@ data Ability :: forall a. a -> Type where
 
 data Card :: forall a. a -> Type where
   ArtifactCard :: Card OTArtifact -> Card OTCard
-  Card1 :: IsObjectType a => CardName -> (ObjectN a {-this-} -> CardTypeDef a) -> Card a
-  Card2 :: Inst2 IsObjectType a b => CardName -> (ObjectN '(a, b {-this-}) -> CardTypeDef '(a, b)) -> Card '(a, b)
+  Card1 :: IsObjectType a => CardName -> (ObjectN a {-this-} -> CardTypeDef t a) -> Card a
+  Card2 :: Inst2 IsObjectType a b => CardName -> (ObjectN '(a, b {-this-}) -> CardTypeDef t '(a, b)) -> Card '(a, b)
   CreatureCard :: Card OTCreature -> Card OTCard
   EnchantmentCard :: Card OTEnchantment -> Card OTCard
   InstantCard :: Card OTInstant -> Card OTCard
@@ -75,16 +77,17 @@ data Card :: forall a. a -> Type where
 
 -- TODO: Add encoding for compositing distinct permanent card types. `this` still needs to work
 -- Can composite: Artifact/Creature/Enchantment only? Lands dont have costs, and planeswalkers are special.
-data CardTypeDef :: forall a. a -> Type where
-  ArtifactCreatureDef :: Colors -> Elect Cost OTArtifactCreature -> [CreatureType] -> Power -> Toughness -> [Ability OTArtifactCreature] -> CardTypeDef OTArtifactCreature
-  ArtifactDef :: Colors -> Elect Cost OTArtifact -> [Ability OTArtifact] -> CardTypeDef OTArtifact
-  CreatureDef :: Colors -> Elect Cost OTCreature -> [CreatureType] -> Power -> Toughness -> [Ability OTCreature] -> CardTypeDef OTCreature
-  EnchantmentDef :: Colors -> Elect Cost OTEnchantment -> [Ability OTEnchantment] -> CardTypeDef OTEnchantment
-  InstantDef :: Colors -> Elect Cost OTInstant -> [Ability OTInstant] -> Elect 'OneShot OTInstant -> CardTypeDef OTInstant
-  LandDef :: [Ability OTLand] -> CardTypeDef OTLand
-  PlaneswalkerDef :: Colors -> Elect Cost OTPlaneswalker -> Loyalty -> [Ability OTPlaneswalker] -> CardTypeDef OTPlaneswalker
-  SorceryDef :: Colors -> Elect Cost OTSorcery -> [Ability OTSorcery] -> Elect 'OneShot OTSorcery -> CardTypeDef OTSorcery
-  Variable :: (Variable -> CardTypeDef a) -> CardTypeDef a
+data CardTypeDef :: forall a. Tribal -> a -> Type where
+  ArtifactCreatureDef :: Colors -> Elect Cost OTArtifactCreature -> [CreatureType] -> Power -> Toughness -> [Ability OTArtifactCreature] -> CardTypeDef t OTArtifactCreature
+  ArtifactDef :: Colors -> Elect Cost OTArtifact -> [Ability OTArtifact] -> CardTypeDef t OTArtifact
+  CreatureDef :: Colors -> Elect Cost OTCreature -> [CreatureType] -> Power -> Toughness -> [Ability OTCreature] -> CardTypeDef t OTCreature
+  EnchantmentDef :: Colors -> Elect Cost OTEnchantment -> [Ability OTEnchantment] -> CardTypeDef t OTEnchantment
+  InstantDef :: Colors -> Elect Cost OTInstant -> [Ability OTInstant] -> Elect 'OneShot OTInstant -> CardTypeDef t OTInstant
+  LandDef :: [Ability OTLand] -> CardTypeDef t OTLand
+  PlaneswalkerDef :: Colors -> Elect Cost OTPlaneswalker -> Loyalty -> [Ability OTPlaneswalker] -> CardTypeDef t OTPlaneswalker
+  SorceryDef :: Colors -> Elect Cost OTSorcery -> [Ability OTSorcery] -> Elect 'OneShot OTSorcery -> CardTypeDef t OTSorcery
+  TribalDef :: NonCreature a -> CardTypeDef 'NonTribal a -> CardTypeDef 'Tribal a
+  VariableDef :: (Variable -> CardTypeDef t a) -> CardTypeDef t a
 
 data Condition :: Type where
   And :: [Condition] -> Condition

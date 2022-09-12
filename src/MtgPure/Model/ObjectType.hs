@@ -35,6 +35,7 @@ module MtgPure.Model.ObjectType
     OTNonLandPermanent,
     OTNonPlaneswalkerPermanent,
     OTPermanent,
+    OTNonCreature,
     OTCard,
     OTAny,
   )
@@ -151,6 +152,15 @@ type OTPermanent =
      OTEnchantment,
      OTLand,
      OTPlaneswalker
+   )
+
+type OTNonCreature =
+  '( OTArtifact,
+     OTEnchantment,
+     OTInstant,
+     OTLand,
+     OTPlaneswalker,
+     OTSorcery
    )
 
 type OTCard =

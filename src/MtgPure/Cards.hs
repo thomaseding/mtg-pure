@@ -234,7 +234,7 @@ backlash = SetCard Invasion Uncommon $
 blaze :: SetCard OTSorcery
 blaze = SetCard Portal Uncommon $
   Card1 "Blaze" $ \this ->
-    Variable $ \x ->
+    VariableDef $ \x ->
       let cost = spellCost (VariableGenericMana x, R)
        in SorceryDef (toColors R) cost [] $
             controllerOf this $
