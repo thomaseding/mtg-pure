@@ -19,8 +19,7 @@ module MtgPure.Model.CardSet
 where
 
 data CardSet -- Sorted by release date
-  = NoCardSet -- Tokens
-  | Alpha
+  = Alpha
   | ArabianNights
   | Legends
   | TheDark

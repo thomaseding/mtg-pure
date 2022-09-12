@@ -142,7 +142,7 @@ data CardTypeDef :: ObjectType -> Type where
   SorceryDef :: Colors -> SpellCost -> [Ability OTSorcery] -> (OSorcery -> Elect 'OneShot OTSorcery) -> CardTypeDef OTSorcery
 
 data Card :: forall a. a -> Type where
-  Card :: CardName -> CardSet -> Rarity -> CardTypeDef a -> Card a
+  Card :: CardName -> CardTypeDef a -> Card a
   ArtifactCard :: Card OTArtifact -> Card OTCard
   CreatureCard :: Card OTCreature -> Card OTCard
   EnchantmentCard :: Card OTEnchantment -> Card OTCard
@@ -153,3 +153,15 @@ data Card :: forall a. a -> Type where
 
 data Token :: forall a. a -> Type where
   Token :: Card a -> Token a
+
+data SetCard :: forall a. a -> Type where
+  SetCard :: CardSet -> Rarity -> Card a -> SetCard a
+
+data SetToken :: forall a. a -> Type where
+  SetToken :: CardSet -> Rarity -> Token a -> SetToken a
+
+fromSetCard :: SetCard a -> Card a
+fromSetCard (SetCard _ _ card) = card
+
+fromSetToken :: SetToken a -> Token a
+fromSetToken (SetToken _ _ token) = token

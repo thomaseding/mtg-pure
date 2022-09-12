@@ -25,6 +25,8 @@ module MtgPure.ShowCard
   ( CardDepth,
     showCard,
     showToken,
+    showSetCard,
+    showSetToken,
   )
 where
 
@@ -77,6 +79,8 @@ import MtgPure.Model
     PrettyObjectName (..),
     Requirement (..),
     Selection (..),
+    SetCard,
+    SetToken,
     SpellCost,
     StaticAbility (..),
     Step (..),
@@ -91,6 +95,7 @@ import MtgPure.Model.Internal.IsObjectType (IsObjectType (..))
 import MtgPure.Model.Internal.Object (Object (..))
 import MtgPure.Model.Internal.ObjectId (ObjectId (ObjectId))
 import MtgPure.Model.Internal.Variable (Variable (ReifiedVariable))
+import MtgPure.Model.Recursive (SetCard (SetCard), SetToken (SetToken))
 
 defaultDepthLimit :: Maybe Int
 defaultDepthLimit = Nothing
@@ -100,6 +105,12 @@ instance Show (Card a) where
 
 instance Show (Token a) where
   show = showToken defaultDepthLimit
+
+instance Show (SetCard a) where
+  show = showSetCard defaultDepthLimit
+
+instance Show (SetToken a) where
+  show = showSetToken defaultDepthLimit
 
 type VariableId = Int
 
@@ -310,8 +321,24 @@ showOPermanent = showObject5
 showOAny :: OAny -> EnvM ParenItems
 showOAny = showObject8
 
+showSetToken :: CardDepth -> SetToken a -> String
+showSetToken depth (SetToken set rarity token) =
+  "SetToken " ++ show set
+    ++ " "
+    ++ show rarity
+    ++ " $ "
+    ++ showToken depth token
+
 showToken :: CardDepth -> Token a -> String
 showToken depth (Token card) = "Token $ " ++ showCard depth card
+
+showSetCard :: CardDepth -> SetCard a -> String
+showSetCard depth (SetCard set rarity card) =
+  "SetCard " ++ show set
+    ++ " "
+    ++ show rarity
+    ++ " $ "
+    ++ showCard depth card
 
 showCard :: CardDepth -> Card a -> String
 showCard depth card = concat $ State.evalState strsM $ mkEnv depth
@@ -365,7 +392,7 @@ showItem used = \case
 
 showCardM :: Card a -> EnvM ParenItems
 showCardM = \case
-  Card (CardName name) set rarity def -> yesParens $ do
+  Card (CardName name) def -> yesParens $ do
     depth <- State.gets cardDepth
     State.modify' $ \st -> st {cardDepth = subtract 1 <$> depth}
     let sName = pure (fromString $ show name)
@@ -373,14 +400,7 @@ showCardM = \case
       Just 0 -> pure $ pure "Card " <> sName <> pure " ..."
       _ -> do
         sDef <- dollar <$> showCardTypeDef def
-        pure $
-          pure "Card "
-            <> sName
-            <> pure " "
-            <> pure (fromString $ show set)
-            <> pure " "
-            <> pure (fromString $ show rarity)
-            <> sDef
+        pure $ pure "Card " <> sName <> sDef
   ArtifactCard card -> yesParens $ do
     sCard <- dollar <$> showCardM card
     pure $ pure "Artifact" <> sCard
