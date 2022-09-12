@@ -276,7 +276,7 @@ bloodMoon = Card1 "Blood Moon" $ \_this ->
     [ Static $
         ContinuousEffect $
           All $
-            object [NonBasic] $
+            object [Not Basic] $
               \land -> effect $ changeTo land mountain
     ]
   where

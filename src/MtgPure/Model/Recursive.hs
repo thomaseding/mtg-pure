@@ -142,11 +142,11 @@ data EventListener :: forall a. a -> Type where
 
 data Requirement :: forall a. a -> Type where
   ControlledBy :: OPlayer -> Requirement a
-  HasAbility :: Ability a -> Requirement a
+  HasAbility :: Ability a -> Requirement a -- Non-unique differing representations will not be considered the same
   HasBasicLandType :: Color -> Requirement OTLand
   Impossible :: Requirement a
-  Is :: AnyObject a -> ObjectN a -> Requirement a -- XXX does this need the AnyObject witness?
-  NonBasic :: Requirement OTLand
+  Is :: AnyObject a -> ObjectN a -> Requirement a
+  Basic :: Requirement OTLand
   Not :: Requirement a -> Requirement a
   OfColors :: Colors -> Requirement a
   OwnedBy :: OPlayer -> Requirement a

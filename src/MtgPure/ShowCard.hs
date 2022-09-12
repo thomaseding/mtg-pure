@@ -644,8 +644,8 @@ showRequirement = \case
     sAnyObj <- parens <$> showAnyObject anyObj
     sObjN <- dollar <$> showAnyObjectN anyObj objN
     pure $ pure "Is " <> sAnyObj <> sObjN
-  NonBasic -> noParens $ do
-    pure $ pure "NonBasic"
+  Basic -> noParens $ do
+    pure $ pure "Basic"
   Not req -> yesParens $ do
     sReq <- dollar <$> showRequirement req
     pure $ pure "Not" <> sReq
