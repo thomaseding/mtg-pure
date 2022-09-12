@@ -68,9 +68,19 @@ header =
   \  )\n\
   \where\n\
   \\n\
+  \import Data.Inst\n\
+  \  ( Inst1,\n\
+  \    Inst2,\n\
+  \    Inst3,\n\
+  \    Inst4,\n\
+  \    Inst5,\n\
+  \    Inst6,\n\
+  \    Inst7,\n\
+  \    Inst8,\n\
+  \  )\n\
+  \import MtgPure.Model.IsObjectType (IsObjectType)\n\
   \import MtgPure.Model.Object (Object)\n\
   \import MtgPure.Model.ObjectN (ObjectN (..))\n\
-  \import MtgPure.Model.ObjectType (ObjectType(..))\n\
   \import MtgPure.Model.ToObjectN.Classes\n\
   \  ( ToObject1(..),\n\
   \    ToObject2(..),\n\
@@ -82,17 +92,10 @@ header =
   \    ToObject8(..),\n\
   \  )\n\
   \\n\
-  \type A = 'OTArtifact\n\
-  \type B = 'OTCreature\n\
-  \type C = 'OTEnchantment\n\
-  \type D = 'OTInstant\n\
-  \type E = 'OTLand\n\
-  \type F = 'OTPlaneswalker\n\
-  \type G = 'OTPlayer\n\
-  \type H = 'OTSorcery\n\
   \"
 
 limit :: Int
+--limit = 3
 limit = 1 + fromEnum (maxBound :: ObjectType)
 
 newtype Sym = Sym Int
@@ -107,10 +110,11 @@ interpretSym desc (Sym n) = case desc of
   SymLetter -> [['a' ..] !! n]
 
 allSyms :: [Sym]
+--allSyms = map Sym [0 .. limit - 1] -- fromEnum (maxBound :: ObjectType)]
 allSyms = map Sym [0 .. fromEnum (maxBound :: ObjectType)]
 
 objectTypeDescs :: [SymDesc]
-objectTypeDescs = map SymObject $ filter p $ subsequences objectTypes
+objectTypeDescs = map SymObject $ filter p $ map (`take` objectTypes) [0 .. limit]
   where
     p xs = not (null xs) && length xs <= limit
 
@@ -144,7 +148,7 @@ objectToObjectNs desc = do
         SymObject syms -> length syms
         SymLetter -> error "should be supplied SymObject instead"
   n <- [1 .. lim]
-  s <- generateObjectsToObjectN desc n
+  s <- generateObjectsToObjectN (if False then desc else SymLetter) n
   pure $ "-- (" ++ show n ++ ")\n" ++ s
 
 generateObjectsToObjectN :: SymDesc -> Int -> [String]
@@ -165,9 +169,14 @@ generateObjectToObjectN desc sym symN =
     instanceLine =
       unwords $
         [ "instance",
-          "ToObject" ++ show n,
-          "(Object " ++ interpretSym desc sym ++ ")"
+          "Inst" ++ show n,
+          "IsObjectType"
         ]
+          ++ map (interpretSym desc) symN
+          ++ [ "=>",
+               "ToObject" ++ show n,
+               "(Object " ++ interpretSym desc sym ++ ")"
+             ]
           ++ map (interpretSym desc) symN
           ++ ["where"]
 
@@ -186,7 +195,7 @@ generateObjectToObjectN desc sym symN =
 objectMsToObjectN :: SymDesc -> [String]
 objectMsToObjectN desc = do
   (m, n) <- indexPairs
-  s <- generateObjectMsToObjectN desc m n
+  s <- generateObjectMsToObjectN (if False then desc else SymLetter) m n
   pure $ "-- " ++ show (m, n) ++ "\n" ++ s
   where
     lim = case desc of
@@ -226,11 +235,16 @@ generateObjectMToObjectN desc symsM symsN =
     instanceLine =
       unwords $
         [ "instance",
-          "ToObject" ++ show n,
-          if m == 1
-            then "(ObjectN " ++ seqSymsM ++ ")"
-            else "(ObjectN '(" ++ seqSymsM ++ "))"
+          "Inst" ++ show n,
+          "IsObjectType"
         ]
+          ++ map (interpretSym desc) symsN
+          ++ [ "=>",
+               "ToObject" ++ show n,
+               if m == 1
+                 then "(ObjectN " ++ seqSymsM ++ ")"
+                 else "(ObjectN '(" ++ seqSymsM ++ "))"
+             ]
           ++ map (interpretSym desc) symsN
           ++ ["where"]
 
