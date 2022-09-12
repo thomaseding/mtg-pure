@@ -552,8 +552,27 @@ ordEffect x = case x of
   DrawCards player1 amount1 -> \case
     DrawCards player2 amount2 -> seqM [pure $ compare amount1 amount2, ordOPlayer player1 player2]
     y -> compareIndexM x y
+  EffectContinuous effect1 -> \case
+    EffectContinuous effect2 -> ordEffect effect1 effect2
+    y -> compareIndexM x y
   EOr effects1 -> \case
     EOr effects2 -> listM ordEffect effects1 effects2
+    y -> compareIndexM x y
+  Gain any1 obj1 ability1 -> \case
+    Gain any2 obj2 ability2 ->
+      let go :: forall k ot. TypeableOT k ot => WAny ot -> ObjectN ot -> Ability ot -> EnvM Ordering
+          go any1 obj1 ability1 = case cast (any2, obj2, ability2) of
+            Nothing -> compareOT @k @ot any2
+            Just (any2, obj2, ability2) -> seqM [ordWAny any1 any2, ordObjectN obj1 obj2, ordAbility ability1 ability2]
+       in go any1 obj1 ability1
+    y -> compareIndexM x y
+  Lose any1 obj1 ability1 -> \case
+    Lose any2 obj2 ability2 ->
+      let go :: forall k ot. TypeableOT k ot => WAny ot -> ObjectN ot -> Ability ot -> EnvM Ordering
+          go any1 obj1 ability1 = case cast (any2, obj2, ability2) of
+            Nothing -> compareOT @k @ot any2
+            Just (any2, obj2, ability2) -> seqM [ordWAny any1 any2, ordObjectN obj1 obj2, ordAbility ability1 ability2]
+       in go any1 obj1 ability1
     y -> compareIndexM x y
   Sacrifice perm1 player1 reqs1 -> \case
     Sacrifice perm2 player2 reqs2 ->
@@ -562,6 +581,17 @@ ordEffect x = case x of
             Nothing -> compareOT @k @ot perm2
             Just (perm2, reqs2) -> seqM [ordWPermanent perm1 perm2, ordOPlayer player1 player2, ordRequirements reqs1 reqs2]
        in go perm1 reqs1
+    y -> compareIndexM x y
+  StatDelta creature1 power1 toughness1 -> \case
+    StatDelta creature2 power2 toughness2 ->
+      seqM
+        [ ordOCreature creature1 creature2,
+          pure $ compare power1 power2,
+          pure $ compare toughness1 toughness2
+        ]
+    y -> compareIndexM x y
+  Until electListener1 -> \case
+    Until electListener2 -> ordElectE electListener1 electListener2
     y -> compareIndexM x y
 
 ordElectE :: Elect e ot -> Elect e ot -> EnvM Ordering
@@ -837,8 +867,8 @@ ordStaticAbility x = case x of
   As with1 -> \case
     As with2 -> ordWithObjectEventListener with1 with2
     y -> compareIndexM x y
-  ContinuousEffect elect1 -> \case
-    ContinuousEffect elect2 -> ordElectE elect1 elect2
+  StaticContinuous elect1 -> \case
+    StaticContinuous elect2 -> ordElectE elect1 elect2
     y -> compareIndexM x y
   FirstStrike -> \case
     FirstStrike -> pure EQ

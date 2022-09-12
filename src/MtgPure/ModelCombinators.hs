@@ -43,6 +43,8 @@ module MtgPure.ModelCombinators
     ofColors,
     playerPays,
     addManaAnyColor,
+    gain,
+    lose,
     is,
     satisfies,
     hasAbility,
@@ -60,6 +62,7 @@ module MtgPure.ModelCombinators
     colored,
     colorless,
     tapped,
+    untilEndOfTurn,
   )
 where
 
@@ -120,6 +123,8 @@ import safe MtgPure.Model.Recursive
     WithObject (..),
     WithThis (..),
   )
+import safe MtgPure.Model.Step (Step (..))
+import safe MtgPure.Model.TimePoint (TimePoint (..))
 import safe MtgPure.Model.ToManaCost (ToManaCost (..))
 import safe MtgPure.Model.ToManaPool (ToManaPool (..))
 import safe MtgPure.Model.ToObjectN.Classes
@@ -405,6 +410,9 @@ instance ElectEffect (Effect e) (Elect (Effect e)) where
 instance ElectEffect [Effect e] (Elect (Effect e)) where
   effect = Effect
 
+instance ElectEffect (Effect 'Continuous) (Elect (Effect 'OneShot)) where
+  effect = Effect . pure . EffectContinuous
+
 event :: EventListener ot -> Elect (EventListener ot) ot
 event = Event
 
@@ -462,3 +470,12 @@ hasAbility = HasAbility . thisObject
 
 becomesTapped :: CoPermanent k ot => WithObject (Elect (Effect 'OneShot)) ot -> EventListener ot
 becomesTapped = BecomesTapped coPermanent
+
+untilEndOfTurn :: Elect (Effect 'OneShot) OTPlayer -> Effect 'OneShot
+untilEndOfTurn = EffectContinuous . Until . event . TimePoint (StepBegin CleanupStep)
+
+gain :: CoAny k ot => ObjectN ot -> Ability ot -> Effect 'Continuous
+gain = Gain coAny
+
+lose :: CoAny k ot => ObjectN ot -> Ability ot -> Effect 'Continuous
+lose = Lose coAny

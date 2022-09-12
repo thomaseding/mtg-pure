@@ -280,7 +280,7 @@ bloodMoon = mkCard "Blood Moon" $ \_this ->
     (toColors R)
     cost
     [ Static $
-        ContinuousEffect $
+        StaticContinuous $
           All $
             object [nonBasic] $
               \land -> effect $ changeTo land mountain
@@ -309,7 +309,8 @@ cityOfBrass = mkCard "City of Brass" $ \this ->
                   \you -> effect $ dealDamage this you 1,
       Activated
         (Cost $ tapCost this)
-        $ controllerOf this $ \you -> effect $ addManaAnyColor you 1
+        $ controllerOf this $
+          \you -> effect $ addManaAnyColor you 1
     ]
 
 conversion :: Card OTEnchantment
@@ -331,7 +332,7 @@ conversion = mkCard "Conversion" $ \this ->
                       event $
                         TimePoint (StepBegin UpkeepStep) $ effect $ sacrifice you [is this],
       Static $
-        ContinuousEffect $
+        StaticContinuous $
           All $
             object [HasBasicLandType Mountain] $
               \land -> effect $ changeTo land plains
@@ -367,6 +368,33 @@ plummet = mkCard "Plummet" $ \this ->
           \target -> effect $ destroy target
   where
     cost = spellCost (1, G)
+
+pradeshGypsies :: Card OTCreature
+pradeshGypsies = mkCard "Pradesh Gypsies" $ \this ->
+  CreatureDef
+    (toColors G)
+    cost
+    [Human, Nomad]
+    (Power 1)
+    (Toughness 1)
+    [ Activated
+        (Cost $ AndCosts [tapCost this, ManaCost $ toManaCost (1, G)])
+        $ controllerOf this $
+          \you -> A (Target you) $
+            object [] $
+              \creature ->
+                let statsChange =
+                      Static $
+                        StaticContinuous $
+                          effect $
+                            StatDelta creature (Power (-2)) (Toughness 0)
+                 in effect
+                      [ EffectContinuous $ gain creature statsChange,
+                        untilEndOfTurn $ effect $ lose creature statsChange
+                      ]
+    ]
+  where
+    cost = spellCost (2, G)
 
 ragingGoblin :: Card OTCreature
 ragingGoblin = mkCard "Raging Goblin" $ \_this ->

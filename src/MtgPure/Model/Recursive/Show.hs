@@ -1128,7 +1128,7 @@ showStaticAbility = \case
   As withObject -> yesParens $ do
     sWithObject <- dollar <$> showWithObject showEventListener "this" withObject
     pure $ pure "As" <> sWithObject
-  ContinuousEffect continuous -> yesParens $ do
+  StaticContinuous continuous -> yesParens $ do
     sContinuous <- dollar <$> showElect continuous
     pure $ pure "ContinuousEffect" <> sContinuous
   FirstStrike -> noParens $ do
@@ -1385,14 +1385,35 @@ showEffect = \case
     sPlayer <- parens <$> showObject1 player
     let amount = fromString $ show n
     pure $ pure "DrawCards " <> sPlayer <> pure " " <> pure amount
+  EffectContinuous effect -> yesParens $ do
+    sEffect <- dollar <$> showEffect effect
+    pure $ pure "EffectContinuous" <> sEffect
   EOr effects -> yesParens $ do
     sEffects <- dollar <$> showEffects effects
     pure $ pure "EOr" <> sEffects
+  Gain wAny obj ability -> yesParens $ do
+    sWAny <- parens <$> showWAny wAny
+    sObj <- parens <$> showAnyN wAny obj
+    sAbility <- dollar <$> showAbility ability
+    pure $ pure "Gain " <> sWAny <> pure " " <> sObj <> sAbility
+  Lose wAny obj ability -> yesParens $ do
+    sWAny <- parens <$> showWAny wAny
+    sObj <- parens <$> showAnyN wAny obj
+    sAbility <- dollar <$> showAbility ability
+    pure $ pure "Lose " <> sWAny <> pure " " <> sObj <> sAbility
   Sacrifice perm player reqs -> yesParens $ do
     sPerm <- parens <$> showWPermanent perm
     sPlayer <- parens <$> showObject1 player
     sReqs <- dollar <$> showRequirements reqs
     pure $ pure "Sacrifice " <> sPerm <> pure " " <> sPlayer <> sReqs
+  StatDelta creature power toughness -> yesParens $ do
+    sCreature <- parens <$> showObject1 creature
+    sPower <- parens <$> showPower power
+    sToughness <- dollar <$> showToughness toughness
+    pure $ pure "StatsDelta " <> sCreature <> pure " " <> sPower <> sToughness
+  Until elect -> yesParens $ do
+    sElect <- dollar <$> showElect elect
+    pure $ pure "Until" <> sElect
 
 showEffects :: [Effect e] -> EnvM ParenItems
 showEffects = showListM showEffect

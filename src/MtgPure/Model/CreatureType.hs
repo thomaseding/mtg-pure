@@ -28,6 +28,7 @@ data CreatureType
   | Human
   | Mercenary
   | Merfolk
+  | Nomad
   | Rebel
   | Soldier
   | Zombie

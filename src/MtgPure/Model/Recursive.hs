@@ -224,8 +224,13 @@ data Effect :: EffectType -> Type where
   DealDamage :: ODamageSource -> OCreaturePlayerPlaneswalker -> Damage -> Effect 'OneShot
   Destroy :: OPermanent -> Effect 'OneShot
   DrawCards :: OPlayer -> Int -> Effect 'OneShot
+  EffectContinuous :: Effect 'Continuous -> Effect 'OneShot -- 611.2
   EOr :: [Effect e] -> Effect e
+  Gain :: TypeableOT k ot => WAny ot -> ObjectN ot -> Ability ot -> Effect 'Continuous
+  Lose :: TypeableOT k ot => WAny ot -> ObjectN ot -> Ability ot -> Effect 'Continuous
   Sacrifice :: TypeableOT k ot => WPermanent ot -> OPlayer -> [Requirement ot] -> Effect 'OneShot
+  StatDelta :: OCreature -> Power -> Toughness -> Effect 'Continuous
+  Until :: Elect (EventListener OTPlayer) OTPlayer -> Effect 'Continuous
   deriving (Typeable)
 
 instance ConsIndex (Effect e) where
@@ -237,9 +242,14 @@ instance ConsIndex (Effect e) where
     CounterSpell {} -> 5
     DealDamage {} -> 6
     Destroy {} -> 7
-    EOr {} -> 8
-    DrawCards {} -> 9
-    Sacrifice {} -> 10
+    EffectContinuous {} -> 8
+    EOr {} -> 9
+    DrawCards {} -> 10
+    Gain {} -> 11
+    Lose {} -> 12
+    Sacrifice {} -> 13
+    StatDelta {} -> 14
+    Until {} -> 15
 
 data Elect :: forall ot. Type -> ot -> Type where
   A :: TypeableOT2 k ot (Elect e) => Selection -> WithObject (Elect e) ot -> Elect e ot
@@ -330,7 +340,8 @@ data SetToken :: forall ot. ot -> Type where
 
 data StaticAbility :: forall ot. ot -> Type where
   As :: TypeableOT2 k ot EventListener => WithObject EventListener ot -> StaticAbility ot -- 603.6d: not a triggered ability
-  ContinuousEffect :: Elect (Effect 'Continuous) ot -> StaticAbility ot
+  -- TODO: `StaticContinuous` should not be able to elect `A`
+  StaticContinuous :: Elect (Effect 'Continuous) ot -> StaticAbility ot -- 611.3
   FirstStrike :: StaticAbility OTCreature
   Flying :: StaticAbility OTCreature
   Haste :: StaticAbility OTCreature
@@ -340,7 +351,7 @@ data StaticAbility :: forall ot. ot -> Type where
 instance ConsIndex (StaticAbility ot) where
   consIndex = \case
     As {} -> 1
-    ContinuousEffect {} -> 2
+    StaticContinuous {} -> 2
     FirstStrike {} -> 3
     Flying {} -> 4
     Haste {} -> 5
