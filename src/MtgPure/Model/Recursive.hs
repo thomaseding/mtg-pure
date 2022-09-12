@@ -136,7 +136,7 @@ data Elect :: forall e a. e -> a -> Type where
 
 data EventListener :: forall a. a -> Type where
   Events :: [EventListener a] -> EventListener a
-  SpellIsCast :: WithObject (Elect 'Continuous) a -> EventListener a
+  SpellIsCast :: WithObject (Elect 'OneShot) a -> EventListener a
   TimePoint :: TimePoint p -> Elect 'OneShot a -> EventListener a
 
 data Requirement :: forall a. a -> Type where
