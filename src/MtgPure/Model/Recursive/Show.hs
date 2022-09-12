@@ -1155,6 +1155,11 @@ showEventListener = showEventListener' showElect
 showTimePoint :: TimePoint p -> EnvM ParenItems
 showTimePoint = yesParens . pure . pure . fromString . show
 
+showNonProxy :: NonProxy x -> EnvM ParenItems
+showNonProxy = \case
+  NonProxyElectEffectOneShot -> noParens $ do
+    pure $ pure "NonProxyElectEffectOneShot"
+
 showStaticAbility :: StaticAbility a -> EnvM ParenItems
 showStaticAbility = \case
   As electListener -> yesParens $ do
@@ -1235,152 +1240,122 @@ showElect = \case
     sElect <- dropParens <$> showElect elect
     pure $ pure "VariableFromPower " <> sCreature <> pure " $ \\" <> pure varName <> pure " -> " <> sElect
 
--- TODO: This needs to inject some config to control how `showO*` prints
 showWithLinkedObject :: (forall ot'. x ot' -> EnvM ParenItems) -> String -> WithLinkedObject x ot -> EnvM ParenItems
 showWithLinkedObject showM memo = \case
   LProxy reqs -> yesParens $ do
     sReqs <- dollar <$> showRequirements reqs
     pure $ pure "LProxy" <> sReqs
-  L1 NonProxyElectEffectOneShot reqs cont -> showO1 showM memo reqs cont
-  L2 NonProxyElectEffectOneShot reqs cont -> showO2 showM memo reqs cont
-  L3 NonProxyElectEffectOneShot reqs cont -> showO3 showM memo reqs cont
-  L4 NonProxyElectEffectOneShot reqs cont -> showO4 showM memo reqs cont
-  L5 NonProxyElectEffectOneShot reqs cont -> showO5 showM memo reqs cont
+  L1 nonProxy reqs cont -> go "L1" nonProxy reqs $ showO1 showM memo cont
+  L2 nonProxy reqs cont -> go "L2" nonProxy reqs $ showO2 showM memo cont
+  L3 nonProxy reqs cont -> go "L3" nonProxy reqs $ showO3 showM memo cont
+  L4 nonProxy reqs cont -> go "L4" nonProxy reqs $ showO4 showM memo cont
+  L5 nonProxy reqs cont -> go "L5" nonProxy reqs $ showO5 showM memo cont
+  where
+    go sCons nonProxy reqs sCont = yesParens $ do
+      sNonProxy <- parens <$> showNonProxy nonProxy
+      sReqs <- parens <$> showRequirements reqs
+      sCont' <- dollar <$> sCont
+      pure $ pure sCons <> pure " " <> sNonProxy <> pure " " <> sReqs <> sCont'
 
--- TODO: This needs to inject some config to control how `showO*` prints
 showWithMaskedObject :: (forall ot'. x ot' -> EnvM ParenItems) -> String -> WithMaskedObject x ot -> EnvM ParenItems
 showWithMaskedObject showM memo = \case
-  M1 reqs cont -> showO1 showM memo reqs cont
-  M2 reqs cont -> showO2 showM memo reqs cont
-  M3 reqs cont -> showO3 showM memo reqs cont
-  M4 reqs cont -> showO4 showM memo reqs cont
-  M5 reqs cont -> showO5 showM memo reqs cont
+  M1 reqs cont -> go "M1" reqs $ showO1 showM memo cont
+  M2 reqs cont -> go "M2" reqs $ showO2 showM memo cont
+  M3 reqs cont -> go "M3" reqs $ showO3 showM memo cont
+  M4 reqs cont -> go "M4" reqs $ showO4 showM memo cont
+  M5 reqs cont -> go "M5" reqs $ showO5 showM memo cont
+  where
+    go sCons reqs sCont = yesParens $ do
+      sReqs <- parens <$> showRequirements reqs
+      sCont' <- dollar <$> sCont
+      pure $ pure sCons <> pure " " <> sReqs <> sCont'
 
--- TODO: This needs to inject some config to control how `showO*` prints
 showWithThis :: (forall ot'. x ot' -> EnvM ParenItems) -> String -> WithThis x ot -> EnvM ParenItems
 showWithThis showM memo = \case
-  T1 cont -> showO1 showM memo reqs cont
-  T2 cont -> showO2 showM memo reqs cont
-  T3 cont -> showO3 showM memo reqs cont
-  T4 cont -> showO4 showM memo reqs cont
-  T5 cont -> showO5 showM memo reqs cont
+  T1 cont -> go "T1" $ showO1 showM memo cont
+  T2 cont -> go "T2" $ showO2 showM memo cont
+  T3 cont -> go "T3" $ showO3 showM memo cont
+  T4 cont -> go "T4" $ showO4 showM memo cont
+  T5 cont -> go "T5" $ showO5 showM memo cont
   where
-    reqs = []
+    go sCons sCont = yesParens $ do
+      sCont' <- dollar <$> sCont
+      pure $ pure sCons <> sCont'
 
 showO1 ::
   forall a b x.
   IsObjectType b =>
   (x a -> EnvM ParenItems) ->
   String ->
-  [Requirement (ON1 b)] ->
   (ON1 b -> x a) ->
   EnvM ParenItems
-showO1 showM memo reqs cont = yesParens $ do
-  sReqs <- parens <$> showRequirements reqs
+showO1 showM memo cont = yesParens $ do
   (obj, snap) <- newObjectN @b O memo
   objName <- parens <$> showObjectDecl showObject1 obj
   let elect = cont obj
   sElect <- dropParens <$> showM elect
   restoreObject snap
-  pure $
-    pure "O1 "
-      <> sReqs
-      <> pure " $ \\"
-      <> objName
-      <> pure " -> "
-      <> sElect
+  pure $ pure "\\" <> objName <> pure " -> " <> sElect
 
 showO2 ::
   forall a b c.
   Inst2 IsObjectType b c =>
   (a -> EnvM ParenItems) ->
   String ->
-  [Requirement (ON2 b c)] ->
   (ON2 b c -> a) ->
   EnvM ParenItems
-showO2 showM memo reqs cont = yesParens $ do
-  sReqs <- parens <$> showRequirements reqs
+showO2 showM memo cont = yesParens $ do
   (obj, snap) <- newObjectN @b O2a memo
   objName <- parens <$> showObjectDecl showObject2 obj
   let elect = cont obj
   sElect <- dropParens <$> showM elect
   restoreObject snap
-  pure $
-    pure "O2 "
-      <> sReqs
-      <> pure " $ \\"
-      <> objName
-      <> pure " -> "
-      <> sElect
+  pure $ pure "\\" <> objName <> pure " -> " <> sElect
 
 showO3 ::
   forall a b c d.
   Inst3 IsObjectType b c d =>
   (a -> EnvM ParenItems) ->
   String ->
-  [Requirement (ON3 b c d)] ->
   (ON3 b c d -> a) ->
   EnvM ParenItems
-showO3 showM memo reqs cont = yesParens $ do
-  sReqs <- parens <$> showRequirements reqs
+showO3 showM memo cont = yesParens $ do
   (obj, snap) <- newObjectN @b O3a memo
   objName <- parens <$> showObjectDecl showObject3 obj
   let elect = cont obj
   sElect <- dropParens <$> showM elect
   restoreObject snap
-  pure $
-    pure "O3 "
-      <> sReqs
-      <> pure " $ \\"
-      <> objName
-      <> pure " -> "
-      <> sElect
+  pure $ pure "\\" <> objName <> pure " -> " <> sElect
 
 showO4 ::
   forall a b c d e.
   Inst4 IsObjectType b c d e =>
   (a -> EnvM ParenItems) ->
   String ->
-  [Requirement (ON4 b c d e)] ->
   (ON4 b c d e -> a) ->
   EnvM ParenItems
-showO4 showM memo reqs cont = yesParens $ do
-  sReqs <- parens <$> showRequirements reqs
+showO4 showM memo cont = yesParens $ do
   (obj, snap) <- newObjectN @b O4a memo
   objName <- parens <$> showObjectDecl showObject4 obj
   let elect = cont obj
   sElect <- dropParens <$> showM elect
   restoreObject snap
-  pure $
-    pure "O4 "
-      <> sReqs
-      <> pure " $ \\"
-      <> objName
-      <> pure " -> "
-      <> sElect
+  pure $ pure "\\" <> objName <> pure " -> " <> sElect
 
 showO5 ::
   forall a b c d e f.
   Inst5 IsObjectType b c d e f =>
   (a -> EnvM ParenItems) ->
   String ->
-  [Requirement (ON5 b c d e f)] ->
   (ON5 b c d e f -> a) ->
   EnvM ParenItems
-showO5 showM memo reqs cont = yesParens $ do
-  sReqs <- parens <$> showRequirements reqs
+showO5 showM memo cont = yesParens $ do
   (obj, snap) <- newObjectN @b O5a memo
   objName <- parens <$> showObjectDecl showObject5 obj
   let elect = cont obj
   sElect <- dropParens <$> showM elect
   restoreObject snap
-  pure $
-    pure "O5 "
-      <> sReqs
-      <> pure " $ \\"
-      <> objName
-      <> pure " -> "
-      <> sElect
+  pure $ pure "\\" <> objName <> pure " -> " <> sElect
 
 -- showPermanentN :: WPermanent a -> ObjectN a -> EnvM ParenItems
 -- showPermanentN perm obj = case perm of
