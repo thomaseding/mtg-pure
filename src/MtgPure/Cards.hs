@@ -166,7 +166,7 @@ mkBasicLand :: CardName -> ManaSymbol a -> Card OTLand
 mkBasicLand name sym = Card1 name $ \this ->
   LandDef
     [ Activated
-        (Cost $ TapCost $ asPermanent this)
+        (Cost $ tapCost this)
         $ controllerOf this $ \you -> Effect $ AddMana mana you
     ]
   where
@@ -203,7 +203,7 @@ acceptableLosses = Card1 "Acceptable Losses" $ \this ->
    in SorceryDef (toColors R) cost [] $
         controllerOf this $
           \you -> A (Target you) $
-            O1 [] $
+            o1 [] $
               \(target :: OCreature) -> Effect $ dealDamage this target 5
 
 allIsDust :: Card OTSorcery
@@ -211,20 +211,20 @@ allIsDust = Card1 "All Is Dust" $ \_this ->
   TribalDef [Eldrazi] NonCreatureSorcery $
     SorceryDef (toColors ()) cost [] $
       All $
-        O1 [] $ \player ->
+        o1 [] $ \player ->
           All $
-            O5 [colored] $ \(perm :: OPermanent) ->
+            o5 [colored] $ \(perm :: OPermanent) ->
               Effect $ sacrifice player [is perm]
   where
     cost = spellCost 7
-    colored = ROr $ map OfColors [toColors W, toColors U, toColors B, toColors R, toColors G]
+    colored = ROr $ map ofColors [toColors W, toColors U, toColors B, toColors R, toColors G]
 
 ancestralVision :: Card OTSorcery
 ancestralVision = Card1 "Ancestral Vision" $ \this ->
   SorceryDef (toColors U) cost [Static $ Suspend 4 $ spellCost U] $
     controllerOf this $
       \you -> A (Target you) $
-        O1 [] $
+        o1 [] $
           \target -> Effect $ DrawCards target 3
   where
     cost = noCost
@@ -234,7 +234,7 @@ backlash = Card1 "Backlash" $ \this ->
   InstantDef (toColors (B, R)) cost [] $
     controllerOf this $
       \you -> A (Target you) $
-        O1 [Not $ Tapped PermanentCreature] $
+        o1 [Not tapped] $
           \target -> controllerOf target $
             \targetController -> Effect $ dealDamage target targetController $ DamageFromPower target
   where
@@ -247,7 +247,7 @@ blaze = Card1 "Blaze" $ \this ->
      in SorceryDef (toColors R) cost [] $
           controllerOf this $
             \you -> A (Target you) $
-              O3 [] $
+              o3 [] $
                 \(target :: OCreaturePlayerPlaneswalker) -> Effect $ dealDamage this target x
 
 bloodMoon :: Card OTEnchantment
@@ -257,7 +257,9 @@ bloodMoon = Card1 "Blood Moon" $ \_this ->
     cost
     [ Static $
         ContinuousEffect $
-          All $ O1 [NonBasic] $ \land -> Effect $ changeTo land mountain
+          All $
+            o1 [NonBasic] $
+              \land -> Effect $ changeTo land mountain
     ]
   where
     cost = spellCost (2, R)
@@ -266,7 +268,7 @@ cleanse :: Card OTSorcery
 cleanse = Card1 "Cleanse" $ \_this ->
   SorceryDef (toColors W) cost [] $
     All $
-      O1 [OfColors $ toColors B] $
+      o1 [ofColors B] $
         \(creature :: OCreature) -> Effect $ destroy creature
   where
     cost = spellCost (2, W, W)
@@ -283,7 +285,7 @@ conversion = Card1 "Conversion" $ \this ->
                 Condition $
                   CAnd
                     [ satisfies you [is active],
-                      Unless $ satisfies you [PlayerPays $ ManaCostCost $ toManaCost (W, W)]
+                      Unless $ satisfies you [playerPays $ toManaCost (W, W)]
                     ]
             )
             $ TimePoint (StepBegin UpkeepStep) $
@@ -292,7 +294,7 @@ conversion = Card1 "Conversion" $ \this ->
       Static $
         ContinuousEffect $
           All $
-            O1 [HasBasicLandType Red] $
+            o1 [HasBasicLandType Red] $
               \land -> Effect $ changeTo land plains
     ]
   where
@@ -302,7 +304,7 @@ damnation :: Card OTSorcery
 damnation = Card1 "Damnation" $ \_this ->
   SorceryDef (toColors B) cost [] $
     All $
-      O1 [] $
+      o1 [] $
         \(creature :: OCreature) -> Effect $ destroy creature
   where
     cost = spellCost (2, B, B)
@@ -312,7 +314,7 @@ lavaAxe = Card1 "Lava Axe" $ \this ->
   SorceryDef (toColors R) cost [] $
     controllerOf this $
       \you -> A (Target you) $
-        O2 [] $
+        o2 [] $
           \(target :: OPlayerPlaneswalker) -> Effect $ dealDamage this target 5
   where
     cost = spellCost (4, R)
@@ -334,7 +336,7 @@ shock = Card1 "Shock" $ \this ->
   InstantDef (toColors R) cost [] $
     controllerOf this $
       \you -> A (Target you) $
-        O3 [] $
+        o3 [] $
           \(target :: OCreaturePlayerPlaneswalker) -> Effect $ dealDamage this target 2
   where
     cost = spellCost R
@@ -344,7 +346,7 @@ sinkhole = Card1 "Sinkhole" $ \this ->
   SorceryDef (toColors B) cost [] $
     controllerOf this $
       \you -> A (Target you) $
-        O1 [] $
+        o1 [] $
           \(target :: OLand) -> Effect $ destroy target
   where
     cost = spellCost (B, B)
@@ -380,7 +382,7 @@ vindicate = Card1 "Vindicate" $ \this ->
   SorceryDef (toColors (W, B)) cost [] $
     controllerOf this $
       \you -> A (Target you) $
-        O5 [] $
+        o5 [] $
           \(target :: OPermanent) -> Effect $ destroy target
   where
     cost = spellCost (1, W, B)
@@ -389,7 +391,7 @@ wrathOfGod :: Card OTSorcery
 wrathOfGod = Card1 "Wrath of God" $ \_this ->
   SorceryDef (toColors W) cost [] $
     All $
-      O1 [] $
+      o1 [] $
         \(creature :: OCreature) -> Effect $ destroy creature
   where
     cost = spellCost (2, W, W)

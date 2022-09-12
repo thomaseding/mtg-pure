@@ -21,6 +21,17 @@ module MtgPure.ModelCombinators
     AsCreaturePlayerPlaneswalker,
     asCreaturePlayerPlaneswalker,
     AsDamage (..),
+    AsCost (..),
+    CoAny (..),
+    CoPermanent (..),
+    o1,
+    o2,
+    o3,
+    o4,
+    o5,
+    tapCost,
+    ofColors,
+    playerPays,
     is,
     satisfies,
     spellCost,
@@ -30,11 +41,28 @@ module MtgPure.ModelCombinators
     changeTo,
     sacrifice,
     destroy,
+    sacrificeCost,
+    tapped,
   )
 where
 
-import Data.Inst (Inst2, Inst3, Inst4)
+import Data.Inst (Inst1, Inst2, Inst3, Inst4, Inst5)
 import MtgPure.Model
+
+o1 :: Inst1 IsObjectType a => [Requirement a] -> (ObjectN a -> x o) -> WithObject x o
+o1 = O1
+
+o2 :: Inst2 IsObjectType a b => [Requirement '(a, b)] -> (ObjectN '(a, b) -> x o) -> WithObject x o
+o2 = O2
+
+o3 :: Inst3 IsObjectType a b c => [Requirement '(a, b, c)] -> (ObjectN '(a, b, c) -> x o) -> WithObject x o
+o3 = O3
+
+o4 :: Inst4 IsObjectType a b c d => [Requirement '(a, b, c, d)] -> (ObjectN '(a, b, c, d) -> x o) -> WithObject x o
+o4 = O4
+
+o5 :: Inst5 IsObjectType a b c d e => [Requirement '(a, b, c, d, e)] -> (ObjectN '(a, b, c, d, e) -> x o) -> WithObject x o
+o5 = O5
 
 type AsAny a =
   ToObject8
@@ -110,6 +138,9 @@ sacrifice = Sacrifice coPermanent
 
 changeTo :: (AsPermanent o, CoPermanent ot) => o -> Card ot -> Effect 'Continuous
 changeTo = ChangeTo coPermanent . asPermanent
+
+tapCost :: AsPermanent o => o -> Cost
+tapCost = TapCost . asPermanent
 
 destroy :: CoPermanent ot => ObjectN ot -> Effect 'OneShot
 destroy = Destroy coPermanent
@@ -188,3 +219,24 @@ is = Is coAny
 
 satisfies :: CoAny ot => ObjectN ot -> [Requirement ot] -> Condition
 satisfies = Satisfies coAny
+
+sacrificeCost :: CoPermanent ot => OPlayer -> [Requirement ot] -> Cost
+sacrificeCost = SacrificeCost coPermanent
+
+tapped :: CoPermanent ot => Requirement ot
+tapped = Tapped coPermanent
+
+ofColors :: ColorsLike c => c -> Requirement ot
+ofColors = OfColors . toColors
+
+class AsCost c where
+  asCost :: c -> Cost
+
+instance AsCost Cost where
+  asCost = id
+
+instance AsCost ManaCost where
+  asCost = ManaCostCost
+
+playerPays :: AsCost c => c -> Requirement OTPlayer
+playerPays = PlayerPays . asCost

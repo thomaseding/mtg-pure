@@ -167,7 +167,7 @@ data Token :: forall a. a -> Type where
 data TriggeredAbility :: forall a. a -> Type where
   When :: EventListener a -> TriggeredAbility a
 
-data WithObject :: forall a x. x -> a -> Type where
+data WithObject :: forall o x. x -> o -> Type where
   O1 :: Inst1 IsObjectType a => [Requirement a] -> (ObjectN a -> x o) -> WithObject x o
   O2 :: Inst2 IsObjectType a b => [Requirement '(a, b)] -> (ObjectN '(a, b) -> x o) -> WithObject x o
   O3 :: Inst3 IsObjectType a b c => [Requirement '(a, b, c)] -> (ObjectN '(a, b, c) -> x o) -> WithObject x o
