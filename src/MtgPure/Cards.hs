@@ -148,6 +148,7 @@ allCards =
     toCard ragingGoblin,
     toCard plains,
     toCard shock,
+    toCard stoneRain,
     toCard stoneThrowingDevils,
     toCard swamp,
     toCard vindicate,
@@ -363,6 +364,16 @@ soldierToken = Token $
       []
   where
     cost = noCost
+
+stoneRain :: Card OTSorcery
+stoneRain = Card1 "Stone Rain" $ \this ->
+  SorceryDef (toColors R) cost [] $
+    controllerOf this $
+      \you -> A (Target you) $
+        o1 [] $
+          \(target :: OLand) -> Effect $ destroy target
+  where
+    cost = spellCost (2, R)
 
 stoneThrowingDevils :: Card OTCreature
 stoneThrowingDevils = Card1 "Stone-Throwing Devils" $ \_this ->

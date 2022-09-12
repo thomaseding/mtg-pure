@@ -1207,10 +1207,9 @@ showEffect = \case
     sVictim <- parens <$> showOCreaturePlayerPlaneswalker victim
     sDamage <- dollar <$> showDamage damage
     pure $ pure "DealDamage " <> sSource <> pure " " <> sVictim <> sDamage
-  Destroy perm obj -> yesParens $ do
-    sPerm <- parens <$> showPermanent perm
-    sObj <- dollar <$> showPermanentN perm obj
-    pure $ pure "Destroy " <> sPerm <> sObj
+  Destroy obj -> yesParens $ do
+    sObj <- dollar <$> showOPermanent obj
+    pure $ pure "Destroy" <> sObj
   DoNothing -> noParens $ do
     pure $ pure "DoNothing"
   DrawCards player n -> yesParens $ do

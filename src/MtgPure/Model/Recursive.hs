@@ -109,7 +109,7 @@ data Effect :: EffectType -> Type where
   AddMana :: ManaPool -> OPlayer -> Effect 'OneShot
   ChangeTo :: Permanent a -> OPermanent -> Card a -> Effect 'Continuous
   DealDamage :: OAny -> OCreaturePlayerPlaneswalker -> Damage -> Effect 'OneShot
-  Destroy :: Permanent a -> ObjectN a -> Effect 'OneShot
+  Destroy :: OPermanent -> Effect 'OneShot
   DoNothing :: Effect e
   DrawCards :: OPlayer -> Int -> Effect 'OneShot
   Sacrifice :: Permanent a -> OPlayer -> [Requirement a] -> Effect 'OneShot

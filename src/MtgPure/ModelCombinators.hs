@@ -142,8 +142,8 @@ changeTo = ChangeTo coPermanent . asPermanent
 tapCost :: AsPermanent o => o -> Cost
 tapCost = TapCost . asPermanent
 
-destroy :: CoPermanent ot => ObjectN ot -> Effect 'OneShot
-destroy = Destroy coPermanent
+destroy :: AsPermanent o => o -> Effect 'OneShot
+destroy = Destroy . asPermanent
 
 class CoPermanent ot where
   coPermanent :: Permanent ot
