@@ -40,7 +40,6 @@ import Data.String (IsString (..))
 import Data.Typeable (TypeRep, Typeable, typeOf, typeRep)
 import MtgPure.Model
   ( Ability (..),
-    AnyObject (..),
     Card (..),
     CardName (CardName),
     CardTypeDef (..),
@@ -56,7 +55,7 @@ import MtgPure.Model
     Elect (..),
     EventListener (..),
     GenericMana (..),
-    IsNonCreatureType,
+    IsNonCreatureCardType,
     IsObjectType (..),
     IsPermanentType,
     Loyalty,
@@ -64,7 +63,6 @@ import MtgPure.Model
     ManaCost (..),
     ManaPool (..),
     ManaSymbol (..),
-    NonCreature (..),
     OActivatedOrTriggeredAbility,
     OAny,
     OCreaturePlaneswalker,
@@ -78,7 +76,6 @@ import MtgPure.Model
     Object (..),
     ObjectId (ObjectId),
     ObjectN (..),
-    Permanent (..),
     Power,
     PrettyObjectName (..),
     Requirement (..),
@@ -92,6 +89,9 @@ import MtgPure.Model
     TriggeredAbility (..),
     Variable (ReifiedVariable),
     VisitObjectN (visitObjectN'),
+    WAny (..),
+    WNonCreatureCard (..),
+    WPermanent (..),
     WithObject (..),
   )
 
@@ -560,7 +560,7 @@ showCardTypeDef = \case
     showOneShot "SorceryDef " colors cost abilities electOneShot
   TribalDef creatureTypes nonCreature cardDef -> yesParens $ do
     sCreatureTypes <- parens <$> showCreatureTypes creatureTypes
-    sNonCreature <- parens <$> showNonCreature nonCreature
+    sNonCreature <- parens <$> showNonCreatureCard nonCreature
     sCardDef <- dollar <$> showCardTypeDef cardDef
     pure $ pure "TribalDef " <> sCreatureTypes <> pure " " <> sNonCreature <> sCardDef
   VariableDef contCardDef -> yesParens $ do
@@ -640,12 +640,10 @@ showRequirement = \case
     pure $ pure $ fromString $ "HasBasicLandType " ++ show basic
   Impossible -> noParens $ do
     pure $ pure "Impossible"
-  Is anyObj objN -> yesParens $ do
-    sAnyObj <- parens <$> showAnyObject anyObj
-    sObjN <- dollar <$> showAnyObjectN anyObj objN
-    pure $ pure "Is " <> sAnyObj <> sObjN
-  Basic -> noParens $ do
-    pure $ pure "Basic"
+  Is wAny objN -> yesParens $ do
+    sWAny <- parens <$> showWAny wAny
+    sObjN <- dollar <$> showAnyN wAny objN
+    pure $ pure "Is " <> sWAny <> sObjN
   Not req -> yesParens $ do
     sReq <- dollar <$> showRequirement req
     pure $ pure "Not" <> sReq
@@ -929,47 +927,47 @@ showDamage =
       let varName = getVarName var
       pure $ DList.fromList [fromString "VariableDamage ", varName]
 
-showPermanent :: Permanent x -> EnvM ParenItems
+showPermanent :: WPermanent x -> EnvM ParenItems
 showPermanent permanent = case permanent of
-  PermanentArtifact -> noParens sPermanent
-  PermanentCreature -> noParens sPermanent
-  PermanentEnchantment -> noParens sPermanent
-  PermanentLand -> noParens sPermanent
-  PermanentPlaneswalker -> noParens sPermanent
-  Permanent -> noParens sPermanent
-  Permanent2 -> yesParens $ do
-    let go :: forall a b. Inst2 IsPermanentType a b => Permanent '(a, b) -> Item
+  WPermanentArtifact -> noParens sPermanent
+  WPermanentCreature -> noParens sPermanent
+  WPermanentEnchantment -> noParens sPermanent
+  WPermanentLand -> noParens sPermanent
+  WPermanentPlaneswalker -> noParens sPermanent
+  WPermanent -> noParens sPermanent
+  WPermanent2 -> yesParens $ do
+    let go :: forall a b. Inst2 IsPermanentType a b => WPermanent '(a, b) -> Item
         go _ = fromString $ prettyObjectName (Proxy :: Proxy '(a, b))
-    pure $ pure "Permanent2 :: @" <> pure (go permanent)
-  Permanent3 -> yesParens $ do
-    let go :: forall a b c. Inst3 IsPermanentType a b c => Permanent '(a, b, c) -> Item
+    pure $ pure "WPermanent2 :: @" <> pure (go permanent)
+  WPermanent3 -> yesParens $ do
+    let go :: forall a b c. Inst3 IsPermanentType a b c => WPermanent '(a, b, c) -> Item
         go _ = fromString $ prettyObjectName (Proxy :: Proxy '(a, b, c))
-    pure $ pure "Permanent3 :: @" <> pure (go permanent)
-  Permanent4 -> yesParens $ do
-    let go :: forall a b c d. Inst4 IsPermanentType a b c d => Permanent '(a, b, c, d) -> Item
+    pure $ pure "WPermanent3 :: @" <> pure (go permanent)
+  WPermanent4 -> yesParens $ do
+    let go :: forall a b c d. Inst4 IsPermanentType a b c d => WPermanent '(a, b, c, d) -> Item
         go _ = fromString $ prettyObjectName (Proxy :: Proxy '(a, b, c, d))
-    pure $ pure "Permanent4 :: @" <> pure (go permanent)
+    pure $ pure "WPermanent4 :: @" <> pure (go permanent)
   where
     sPermanent :: EnvM Items
     sPermanent = pure $ pure $ fromString $ show permanent
 
-showNonCreature :: NonCreature a -> EnvM ParenItems
-showNonCreature nonCreature = case nonCreature of
-  NonCreatureArtifact -> noParens sNonCreature
-  NonCreatureEnchantment -> noParens sNonCreature
-  NonCreatureInstant -> noParens sNonCreature
-  NonCreatureLand -> noParens sNonCreature
-  NonCreaturePlaneswalker -> noParens sNonCreature
-  NonCreatureSorcery -> noParens sNonCreature
-  NonCreature -> noParens sNonCreature
-  NonCreature2 -> yesParens $ do
-    let go :: forall a b. Inst2 IsNonCreatureType a b => NonCreature '(a, b) -> Item
+showNonCreatureCard :: WNonCreatureCard a -> EnvM ParenItems
+showNonCreatureCard nonCreature = case nonCreature of
+  WNonCreatureArtifact -> noParens sNonCreature
+  WNonCreatureEnchantment -> noParens sNonCreature
+  WNonCreatureInstant -> noParens sNonCreature
+  WNonCreatureLand -> noParens sNonCreature
+  WNonCreaturePlaneswalker -> noParens sNonCreature
+  WNonCreatureSorcery -> noParens sNonCreature
+  WNonCreatureCard -> noParens sNonCreature
+  WNonCreatureCard2 -> yesParens $ do
+    let go :: forall a b. Inst2 IsNonCreatureCardType a b => WNonCreatureCard '(a, b) -> Item
         go _ = fromString $ prettyObjectName (Proxy :: Proxy '(a, b))
-    pure $ pure "NonCreature2 :: @" <> pure (go nonCreature)
-  NonCreature3 -> yesParens $ do
-    let go :: forall a b c. Inst3 IsNonCreatureType a b c => NonCreature '(a, b, c) -> Item
+    pure $ pure "WNonCreatureCard2 :: @" <> pure (go nonCreature)
+  WNonCreatureCard3 -> yesParens $ do
+    let go :: forall a b c. Inst3 IsNonCreatureCardType a b c => WNonCreatureCard '(a, b, c) -> Item
         go _ = fromString $ prettyObjectName (Proxy :: Proxy '(a, b, c))
-    pure $ pure "NonCreature3 :: @" <> pure (go nonCreature)
+    pure $ pure "WNonCreatureCard3 :: @" <> pure (go nonCreature)
   where
     sNonCreature :: EnvM Items
     sNonCreature = pure $ pure $ fromString $ show nonCreature
@@ -993,33 +991,33 @@ showCondition = \case
   COr conds -> yesParens $ do
     sConds <- parens <$> showConditions conds
     pure $ pure "COr " <> sConds
-  Satisfies anyObj objN reqs -> yesParens $ do
-    sAnyObj <- parens <$> showAnyObject anyObj
-    sObjN <- parens <$> showAnyObjectN anyObj objN
+  Satisfies wAny objN reqs -> yesParens $ do
+    sWAny <- parens <$> showWAny wAny
+    sObjN <- parens <$> showAnyN wAny objN
     sReqs <- dollar <$> showRequirements reqs
-    pure $ pure "Satisfies " <> sAnyObj <> pure " " <> sObjN <> sReqs
+    pure $ pure "Satisfies " <> sWAny <> pure " " <> sObjN <> sReqs
 
-showAnyObject :: AnyObject a -> EnvM ParenItems
-showAnyObject = \case
-  AnyInstant -> noParens $ pure $ pure "AnyInstant"
-  AnySorcery -> noParens $ pure $ pure "AnySorcery"
-  AnyPlayer -> noParens $ pure $ pure "AnyPlayer"
-  AnyPermanent perm -> yesParens $ do
+showWAny :: WAny a -> EnvM ParenItems
+showWAny = \case
+  WAnyInstant -> noParens $ pure $ pure "WAnyInstant"
+  WAnySorcery -> noParens $ pure $ pure "WAnySorcery"
+  WAnyPlayer -> noParens $ pure $ pure "WAnyPlayer"
+  WAnyPermanent perm -> yesParens $ do
     sPerm <- dollar <$> showPermanent perm
-    pure $ pure "AnyPermanent" <> sPerm
+    pure $ pure "WAnyPermanent" <> sPerm
 
-showAnyObjectN :: AnyObject a -> ObjectN a -> EnvM ParenItems
-showAnyObjectN anyObj objN = case anyObj of
-  AnyInstant -> yesParens $ do
+showAnyN :: WAny a -> ObjectN a -> EnvM ParenItems
+showAnyN wAny objN = case wAny of
+  WAnyInstant -> yesParens $ do
     let O obj = objN
     showObject obj
-  AnySorcery -> yesParens $ do
+  WAnySorcery -> yesParens $ do
     let O obj = objN
     showObject obj
-  AnyPlayer -> yesParens $ do
+  WAnyPlayer -> yesParens $ do
     let O obj = objN
     showObject obj
-  AnyPermanent perm -> do
+  WAnyPermanent perm -> do
     showPermanentN perm objN
 
 showEventListener :: EventListener a -> EnvM ParenItems
@@ -1225,35 +1223,35 @@ showO5 showM memo reqs cont = yesParens $ do
       <> pure " -> "
       <> sElect
 
-showPermanentN :: Permanent a -> ObjectN a -> EnvM ParenItems
+showPermanentN :: WPermanent a -> ObjectN a -> EnvM ParenItems
 showPermanentN perm obj = case perm of
-  PermanentArtifact -> yesParens $ do
+  WPermanentArtifact -> yesParens $ do
     sObj <- visitObjectN' showObject obj
-    pure $ pure "PermanentArtifact " <> sObj
-  PermanentCreature -> yesParens $ do
+    pure $ pure "WPermanentArtifact " <> sObj
+  WPermanentCreature -> yesParens $ do
     sObj <- visitObjectN' showObject obj
-    pure $ pure "PermanentCreature " <> sObj
-  PermanentEnchantment -> yesParens $ do
+    pure $ pure "WPermanentCreature " <> sObj
+  WPermanentEnchantment -> yesParens $ do
     sObj <- visitObjectN' showObject obj
-    pure $ pure "PermanentEnchantment " <> sObj
-  PermanentLand -> yesParens $ do
+    pure $ pure "WPermanentEnchantment " <> sObj
+  WPermanentLand -> yesParens $ do
     sObj <- visitObjectN' showObject obj
-    pure $ pure "PermanentLand " <> sObj
-  PermanentPlaneswalker -> yesParens $ do
+    pure $ pure "WPermanentLand " <> sObj
+  WPermanentPlaneswalker -> yesParens $ do
     sObj <- visitObjectN' showObject obj
-    pure $ pure "PermanentPlaneswalker " <> sObj
-  Permanent -> yesParens $ do
+    pure $ pure "WPermanentPlaneswalker " <> sObj
+  WPermanent -> yesParens $ do
     sObj <- dollar <$> showOPermanent obj
-    pure $ pure "Permanent" <> sObj
-  Permanent2 -> yesParens $ do
+    pure $ pure "WPermanent" <> sObj
+  WPermanent2 -> yesParens $ do
     sObj <- dollar <$> showObject2 obj
-    pure $ pure "Permanent2" <> sObj
-  Permanent3 -> yesParens $ do
+    pure $ pure "WPermanent2" <> sObj
+  WPermanent3 -> yesParens $ do
     sObj <- dollar <$> showObject3 obj
-    pure $ pure "Permanent3" <> sObj
-  Permanent4 -> yesParens $ do
+    pure $ pure "WPermanent3" <> sObj
+  WPermanent4 -> yesParens $ do
     sObj <- dollar <$> showObject4 obj
-    pure $ pure "Permanent4" <> sObj
+    pure $ pure "WPermanent4" <> sObj
 
 showEffect :: Effect e -> EnvM ParenItems
 showEffect = \case

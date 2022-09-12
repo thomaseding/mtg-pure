@@ -213,7 +213,7 @@ acceptableLosses = Card1 "Acceptable Losses" $ \this ->
 
 allIsDust :: Card OTSorcery
 allIsDust = Card1 "All Is Dust" $ \_this ->
-  TribalDef [Eldrazi] NonCreatureSorcery $
+  TribalDef [Eldrazi] WNonCreatureSorcery $
     SorceryDef (toColors ()) cost [] $
       All $
         object [] $ \player ->
@@ -222,7 +222,6 @@ allIsDust = Card1 "All Is Dust" $ \_this ->
               effect $ sacrifice player [is perm]
   where
     cost = spellCost 7
-    colored = ROr $ map ofColors [toColors W, toColors U, toColors B, toColors R, toColors G]
 
 ancestralVision :: Card OTSorcery
 ancestralVision = Card1 "Ancestral Vision" $ \this ->
@@ -276,7 +275,7 @@ bloodMoon = Card1 "Blood Moon" $ \_this ->
     [ Static $
         ContinuousEffect $
           All $
-            object [Not Basic] $
+            object nonBasic $
               \land -> effect $ changeTo land mountain
     ]
   where

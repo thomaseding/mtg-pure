@@ -48,7 +48,14 @@ import MtgPure.Model.ObjectN
     OSpell,
     ObjectN (..),
   )
-import MtgPure.Model.ObjectType (OTCreaturePlaneswalker, OTCreaturePlayer, OTCreaturePlayerPlaneswalker, OTPermanent, OTPlayerPlaneswalker, ObjectType (..))
+import MtgPure.Model.ObjectType (ObjectType (..))
+import MtgPure.Model.ObjectType.Kind
+  ( OTCreaturePlaneswalker,
+    OTCreaturePlayer,
+    OTCreaturePlayerPlaneswalker,
+    OTPermanent,
+    OTPlayerPlaneswalker,
+  )
 
 class PrettyObjectName a where
   prettyObjectName :: Proxy a -> String

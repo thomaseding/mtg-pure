@@ -34,6 +34,7 @@ module MtgPure.ModelCombinators
     event,
     ifThen,
     ifElse,
+    nonBasic,
     tapCost,
     ofColors,
     playerPays,
@@ -49,6 +50,7 @@ module MtgPure.ModelCombinators
     counterAbility,
     counterSpell,
     sacrificeCost,
+    colored,
     tapped,
   )
 where
@@ -203,73 +205,73 @@ counterSpell :: AsSpell o => o -> Effect 'OneShot
 counterSpell = CounterSpell . asSpell
 
 class CoPermanent ot where
-  coPermanent :: Permanent ot
+  coPermanent :: WPermanent ot
 
 instance CoPermanent OTArtifact where
-  coPermanent = PermanentArtifact
+  coPermanent = WPermanentArtifact
 
 instance CoPermanent OTCreature where
-  coPermanent = PermanentCreature
+  coPermanent = WPermanentCreature
 
 instance CoPermanent OTEnchantment where
-  coPermanent = PermanentEnchantment
+  coPermanent = WPermanentEnchantment
 
 instance CoPermanent OTLand where
-  coPermanent = PermanentLand
+  coPermanent = WPermanentLand
 
 instance CoPermanent OTPlaneswalker where
-  coPermanent = PermanentPlaneswalker
+  coPermanent = WPermanentPlaneswalker
 
 instance CoPermanent OTPermanent where
-  coPermanent = Permanent
+  coPermanent = WPermanent
 
 instance Inst2 IsPermanentType a b => CoPermanent '(a, b) where
-  coPermanent = Permanent2 :: Permanent '(a, b)
+  coPermanent = WPermanent2 :: WPermanent '(a, b)
 
 instance Inst3 IsPermanentType a b c => CoPermanent '(a, b, c) where
-  coPermanent = Permanent3 :: Permanent '(a, b, c)
+  coPermanent = WPermanent3 :: WPermanent '(a, b, c)
 
 instance Inst4 IsPermanentType a b c d => CoPermanent '(a, b, c, d) where
-  coPermanent = Permanent4 :: Permanent '(a, b, c, d)
+  coPermanent = WPermanent4 :: WPermanent '(a, b, c, d)
 
 class CoAny ot where
-  coAny :: AnyObject ot
+  coAny :: WAny ot
 
 instance CoAny OTInstant where
-  coAny = AnyInstant
+  coAny = WAnyInstant
 
 instance CoAny OTSorcery where
-  coAny = AnySorcery
+  coAny = WAnySorcery
 
 instance CoAny OTPlayer where
-  coAny = AnyPlayer
+  coAny = WAnyPlayer
 
 instance CoAny OTArtifact where
-  coAny = AnyPermanent coPermanent
+  coAny = WAnyPermanent coPermanent
 
 instance CoAny OTCreature where
-  coAny = AnyPermanent coPermanent
+  coAny = WAnyPermanent coPermanent
 
 instance CoAny OTEnchantment where
-  coAny = AnyPermanent coPermanent
+  coAny = WAnyPermanent coPermanent
 
 instance CoAny OTLand where
-  coAny = AnyPermanent coPermanent
+  coAny = WAnyPermanent coPermanent
 
 instance CoAny OTPlaneswalker where
-  coAny = AnyPermanent coPermanent
+  coAny = WAnyPermanent coPermanent
 
 instance CoAny OTPermanent where
-  coAny = AnyPermanent coPermanent
+  coAny = WAnyPermanent coPermanent
 
 instance Inst2 IsPermanentType a b => CoAny '(a, b) where
-  coAny = AnyPermanent coPermanent
+  coAny = WAnyPermanent coPermanent
 
 instance Inst3 IsPermanentType a b c => CoAny '(a, b, c) where
-  coAny = AnyPermanent coPermanent
+  coAny = WAnyPermanent coPermanent
 
 instance Inst4 IsPermanentType a b c d => CoAny '(a, b, c, d) where
-  coAny = AnyPermanent coPermanent
+  coAny = WAnyPermanent coPermanent
 
 is :: CoAny ot => ObjectN ot -> Requirement ot
 is = Is coAny
@@ -327,3 +329,9 @@ ifThen cond elect = If cond elect branchEmpty
 
 ifElse :: Branchable e => Condition -> Elect e a -> Elect e a
 ifElse cond = If cond branchEmpty
+
+nonBasic :: [Requirement OTLand]
+nonBasic = map (Not . HasBasicLandType) [minBound .. maxBound]
+
+colored :: Requirement ot
+colored = ROr $ map ofColors [toColors W, toColors U, toColors B, toColors R, toColors G]

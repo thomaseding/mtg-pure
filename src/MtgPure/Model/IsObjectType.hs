@@ -26,6 +26,10 @@ import MtgPure.Model.Object
   )
 import MtgPure.Model.ObjectId (ObjectId)
 import MtgPure.Model.ObjectType
+  ( ObjectType (..),
+    SObjectType (..),
+  )
+import MtgPure.Model.ObjectType.Kind
   ( OTActivatedAbility,
     OTArtifact,
     OTCreature,
@@ -38,23 +42,21 @@ import MtgPure.Model.ObjectType
     OTSorcery,
     OTStaticAbility,
     OTTriggeredAbility,
-    ObjectType (..),
-    SObjectType (..),
   )
 
 data ObjectVisitor a = ObjectVisitor
-  { visitOActivatedAbility :: Object 'OTActivatedAbility -> a,
-    visitOArtifact :: Object 'OTArtifact -> a,
-    visitOCreature :: Object 'OTCreature -> a,
-    visitOEmblem :: Object 'OTEmblem -> a,
-    visitOEnchantment :: Object 'OTEnchantment -> a,
-    visitOInstant :: Object 'OTInstant -> a,
-    visitOLand :: Object 'OTLand -> a,
-    visitOPlaneswalker :: Object 'OTPlaneswalker -> a,
-    visitOPlayer :: Object 'OTPlayer -> a,
-    visitOSorcery :: Object 'OTSorcery -> a,
-    visitOStaticAbility :: Object 'OTStaticAbility -> a,
-    visitOTriggeredAbility :: Object 'OTTriggeredAbility -> a
+  { visitOActivatedAbility :: Object OTActivatedAbility -> a,
+    visitOArtifact :: Object OTArtifact -> a,
+    visitOCreature :: Object OTCreature -> a,
+    visitOEmblem :: Object OTEmblem -> a,
+    visitOEnchantment :: Object OTEnchantment -> a,
+    visitOInstant :: Object OTInstant -> a,
+    visitOLand :: Object OTLand -> a,
+    visitOPlaneswalker :: Object OTPlaneswalker -> a,
+    visitOPlayer :: Object OTPlayer -> a,
+    visitOSorcery :: Object OTSorcery -> a,
+    visitOStaticAbility :: Object OTStaticAbility -> a,
+    visitOTriggeredAbility :: Object OTTriggeredAbility -> a
   }
 
 class Typeable a => IsObjectType (a :: ObjectType) where

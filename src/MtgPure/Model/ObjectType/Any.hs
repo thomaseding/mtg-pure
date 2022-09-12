@@ -13,18 +13,22 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.AnyObject
-  ( AnyObject (..),
+module MtgPure.Model.ObjectType.Any
+  ( WAny (..),
   )
 where
 
 import Data.Kind (Type)
-import MtgPure.Model.ObjectType (OTInstant, OTPlayer, OTSorcery)
-import MtgPure.Model.Permanent (Permanent)
+import MtgPure.Model.ObjectType.Kind
+  ( OTInstant,
+    OTPlayer,
+    OTSorcery,
+  )
+import MtgPure.Model.ObjectType.Permanent (WPermanent)
 
 -- Witness type
-data AnyObject :: forall a. a -> Type where
-  AnyInstant :: AnyObject OTInstant
-  AnySorcery :: AnyObject OTSorcery
-  AnyPlayer :: AnyObject OTPlayer
-  AnyPermanent :: Permanent a -> AnyObject a
+data WAny :: forall a. a -> Type where
+  WAnyInstant :: WAny OTInstant
+  WAnySorcery :: WAny OTSorcery
+  WAnyPlayer :: WAny OTPlayer
+  WAnyPermanent :: WPermanent a -> WAny a

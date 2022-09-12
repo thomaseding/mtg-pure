@@ -1,8 +1,7 @@
 {-# LANGUAGE Safe #-}
 
 module MtgPure.Model
-  ( module MtgPure.Model.AnyObject,
-    module MtgPure.Model.BasicLandType,
+  ( module MtgPure.Model.BasicLandType,
     module MtgPure.Model.CardName,
     module MtgPure.Model.CardSet,
     module MtgPure.Model.CardType,
@@ -25,12 +24,14 @@ module MtgPure.Model
     module MtgPure.Model.ManaSymbol,
     module MtgPure.Model.ManaType,
     module MtgPure.Model.ManaTypeToColor,
-    module MtgPure.Model.NonCreature,
     module MtgPure.Model.Object,
     module MtgPure.Model.ObjectId,
     module MtgPure.Model.ObjectN,
     module MtgPure.Model.ObjectType,
-    module MtgPure.Model.Permanent,
+    module MtgPure.Model.ObjectType.Any,
+    module MtgPure.Model.ObjectType.Kind,
+    module MtgPure.Model.ObjectType.NonCreatureCard,
+    module MtgPure.Model.ObjectType.Permanent,
     module MtgPure.Model.Phase,
     module MtgPure.Model.Power,
     module MtgPure.Model.PrettyObjectName,
@@ -55,7 +56,6 @@ where
 -- Instead have Model as the master repr and export the corresponding
 -- stuff to Model.Authoring and Model.Runtime
 
-import MtgPure.Model.AnyObject
 import MtgPure.Model.BasicLandType
 import MtgPure.Model.CardName
 import MtgPure.Model.CardSet
@@ -79,12 +79,14 @@ import MtgPure.Model.ManaPool
 import MtgPure.Model.ManaSymbol
 import MtgPure.Model.ManaType
 import MtgPure.Model.ManaTypeToColor
-import MtgPure.Model.NonCreature
 import MtgPure.Model.Object
 import MtgPure.Model.ObjectId
 import MtgPure.Model.ObjectN
 import MtgPure.Model.ObjectType
-import MtgPure.Model.Permanent
+import MtgPure.Model.ObjectType.Any
+import MtgPure.Model.ObjectType.Kind
+import MtgPure.Model.ObjectType.NonCreatureCard
+import MtgPure.Model.ObjectType.Permanent
 import MtgPure.Model.Phase
 import MtgPure.Model.Power
 import MtgPure.Model.PrettyObjectName

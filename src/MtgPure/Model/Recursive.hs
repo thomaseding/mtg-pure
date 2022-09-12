@@ -17,7 +17,6 @@ module MtgPure.Model.Recursive where
 
 import Data.Inst (Inst1, Inst2, Inst3, Inst4, Inst5)
 import Data.Kind (Type)
-import MtgPure.Model.AnyObject (AnyObject)
 import MtgPure.Model.BasicLandType (BasicLandType)
 import MtgPure.Model.CardName (CardName)
 import MtgPure.Model.CardSet (CardSet)
@@ -29,7 +28,6 @@ import MtgPure.Model.IsObjectType (IsObjectType)
 import MtgPure.Model.Loyalty (Loyalty)
 import MtgPure.Model.ManaCost (ManaCost)
 import MtgPure.Model.ManaPool (ManaPool)
-import MtgPure.Model.NonCreature (NonCreature)
 import MtgPure.Model.ObjectN
   ( OActivatedOrTriggeredAbility,
     OAny,
@@ -41,7 +39,8 @@ import MtgPure.Model.ObjectN
     OSpell,
     ObjectN,
   )
-import MtgPure.Model.ObjectType
+import MtgPure.Model.ObjectType.Any (WAny)
+import MtgPure.Model.ObjectType.Kind
   ( OTArtifact,
     OTArtifactCreature,
     OTCard,
@@ -53,7 +52,8 @@ import MtgPure.Model.ObjectType
     OTPlayer,
     OTSorcery,
   )
-import MtgPure.Model.Permanent (Permanent)
+import MtgPure.Model.ObjectType.NonCreatureCard (WNonCreatureCard)
+import MtgPure.Model.ObjectType.Permanent (WPermanent)
 import MtgPure.Model.Power (Power)
 import MtgPure.Model.Rarity (Rarity)
 import MtgPure.Model.Selection (Selection)
@@ -95,13 +95,13 @@ data CardTypeDef :: forall a. Tribal -> a -> Type where
   LandDef :: [Ability OTLand] -> CardTypeDef t OTLand
   PlaneswalkerDef :: Colors -> Elect Cost OTPlaneswalker -> Loyalty -> [Ability OTPlaneswalker] -> CardTypeDef t OTPlaneswalker
   SorceryDef :: Colors -> Elect Cost OTSorcery -> [Ability OTSorcery] -> Elect 'OneShot OTSorcery -> CardTypeDef t OTSorcery
-  TribalDef :: [CreatureType] -> NonCreature a -> CardTypeDef 'NonTribal a -> CardTypeDef 'Tribal a
+  TribalDef :: [CreatureType] -> WNonCreatureCard a -> CardTypeDef 'NonTribal a -> CardTypeDef 'Tribal a
   VariableDef :: (Variable -> CardTypeDef t a) -> CardTypeDef t a
 
 data Condition :: Type where
   CAnd :: [Condition] -> Condition
   COr :: [Condition] -> Condition
-  Satisfies :: AnyObject a -> ObjectN a -> [Requirement a] -> Condition
+  Satisfies :: WAny a -> ObjectN a -> [Requirement a] -> Condition
 
 data Cost :: Type where
   AndCosts :: [Cost] -> Cost
@@ -110,19 +110,19 @@ data Cost :: Type where
   ManaCostCost :: ManaCost -> Cost
   OrCosts :: [Cost] -> Cost
   PayLife :: OPlayer -> Int -> Cost
-  SacrificeCost :: Permanent a -> OPlayer -> [Requirement a] -> Cost
+  SacrificeCost :: WPermanent a -> OPlayer -> [Requirement a] -> Cost
   TapCost :: OPermanent -> Cost
 
 data Effect :: EffectType -> Type where
   AddMana :: ManaPool -> OPlayer -> Effect 'OneShot
-  AddToBattlefield :: Permanent a -> OPlayer -> Token a -> Effect 'OneShot
-  ChangeTo :: Permanent a -> OPermanent -> Card a -> Effect 'Continuous
+  AddToBattlefield :: WPermanent a -> OPlayer -> Token a -> Effect 'OneShot
+  ChangeTo :: WPermanent a -> OPermanent -> Card a -> Effect 'Continuous
   CounterAbility :: OActivatedOrTriggeredAbility -> Effect 'OneShot
   CounterSpell :: OSpell -> Effect 'OneShot
   DealDamage :: ODamageSource -> OCreaturePlayerPlaneswalker -> Damage -> Effect 'OneShot
   Destroy :: OPermanent -> Effect 'OneShot
   DrawCards :: OPlayer -> Int -> Effect 'OneShot
-  Sacrifice :: Permanent a -> OPlayer -> [Requirement a] -> Effect 'OneShot
+  Sacrifice :: WPermanent a -> OPlayer -> [Requirement a] -> Effect 'OneShot
 
 data Elect :: forall e a. e -> a -> Type where
   A :: Selection -> WithObject (Elect e) a -> Elect e a
@@ -145,15 +145,14 @@ data Requirement :: forall a. a -> Type where
   HasAbility :: Ability a -> Requirement a -- Non-unique differing representations will not be considered the same
   HasBasicLandType :: BasicLandType -> Requirement OTLand
   Impossible :: Requirement a
-  Is :: AnyObject a -> ObjectN a -> Requirement a
-  Basic :: Requirement OTLand
+  Is :: WAny a -> ObjectN a -> Requirement a
   Not :: Requirement a -> Requirement a
-  OfColors :: Colors -> Requirement a
+  OfColors :: Colors -> Requirement a -- needs `WCard a` witness
   OwnedBy :: OPlayer -> Requirement a
   PlayerPays :: Cost -> Requirement OTPlayer
   RAnd :: [Requirement a] -> Requirement a
   ROr :: [Requirement a] -> Requirement a
-  Tapped :: Permanent a -> Requirement a
+  Tapped :: WPermanent a -> Requirement a
   -- TODO: Try to add some combinators that go from: forall a b. [forall x. Requirement x] -> Requirement '(a, b)
   R2 :: Inst2 IsObjectType a b => [Requirement a] -> [Requirement b] -> Requirement '(a, b)
   R3 :: Inst3 IsObjectType a b c => [Requirement a] -> [Requirement b] -> [Requirement c] -> Requirement '(a, b, c)

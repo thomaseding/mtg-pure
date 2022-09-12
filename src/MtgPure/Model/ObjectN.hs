@@ -62,7 +62,8 @@ import Data.Kind (Type)
 import Data.Typeable (Typeable)
 import MtgPure.Model.IsObjectType (IsObjectType)
 import MtgPure.Model.Object (Object)
-import MtgPure.Model.ObjectType
+import MtgPure.Model.ObjectType (ObjectType)
+import MtgPure.Model.ObjectType.Kind
   ( OTAbility,
     OTActivatedAbility,
     OTActivatedOrTriggeredAbility,
@@ -86,7 +87,6 @@ import MtgPure.Model.ObjectType
     OTSpell,
     OTStaticAbility,
     OTTriggeredAbility,
-    ObjectType,
   )
 
 type OAny = ObjectN OTAny
