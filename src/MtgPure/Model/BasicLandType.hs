@@ -13,10 +13,9 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.BasicLandType
-  ( BasicLandType (..),
-  )
-where
+module MtgPure.Model.BasicLandType (
+  BasicLandType (..),
+) where
 
 import safe Data.Typeable (Typeable)
 

@@ -14,61 +14,60 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.VisitObjectN
-  ( VisitObjectN (..),
-    ObjectVisitorN (..),
-    KnownObjectN (..),
-  )
-where
+module MtgPure.Model.VisitObjectN (
+  VisitObjectN (..),
+  ObjectVisitorN (..),
+  KnownObjectN (..),
+) where
 
-import safe Data.Inst
-  ( Inst1,
-    Inst10,
-    Inst11,
-    Inst12,
-    Inst2,
-    Inst3,
-    Inst4,
-    Inst5,
-    Inst6,
-    Inst7,
-    Inst8,
-    Inst9,
-  )
+import safe Data.Inst (
+  Inst1,
+  Inst10,
+  Inst11,
+  Inst12,
+  Inst2,
+  Inst3,
+  Inst4,
+  Inst5,
+  Inst6,
+  Inst7,
+  Inst8,
+  Inst9,
+ )
 import safe Data.Kind (Type)
 import safe Data.Proxy (Proxy)
 import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.IsObjectType (IsObjectType)
 import safe MtgPure.Model.Object (Object)
 import safe MtgPure.Model.ObjectN (ObjectN (..))
-import safe MtgPure.Model.ObjectN.Type
-  ( ON1,
-    ON10,
-    ON11,
-    ON12,
-    ON2,
-    ON3,
-    ON4,
-    ON5,
-    ON6,
-    ON7,
-    ON8,
-    ON9,
-  )
-import safe MtgPure.Model.ObjectType
-  ( OT1,
-    OT10,
-    OT11,
-    OT12,
-    OT2,
-    OT3,
-    OT4,
-    OT5,
-    OT6,
-    OT7,
-    OT8,
-    OT9,
-  )
+import safe MtgPure.Model.ObjectN.Type (
+  ON1,
+  ON10,
+  ON11,
+  ON12,
+  ON2,
+  ON3,
+  ON4,
+  ON5,
+  ON6,
+  ON7,
+  ON8,
+  ON9,
+ )
+import safe MtgPure.Model.ObjectType (
+  OT1,
+  OT10,
+  OT11,
+  OT12,
+  OT2,
+  OT3,
+  OT4,
+  OT5,
+  OT6,
+  OT7,
+  OT8,
+  OT9,
+ )
 
 data KnownObjectTypeN :: Type -> Type where
   KOT1 :: Inst1 IsObjectType a => KnownObjectTypeN (OT1 a)
@@ -123,8 +122,8 @@ instance Inst1 IsObjectType a => VisitObjectN (OT1 a) where
 
 instance Inst2 IsObjectType a b => VisitObjectN (OT2 a b) where
   data ObjectVisitorN (OT2 a b) x = ObjectVisitor2
-    { visitObject2a :: Object a -> x,
-      visitObject2b :: Object b -> x
+    { visitObject2a :: Object a -> x
+    , visitObject2b :: Object b -> x
     }
   visitObjectN' f = visitObjectN $ ObjectVisitor2 f f
   visitObjectN v = \case
@@ -132,18 +131,18 @@ instance Inst2 IsObjectType a b => VisitObjectN (OT2 a b) where
     O2b x -> b x
     ON2a x -> vn (ObjectVisitor1 b) x
     ON2b x -> vn (ObjectVisitor1 a) x
-    where
-      a = visitObject2a v
-      b = visitObject2b v
+   where
+    a = visitObject2a v
+    b = visitObject2b v
   orderObjectN _ = 2
   knownObjectN = KO2
   knownObjectTypeN _ = KOT2
 
 instance Inst3 IsObjectType a b c => VisitObjectN (OT3 a b c) where
   data ObjectVisitorN (OT3 a b c) x = ObjectVisitor3
-    { visitObject3a :: Object a -> x,
-      visitObject3b :: Object b -> x,
-      visitObject3c :: Object c -> x
+    { visitObject3a :: Object a -> x
+    , visitObject3b :: Object b -> x
+    , visitObject3c :: Object c -> x
     }
   visitObjectN' f = visitObjectN $ ObjectVisitor3 f f f
   visitObjectN v = \case
@@ -153,20 +152,20 @@ instance Inst3 IsObjectType a b c => VisitObjectN (OT3 a b c) where
     ON3a x -> vn (ObjectVisitor2 b c) x
     ON3b x -> vn (ObjectVisitor2 a c) x
     ON3c x -> vn (ObjectVisitor2 a b) x
-    where
-      a = visitObject3a v
-      b = visitObject3b v
-      c = visitObject3c v
+   where
+    a = visitObject3a v
+    b = visitObject3b v
+    c = visitObject3c v
   orderObjectN _ = 3
   knownObjectN = KO3
   knownObjectTypeN _ = KOT3
 
 instance Inst4 IsObjectType a b c d => VisitObjectN (OT4 a b c d) where
   data ObjectVisitorN (OT4 a b c d) x = ObjectVisitor4
-    { visitObject4a :: Object a -> x,
-      visitObject4b :: Object b -> x,
-      visitObject4c :: Object c -> x,
-      visitObject4d :: Object d -> x
+    { visitObject4a :: Object a -> x
+    , visitObject4b :: Object b -> x
+    , visitObject4c :: Object c -> x
+    , visitObject4d :: Object d -> x
     }
   visitObjectN' f = visitObjectN $ ObjectVisitor4 f f f f
   visitObjectN v = \case
@@ -178,22 +177,22 @@ instance Inst4 IsObjectType a b c d => VisitObjectN (OT4 a b c d) where
     ON4b x -> vn (ObjectVisitor3 a c d) x
     ON4c x -> vn (ObjectVisitor3 a b d) x
     ON4d x -> vn (ObjectVisitor3 a b c) x
-    where
-      a = visitObject4a v
-      b = visitObject4b v
-      c = visitObject4c v
-      d = visitObject4d v
+   where
+    a = visitObject4a v
+    b = visitObject4b v
+    c = visitObject4c v
+    d = visitObject4d v
   orderObjectN _ = 4
   knownObjectN = KO4
   knownObjectTypeN _ = KOT4
 
 instance Inst5 IsObjectType a b c d e => VisitObjectN (OT5 a b c d e) where
   data ObjectVisitorN (OT5 a b c d e) x = ObjectVisitor5
-    { visitObject5a :: Object a -> x,
-      visitObject5b :: Object b -> x,
-      visitObject5c :: Object c -> x,
-      visitObject5d :: Object d -> x,
-      visitObject5e :: Object e -> x
+    { visitObject5a :: Object a -> x
+    , visitObject5b :: Object b -> x
+    , visitObject5c :: Object c -> x
+    , visitObject5d :: Object d -> x
+    , visitObject5e :: Object e -> x
     }
   visitObjectN' f = visitObjectN $ ObjectVisitor5 f f f f f
   visitObjectN v = \case
@@ -207,24 +206,24 @@ instance Inst5 IsObjectType a b c d e => VisitObjectN (OT5 a b c d e) where
     ON5c x -> vn (ObjectVisitor4 a b d e) x
     ON5d x -> vn (ObjectVisitor4 a b c e) x
     ON5e x -> vn (ObjectVisitor4 a b c d) x
-    where
-      a = visitObject5a v
-      b = visitObject5b v
-      c = visitObject5c v
-      d = visitObject5d v
-      e = visitObject5e v
+   where
+    a = visitObject5a v
+    b = visitObject5b v
+    c = visitObject5c v
+    d = visitObject5d v
+    e = visitObject5e v
   orderObjectN _ = 5
   knownObjectN = KO5
   knownObjectTypeN _ = KOT5
 
 instance Inst6 IsObjectType a b c d e f => VisitObjectN (OT6 a b c d e f) where
   data ObjectVisitorN (OT6 a b c d e f) x = ObjectVisitor6
-    { visitObject6a :: Object a -> x,
-      visitObject6b :: Object b -> x,
-      visitObject6c :: Object c -> x,
-      visitObject6d :: Object d -> x,
-      visitObject6e :: Object e -> x,
-      visitObject6f :: Object f -> x
+    { visitObject6a :: Object a -> x
+    , visitObject6b :: Object b -> x
+    , visitObject6c :: Object c -> x
+    , visitObject6d :: Object d -> x
+    , visitObject6e :: Object e -> x
+    , visitObject6f :: Object f -> x
     }
   visitObjectN' f = visitObjectN $ ObjectVisitor6 f f f f f f
   visitObjectN v = \case
@@ -240,26 +239,26 @@ instance Inst6 IsObjectType a b c d e f => VisitObjectN (OT6 a b c d e f) where
     ON6d x -> vn (ObjectVisitor5 a b c e f) x
     ON6e x -> vn (ObjectVisitor5 a b c d f) x
     ON6f x -> vn (ObjectVisitor5 a b c d e) x
-    where
-      a = visitObject6a v
-      b = visitObject6b v
-      c = visitObject6c v
-      d = visitObject6d v
-      e = visitObject6e v
-      f = visitObject6f v
+   where
+    a = visitObject6a v
+    b = visitObject6b v
+    c = visitObject6c v
+    d = visitObject6d v
+    e = visitObject6e v
+    f = visitObject6f v
   orderObjectN _ = 6
   knownObjectN = KO6
   knownObjectTypeN _ = KOT6
 
 instance Inst7 IsObjectType a b c d e f g => VisitObjectN (OT7 a b c d e f g) where
   data ObjectVisitorN (OT7 a b c d e f g) x = ObjectVisitor7
-    { visitObject7a :: Object a -> x,
-      visitObject7b :: Object b -> x,
-      visitObject7c :: Object c -> x,
-      visitObject7d :: Object d -> x,
-      visitObject7e :: Object e -> x,
-      visitObject7f :: Object f -> x,
-      visitObject7g :: Object g -> x
+    { visitObject7a :: Object a -> x
+    , visitObject7b :: Object b -> x
+    , visitObject7c :: Object c -> x
+    , visitObject7d :: Object d -> x
+    , visitObject7e :: Object e -> x
+    , visitObject7f :: Object f -> x
+    , visitObject7g :: Object g -> x
     }
   visitObjectN' f = visitObjectN $ ObjectVisitor7 f f f f f f f
   visitObjectN v = \case
@@ -277,28 +276,28 @@ instance Inst7 IsObjectType a b c d e f g => VisitObjectN (OT7 a b c d e f g) wh
     ON7e x -> vn (ObjectVisitor6 a b c d f g) x
     ON7f x -> vn (ObjectVisitor6 a b c d e g) x
     ON7g x -> vn (ObjectVisitor6 a b c d e f) x
-    where
-      a = visitObject7a v
-      b = visitObject7b v
-      c = visitObject7c v
-      d = visitObject7d v
-      e = visitObject7e v
-      f = visitObject7f v
-      g = visitObject7g v
+   where
+    a = visitObject7a v
+    b = visitObject7b v
+    c = visitObject7c v
+    d = visitObject7d v
+    e = visitObject7e v
+    f = visitObject7f v
+    g = visitObject7g v
   orderObjectN _ = 7
   knownObjectN = KO7
   knownObjectTypeN _ = KOT7
 
 instance Inst8 IsObjectType a b c d e f g h => VisitObjectN (OT8 a b c d e f g h) where
   data ObjectVisitorN (OT8 a b c d e f g h) x = ObjectVisitor8
-    { visitObject8a :: Object a -> x,
-      visitObject8b :: Object b -> x,
-      visitObject8c :: Object c -> x,
-      visitObject8d :: Object d -> x,
-      visitObject8e :: Object e -> x,
-      visitObject8f :: Object f -> x,
-      visitObject8g :: Object g -> x,
-      visitObject8h :: Object h -> x
+    { visitObject8a :: Object a -> x
+    , visitObject8b :: Object b -> x
+    , visitObject8c :: Object c -> x
+    , visitObject8d :: Object d -> x
+    , visitObject8e :: Object e -> x
+    , visitObject8f :: Object f -> x
+    , visitObject8g :: Object g -> x
+    , visitObject8h :: Object h -> x
     }
   visitObjectN' f = visitObjectN $ ObjectVisitor8 f f f f f f f f
   visitObjectN v = \case
@@ -318,30 +317,30 @@ instance Inst8 IsObjectType a b c d e f g h => VisitObjectN (OT8 a b c d e f g h
     ON8f x -> vn (ObjectVisitor7 a b c d e g h) x
     ON8g x -> vn (ObjectVisitor7 a b c d e f h) x
     ON8h x -> vn (ObjectVisitor7 a b c d e f g) x
-    where
-      a = visitObject8a v
-      b = visitObject8b v
-      c = visitObject8c v
-      d = visitObject8d v
-      e = visitObject8e v
-      f = visitObject8f v
-      g = visitObject8g v
-      h = visitObject8h v
+   where
+    a = visitObject8a v
+    b = visitObject8b v
+    c = visitObject8c v
+    d = visitObject8d v
+    e = visitObject8e v
+    f = visitObject8f v
+    g = visitObject8g v
+    h = visitObject8h v
   orderObjectN _ = 8
   knownObjectN = KO8
   knownObjectTypeN _ = KOT8
 
 instance Inst9 IsObjectType a b c d e f g h i => VisitObjectN (OT9 a b c d e f g h i) where
   data ObjectVisitorN (OT9 a b c d e f g h i) x = ObjectVisitor9
-    { visitObject9a :: Object a -> x,
-      visitObject9b :: Object b -> x,
-      visitObject9c :: Object c -> x,
-      visitObject9d :: Object d -> x,
-      visitObject9e :: Object e -> x,
-      visitObject9f :: Object f -> x,
-      visitObject9g :: Object g -> x,
-      visitObject9h :: Object h -> x,
-      visitObject9i :: Object i -> x
+    { visitObject9a :: Object a -> x
+    , visitObject9b :: Object b -> x
+    , visitObject9c :: Object c -> x
+    , visitObject9d :: Object d -> x
+    , visitObject9e :: Object e -> x
+    , visitObject9f :: Object f -> x
+    , visitObject9g :: Object g -> x
+    , visitObject9h :: Object h -> x
+    , visitObject9i :: Object i -> x
     }
   visitObjectN' f = visitObjectN $ ObjectVisitor9 f f f f f f f f f
   visitObjectN v = \case
@@ -363,32 +362,32 @@ instance Inst9 IsObjectType a b c d e f g h i => VisitObjectN (OT9 a b c d e f g
     ON9g x -> vn (ObjectVisitor8 a b c d e f h i) x
     ON9h x -> vn (ObjectVisitor8 a b c d e f g i) x
     ON9i x -> vn (ObjectVisitor8 a b c d e f g h) x
-    where
-      a = visitObject9a v
-      b = visitObject9b v
-      c = visitObject9c v
-      d = visitObject9d v
-      e = visitObject9e v
-      f = visitObject9f v
-      g = visitObject9g v
-      h = visitObject9h v
-      i = visitObject9i v
+   where
+    a = visitObject9a v
+    b = visitObject9b v
+    c = visitObject9c v
+    d = visitObject9d v
+    e = visitObject9e v
+    f = visitObject9f v
+    g = visitObject9g v
+    h = visitObject9h v
+    i = visitObject9i v
   orderObjectN _ = 9
   knownObjectN = KO9
   knownObjectTypeN _ = KOT9
 
 instance Inst10 IsObjectType a b c d e f g h i j => VisitObjectN (OT10 a b c d e f g h i j) where
   data ObjectVisitorN (OT10 a b c d e f g h i j) x = ObjectVisitor10
-    { visitObject10a :: Object a -> x,
-      visitObject10b :: Object b -> x,
-      visitObject10c :: Object c -> x,
-      visitObject10d :: Object d -> x,
-      visitObject10e :: Object e -> x,
-      visitObject10f :: Object f -> x,
-      visitObject10g :: Object g -> x,
-      visitObject10h :: Object h -> x,
-      visitObject10i :: Object i -> x,
-      visitObject10j :: Object j -> x
+    { visitObject10a :: Object a -> x
+    , visitObject10b :: Object b -> x
+    , visitObject10c :: Object c -> x
+    , visitObject10d :: Object d -> x
+    , visitObject10e :: Object e -> x
+    , visitObject10f :: Object f -> x
+    , visitObject10g :: Object g -> x
+    , visitObject10h :: Object h -> x
+    , visitObject10i :: Object i -> x
+    , visitObject10j :: Object j -> x
     }
   visitObjectN' f = visitObjectN $ ObjectVisitor10 f f f f f f f f f f
   visitObjectN v = \case
@@ -412,34 +411,34 @@ instance Inst10 IsObjectType a b c d e f g h i j => VisitObjectN (OT10 a b c d e
     ON10h x -> vn (ObjectVisitor9 a b c d e f g i j) x
     ON10i x -> vn (ObjectVisitor9 a b c d e f g h j) x
     ON10j x -> vn (ObjectVisitor9 a b c d e f g h i) x
-    where
-      a = visitObject10a v
-      b = visitObject10b v
-      c = visitObject10c v
-      d = visitObject10d v
-      e = visitObject10e v
-      f = visitObject10f v
-      g = visitObject10g v
-      h = visitObject10h v
-      i = visitObject10i v
-      j = visitObject10j v
+   where
+    a = visitObject10a v
+    b = visitObject10b v
+    c = visitObject10c v
+    d = visitObject10d v
+    e = visitObject10e v
+    f = visitObject10f v
+    g = visitObject10g v
+    h = visitObject10h v
+    i = visitObject10i v
+    j = visitObject10j v
   orderObjectN _ = 10
   knownObjectN = KO10
   knownObjectTypeN _ = KOT10
 
 instance Inst11 IsObjectType a b c d e f g h i j k => VisitObjectN (OT11 a b c d e f g h i j k) where
   data ObjectVisitorN (OT11 a b c d e f g h i j k) x = ObjectVisitor11
-    { visitObject11a :: Object a -> x,
-      visitObject11b :: Object b -> x,
-      visitObject11c :: Object c -> x,
-      visitObject11d :: Object d -> x,
-      visitObject11e :: Object e -> x,
-      visitObject11f :: Object f -> x,
-      visitObject11g :: Object g -> x,
-      visitObject11h :: Object h -> x,
-      visitObject11i :: Object i -> x,
-      visitObject11j :: Object j -> x,
-      visitObject11k :: Object k -> x
+    { visitObject11a :: Object a -> x
+    , visitObject11b :: Object b -> x
+    , visitObject11c :: Object c -> x
+    , visitObject11d :: Object d -> x
+    , visitObject11e :: Object e -> x
+    , visitObject11f :: Object f -> x
+    , visitObject11g :: Object g -> x
+    , visitObject11h :: Object h -> x
+    , visitObject11i :: Object i -> x
+    , visitObject11j :: Object j -> x
+    , visitObject11k :: Object k -> x
     }
   visitObjectN' f = visitObjectN $ ObjectVisitor11 f f f f f f f f f f f
   visitObjectN v = \case
@@ -465,36 +464,36 @@ instance Inst11 IsObjectType a b c d e f g h i j k => VisitObjectN (OT11 a b c d
     ON11i x -> vn (ObjectVisitor10 a b c d e f g h j k) x
     ON11j x -> vn (ObjectVisitor10 a b c d e f g h i k) x
     ON11k x -> vn (ObjectVisitor10 a b c d e f g h i j) x
-    where
-      a = visitObject11a v
-      b = visitObject11b v
-      c = visitObject11c v
-      d = visitObject11d v
-      e = visitObject11e v
-      f = visitObject11f v
-      g = visitObject11g v
-      h = visitObject11h v
-      i = visitObject11i v
-      j = visitObject11j v
-      k = visitObject11k v
+   where
+    a = visitObject11a v
+    b = visitObject11b v
+    c = visitObject11c v
+    d = visitObject11d v
+    e = visitObject11e v
+    f = visitObject11f v
+    g = visitObject11g v
+    h = visitObject11h v
+    i = visitObject11i v
+    j = visitObject11j v
+    k = visitObject11k v
   orderObjectN _ = 11
   knownObjectN = KO11
   knownObjectTypeN _ = KOT11
 
 instance Inst12 IsObjectType a b c d e f g h i j k l => VisitObjectN (OT12 a b c d e f g h i j k l) where
   data ObjectVisitorN (OT12 a b c d e f g h i j k l) x = ObjectVisitor12
-    { visitObject12a :: Object a -> x,
-      visitObject12b :: Object b -> x,
-      visitObject12c :: Object c -> x,
-      visitObject12d :: Object d -> x,
-      visitObject12e :: Object e -> x,
-      visitObject12f :: Object f -> x,
-      visitObject12g :: Object g -> x,
-      visitObject12h :: Object h -> x,
-      visitObject12i :: Object i -> x,
-      visitObject12j :: Object j -> x,
-      visitObject12k :: Object k -> x,
-      visitObject12l :: Object l -> x
+    { visitObject12a :: Object a -> x
+    , visitObject12b :: Object b -> x
+    , visitObject12c :: Object c -> x
+    , visitObject12d :: Object d -> x
+    , visitObject12e :: Object e -> x
+    , visitObject12f :: Object f -> x
+    , visitObject12g :: Object g -> x
+    , visitObject12h :: Object h -> x
+    , visitObject12i :: Object i -> x
+    , visitObject12j :: Object j -> x
+    , visitObject12k :: Object k -> x
+    , visitObject12l :: Object l -> x
     }
   visitObjectN' f = visitObjectN $ ObjectVisitor12 f f f f f f f f f f f f
   visitObjectN v = \case
@@ -522,19 +521,19 @@ instance Inst12 IsObjectType a b c d e f g h i j k l => VisitObjectN (OT12 a b c
     ON12j x -> vn (ObjectVisitor11 a b c d e f g h i k l) x
     ON12k x -> vn (ObjectVisitor11 a b c d e f g h i j l) x
     ON12l x -> vn (ObjectVisitor11 a b c d e f g h i j k) x
-    where
-      a = visitObject12a v
-      b = visitObject12b v
-      c = visitObject12c v
-      d = visitObject12d v
-      e = visitObject12e v
-      f = visitObject12f v
-      g = visitObject12g v
-      h = visitObject12h v
-      i = visitObject12i v
-      j = visitObject12j v
-      k = visitObject12k v
-      l = visitObject12l v
+   where
+    a = visitObject12a v
+    b = visitObject12b v
+    c = visitObject12c v
+    d = visitObject12d v
+    e = visitObject12e v
+    f = visitObject12f v
+    g = visitObject12g v
+    h = visitObject12h v
+    i = visitObject12i v
+    j = visitObject12j v
+    k = visitObject12k v
+    l = visitObject12l v
   orderObjectN _ = 12
   knownObjectN = KO12
   knownObjectTypeN _ = KOT12

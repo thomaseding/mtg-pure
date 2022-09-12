@@ -15,11 +15,10 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.Phase
-  ( Phase (..),
-    SPhase (..),
-  )
-where
+module MtgPure.Model.Phase (
+  Phase (..),
+  SPhase (..),
+) where
 
 import Data.ConsIndex (ConsIndex (..))
 import safe Data.Kind (Type)

@@ -13,10 +13,9 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.Tribal
-  ( Tribal (..),
-  )
-where
+module MtgPure.Model.Tribal (
+  Tribal (..),
+) where
 
 import Data.Typeable (Typeable)
 

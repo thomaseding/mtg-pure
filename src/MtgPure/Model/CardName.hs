@@ -13,10 +13,9 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.CardName
-  ( CardName (..),
-  )
-where
+module MtgPure.Model.CardName (
+  CardName (..),
+) where
 
 import safe Data.String (IsString (..))
 

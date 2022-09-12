@@ -16,32 +16,31 @@
 {-# HLINT ignore "Use const" #-}
 {-# HLINT ignore "Use if" #-}
 
-module MtgPure.Model.Recursive
-  ( IsOT,
-    IsZO,
-    Ability (..),
-    Card (..),
-    CardTypeDef (..),
-    Condition (..),
-    Cost (..),
-    Effect (..),
-    Elect (..),
-    Else (..),
-    Event,
-    EventListener,
-    EventListener' (..),
-    NonProxy (..),
-    Requirement (..),
-    SetCard (..),
-    SetToken (..),
-    StaticAbility (..),
-    Token (..),
-    TriggeredAbility (..),
-    WithLinkedObject (..),
-    WithMaskedObject (..),
-    WithThis (..),
-  )
-where
+module MtgPure.Model.Recursive (
+  IsOT,
+  IsZO,
+  Ability (..),
+  Card (..),
+  CardTypeDef (..),
+  Condition (..),
+  Cost (..),
+  Effect (..),
+  Elect (..),
+  Else (..),
+  Event,
+  EventListener,
+  EventListener' (..),
+  NonProxy (..),
+  Requirement (..),
+  SetCard (..),
+  SetToken (..),
+  StaticAbility (..),
+  Token (..),
+  TriggeredAbility (..),
+  WithLinkedObject (..),
+  WithMaskedObject (..),
+  WithThis (..),
+) where
 
 import safe Data.ConsIndex (ConsIndex (..))
 import safe Data.Inst (Inst1, Inst2, Inst3, Inst4, Inst5)
@@ -63,17 +62,17 @@ import safe MtgPure.Model.ObjectType (OT1, OT2, OT3, OT4, OT5)
 import safe MtgPure.Model.ObjectType.Any (WAny)
 import safe MtgPure.Model.ObjectType.Card (WCard)
 import safe MtgPure.Model.ObjectType.Index (IndexOT)
-import safe MtgPure.Model.ObjectType.Kind
-  ( OTArtifact,
-    OTArtifactCreature,
-    OTCreature,
-    OTEnchantment,
-    OTInstant,
-    OTLand,
-    OTPlaneswalker,
-    OTPlayer,
-    OTSorcery,
-  )
+import safe MtgPure.Model.ObjectType.Kind (
+  OTArtifact,
+  OTArtifactCreature,
+  OTCreature,
+  OTEnchantment,
+  OTInstant,
+  OTLand,
+  OTPlaneswalker,
+  OTPlayer,
+  OTSorcery,
+ )
 import safe MtgPure.Model.ObjectType.NonCreatureCard (WNonCreatureCard)
 import safe MtgPure.Model.ObjectType.Permanent (WPermanent)
 import safe MtgPure.Model.ObjectType.Spell (WSpell (..))
@@ -87,29 +86,22 @@ import safe MtgPure.Model.Tribal (Tribal (..))
 import safe MtgPure.Model.Variable (Variable)
 import safe MtgPure.Model.VisitObjectN (VisitObjectN)
 import safe MtgPure.Model.Zone (IsZone (..), Zone (..))
-import safe MtgPure.Model.ZoneObject
-  ( OActivatedOrTriggeredAbility,
-    OAny,
-    OCreature,
-    OCreaturePlayerPlaneswalker,
-    ODamageSource,
-    OPermanent,
-    OPlayer,
-    OSpell,
-    ZO,
-  )
+import safe MtgPure.Model.ZoneObject (
+  OActivatedOrTriggeredAbility,
+  OAny,
+  OCreature,
+  OCreaturePlayerPlaneswalker,
+  ODamageSource,
+  OPermanent,
+  OPlayer,
+  OSpell,
+  ZO,
+ )
 
-type IsOT (ot :: Type) =
-  ( IndexOT ot,
-    VisitObjectN ot,
-    PrettyType ot
-  )
+type IsOT (ot :: Type) = (IndexOT ot, VisitObjectN ot, PrettyType ot)
 
 type IsZO (zone :: Zone) (ot :: Type) =
-  ( IsOT ot,
-    IsZone zone,
-    PrettyType (ZO zone ot)
-  )
+  (IsOT ot, IsZone zone, PrettyType (ZO zone ot))
 
 data Ability (ot :: Type) :: Type where
   Activated :: Elect (Cost ot) ot -> Elect (Effect 'OneShot) ot -> Ability ot
@@ -119,9 +111,9 @@ data Ability (ot :: Type) :: Type where
 
 instance ConsIndex (Ability ot) where
   consIndex = \case
-    Activated {} -> 1
-    Static {} -> 2
-    Triggered {} -> 3
+    Activated{} -> 1
+    Static{} -> 2
+    Triggered{} -> 3
 
 data Card (ot :: Type) :: Type where
   -- For now Instants and Sorceries will use 'Battlefield for it's THIS zone.
@@ -139,15 +131,15 @@ data Card (ot :: Type) :: Type where
 
 instance ConsIndex (Card ot) where
   consIndex = \case
-    Card {} -> 1
-    TribalCard {} -> 2
-    ArtifactCard {} -> 3
-    CreatureCard {} -> 4
-    EnchantmentCard {} -> 5
-    InstantCard {} -> 6
-    LandCard {} -> 7
-    PlaneswalkerCard {} -> 8
-    SorceryCard {} -> 9
+    Card{} -> 1
+    TribalCard{} -> 2
+    ArtifactCard{} -> 3
+    CreatureCard{} -> 4
+    EnchantmentCard{} -> 5
+    InstantCard{} -> 6
+    LandCard{} -> 7
+    PlaneswalkerCard{} -> 8
+    SorceryCard{} -> 9
 
 data CardTypeDef (tribal :: Tribal) (ot :: Type) :: Type where
   ArtifactCreatureDef ::
@@ -210,16 +202,16 @@ data CardTypeDef (tribal :: Tribal) (ot :: Type) :: Type where
 
 instance ConsIndex (CardTypeDef tribe ot) where
   consIndex = \case
-    ArtifactCreatureDef {} -> 1
-    ArtifactDef {} -> 2
-    CreatureDef {} -> 3
-    EnchantmentDef {} -> 4
-    InstantDef {} -> 5
-    LandDef {} -> 6
-    PlaneswalkerDef {} -> 7
-    SorceryDef {} -> 8
-    TribalDef {} -> 9
-    VariableDef {} -> 10
+    ArtifactCreatureDef{} -> 1
+    ArtifactDef{} -> 2
+    CreatureDef{} -> 3
+    EnchantmentDef{} -> 4
+    InstantDef{} -> 5
+    LandDef{} -> 6
+    PlaneswalkerDef{} -> 7
+    SorceryDef{} -> 8
+    TribalDef{} -> 9
+    VariableDef{} -> 10
 
 data Condition :: Type where
   CAnd :: [Condition] -> Condition
@@ -230,10 +222,10 @@ data Condition :: Type where
 
 instance ConsIndex Condition where
   consIndex = \case
-    CAnd {} -> 1
-    CNot {} -> 2
-    COr {} -> 3
-    Satisfies {} -> 4
+    CAnd{} -> 1
+    CNot{} -> 2
+    COr{} -> 3
+    Satisfies{} -> 4
 
 data Cost (ot :: Type) :: Type where
   AndCosts :: [Cost ot] -> Cost ot
@@ -248,14 +240,14 @@ data Cost (ot :: Type) :: Type where
 
 instance ConsIndex (Cost ot) where
   consIndex = \case
-    AndCosts {} -> 1
-    DiscardRandomCost {} -> 2
-    LoyaltyCost {} -> 3
-    ManaCost {} -> 4
-    OrCosts {} -> 5
-    PayLife {} -> 6
-    SacrificeCost {} -> 7
-    TapCost {} -> 8
+    AndCosts{} -> 1
+    DiscardRandomCost{} -> 2
+    LoyaltyCost{} -> 3
+    ManaCost{} -> 4
+    OrCosts{} -> 5
+    PayLife{} -> 6
+    SacrificeCost{} -> 7
+    TapCost{} -> 8
 
 data Effect (ef :: EffectType) :: Type where
   AddMana :: OPlayer -> ManaPool -> Effect 'OneShot
@@ -279,23 +271,23 @@ data Effect (ef :: EffectType) :: Type where
 
 instance ConsIndex (Effect ef) where
   consIndex = \case
-    AddMana {} -> 1
-    AddToBattlefield {} -> 2
-    ChangeTo {} -> 3
-    CounterAbility {} -> 4
-    CounterSpell {} -> 5
-    DealDamage {} -> 6
-    Destroy {} -> 7
-    EffectContinuous {} -> 8
-    EOr {} -> 9
-    DrawCards {} -> 10
-    Gain {} -> 11
-    Lose {} -> 12
-    PutOntoBattlefield {} -> 13
-    Sacrifice {} -> 14
-    SearchLibrary {} -> 15
-    StatDelta {} -> 16
-    Until {} -> 17
+    AddMana{} -> 1
+    AddToBattlefield{} -> 2
+    ChangeTo{} -> 3
+    CounterAbility{} -> 4
+    CounterSpell{} -> 5
+    DealDamage{} -> 6
+    Destroy{} -> 7
+    EffectContinuous{} -> 8
+    EOr{} -> 9
+    DrawCards{} -> 10
+    Gain{} -> 11
+    Lose{} -> 12
+    PutOntoBattlefield{} -> 13
+    Sacrifice{} -> 14
+    SearchLibrary{} -> 15
+    StatDelta{} -> 16
+    Until{} -> 17
 
 data Elect (el :: Type) (ot :: Type) :: Type where
   A :: (el ~ Effect 'OneShot, IsZO zone ot) => Selection -> OPlayer -> WithMaskedObject zone (Elect el ot) -> Elect el ot
@@ -316,18 +308,18 @@ data Elect (el :: Type) (ot :: Type) :: Type where
 
 instance ConsIndex (Elect el ot) where
   consIndex = \case
-    A {} -> 1
-    ActivePlayer {} -> 2
-    All {} -> 3
-    Condition {} -> 4
-    ControllerOf {} -> 5
-    Cost {} -> 6
-    Effect {} -> 7
-    Event {} -> 8
-    If {} -> 9
-    Listen {} -> 10
-    Random {} -> 11
-    VariableFromPower {} -> 12
+    A{} -> 1
+    ActivePlayer{} -> 2
+    All{} -> 3
+    Condition{} -> 4
+    ControllerOf{} -> 5
+    Cost{} -> 6
+    Effect{} -> 7
+    Event{} -> 8
+    If{} -> 9
+    Listen{} -> 10
+    Random{} -> 11
+    VariableFromPower{} -> 12
 
 data Else (el :: Type) (ot :: Type) :: Type where
   ElseCost :: (el ~ Cost ot) => Elect el ot -> Else el ot
@@ -342,9 +334,9 @@ data Else (el :: Type) (ot :: Type) :: Type where
 
 instance ConsIndex (Else el ot) where
   consIndex = \case
-    ElseCost {} -> 1
-    ElseEffect {} -> 2
-    ElseEvent {} -> 3
+    ElseCost{} -> 1
+    ElseEffect{} -> 2
+    ElseEvent{} -> 3
 
 type Event = EventListener' Proxy
 
@@ -359,10 +351,10 @@ data EventListener' (liftOT :: Type -> Type) :: Type where
 
 instance ConsIndex (EventListener' liftOT) where
   consIndex = \case
-    BecomesTapped {} -> 1
-    Events {} -> 2
-    SpellIsCast {} -> 3
-    TimePoint {} -> 4
+    BecomesTapped{} -> 1
+    Events{} -> 2
+    SpellIsCast{} -> 3
+    TimePoint{} -> 4
 
 data NonProxy (liftOT :: Type -> Type) :: Type where
   NonProxyElectEffectOneShot :: NonProxy (Elect (Effect 'OneShot))
@@ -414,21 +406,21 @@ data Requirement (zone :: Zone) (ot :: Type) :: Type where
 
 instance ConsIndex (Requirement zone ot) where
   consIndex = \case
-    ControlledBy {} -> 1
-    HasAbility {} -> 2
-    HasLandType {} -> 3
-    Is {} -> 4
-    Not {} -> 5
-    OfColors {} -> 6
-    OwnedBy {} -> 7
-    PlayerPays {} -> 8
-    RAnd {} -> 9
-    ROr {} -> 10
-    Tapped {} -> 11
-    R2 {} -> 12
-    R3 {} -> 13
-    R4 {} -> 14
-    R5 {} -> 15
+    ControlledBy{} -> 1
+    HasAbility{} -> 2
+    HasLandType{} -> 3
+    Is{} -> 4
+    Not{} -> 5
+    OfColors{} -> 6
+    OwnedBy{} -> 7
+    PlayerPays{} -> 8
+    RAnd{} -> 9
+    ROr{} -> 10
+    Tapped{} -> 11
+    R2{} -> 12
+    R3{} -> 13
+    R4{} -> 14
+    R5{} -> 15
 
 data SetCard (ot :: Type) :: Type where
   SetCard :: CardSet -> Rarity -> Card ot -> SetCard ot
@@ -436,7 +428,7 @@ data SetCard (ot :: Type) :: Type where
 
 instance ConsIndex (SetCard ot) where
   consIndex = \case
-    SetCard {} -> 1
+    SetCard{} -> 1
 
 data SetToken (ot :: Type) :: Type where
   SetToken :: CardSet -> Rarity -> Token ot -> SetToken ot
@@ -444,7 +436,7 @@ data SetToken (ot :: Type) :: Type where
 
 instance ConsIndex (SetToken ot) where
   consIndex = \case
-    SetToken {} -> 1
+    SetToken{} -> 1
 
 data StaticAbility (ot :: Type) :: Type where
   As :: IsOT ot => Elect EventListener ot -> StaticAbility ot -- 603.6d: not a triggered ability
@@ -457,12 +449,12 @@ data StaticAbility (ot :: Type) :: Type where
 
 instance ConsIndex (StaticAbility ot) where
   consIndex = \case
-    As {} -> 1
-    StaticContinuous {} -> 2
-    FirstStrike {} -> 3
-    Flying {} -> 4
-    Haste {} -> 5
-    Suspend {} -> 6
+    As{} -> 1
+    StaticContinuous{} -> 2
+    FirstStrike{} -> 3
+    Flying{} -> 4
+    Haste{} -> 5
+    Suspend{} -> 6
 
 data Token (ot :: Type) :: Type where
   Token :: WPermanent ot -> Card ot -> Token ot
@@ -475,12 +467,12 @@ data Token (ot :: Type) :: Type where
 
 instance ConsIndex (Token ot) where
   consIndex = \case
-    Token {} -> 1
-    ArtifactToken {} -> 2
-    CreatureToken {} -> 3
-    EnchantmentToken {} -> 4
-    LandToken {} -> 5
-    PlaneswalkerToken {} -> 6
+    Token{} -> 1
+    ArtifactToken{} -> 2
+    CreatureToken{} -> 3
+    EnchantmentToken{} -> 4
+    LandToken{} -> 5
+    PlaneswalkerToken{} -> 6
 
 -- https://www.mtgsalvation.com/forums/magic-fundamentals/magic-rulings/magic-rulings-archives/611601-whenever-what-does-it-mean?comment=3
 -- https://www.reddit.com/r/magicTCG/comments/asmecb/noob_question_difference_between_as_and_when/
@@ -490,7 +482,7 @@ data TriggeredAbility (ot :: Type) :: Type where
 
 instance ConsIndex (TriggeredAbility ot) where
   consIndex = \case
-    When {} -> 1
+    When{} -> 1
 
 data WithLinkedObject (zone :: Zone) (liftOT :: Type -> Type) (ot :: Type) :: Type where
   LProxy :: [Requirement zone ot] -> WithLinkedObject zone Proxy ot
@@ -528,12 +520,12 @@ data WithLinkedObject (zone :: Zone) (liftOT :: Type -> Type) (ot :: Type) :: Ty
 
 instance ConsIndex (WithLinkedObject zone liftOT ot) where
   consIndex = \case
-    LProxy {} -> 1
-    L1 {} -> 2
-    L2 {} -> 3
-    L3 {} -> 4
-    L4 {} -> 5
-    L5 {} -> 6
+    LProxy{} -> 1
+    L1{} -> 2
+    L2{} -> 3
+    L3{} -> 4
+    L4{} -> 5
+    L5{} -> 6
 
 data WithMaskedObject (zone :: Zone) (liftedOT :: Type) :: Type where
   M1 ::
@@ -565,11 +557,11 @@ data WithMaskedObject (zone :: Zone) (liftedOT :: Type) :: Type where
 
 instance ConsIndex (WithMaskedObject zone liftedOT) where
   consIndex = \case
-    M1 {} -> 1
-    M2 {} -> 2
-    M3 {} -> 3
-    M4 {} -> 4
-    M5 {} -> 5
+    M1{} -> 1
+    M2{} -> 2
+    M3{} -> 3
+    M4{} -> 4
+    M5{} -> 5
 
 data WithThis (zone :: Zone) (liftOT :: Type -> Type) (ot :: Type) :: Type where
   T1 ::
@@ -596,8 +588,8 @@ data WithThis (zone :: Zone) (liftOT :: Type -> Type) (ot :: Type) :: Type where
 
 instance ConsIndex (WithThis zone liftOT ot) where
   consIndex = \case
-    T1 {} -> 1
-    T2 {} -> 2
-    T3 {} -> 3
-    T4 {} -> 4
-    T5 {} -> 5
+    T1{} -> 1
+    T2{} -> 2
+    T3{} -> 3
+    T4{} -> 4
+    T5{} -> 5

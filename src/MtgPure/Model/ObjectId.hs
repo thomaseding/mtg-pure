@@ -13,10 +13,9 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.ObjectId
-  ( ObjectId (..),
-  )
-where
+module MtgPure.Model.ObjectId (
+  ObjectId (..),
+) where
 
 import safe Data.Typeable (Typeable)
 

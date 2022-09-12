@@ -15,68 +15,67 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.ModelCombinators
-  ( ToCard (..),
-    ToToken (..),
-    ToSetCard (..),
-    ToSetToken (..),
-    AsAny,
-    asAny,
-    AsActivatedOrTriggeredAbility,
-    asActivatedOrTriggeredAbility,
-    AsPermanent,
-    asPermanent,
-    AsSpell,
-    asSpell,
-    AsCreaturePlayerPlaneswalker,
-    asCreaturePlayerPlaneswalker,
-    AsDamage (..),
-    AsCost (..),
-    ElectEffect (..),
-    CoAny (..),
-    CoPermanent (..),
-    AsWithLinkedObject (..),
-    AsWithMaskedObject (..),
-    AsWithThis (..),
-    HasLandType (..),
-    AsIfThen (..),
-    AsIfThenElse (..),
-    mkCard,
-    mkToken,
-    becomesTapped,
-    event,
-    ifThen,
-    ifElse,
-    ifThenElse,
-    nonBasic,
-    tapCost,
-    ofColors,
-    playerPays,
-    addManaAnyColor,
-    gain,
-    lose,
-    is,
-    satisfies,
-    hasAbility,
-    spellCost,
-    noCost,
-    dealDamage,
-    controllerOf,
-    changeTo,
-    sacrifice,
-    destroy,
-    counterAbility,
-    counterSpell,
-    sacrificeCost,
-    addToBattlefield,
-    colored,
-    colorless,
-    tapped,
-    untilEndOfTurn,
-    putOntoBattlefield,
-    searchLibrary,
-  )
-where
+module MtgPure.ModelCombinators (
+  ToCard (..),
+  ToToken (..),
+  ToSetCard (..),
+  ToSetToken (..),
+  AsAny,
+  asAny,
+  AsActivatedOrTriggeredAbility,
+  asActivatedOrTriggeredAbility,
+  AsPermanent,
+  asPermanent,
+  AsSpell,
+  asSpell,
+  AsCreaturePlayerPlaneswalker,
+  asCreaturePlayerPlaneswalker,
+  AsDamage (..),
+  AsCost (..),
+  ElectEffect (..),
+  CoAny (..),
+  CoPermanent (..),
+  AsWithLinkedObject (..),
+  AsWithMaskedObject (..),
+  AsWithThis (..),
+  HasLandType (..),
+  AsIfThen (..),
+  AsIfThenElse (..),
+  mkCard,
+  mkToken,
+  becomesTapped,
+  event,
+  ifThen,
+  ifElse,
+  ifThenElse,
+  nonBasic,
+  tapCost,
+  ofColors,
+  playerPays,
+  addManaAnyColor,
+  gain,
+  lose,
+  is,
+  satisfies,
+  hasAbility,
+  spellCost,
+  noCost,
+  dealDamage,
+  controllerOf,
+  changeTo,
+  sacrifice,
+  destroy,
+  counterAbility,
+  counterSpell,
+  sacrificeCost,
+  addToBattlefield,
+  colored,
+  colorless,
+  tapped,
+  untilEndOfTurn,
+  putOntoBattlefield,
+  searchLibrary,
+) where
 
 import safe Data.Inst (Inst1, Inst2, Inst3, Inst4, Inst5)
 import safe Data.Proxy (Proxy (..))
@@ -91,85 +90,78 @@ import safe MtgPure.Model.IsObjectType (IsObjectType)
 import safe MtgPure.Model.LandType (LandType (BasicLand))
 import safe MtgPure.Model.ManaCost (ManaCost)
 import safe MtgPure.Model.ManaSymbol (ManaSymbol (..))
-import safe MtgPure.Model.ObjectType
-  ( OT1,
-    OT2,
-    OT3,
-    OT4,
-    OT5,
-    ObjectType (..),
-  )
+import safe MtgPure.Model.ObjectType (OT1, OT2, OT3, OT4, OT5, ObjectType (..))
 import safe MtgPure.Model.ObjectType.Any (WAny (..))
 import safe MtgPure.Model.ObjectType.Card (IsCardType, WCard (..))
 import safe MtgPure.Model.ObjectType.Index (IndexOT)
-import safe MtgPure.Model.ObjectType.Kind
-  ( OTActivatedOrTriggeredAbility,
-    OTAny,
-    OTArtifact,
-    OTCard,
-    OTCreature,
-    OTCreaturePlayerPlaneswalker,
-    OTDamageSource,
-    OTEnchantment,
-    OTInstant,
-    OTLand,
-    OTPermanent,
-    OTPlaneswalker,
-    OTPlayer,
-    OTSorcery,
-    OTSpell,
-  )
+import safe MtgPure.Model.ObjectType.Kind (
+  OTActivatedOrTriggeredAbility,
+  OTAny,
+  OTArtifact,
+  OTCard,
+  OTCreature,
+  OTCreaturePlayerPlaneswalker,
+  OTDamageSource,
+  OTEnchantment,
+  OTInstant,
+  OTLand,
+  OTPermanent,
+  OTPlaneswalker,
+  OTPlayer,
+  OTSorcery,
+  OTSpell,
+ )
 import safe MtgPure.Model.ObjectType.Permanent (IsPermanentType, WPermanent (..))
-import safe MtgPure.Model.Recursive
-  ( Ability,
-    Card (..),
-    CardTypeDef,
-    Condition (..),
-    Cost (..),
-    Effect (..),
-    Elect (..),
-    Else (..),
-    Event,
-    EventListener,
-    EventListener' (..),
-    IsOT,
-    IsZO,
-    NonProxy (..),
-    Requirement (..),
-    SetCard (..),
-    SetToken (..),
-    Token (..),
-    WithLinkedObject (..),
-    WithMaskedObject (..),
-    WithThis (..),
-  )
+import safe MtgPure.Model.Recursive (
+  Ability,
+  Card (..),
+  CardTypeDef,
+  Condition (..),
+  Cost (..),
+  Effect (..),
+  Elect (..),
+  Else (..),
+  Event,
+  EventListener,
+  EventListener' (..),
+  IsOT,
+  IsZO,
+  NonProxy (..),
+  Requirement (..),
+  SetCard (..),
+  SetToken (..),
+  Token (..),
+  WithLinkedObject (..),
+  WithMaskedObject (..),
+  WithThis (..),
+ )
 import safe MtgPure.Model.Step (Step (..))
 import safe MtgPure.Model.TimePoint (TimePoint (..))
 import safe MtgPure.Model.ToManaCost (ToManaCost (..))
 import safe MtgPure.Model.ToManaPool (ToManaPool (..))
-import safe MtgPure.Model.ToObjectN.Classes
-  ( ToObject12,
-    ToObject2,
-    ToObject3,
-    ToObject5,
-    ToObject6,
-    ToObject8,
-  )
+import safe MtgPure.Model.ToObjectN.Classes (
+  ToObject12,
+  ToObject2,
+  ToObject3,
+  ToObject5,
+  ToObject6,
+  ToObject8,
+ )
 import safe MtgPure.Model.ToObjectN.Instances ()
 import safe MtgPure.Model.Tribal (Tribal (..))
 import safe MtgPure.Model.Variable (Variable)
 import safe MtgPure.Model.VisitObjectN (VisitObjectN)
 import safe MtgPure.Model.Zone (IsZone, Zone (..))
-import safe MtgPure.Model.ZoneObject
-  ( OPlayer,
-    ZO,
-    toZO12,
-    toZO2,
-    toZO3,
-    toZO5,
-    toZO6,
-    toZO8,
-  )
+import safe MtgPure.Model.ZoneObject (
+  OPlayer,
+  ZO,
+  toZO12,
+  toZO2,
+  toZO3,
+  toZO5,
+  toZO6,
+  toZO8,
+ )
 
 class ToCard card where
   toCard :: card -> Card ()
@@ -253,19 +245,24 @@ instance ToSetToken (SetToken ()) where
   toSetToken = id
 
 instance ToSetToken (SetToken OTArtifact) where
-  toSetToken (SetToken s r (Token _ x)) = SetToken s r $ ArtifactToken $ Token coPermanent x
+  toSetToken (SetToken s r (Token _ x)) =
+    SetToken s r $ ArtifactToken $ Token coPermanent x
 
 instance ToSetToken (SetToken OTCreature) where
-  toSetToken (SetToken s r (Token _ x)) = SetToken s r $ CreatureToken $ Token coPermanent x
+  toSetToken (SetToken s r (Token _ x)) =
+    SetToken s r $ CreatureToken $ Token coPermanent x
 
 instance ToSetToken (SetToken OTEnchantment) where
-  toSetToken (SetToken s r (Token _ x)) = SetToken s r $ EnchantmentToken $ Token coPermanent x
+  toSetToken (SetToken s r (Token _ x)) =
+    SetToken s r $ EnchantmentToken $ Token coPermanent x
 
 instance ToSetToken (SetToken OTLand) where
-  toSetToken (SetToken s r (Token _ x)) = SetToken s r $ LandToken $ Token coPermanent x
+  toSetToken (SetToken s r (Token _ x)) =
+    SetToken s r $ LandToken $ Token coPermanent x
 
 instance ToSetToken (SetToken OTPlaneswalker) where
-  toSetToken (SetToken s r (Token _ x)) = SetToken s r $ PlaneswalkerToken $ Token coPermanent x
+  toSetToken (SetToken s r (Token _ x)) =
+    SetToken s r $ PlaneswalkerToken $ Token coPermanent x
 
 class Typeable x => CoNonProxy x where
   coNonProxy :: NonProxy x
@@ -328,10 +325,7 @@ instance Inst5 IsObjectType a b c d e => AsWithThis (OT5 a b c d e) where
   thisObject = T5
 
 type AsActivatedOrTriggeredAbility ot =
-  ToObject2
-    ot
-    'OTActivatedAbility
-    'OTTriggeredAbility
+  ToObject2 ot 'OTActivatedAbility 'OTTriggeredAbility
 
 asActivatedOrTriggeredAbility ::
   AsActivatedOrTriggeredAbility ot =>
@@ -370,7 +364,8 @@ type AsDamageSource ot =
     'OTPlayer
     'OTSorcery
 
-asDamageSource :: AsDamageSource ot => ZO 'Battlefield ot -> ZO 'Battlefield OTDamageSource
+asDamageSource ::
+  AsDamageSource ot => ZO 'Battlefield ot -> ZO 'Battlefield OTDamageSource
 asDamageSource = toZO8
 
 type AsPermanent ot =
@@ -399,11 +394,7 @@ asSpell :: AsSpell ot => ZO zone ot -> ZO zone OTSpell
 asSpell = toZO6
 
 type AsCreaturePlayerPlaneswalker ot =
-  ToObject3
-    ot
-    'OTCreature
-    'OTPlaneswalker
-    'OTPlayer
+  ToObject3 ot 'OTCreature 'OTPlaneswalker 'OTPlayer
 
 asCreaturePlayerPlaneswalker ::
   AsCreaturePlayerPlaneswalker ot =>
@@ -433,23 +424,34 @@ noCost :: Elect (Cost ot) ot
 noCost = Cost $ OrCosts []
 
 dealDamage ::
-  ( AsDamageSource source,
-    AsCreaturePlayerPlaneswalker target,
-    AsDamage damage
+  ( AsDamageSource source
+  , AsCreaturePlayerPlaneswalker target
+  , AsDamage damage
   ) =>
   ZO 'Battlefield source ->
   ZO 'Battlefield target ->
   damage ->
   Effect 'OneShot
-dealDamage source target = DealDamage (asDamageSource source) (asCreaturePlayerPlaneswalker target) . asDamage
+dealDamage source target =
+  DealDamage (asDamageSource source) (asCreaturePlayerPlaneswalker target)
+    . asDamage
 
-controllerOf :: AsAny ot' => ZO 'Battlefield ot' -> (OPlayer -> Elect e ot) -> Elect e ot
+controllerOf ::
+  AsAny ot' => ZO 'Battlefield ot' -> (OPlayer -> Elect e ot) -> Elect e ot
 controllerOf = ControllerOf . asAny
 
-sacrifice :: CoPermanent ot => OPlayer -> [Requirement 'Battlefield ot] -> Effect 'OneShot
+sacrifice ::
+  CoPermanent ot =>
+  OPlayer ->
+  [Requirement 'Battlefield ot] ->
+  Effect 'OneShot
 sacrifice = Sacrifice coPermanent
 
-changeTo :: (AsPermanent ot, CoPermanent ot) => ZO 'Battlefield ot -> Card ot -> Effect 'Continuous
+changeTo ::
+  (AsPermanent ot, CoPermanent ot) =>
+  ZO 'Battlefield ot ->
+  Card ot ->
+  Effect 'Continuous
 changeTo = ChangeTo coPermanent . asPermanent
 
 tapCost :: AsPermanent ot => ZO 'Battlefield ot -> Cost ot
@@ -458,7 +460,8 @@ tapCost = TapCost . asPermanent
 destroy :: AsPermanent ot => ZO 'Battlefield ot -> Effect 'OneShot
 destroy = Destroy . asPermanent
 
-counterAbility :: AsActivatedOrTriggeredAbility ot => ZO 'Battlefield ot -> Effect 'OneShot
+counterAbility ::
+  AsActivatedOrTriggeredAbility ot => ZO 'Battlefield ot -> Effect 'OneShot
 counterAbility = CounterAbility . asActivatedOrTriggeredAbility
 
 counterSpell :: AsSpell ot => ZO 'Battlefield ot -> Effect 'OneShot
@@ -569,7 +572,8 @@ instance Inst5 IsPermanentType a b c d e => CoAny (OT5 a b c d e) where
 is :: (IsZone zone, CoAny ot) => ZO zone ot -> Requirement zone ot
 is = Is coAny
 
-satisfies :: (IsZone zone, CoAny ot) => ZO zone ot -> [Requirement zone ot] -> Condition
+satisfies ::
+  (IsZone zone, CoAny ot) => ZO zone ot -> [Requirement zone ot] -> Condition
 satisfies = Satisfies coAny
 
 sacrificeCost :: CoPermanent ot => [Requirement 'Battlefield ot] -> Cost ot
@@ -648,7 +652,8 @@ ifThen cond then_ = If cond then_ elseEmpty
 ifElse :: AsIfThen e ot => Condition -> Elect e ot -> Elect e ot
 ifElse cond else_ = If (CNot cond) else_ elseEmpty
 
-ifThenElse :: AsIfThenElse e ot => Condition -> Elect e ot -> Elect e ot -> Elect e ot
+ifThenElse ::
+  AsIfThenElse e ot => Condition -> Elect e ot -> Elect e ot -> Elect e ot
 ifThenElse cond then_ else_ = If cond then_ $ liftElse else_
 
 nonBasic :: IsZone zone => Requirement zone OTLand
@@ -663,11 +668,11 @@ colorless = Not colored
 addManaAnyColor :: OPlayer -> Int -> Effect 'OneShot
 addManaAnyColor player amount =
   EOr
-    [ AddMana player $ toManaPool (W, amount),
-      AddMana player $ toManaPool (U, amount),
-      AddMana player $ toManaPool (B, amount),
-      AddMana player $ toManaPool (R, amount),
-      AddMana player $ toManaPool (G, amount)
+    [ AddMana player $ toManaPool (W, amount)
+    , AddMana player $ toManaPool (U, amount)
+    , AddMana player $ toManaPool (B, amount)
+    , AddMana player $ toManaPool (R, amount)
+    , AddMana player $ toManaPool (G, amount)
     ]
 
 class (AsWithThis ot, IndexOT ot, VisitObjectN ot) => MkCard t ot where
@@ -679,17 +684,28 @@ instance (AsWithThis ot, CoCard ot, IndexOT ot, VisitObjectN ot) => MkCard 'NonT
 instance (AsWithThis ot, CoCard ot, IndexOT ot, VisitObjectN ot) => MkCard 'Tribal ot where
   mkCard name = TribalCard name coCard . thisObject
 
-mkToken :: (CoPermanent ot, MkCard tribal ot) => CardName -> (ZO 'Battlefield ot -> CardTypeDef tribal ot) -> Token ot
+mkToken ::
+  (CoPermanent ot, MkCard tribal ot) =>
+  CardName ->
+  (ZO 'Battlefield ot -> CardTypeDef tribal ot) ->
+  Token ot
 mkToken name = Token coPermanent . mkCard name
 
-hasAbility :: (AsWithThis ot, IsZO zone ot) => (ZO zone ot -> Ability ot) -> Requirement zone ot
+hasAbility ::
+  (AsWithThis ot, IsZO zone ot) =>
+  (ZO zone ot -> Ability ot) ->
+  Requirement zone ot
 hasAbility = HasAbility . thisObject
 
-becomesTapped :: CoPermanent ot => WithLinkedObject 'Battlefield (Elect (Effect 'OneShot)) ot -> EventListener
+becomesTapped ::
+  CoPermanent ot =>
+  WithLinkedObject 'Battlefield (Elect (Effect 'OneShot)) ot ->
+  EventListener
 becomesTapped = BecomesTapped coPermanent
 
 untilEndOfTurn :: Effect 'Continuous -> Effect 'OneShot
-untilEndOfTurn = EffectContinuous . Until (event $ TimePoint (StepBegin CleanupStep) Proxy)
+untilEndOfTurn =
+  EffectContinuous . Until (event $ TimePoint (StepBegin CleanupStep) Proxy)
 
 gain :: CoAny ot => ZO 'Battlefield ot -> Ability ot -> Effect 'Continuous
 gain = Gain coAny
@@ -706,8 +722,13 @@ instance HasLandType BasicLandType where
 instance HasLandType LandType where
   hasLandType = HasLandType
 
-putOntoBattlefield :: (IsZone zone, CoPermanent ot) => OPlayer -> ZO zone ot -> Effect 'OneShot
+putOntoBattlefield ::
+  (IsZone zone, CoPermanent ot) => OPlayer -> ZO zone ot -> Effect 'OneShot
 putOntoBattlefield = PutOntoBattlefield coPermanent
 
-searchLibrary :: CoCard ot => OPlayer -> WithLinkedObject 'Library (Elect (Effect 'OneShot)) ot -> Effect 'OneShot
+searchLibrary ::
+  CoCard ot =>
+  OPlayer ->
+  WithLinkedObject 'Library (Elect (Effect 'OneShot)) ot ->
+  Effect 'OneShot
 searchLibrary = SearchLibrary coCard

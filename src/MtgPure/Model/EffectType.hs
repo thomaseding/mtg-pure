@@ -13,10 +13,9 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.EffectType
-  ( EffectType (..),
-  )
-where
+module MtgPure.Model.EffectType (
+  EffectType (..),
+) where
 
 import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)

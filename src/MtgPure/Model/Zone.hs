@@ -14,12 +14,11 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.Zone
-  ( Zone (..),
-    SZone (..),
-    IsZone (..),
-  )
-where
+module MtgPure.Model.Zone (
+  Zone (..),
+  SZone (..),
+  IsZone (..),
+) where
 
 import safe Data.Kind (Type)
 import safe Data.Proxy (Proxy)

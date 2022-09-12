@@ -14,37 +14,36 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.ObjectType
-  ( ObjectType (..),
-    OT,
-    OT0,
-    OT1,
-    OT2,
-    OT3,
-    OT4,
-    OT5,
-    OT6,
-    OT7,
-    OT8,
-    OT9,
-    OT10,
-    OT11,
-    OT12,
-    ObjectType1,
-    ObjectType2,
-    ObjectType3,
-    ObjectType4,
-    ObjectType5,
-    ObjectType6,
-    ObjectType7,
-    ObjectType8,
-    ObjectType9,
-    ObjectType10,
-    ObjectType11,
-    ObjectType12,
-    SObjectType (..),
-  )
-where
+module MtgPure.Model.ObjectType (
+  ObjectType (..),
+  OT,
+  OT0,
+  OT1,
+  OT2,
+  OT3,
+  OT4,
+  OT5,
+  OT6,
+  OT7,
+  OT8,
+  OT9,
+  OT10,
+  OT11,
+  OT12,
+  ObjectType1,
+  ObjectType2,
+  ObjectType3,
+  ObjectType4,
+  ObjectType5,
+  ObjectType6,
+  ObjectType7,
+  ObjectType8,
+  ObjectType9,
+  ObjectType10,
+  ObjectType11,
+  ObjectType12,
+  SObjectType (..),
+) where
 
 import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
@@ -80,21 +79,92 @@ type ObjectType3 = ((), ObjectType, ObjectType, ObjectType)
 
 type ObjectType4 = ((), ObjectType, ObjectType, ObjectType, ObjectType)
 
-type ObjectType5 = ((), ObjectType, ObjectType, ObjectType, ObjectType, ObjectType)
+type ObjectType5 =
+  ((), ObjectType, ObjectType, ObjectType, ObjectType, ObjectType)
 
-type ObjectType6 = ((), ObjectType, ObjectType, ObjectType, ObjectType, ObjectType, ObjectType)
+type ObjectType6 =
+  ((), ObjectType, ObjectType, ObjectType, ObjectType, ObjectType, ObjectType)
 
-type ObjectType7 = ((), ObjectType, ObjectType, ObjectType, ObjectType, ObjectType, ObjectType, ObjectType)
+type ObjectType7 =
+  ( ()
+  , ObjectType
+  , ObjectType
+  , ObjectType
+  , ObjectType
+  , ObjectType
+  , ObjectType
+  , ObjectType
+  )
 
-type ObjectType8 = ((), ObjectType, ObjectType, ObjectType, ObjectType, ObjectType, ObjectType, ObjectType, ObjectType)
+type ObjectType8 =
+  ( ()
+  , ObjectType
+  , ObjectType
+  , ObjectType
+  , ObjectType
+  , ObjectType
+  , ObjectType
+  , ObjectType
+  , ObjectType
+  )
 
-type ObjectType9 = ((), ObjectType, ObjectType, ObjectType, ObjectType, ObjectType, ObjectType, ObjectType, ObjectType, ObjectType)
+type ObjectType9 =
+  ( ()
+  , ObjectType
+  , ObjectType
+  , ObjectType
+  , ObjectType
+  , ObjectType
+  , ObjectType
+  , ObjectType
+  , ObjectType
+  , ObjectType
+  )
 
-type ObjectType10 = ((), ObjectType, ObjectType, ObjectType, ObjectType, ObjectType, ObjectType, ObjectType, ObjectType, ObjectType, ObjectType)
+type ObjectType10 =
+  ( ()
+  , ObjectType
+  , ObjectType
+  , ObjectType
+  , ObjectType
+  , ObjectType
+  , ObjectType
+  , ObjectType
+  , ObjectType
+  , ObjectType
+  , ObjectType
+  )
 
-type ObjectType11 = ((), ObjectType, ObjectType, ObjectType, ObjectType, ObjectType, ObjectType, ObjectType, ObjectType, ObjectType, ObjectType, ObjectType)
+type ObjectType11 =
+  ( ()
+  , ObjectType
+  , ObjectType
+  , ObjectType
+  , ObjectType
+  , ObjectType
+  , ObjectType
+  , ObjectType
+  , ObjectType
+  , ObjectType
+  , ObjectType
+  , ObjectType
+  )
 
-type ObjectType12 = ((), ObjectType, ObjectType, ObjectType, ObjectType, ObjectType, ObjectType, ObjectType, ObjectType, ObjectType, ObjectType, ObjectType, ObjectType)
+type ObjectType12 =
+  ( ()
+  , ObjectType
+  , ObjectType
+  , ObjectType
+  , ObjectType
+  , ObjectType
+  , ObjectType
+  , ObjectType
+  , ObjectType
+  , ObjectType
+  , ObjectType
+  , ObjectType
+  , ObjectType
+  )
 
 data family OT (ot :: k) :: Type
 
@@ -132,23 +202,41 @@ type OT2 a b = OT '( '(), a :: ObjectType, b :: ObjectType)
 
 type OT3 a b c = OT '( '(), a :: ObjectType, b :: ObjectType, c :: ObjectType)
 
-type OT4 a b c d = OT '( '(), a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType)
+type OT4 a b c d =
+  OT
+    '( '(), a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType)
 
-type OT5 a b c d e = OT '( '(), a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType)
+type OT5 a b c d e =
+  OT
+    '( '(), a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType)
 
-type OT6 a b c d e f = OT '( '(), a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType)
+type OT6 a b c d e f =
+  OT
+    '( '(), a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType)
 
-type OT7 a b c d e f g = OT '( '(), a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType)
+type OT7 a b c d e f g =
+  OT
+    '( '(), a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType)
 
-type OT8 a b c d e f g h = OT '( '(), a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType)
+type OT8 a b c d e f g h =
+  OT
+    '( '(), a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType)
 
-type OT9 a b c d e f g h i = OT '( '(), a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType)
+type OT9 a b c d e f g h i =
+  OT
+    '( '(), a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType)
 
-type OT10 a b c d e f g h i j = OT '( '(), a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType)
+type OT10 a b c d e f g h i j =
+  OT
+    '( '(), a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType)
 
-type OT11 a b c d e f g h i j k = OT '( '(), a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType, k :: ObjectType)
+type OT11 a b c d e f g h i j k =
+  OT
+    '( '(), a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType, k :: ObjectType)
 
-type OT12 a b c d e f g h i j k l = OT '( '(), a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType, k :: ObjectType, l :: ObjectType)
+type OT12 a b c d e f g h i j k l =
+  OT
+    '( '(), a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType, k :: ObjectType, l :: ObjectType)
 
 -- XXX: Data.Sing
 data SObjectType :: ObjectType -> Type where

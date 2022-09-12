@@ -14,10 +14,9 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.ToManaPool
-  ( ToManaPool (..),
-  )
-where
+module MtgPure.Model.ToManaPool (
+  ToManaPool (..),
+) where
 
 import safe Data.Inst (Inst2, Inst3, Inst4, Inst5, Inst6)
 import safe MtgPure.Model.Mana (Mana (..))
@@ -39,49 +38,57 @@ instance {-# OVERLAPPABLE #-} (Inst3 ToManaPool a b c) => ToManaPool (a, b, c) w
   toManaPool (a, b, c) = toManaPool a <> toManaPool b <> toManaPool c
 
 instance {-# OVERLAPPABLE #-} (Inst4 ToManaPool a b c d) => ToManaPool (a, b, c, d) where
-  toManaPool (a, b, c, d) = toManaPool a <> toManaPool b <> toManaPool c <> toManaPool d
+  toManaPool (a, b, c, d) =
+    toManaPool a <> toManaPool b <> toManaPool c <> toManaPool d
 
 instance {-# OVERLAPPABLE #-} (Inst5 ToManaPool a b c d e) => ToManaPool (a, b, c, d, e) where
-  toManaPool (a, b, c, d, e) = toManaPool a <> toManaPool b <> toManaPool c <> toManaPool d <> toManaPool e
+  toManaPool (a, b, c, d, e) =
+    toManaPool a <> toManaPool b <> toManaPool c <> toManaPool d <> toManaPool e
 
 instance {-# OVERLAPPABLE #-} (Inst6 ToManaPool a b c d e f) => ToManaPool (a, b, c, d, e, f) where
-  toManaPool (a, b, c, d, e, f) = toManaPool a <> toManaPool b <> toManaPool c <> toManaPool d <> toManaPool e <> toManaPool f
+  toManaPool (a, b, c, d, e, f) =
+    toManaPool a
+      <> toManaPool b
+      <> toManaPool c
+      <> toManaPool d
+      <> toManaPool e
+      <> toManaPool f
 
 instance ToManaPool (Mana 'MTWhite) where
   toManaPool = \case
-    x@(WhiteMana _) -> emptyManaPool {poolWhite = x}
+    x@(WhiteMana _) -> emptyManaPool{poolWhite = x}
 
 instance ToManaPool (Mana 'MTBlue) where
   toManaPool = \case
-    x@(BlueMana _) -> emptyManaPool {poolBlue = x}
+    x@(BlueMana _) -> emptyManaPool{poolBlue = x}
 
 instance ToManaPool (Mana 'MTBlack) where
   toManaPool = \case
-    x@(BlackMana _) -> emptyManaPool {poolBlack = x}
+    x@(BlackMana _) -> emptyManaPool{poolBlack = x}
 
 instance ToManaPool (Mana 'MTRed) where
   toManaPool = \case
-    x@(RedMana _) -> emptyManaPool {poolRed = x}
+    x@(RedMana _) -> emptyManaPool{poolRed = x}
 
 instance ToManaPool (Mana 'MTGreen) where
   toManaPool = \case
-    x@(GreenMana _) -> emptyManaPool {poolGreen = x}
+    x@(GreenMana _) -> emptyManaPool{poolGreen = x}
 
 instance ToManaPool (Mana 'MTColorless) where
   toManaPool = \case
-    x@ColorlessMana {} -> emptyManaPool {poolColorless = x}
+    x@ColorlessMana{} -> emptyManaPool{poolColorless = x}
 
 instance ToManaPool (ManaSymbol a, Integer) where
   toManaPool (sym, n) = toManaPool (sym, fromInteger n :: Int)
 
 instance ToManaPool (ManaSymbol a, Int) where
   toManaPool = \case
-    x@(W, _) -> emptyManaPool {poolWhite = toMana x}
-    x@(U, _) -> emptyManaPool {poolBlue = toMana x}
-    x@(B, _) -> emptyManaPool {poolBlack = toMana x}
-    x@(R, _) -> emptyManaPool {poolRed = toMana x}
-    x@(G, _) -> emptyManaPool {poolGreen = toMana x}
-    x@(C, _) -> emptyManaPool {poolColorless = toMana x}
+    x@(W, _) -> emptyManaPool{poolWhite = toMana x}
+    x@(U, _) -> emptyManaPool{poolBlue = toMana x}
+    x@(B, _) -> emptyManaPool{poolBlack = toMana x}
+    x@(R, _) -> emptyManaPool{poolRed = toMana x}
+    x@(G, _) -> emptyManaPool{poolGreen = toMana x}
+    x@(C, _) -> emptyManaPool{poolColorless = toMana x}
 
 instance ToManaPool (ManaSymbol a) where
   toManaPool = \case

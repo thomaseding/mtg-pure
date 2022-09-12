@@ -14,14 +14,13 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.ObjectType.Card
-  ( WCard (..),
-    CardType (..),
-    IsCardType (..),
-    CardVisitor (..),
-    visitCard',
-  )
-where
+module MtgPure.Model.ObjectType.Card (
+  WCard (..),
+  CardType (..),
+  IsCardType (..),
+  CardVisitor (..),
+  visitCard',
+) where
 
 import safe Data.Inst (Inst2, Inst3)
 import safe Data.Kind (Type)
@@ -29,16 +28,16 @@ import safe Data.Proxy (Proxy)
 import safe MtgPure.Model.CardType (CardType (..))
 import safe MtgPure.Model.IsObjectType (IsObjectType)
 import safe MtgPure.Model.ObjectType (OT1, OT2, OT3, ObjectType (..))
-import safe MtgPure.Model.ObjectType.Kind
-  ( OTArtifact,
-    OTCard,
-    OTCreature,
-    OTEnchantment,
-    OTInstant,
-    OTLand,
-    OTPlaneswalker,
-    OTSorcery,
-  )
+import safe MtgPure.Model.ObjectType.Kind (
+  OTArtifact,
+  OTCard,
+  OTCreature,
+  OTEnchantment,
+  OTInstant,
+  OTLand,
+  OTPlaneswalker,
+  OTSorcery,
+ )
 import safe MtgPure.Model.ZoneObject (ZO)
 
 -- Witness type
@@ -57,13 +56,13 @@ data WCard :: Type -> Type where
 deriving instance Show (WCard a)
 
 data CardVisitor zone z = CardVisitor
-  { visitCArtifact :: ZO zone OTArtifact -> z,
-    visitCCreature :: ZO zone OTCreature -> z,
-    visitCInstant :: ZO zone OTInstant -> z,
-    visitCEnchantment :: ZO zone OTEnchantment -> z,
-    visitCLand :: ZO zone OTLand -> z,
-    visitCPlaneswalker :: ZO zone OTPlaneswalker -> z,
-    visitCSorcery :: ZO zone OTSorcery -> z
+  { visitCArtifact :: ZO zone OTArtifact -> z
+  , visitCCreature :: ZO zone OTCreature -> z
+  , visitCInstant :: ZO zone OTInstant -> z
+  , visitCEnchantment :: ZO zone OTEnchantment -> z
+  , visitCLand :: ZO zone OTLand -> z
+  , visitCPlaneswalker :: ZO zone OTPlaneswalker -> z
+  , visitCSorcery :: ZO zone OTSorcery -> z
   }
 
 class IsObjectType a => IsCardType a where

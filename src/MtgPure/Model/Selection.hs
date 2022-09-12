@@ -14,10 +14,9 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.Selection
-  ( Selection (..),
-  )
-where
+module MtgPure.Model.Selection (
+  Selection (..),
+) where
 
 import safe Data.ConsIndex (ConsIndex (..))
 import safe Data.Kind (Type)
@@ -28,5 +27,5 @@ data Selection :: Type where
 
 instance ConsIndex Selection where
   consIndex = \case
-    Choose {} -> 1
-    Target {} -> 2
+    Choose{} -> 1
+    Target{} -> 2

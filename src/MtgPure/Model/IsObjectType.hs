@@ -13,38 +13,32 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.IsObjectType
-  ( IsObjectType (..),
-    ObjectVisitor (..),
-    visitObject',
-    objectTypeIndex,
-  )
-where
+module MtgPure.Model.IsObjectType (
+  IsObjectType (..),
+  ObjectVisitor (..),
+  visitObject',
+  objectTypeIndex,
+) where
 
 import safe Data.Proxy (Proxy)
 import safe Data.Typeable (Typeable)
-import safe MtgPure.Model.Object
-  ( Object (Object),
-  )
+import safe MtgPure.Model.Object (Object (Object))
 import safe MtgPure.Model.ObjectId (ObjectId)
-import safe MtgPure.Model.ObjectType
-  ( ObjectType (..),
-    SObjectType (..),
-  )
+import safe MtgPure.Model.ObjectType (ObjectType (..), SObjectType (..))
 
 data ObjectVisitor a = ObjectVisitor
-  { visitOActivatedAbility :: Object 'OTActivatedAbility -> a,
-    visitOArtifact :: Object 'OTArtifact -> a,
-    visitOCreature :: Object 'OTCreature -> a,
-    visitOEmblem :: Object 'OTEmblem -> a,
-    visitOEnchantment :: Object 'OTEnchantment -> a,
-    visitOInstant :: Object 'OTInstant -> a,
-    visitOLand :: Object 'OTLand -> a,
-    visitOPlaneswalker :: Object 'OTPlaneswalker -> a,
-    visitOPlayer :: Object 'OTPlayer -> a,
-    visitOSorcery :: Object 'OTSorcery -> a,
-    visitOStaticAbility :: Object 'OTStaticAbility -> a,
-    visitOTriggeredAbility :: Object 'OTTriggeredAbility -> a
+  { visitOActivatedAbility :: Object 'OTActivatedAbility -> a
+  , visitOArtifact :: Object 'OTArtifact -> a
+  , visitOCreature :: Object 'OTCreature -> a
+  , visitOEmblem :: Object 'OTEmblem -> a
+  , visitOEnchantment :: Object 'OTEnchantment -> a
+  , visitOInstant :: Object 'OTInstant -> a
+  , visitOLand :: Object 'OTLand -> a
+  , visitOPlaneswalker :: Object 'OTPlaneswalker -> a
+  , visitOPlayer :: Object 'OTPlayer -> a
+  , visitOSorcery :: Object 'OTSorcery -> a
+  , visitOStaticAbility :: Object 'OTStaticAbility -> a
+  , visitOTriggeredAbility :: Object 'OTTriggeredAbility -> a
   }
 
 class Typeable a => IsObjectType (a :: ObjectType) where
@@ -54,7 +48,11 @@ class Typeable a => IsObjectType (a :: ObjectType) where
   litObjectType :: Proxy a -> ObjectType
   visitObject :: ObjectVisitor b -> Object a -> b
 
-visitObject' :: IsObjectType a => (forall b. IsObjectType b => Object b -> x) -> Object a -> x
+visitObject' ::
+  IsObjectType a =>
+  (forall b. IsObjectType b => Object b -> x) ->
+  Object a ->
+  x
 visitObject' f = visitObject $ ObjectVisitor f f f f f f f f f f f f
 
 objectTypeIndex :: IsObjectType a => Proxy a -> Int

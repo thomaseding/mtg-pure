@@ -14,10 +14,9 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.Mana
-  ( Mana (..),
-  )
-where
+module MtgPure.Model.Mana (
+  Mana (..),
+) where
 
 import safe Data.Kind (Type)
 import safe MtgPure.Model.Color (Color (..))

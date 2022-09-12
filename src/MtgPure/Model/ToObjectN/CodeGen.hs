@@ -19,11 +19,10 @@
 {-# HLINT ignore "Use tuple-section" #-}
 {-# HLINT ignore "Use if" #-}
 
-module MtgPure.Model.ToObjectN.CodeGen
-  ( main,
-    codeGenToObjectN,
-  )
-where
+module MtgPure.Model.ToObjectN.CodeGen (
+  main,
+  codeGenToObjectN,
+) where
 
 import safe Data.List (intercalate, sort, sortBy, subsequences, (\\))
 import safe Data.Maybe (catMaybes)
@@ -139,23 +138,28 @@ allSyms :: [Sym]
 allSyms = map Sym [0 .. fromEnum (maxBound :: ObjectType)]
 
 objectTypeDescs :: [SymDesc]
-objectTypeDescs = map SymObject $ filter p $ map (`take` objectTypes) [0 .. limit]
-  where
-    p xs = not (null xs) && length xs <= limit
+objectTypeDescs =
+  map SymObject $
+    filter p $
+      map
+        (`take` objectTypes)
+        [0 .. limit]
+ where
+  p xs = not (null xs) && length xs <= limit
 
 objectTypes :: [String]
 objectTypes = map f [minBound :: ObjectType .. maxBound]
-  where
-    f o = [['A' ..] !! fromEnum o]
+ where
+  f o = [['A' ..] !! fromEnum o]
 
 -- https://stackoverflow.com/a/3100764
 nubOrd :: Ord a => [a] -> [a]
 nubOrd = go Set.empty
-  where
-    go s (x : xs)
-      | x `Set.member` s = go s xs
-      | otherwise = x : go (Set.insert x s) xs
-    go _ _ = []
+ where
+  go s (x : xs)
+    | x `Set.member` s = go s xs
+    | otherwise = x : go (Set.insert x s) xs
+  go _ _ = []
 
 codeGenToObjectN :: IO ()
 codeGenToObjectN = do
@@ -180,40 +184,31 @@ generateObjectsToObjectN :: SymDesc -> Int -> [String]
 generateObjectsToObjectN desc n = do
   sym <- symsN
   catMaybes [generateObjectToObjectN desc sym symsN]
-  where
-    symsN = take n allSyms
+ where
+  symsN = take n allSyms
 
 generateObjectToObjectN :: SymDesc -> Sym -> [Sym] -> Maybe String
 generateObjectToObjectN desc sym symN =
   if
       | n < 1 -> Nothing
       | otherwise -> Just $ instanceLine ++ "\n  " ++ funcLine ++ "\n"
-  where
-    n = length symN
+ where
+  n = length symN
 
-    instanceLine =
-      unwords $
-        [ "instance",
-          "Inst" ++ show n,
-          "IsObjectType"
-        ]
-          ++ map (interpretSym desc) symN
-          ++ [ "=>",
-               "ToObject" ++ show n ++ "'",
-               interpretSym desc sym
-             ]
-          ++ map (interpretSym desc) symN
-          ++ ["where"]
+  instanceLine =
+    unwords $
+      ["instance", "Inst" ++ show n, "IsObjectType"]
+        ++ map (interpretSym desc) symN
+        ++ ["=>", "ToObject" ++ show n ++ "'", interpretSym desc sym]
+        ++ map (interpretSym desc) symN
+        ++ ["where"]
 
-    funcLine =
-      unwords
-        [ "toObject" ++ show n ++ "'",
-          "=",
-          "O"
-            ++ if n == 1
-              then ""
-              else show n ++ interpretSym SymLetter sym
-        ]
+  funcLine =
+    unwords
+      [ "toObject" ++ show n ++ "'"
+      , "="
+      , "O" ++ if n == 1 then "" else show n ++ interpretSym SymLetter sym
+      ]
 
 ----------------------------------------
 
@@ -222,67 +217,80 @@ objectMsToObjectN desc = do
   (m, n) <- indexPairs
   s <- generateObjectMsToObjectN (if False then desc else SymLetter) m n
   pure $ "-- " ++ show (m, n) ++ "\n" ++ s
-  where
-    lim = case desc of
-      SymObject syms -> length syms
-      SymLetter -> error "should be passed SymObject instead"
-    indexPairs = sortBy cmp $ do
-      m <- [1 .. lim]
-      n <- [m .. lim]
-      pure (m, n)
-    cmp (a, b) (x, y) = compare (b, a) (y, x)
+ where
+  lim = case desc of
+    SymObject syms -> length syms
+    SymLetter -> error "should be passed SymObject instead"
+  indexPairs = sortBy cmp $ do
+    m <- [1 .. lim]
+    n <- [m .. lim]
+    pure (m, n)
+  cmp (a, b) (x, y) = compare (b, a) (y, x)
 
 generateObjectMsToObjectN :: SymDesc -> Int -> Int -> [String]
 generateObjectMsToObjectN desc m n = reverse $ do
   symsM <- symsMs
   catMaybes [generateObjectMToObjectN desc symsM symsN]
-  where
-    symsN = take n allSyms
-    subseqs = subsequences symsN
-    symsMs = filter (\xs -> length xs == m) subseqs
+ where
+  symsN = take n allSyms
+  subseqs = subsequences symsN
+  symsMs = filter (\xs -> length xs == m) subseqs
 
 generateObjectMToObjectN :: SymDesc -> [Sym] -> [Sym] -> Maybe String
 generateObjectMToObjectN desc symsM symsN =
   if
-      | m == n -> Just $ instanceLine ++ "\n  toObject" ++ show n ++ " = id\n"
-      | n <= 1 -> Nothing
-      | m < 1 -> Nothing
-      | m + 1 == n -> Just $ instanceLine ++ "\n  toObject" ++ show n ++ " = ON" ++ show n ++ letterMissing ++ "\n"
-      | otherwise -> Just $ instanceLine ++ "\n  toObject" ++ show n ++ " x = " ++ telescope ++ "\n"
-  where
-    m = length symsM
-    n = length symsN
-    letterMissing = case symsN \\ symsM of
-      [x] -> interpretSym SymLetter x
-      _ -> error "impossible"
-    seqSymsM = commas $ map (interpretSym desc) symsM
-    telescope = telescopeToObjectN desc "x" symsM symsN
-    instanceLine =
-      unwords $
-        [ "instance",
-          "Inst" ++ show n,
-          "IsObjectType"
-        ]
-          ++ map (interpretSym desc) symsN
-          ++ [ "=>",
-               "ToObject" ++ show n,
-               "(OT '(Z, " ++ seqSymsM ++ "))"
-             ]
-          ++ map (interpretSym desc) symsN
-          ++ ["where"]
+      | m == n ->
+        Just $ instanceLine ++ "\n  toObject" ++ show n ++ " = id\n"
+      | n <= 1 ->
+        Nothing
+      | m < 1 ->
+        Nothing
+      | m + 1 == n ->
+        Just $
+          instanceLine
+            ++ "\n  toObject"
+            ++ show n
+            ++ " = ON"
+            ++ show n
+            ++ letterMissing
+            ++ "\n"
+      | otherwise ->
+        Just $
+          instanceLine
+            ++ "\n  toObject"
+            ++ show n
+            ++ " x = "
+            ++ telescope
+            ++ "\n"
+ where
+  m = length symsM
+  n = length symsN
+  letterMissing = case symsN \\ symsM of
+    [x] -> interpretSym SymLetter x
+    _ -> error "impossible"
+  seqSymsM = commas $ map (interpretSym desc) symsM
+  telescope = telescopeToObjectN desc "x" symsM symsN
+  instanceLine =
+    unwords $
+      ["instance", "Inst" ++ show n, "IsObjectType"]
+        ++ map (interpretSym desc) symsN
+        ++ ["=>", "ToObject" ++ show n, "(OT '(Z, " ++ seqSymsM ++ "))"]
+        ++ map (interpretSym desc) symsN
+        ++ ["where"]
 
 telescopeToObjectN :: SymDesc -> String -> [Sym] -> [Sym] -> String
 telescopeToObjectN desc acc symsM symsN = case m < n of
   True -> telescopeToObjectN desc acc' symsSucc symsN
   False -> acc
-  where
-    m = length symsM
-    n = length symsN
-    toObjectSucc = "to" ++ show (m + 1)
-    newSym = head $ symsN \\ symsM
-    symsSucc = sort $ newSym : symsM
-    typeSucc = "(ON (OT '(Z, " ++ commas (map (interpretSym desc) symsSucc) ++ ")))"
-    acc' = "(" ++ toObjectSucc ++ " " ++ acc ++ " :: " ++ typeSucc ++ ")"
+ where
+  m = length symsM
+  n = length symsN
+  toObjectSucc = "to" ++ show (m + 1)
+  newSym = head $ symsN \\ symsM
+  symsSucc = sort $ newSym : symsM
+  typeSucc =
+    "(ON (OT '(Z, " ++ commas (map (interpretSym desc) symsSucc) ++ ")))"
+  acc' = "(" ++ toObjectSucc ++ " " ++ acc ++ " :: " ++ typeSucc ++ ")"
 
 commas :: [String] -> String
 commas = intercalate ", "

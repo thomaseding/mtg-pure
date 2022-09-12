@@ -13,10 +13,9 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.Variable
-  ( Variable (..),
-  )
-where
+module MtgPure.Model.Variable (
+  Variable (..),
+) where
 
 newtype Variable = ReifiedVariable Int -- e.g. X
   deriving (Eq, Ord, Show)

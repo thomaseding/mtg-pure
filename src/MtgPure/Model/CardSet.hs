@@ -13,10 +13,9 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.CardSet
-  ( CardSet (..),
-  )
-where
+module MtgPure.Model.CardSet (
+  CardSet (..),
+) where
 
 data CardSet -- Sorted by release date
   = Alpha

@@ -14,29 +14,28 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.ObjectType.Spell
-  ( WSpell (..),
-    SpellType (..),
-    IsSpellType (..),
-    SpellVisitor (..),
-    visitSpell',
-  )
-where
+module MtgPure.Model.ObjectType.Spell (
+  WSpell (..),
+  SpellType (..),
+  IsSpellType (..),
+  SpellVisitor (..),
+  visitSpell',
+) where
 
 import safe Data.Inst (Inst2, Inst3, Inst4)
 import safe Data.Kind (Type)
 import safe Data.Proxy (Proxy)
 import safe MtgPure.Model.IsObjectType (IsObjectType)
 import safe MtgPure.Model.ObjectType (OT1, OT2, OT3, OT4, ObjectType (..))
-import safe MtgPure.Model.ObjectType.Kind
-  ( OTArtifact,
-    OTCreature,
-    OTEnchantment,
-    OTInstant,
-    OTPlaneswalker,
-    OTSorcery,
-    OTSpell,
-  )
+import safe MtgPure.Model.ObjectType.Kind (
+  OTArtifact,
+  OTCreature,
+  OTEnchantment,
+  OTInstant,
+  OTPlaneswalker,
+  OTSorcery,
+  OTSpell,
+ )
 import safe MtgPure.Model.ZoneObject (ZO)
 
 data SpellType
@@ -64,12 +63,12 @@ data WSpell :: Type -> Type where
 deriving instance Show (WSpell a)
 
 data SpellVisitor zone z = SpellVisitor
-  { visitSArtifact :: ZO zone OTArtifact -> z,
-    visitSCreature :: ZO zone OTCreature -> z,
-    visitSEnchantment :: ZO zone OTEnchantment -> z,
-    visitSInstant :: ZO zone OTInstant -> z,
-    visitSPlaneswalker :: ZO zone OTPlaneswalker -> z,
-    visitSSorcery :: ZO zone OTSorcery -> z
+  { visitSArtifact :: ZO zone OTArtifact -> z
+  , visitSCreature :: ZO zone OTCreature -> z
+  , visitSEnchantment :: ZO zone OTEnchantment -> z
+  , visitSInstant :: ZO zone OTInstant -> z
+  , visitSPlaneswalker :: ZO zone OTPlaneswalker -> z
+  , visitSSorcery :: ZO zone OTSorcery -> z
   }
 
 class IsObjectType a => IsSpellType a where

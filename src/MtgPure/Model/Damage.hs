@@ -13,10 +13,9 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.Damage
-  ( Damage (..),
-  )
-where
+module MtgPure.Model.Damage (
+  Damage (..),
+) where
 
 import safe Data.Kind (Type)
 import safe MtgPure.Model.Variable (Variable)

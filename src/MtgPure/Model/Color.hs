@@ -12,11 +12,10 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.Color
-  ( Colorless,
-    Color (..),
-  )
-where
+module MtgPure.Model.Color (
+  Colorless,
+  Color (..),
+) where
 
 import safe Data.Kind (Type)
 

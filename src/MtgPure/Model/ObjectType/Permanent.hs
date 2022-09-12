@@ -14,14 +14,13 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.ObjectType.Permanent
-  ( WPermanent (..),
-    PermanentType (..),
-    IsPermanentType (..),
-    PermanentVisitor (..),
-    visitPermanent',
-  )
-where
+module MtgPure.Model.ObjectType.Permanent (
+  WPermanent (..),
+  PermanentType (..),
+  IsPermanentType (..),
+  PermanentVisitor (..),
+  visitPermanent',
+) where
 
 import safe Data.Inst (Inst2, Inst3, Inst4)
 import safe Data.Kind (Type)
@@ -29,14 +28,14 @@ import safe Data.Proxy (Proxy)
 import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.IsObjectType (IsObjectType)
 import safe MtgPure.Model.ObjectType (OT1, OT2, OT3, OT4, ObjectType (..))
-import safe MtgPure.Model.ObjectType.Kind
-  ( OTArtifact,
-    OTCreature,
-    OTEnchantment,
-    OTLand,
-    OTPermanent,
-    OTPlaneswalker,
-  )
+import safe MtgPure.Model.ObjectType.Kind (
+  OTArtifact,
+  OTCreature,
+  OTEnchantment,
+  OTLand,
+  OTPermanent,
+  OTPlaneswalker,
+ )
 import safe MtgPure.Model.ZoneObject (ZO)
 
 data PermanentType
@@ -63,11 +62,11 @@ data WPermanent :: Type -> Type where
 deriving instance Show (WPermanent a)
 
 data PermanentVisitor zone z = PermanentVisitor
-  { visitPArtifact :: ZO zone OTArtifact -> z,
-    visitPCreature :: ZO zone OTCreature -> z,
-    visitPEnchantment :: ZO zone OTEnchantment -> z,
-    visitPLand :: ZO zone OTLand -> z,
-    visitPPlaneswalker :: ZO zone OTPlaneswalker -> z
+  { visitPArtifact :: ZO zone OTArtifact -> z
+  , visitPCreature :: ZO zone OTCreature -> z
+  , visitPEnchantment :: ZO zone OTEnchantment -> z
+  , visitPLand :: ZO zone OTLand -> z
+  , visitPPlaneswalker :: ZO zone OTPlaneswalker -> z
   }
 
 class IsObjectType a => IsPermanentType a where

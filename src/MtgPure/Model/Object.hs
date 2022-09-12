@@ -13,18 +13,14 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.Object
-  ( Object (..),
-  )
-where
+module MtgPure.Model.Object (
+  Object (..),
+) where
 
 import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.ObjectId (ObjectId)
-import safe MtgPure.Model.ObjectType
-  ( ObjectType (..),
-    SObjectType,
-  )
+import safe MtgPure.Model.ObjectType (ObjectType (..), SObjectType)
 
 data Object :: ObjectType -> Type where
   Object :: SObjectType a -> ObjectId -> Object a

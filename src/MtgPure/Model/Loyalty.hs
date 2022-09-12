@@ -13,10 +13,9 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.Loyalty
-  ( Loyalty (..),
-  )
-where
+module MtgPure.Model.Loyalty (
+  Loyalty (..),
+) where
 
 newtype Loyalty = Loyalty Int
   deriving (Eq, Ord, Show)

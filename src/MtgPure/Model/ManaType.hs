@@ -13,10 +13,9 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.ManaType
-  ( ManaType (..),
-  )
-where
+module MtgPure.Model.ManaType (
+  ManaType (..),
+) where
 
 import Data.Typeable (Typeable)
 

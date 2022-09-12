@@ -13,10 +13,9 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.GenericMana
-  ( GenericMana (..),
-  )
-where
+module MtgPure.Model.GenericMana (
+  GenericMana (..),
+) where
 
 import safe Data.Kind (Type)
 import safe MtgPure.Model.Variable (Variable)

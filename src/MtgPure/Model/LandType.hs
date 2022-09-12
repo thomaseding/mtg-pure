@@ -13,10 +13,9 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.LandType
-  ( LandType (..),
-  )
-where
+module MtgPure.Model.LandType (
+  LandType (..),
+) where
 
 import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)

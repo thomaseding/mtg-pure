@@ -16,44 +16,43 @@
 {-# HLINT ignore "Use const" #-}
 {-# HLINT ignore "Redundant multi-way if" #-}
 
-module MtgPure.Model.ObjectN
-  ( ObjectN (..),
-  )
-where
+module MtgPure.Model.ObjectN (
+  ObjectN (..),
+) where
 
-import safe Data.Inst
-  ( Inst1,
-    Inst10,
-    Inst11,
-    Inst12,
-    Inst2,
-    Inst3,
-    Inst4,
-    Inst5,
-    Inst6,
-    Inst7,
-    Inst8,
-    Inst9,
-  )
+import safe Data.Inst (
+  Inst1,
+  Inst10,
+  Inst11,
+  Inst12,
+  Inst2,
+  Inst3,
+  Inst4,
+  Inst5,
+  Inst6,
+  Inst7,
+  Inst8,
+  Inst9,
+ )
 import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.IsObjectType (IsObjectType)
 import safe MtgPure.Model.Object (Object)
-import safe MtgPure.Model.ObjectType
-  ( OT0,
-    OT1,
-    OT10,
-    OT11,
-    OT12,
-    OT2,
-    OT3,
-    OT4,
-    OT5,
-    OT6,
-    OT7,
-    OT8,
-    OT9,
-  )
+import safe MtgPure.Model.ObjectType (
+  OT0,
+  OT1,
+  OT10,
+  OT11,
+  OT12,
+  OT2,
+  OT3,
+  OT4,
+  OT5,
+  OT6,
+  OT7,
+  OT8,
+  OT9,
+ )
 
 data family ObjectN (ot :: Type) :: Type
 

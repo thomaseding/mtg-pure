@@ -2,14 +2,13 @@
 
 -- ghci -hidir .output -odir .output -fobject-code -Wall -Werror -XDataKinds MtgPure
 
-module MtgPure
-  ( module MtgPure.AllCards,
-    module MtgPure.Cards,
-    module MtgPure.Model,
-    module MtgPure.ModelCombinators,
-    codeGenToObjectN,
-  )
-where
+module MtgPure (
+  module MtgPure.AllCards,
+  module MtgPure.Cards,
+  module MtgPure.Model,
+  module MtgPure.ModelCombinators,
+  codeGenToObjectN,
+) where
 
 import safe MtgPure.AllCards
 import safe MtgPure.Cards

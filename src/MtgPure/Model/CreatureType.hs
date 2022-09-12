@@ -13,10 +13,9 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.CreatureType
-  ( CreatureType (..),
-  )
-where
+module MtgPure.Model.CreatureType (
+  CreatureType (..),
+) where
 
 data CreatureType
   = Bird

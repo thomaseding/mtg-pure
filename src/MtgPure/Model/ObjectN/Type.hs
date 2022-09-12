@@ -15,37 +15,36 @@
 {-# HLINT ignore "Use const" #-}
 {-# HLINT ignore "Redundant multi-way if" #-}
 
-module MtgPure.Model.ObjectN.Type
-  ( ON1,
-    ON2,
-    ON3,
-    ON4,
-    ON5,
-    ON6,
-    ON7,
-    ON8,
-    ON9,
-    ON10,
-    ON11,
-    ON12,
-  )
-where
+module MtgPure.Model.ObjectN.Type (
+  ON1,
+  ON2,
+  ON3,
+  ON4,
+  ON5,
+  ON6,
+  ON7,
+  ON8,
+  ON9,
+  ON10,
+  ON11,
+  ON12,
+) where
 
 import safe MtgPure.Model.ObjectN (ObjectN)
-import safe MtgPure.Model.ObjectType
-  ( OT1,
-    OT10,
-    OT11,
-    OT12,
-    OT2,
-    OT3,
-    OT4,
-    OT5,
-    OT6,
-    OT7,
-    OT8,
-    OT9,
-  )
+import safe MtgPure.Model.ObjectType (
+  OT1,
+  OT10,
+  OT11,
+  OT12,
+  OT2,
+  OT3,
+  OT4,
+  OT5,
+  OT6,
+  OT7,
+  OT8,
+  OT9,
+ )
 
 type ON1 a = ObjectN (OT1 a)
 

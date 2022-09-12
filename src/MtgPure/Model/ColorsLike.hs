@@ -14,10 +14,9 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.ColorsLike
-  ( ColorsLike (..),
-  )
-where
+module MtgPure.Model.ColorsLike (
+  ColorsLike (..),
+) where
 
 import safe MtgPure.Model.Color (Color (..))
 import safe MtgPure.Model.Colors (Colors (..))
@@ -66,4 +65,5 @@ instance (ColorsLike a, ColorsLike b, ColorsLike c, ColorsLike d) => ColorsLike 
   toColors (a, b, c, d) = toColors a <> toColors b <> toColors c <> toColors d
 
 instance (ColorsLike a, ColorsLike b, ColorsLike c, ColorsLike d, ColorsLike e) => ColorsLike (a, b, c, d, e) where
-  toColors (a, b, c, d, e) = toColors a <> toColors b <> toColors c <> toColors d <> toColors e
+  toColors (a, b, c, d, e) =
+    toColors a <> toColors b <> toColors c <> toColors d <> toColors e

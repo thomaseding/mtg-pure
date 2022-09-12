@@ -13,10 +13,9 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.HasManaSymbol
-  ( HasManaSymbol (..),
-  )
-where
+module MtgPure.Model.HasManaSymbol (
+  HasManaSymbol (..),
+) where
 
 import safe MtgPure.Model.ManaSymbol (ManaSymbol)
 import safe MtgPure.Model.ManaType (ManaType (..))

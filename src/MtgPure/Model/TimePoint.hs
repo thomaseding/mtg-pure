@@ -14,10 +14,9 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.TimePoint
-  ( TimePoint (..),
-  )
-where
+module MtgPure.Model.TimePoint (
+  TimePoint (..),
+) where
 
 import safe Data.ConsIndex (ConsIndex (..))
 import safe Data.Kind (Type)
@@ -34,7 +33,7 @@ data TimePoint (p :: Phase) :: Type where
 
 instance ConsIndex (TimePoint p) where
   consIndex = \case
-    PhaseBegin {} -> 1
-    PhaseEnd {} -> 2
-    StepBegin {} -> 3
-    StepEnd {} -> 4
+    PhaseBegin{} -> 1
+    PhaseEnd{} -> 2
+    StepBegin{} -> 3
+    StepEnd{} -> 4

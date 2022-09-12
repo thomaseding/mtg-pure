@@ -14,10 +14,9 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.ToManaCost
-  ( ToManaCost (..),
-  )
-where
+module MtgPure.Model.ToManaCost (
+  ToManaCost (..),
+) where
 
 import safe Data.Inst (Inst2, Inst3, Inst4, Inst5, Inst6, Inst7)
 import safe MtgPure.Model.GenericMana (GenericMana (GenericMana'))
@@ -40,16 +39,31 @@ instance {-# OVERLAPPABLE #-} (Inst3 ToManaCost a b c) => ToManaCost (a, b, c) w
   toManaCost (a, b, c) = toManaCost a <> toManaCost b <> toManaCost c
 
 instance {-# OVERLAPPABLE #-} (Inst4 ToManaCost a b c d) => ToManaCost (a, b, c, d) where
-  toManaCost (a, b, c, d) = toManaCost a <> toManaCost b <> toManaCost c <> toManaCost d
+  toManaCost (a, b, c, d) =
+    toManaCost a <> toManaCost b <> toManaCost c <> toManaCost d
 
 instance {-# OVERLAPPABLE #-} (Inst5 ToManaCost a b c d e) => ToManaCost (a, b, c, d, e) where
-  toManaCost (a, b, c, d, e) = toManaCost a <> toManaCost b <> toManaCost c <> toManaCost d <> toManaCost e
+  toManaCost (a, b, c, d, e) =
+    toManaCost a <> toManaCost b <> toManaCost c <> toManaCost d <> toManaCost e
 
 instance {-# OVERLAPPABLE #-} (Inst6 ToManaCost a b c d e f) => ToManaCost (a, b, c, d, e, f) where
-  toManaCost (a, b, c, d, e, f) = toManaCost a <> toManaCost b <> toManaCost c <> toManaCost d <> toManaCost e <> toManaCost f
+  toManaCost (a, b, c, d, e, f) =
+    toManaCost a
+      <> toManaCost b
+      <> toManaCost c
+      <> toManaCost d
+      <> toManaCost e
+      <> toManaCost f
 
 instance {-# OVERLAPPABLE #-} (Inst7 ToManaCost a b c d e f g) => ToManaCost (a, b, c, d, e, f, g) where
-  toManaCost (a, b, c, d, e, f, g) = toManaCost a <> toManaCost b <> toManaCost c <> toManaCost d <> toManaCost e <> toManaCost f <> toManaCost g
+  toManaCost (a, b, c, d, e, f, g) =
+    toManaCost a
+      <> toManaCost b
+      <> toManaCost c
+      <> toManaCost d
+      <> toManaCost e
+      <> toManaCost f
+      <> toManaCost g
 
 instance ToManaCost Integer where
   toManaCost n = toManaCost (fromInteger n :: Int)
@@ -62,22 +76,22 @@ instance ToManaCost GenericMana where
 
 instance ToManaCost (Mana a) where
   toManaCost = \case
-    x@(WhiteMana _) -> emptyManaCost {costWhite = x}
-    x@(BlueMana _) -> emptyManaCost {costBlue = x}
-    x@(BlackMana _) -> emptyManaCost {costBlack = x}
-    x@(RedMana _) -> emptyManaCost {costRed = x}
-    x@(GreenMana _) -> emptyManaCost {costGreen = x}
-    x@ColorlessMana {} -> emptyManaCost {costColorless = x}
-    x@GenericMana {} -> emptyManaCost {costGeneric = x}
+    x@(WhiteMana _) -> emptyManaCost{costWhite = x}
+    x@(BlueMana _) -> emptyManaCost{costBlue = x}
+    x@(BlackMana _) -> emptyManaCost{costBlack = x}
+    x@(RedMana _) -> emptyManaCost{costRed = x}
+    x@(GreenMana _) -> emptyManaCost{costGreen = x}
+    x@ColorlessMana{} -> emptyManaCost{costColorless = x}
+    x@GenericMana{} -> emptyManaCost{costGeneric = x}
 
 instance ToManaCost (ManaSymbol a, Int) where
   toManaCost = \case
-    x@(W, _) -> emptyManaCost {costWhite = toMana x}
-    x@(U, _) -> emptyManaCost {costBlue = toMana x}
-    x@(B, _) -> emptyManaCost {costBlack = toMana x}
-    x@(R, _) -> emptyManaCost {costRed = toMana x}
-    x@(G, _) -> emptyManaCost {costGreen = toMana x}
-    x@(C, _) -> emptyManaCost {costColorless = toMana x}
+    x@(W, _) -> emptyManaCost{costWhite = toMana x}
+    x@(U, _) -> emptyManaCost{costBlue = toMana x}
+    x@(B, _) -> emptyManaCost{costBlack = toMana x}
+    x@(R, _) -> emptyManaCost{costRed = toMana x}
+    x@(G, _) -> emptyManaCost{costGreen = toMana x}
+    x@(C, _) -> emptyManaCost{costColorless = toMana x}
 
 instance ToManaCost (ManaSymbol a) where
   toManaCost = \case
@@ -92,4 +106,5 @@ instance ToManaCost ManaPool where
   toManaCost (ManaPool w u b r g c) = ManaCost' w u b r g c mempty
 
 instance ToManaCost (Int, ManaPool) where
-  toManaCost (generic, pool) = (toManaCost pool) {costGeneric = toMana generic}
+  toManaCost (generic, pool) =
+    (toManaCost pool){costGeneric = toMana generic}
