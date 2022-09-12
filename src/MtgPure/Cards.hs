@@ -202,7 +202,7 @@ acceptableLosses = Card1 "Acceptable Losses" $ \this ->
   let cost = controllerOf this $ \you ->
         Cost $
           AndCosts
-            [ ManaCostCost $ toManaCost (3, R),
+            [ ManaCost $ toManaCost (3, R),
               DiscardRandomCost you 1
             ]
    in SorceryDef (toColors R) cost [] $
@@ -275,7 +275,7 @@ bloodMoon = Card1 "Blood Moon" $ \_this ->
     [ Static $
         ContinuousEffect $
           All $
-            object nonBasic $
+            object [nonBasic] $
               \land -> effect $ changeTo land mountain
     ]
   where
@@ -434,7 +434,7 @@ swanSong = Card1 "Swan Song" $ \this ->
             controllerOf target $ \controller ->
               effect
                 [ counterSpell target,
-                  AddToBattlefield coPermanent controller birdToken
+                  addToBattlefield controller birdToken
                 ]
   where
     cost = spellCost U

@@ -89,7 +89,7 @@ instance ToManaCost (ManaSymbol a) where
     C -> toManaCost (C, 1 :: Int)
 
 instance ToManaCost ManaPool where
-  toManaCost (ManaPool w u b r g c) = ManaCost w u b r g c mempty
+  toManaCost (ManaPool w u b r g c) = ManaCost' w u b r g c mempty
 
 instance ToManaCost (Int, ManaPool) where
   toManaCost (generic, pool) = (toManaCost pool) {costGeneric = toMana generic}

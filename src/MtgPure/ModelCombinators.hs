@@ -50,7 +50,9 @@ module MtgPure.ModelCombinators
     counterAbility,
     counterSpell,
     sacrificeCost,
+    addToBattlefield,
     colored,
+    colorless,
     tapped,
   )
 where
@@ -170,7 +172,7 @@ instance AsDamage Variable where
   asDamage = VariableDamage
 
 spellCost :: ToManaCost a => a -> Elect Cost x
-spellCost = Cost . ManaCostCost . toManaCost
+spellCost = Cost . ManaCost . toManaCost
 
 noCost :: Elect Cost a
 noCost = Cost $ OrCosts []
@@ -285,6 +287,9 @@ sacrificeCost = SacrificeCost coPermanent
 tapped :: CoPermanent ot => Requirement ot
 tapped = Tapped coPermanent
 
+addToBattlefield :: CoPermanent a => OPlayer -> Token a -> Effect 'OneShot
+addToBattlefield = AddToBattlefield coPermanent
+
 ofColors :: ColorsLike c => c -> Requirement ot
 ofColors = OfColors . toColors
 
@@ -295,7 +300,7 @@ instance AsCost Cost where
   asCost = id
 
 instance AsCost ManaCost where
-  asCost = ManaCostCost
+  asCost = ManaCost
 
 playerPays :: AsCost c => c -> Requirement OTPlayer
 playerPays = PlayerPays . asCost
@@ -330,8 +335,11 @@ ifThen cond elect = If cond elect branchEmpty
 ifElse :: Branchable e => Condition -> Elect e a -> Elect e a
 ifElse cond = If cond branchEmpty
 
-nonBasic :: [Requirement OTLand]
-nonBasic = map (Not . HasBasicLandType) [minBound .. maxBound]
+nonBasic :: Requirement OTLand
+nonBasic = RAnd $ map (Not . HasBasicLandType) [minBound ..]
 
 colored :: Requirement ot
-colored = ROr $ map ofColors [toColors W, toColors U, toColors B, toColors R, toColors G]
+colored = ROr $ map ofColors [minBound :: Color ..]
+
+colorless :: Requirement ot
+colorless = Not colored

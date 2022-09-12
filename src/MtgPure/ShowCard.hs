@@ -711,9 +711,9 @@ showCost = \case
     sPlaneswalker <- parens <$> showObject1 planeswalker
     sLoyalty <- dollar <$> showLoyalty loyalty
     pure $ pure "LoyaltyCost " <> sPlaneswalker <> sLoyalty
-  ManaCostCost cost -> yesParens $ do
+  ManaCost cost -> yesParens $ do
     sCost <- dollar <$> showManaCost cost
-    pure $ pure (fromString "ManaCostCost") <> sCost
+    pure $ pure (fromString "ManaCost") <> sCost
   OrCosts costs -> yesParens $ do
     sCosts <- parens <$> showListM showCost costs
     pure $ pure "OrCosts " <> sCosts
@@ -763,7 +763,7 @@ instance LiteralMana (Mana a) where
 
 showManaCost :: ManaCost -> EnvM ParenItems
 showManaCost cost = yesParens $ do
-  let ManaCost
+  let ManaCost'
         { costWhite = w,
           costBlue = u,
           costBlack = b,
@@ -802,7 +802,7 @@ showManaCost cost = yesParens $ do
       sC <- parens <$> showMana c
       sX <- parens <$> showMana x
       pure $
-        pure (fromString "ManaCost ")
+        pure (fromString "ManaCost' ")
           <> sW
           <> pure " "
           <> sU

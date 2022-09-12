@@ -1,14 +1,8 @@
 # mtg-pure
 Purely functional Haskell MTG engine and encoding library
 
-Haskell language options:
-- Safe
-- NoIncoherentInstances
-- NoOverlappingInstances (todo)
-- NoTemplateHaskell
-- NoUndecidableInstances 
-
 Model goals:
+- The world's best MTG encoding.
 - Pure data modelling of cards as a type-safe DSL.
 - Card model is a deep embedding.
 - Card model is algebraic and recursive.
@@ -30,3 +24,10 @@ Will not fix issues related to:
 - Handling of integer overflow
 - Memory performance
 - Speed performance
+
+Haskell language options:
+- Safe
+- NoIncoherentInstances
+- NoOverlappingInstances (todo: write a script that generates non-overlapping ToManaCost/ToManaPool instances needed to achieve this)
+- NoTemplateHaskell
+- NoUndecidableInstances 

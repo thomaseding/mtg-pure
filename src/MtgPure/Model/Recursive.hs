@@ -107,7 +107,7 @@ data Cost :: Type where
   AndCosts :: [Cost] -> Cost
   DiscardRandomCost :: OPlayer -> Int -> Cost
   LoyaltyCost :: OPlaneswalker -> Loyalty -> Cost
-  ManaCostCost :: ManaCost -> Cost
+  ManaCost :: ManaCost -> Cost
   OrCosts :: [Cost] -> Cost
   PayLife :: OPlayer -> Int -> Cost
   SacrificeCost :: WPermanent a -> OPlayer -> [Requirement a] -> Cost

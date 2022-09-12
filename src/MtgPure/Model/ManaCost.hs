@@ -22,7 +22,7 @@ where
 import MtgPure.Model.Mana (Mana (..))
 import MtgPure.Model.ManaType (ManaType (..))
 
-data ManaCost = ManaCost
+data ManaCost = ManaCost'
   { costWhite :: Mana 'MTWhite,
     costBlue :: Mana 'MTBlue,
     costBlack :: Mana 'MTBlack,
@@ -35,7 +35,7 @@ data ManaCost = ManaCost
 
 instance Semigroup ManaCost where
   mc1 <> mc2 =
-    ManaCost
+    ManaCost'
       { costWhite = w1 <> w2,
         costBlue = u1 <> u2,
         costBlack = b1 <> b2,
@@ -45,7 +45,7 @@ instance Semigroup ManaCost where
         costGeneric = x1 <> x2
       }
     where
-      ManaCost
+      ManaCost'
         { costWhite = w1,
           costBlue = u1,
           costBlack = b1,
@@ -54,7 +54,7 @@ instance Semigroup ManaCost where
           costColorless = c1,
           costGeneric = x1
         } = mc1
-      ManaCost
+      ManaCost'
         { costWhite = w2,
           costBlue = u2,
           costBlack = b2,
@@ -66,7 +66,7 @@ instance Semigroup ManaCost where
 
 emptyManaCost :: ManaCost
 emptyManaCost =
-  ManaCost
+  ManaCost'
     { costWhite = mempty,
       costBlue = mempty,
       costBlack = mempty,
