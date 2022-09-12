@@ -31,4 +31,6 @@ data Step :: Phase -> Type where
 
 deriving instance Eq (Step p)
 
+deriving instance Ord (Step p)
+
 deriving instance Show (Step p)

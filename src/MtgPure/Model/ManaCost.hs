@@ -31,7 +31,7 @@ data ManaCost = ManaCost'
     costColorless :: Mana 'MTColorless,
     costGeneric :: Mana 'MTGeneric
   }
-  deriving (Eq, Show)
+  deriving (Eq, Ord, Show)
 
 instance Semigroup ManaCost where
   mc1 <> mc2 =

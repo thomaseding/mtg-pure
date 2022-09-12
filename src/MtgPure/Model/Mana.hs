@@ -37,6 +37,8 @@ data Mana :: ManaType -> Type where
 
 deriving instance Eq (Mana a)
 
+deriving instance Ord (Mana a)
+
 deriving instance Show (Mana a)
 
 instance Semigroup (Mana 'MTWhite) where

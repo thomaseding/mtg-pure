@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE Safe #-}
@@ -20,6 +21,7 @@ module MtgPure.Model.Phase
   )
 where
 
+import Data.ConsIndex (ConsIndex (..))
 import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
 
@@ -41,4 +43,14 @@ data SPhase :: Phase -> Type where
 
 deriving instance Eq (SPhase a)
 
+deriving instance Ord (SPhase a)
+
 deriving instance Show (SPhase a)
+
+instance ConsIndex Phase where
+  consIndex = \case
+    BeginningPhase -> 1
+    PreCombatMainPhase -> 2
+    CombatPhase -> 3
+    PostCombatMainPhase -> 4
+    EndingPhase -> 5

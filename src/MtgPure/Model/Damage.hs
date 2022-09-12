@@ -24,4 +24,4 @@ import safe MtgPure.Model.Variable (Variable)
 data Damage :: Type where
   Damage :: Int -> Damage
   VariableDamage :: Variable -> Damage
-  deriving (Eq, Show)
+  deriving (Eq, Ord, Show)

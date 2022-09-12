@@ -7,7 +7,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE Safe #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
@@ -26,9 +25,7 @@ data GenericMana :: Type where
   GenericMana' :: Int -> GenericMana
   VariableGenericMana :: Variable -> GenericMana
   SumGenericMana :: GenericMana -> GenericMana -> GenericMana
-  deriving (Show)
-
-deriving instance Eq GenericMana
+  deriving (Eq, Ord, Show)
 
 instance Semigroup GenericMana where
   (<>) (GenericMana' x) (GenericMana' y) = GenericMana' (x + y)

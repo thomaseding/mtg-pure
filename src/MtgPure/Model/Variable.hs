@@ -19,4 +19,4 @@ module MtgPure.Model.Variable
 where
 
 newtype Variable = ReifiedVariable Int -- e.g. X
-  deriving (Eq, Show)
+  deriving (Eq, Ord, Show)

@@ -96,7 +96,7 @@ import safe MtgPure.Model.Power
 import safe MtgPure.Model.PrettyObjectName
 import safe MtgPure.Model.Rarity
 import safe MtgPure.Model.Recursive
-import safe MtgPure.Model.Recursive.Eq ()
+import safe MtgPure.Model.Recursive.Ord ()
 import safe MtgPure.Model.Recursive.Show ()
 import safe MtgPure.Model.Selection
 import safe MtgPure.Model.Step

@@ -7,7 +7,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE Safe #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
@@ -26,9 +25,7 @@ data ColorlessMana :: Type where
   ColorlessMana' :: Int -> ColorlessMana
   VariableColorlessMana :: Variable -> ColorlessMana
   SumColorlessMana :: ColorlessMana -> ColorlessMana -> ColorlessMana
-  deriving (Show)
-
-deriving instance Eq ColorlessMana
+  deriving (Eq, Ord, Show)
 
 instance Semigroup ColorlessMana where
   (<>) (ColorlessMana' x) (ColorlessMana' y) = ColorlessMana' (x + y)

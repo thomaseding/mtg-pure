@@ -23,4 +23,4 @@ import Data.Typeable (Typeable)
 data Tribal
   = Tribal
   | NonTribal
-  deriving (Typeable)
+  deriving (Eq, Ord, Typeable)

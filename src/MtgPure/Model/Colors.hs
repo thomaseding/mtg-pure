@@ -30,7 +30,7 @@ data Colors :: Type where
     Maybe (ManaSymbol 'MTRed) ->
     Maybe (ManaSymbol 'MTGreen) ->
     Colors
-  deriving (Eq, Show)
+  deriving (Eq, Ord, Show)
 
 instance Semigroup Colors where
   Colors w1 u1 b1 r1 g1 <> Colors w2 u2 b2 r2 g2 =

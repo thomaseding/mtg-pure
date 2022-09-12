@@ -99,4 +99,8 @@ data SObjectType :: ObjectType -> Type where
   STriggeredAbility :: SObjectType 'OTTriggeredAbility
   deriving (Typeable)
 
+deriving instance Eq (SObjectType a)
+
+deriving instance Ord (SObjectType a)
+
 deriving instance Show (SObjectType a)

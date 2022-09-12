@@ -17,6 +17,7 @@ module MtgPure.Model.IsObjectType
   ( IsObjectType (..),
     ObjectVisitor (..),
     visitObject',
+    objectTypeIndex,
   )
 where
 
@@ -53,6 +54,9 @@ class Typeable a => IsObjectType (a :: ObjectType) where
 
 visitObject' :: IsObjectType a => (forall b. IsObjectType b => Object b -> x) -> Object a -> x
 visitObject' f = visitObject $ ObjectVisitor f f f f f f f f f f f f
+
+objectTypeIndex :: IsObjectType a => Proxy a -> Int
+objectTypeIndex = fromEnum . singObjectType
 
 instance IsObjectType 'OTActivatedAbility where
   idToObject = Object SActivatedAbility

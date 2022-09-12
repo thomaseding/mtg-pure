@@ -32,6 +32,8 @@ data ColoredMana :: Color -> Type where
 
 deriving instance Eq (ColoredMana c)
 
+deriving instance Ord (ColoredMana c)
+
 deriving instance Show (ColoredMana c)
 
 instance Semigroup (ColoredMana 'White) where

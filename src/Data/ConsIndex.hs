@@ -3,7 +3,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE Safe #-}
@@ -14,22 +13,12 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.Selection
-  ( Selection (..),
+module Data.ConsIndex
+  ( ConsIndex (..),
   )
 where
 
-import safe Data.ConsIndex (ConsIndex (..))
-import safe Data.Kind (Type)
-import safe MtgPure.Model.ObjectN.Type (OPlayer)
-
-data Selection :: Type where
-  Choose :: OPlayer -> Selection
-  Target :: OPlayer -> Selection
-  Random :: Selection
-
-instance ConsIndex Selection where
-  consIndex = \case
-    Choose {} -> 1
-    Target {} -> 2
-    Random {} -> 3
+-- `Data` not always derivable, hence this.
+-- `NumberMonger` VSCode extension nice for populating instances.
+class ConsIndex a where
+  consIndex :: a -> Int

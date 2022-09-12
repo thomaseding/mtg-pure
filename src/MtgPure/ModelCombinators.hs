@@ -43,6 +43,7 @@ module MtgPure.ModelCombinators
     playerPays,
     is,
     satisfies,
+    hasAbility,
     spellCost,
     noCost,
     dealDamage,
@@ -101,7 +102,8 @@ import safe MtgPure.Model.ObjectType.Kind
   )
 import safe MtgPure.Model.ObjectType.Permanent (IsPermanentType, WPermanent (..))
 import safe MtgPure.Model.Recursive
-  ( Card (..),
+  ( Ability,
+    Card (..),
     CardTypeDef,
     Condition (..),
     Cost (..),
@@ -440,3 +442,6 @@ instance (AsWithThis ot, TypeableOT k ot) => MkCard 'Tribal k ot where
 
 mkToken :: MkCard tribal k ot => CardName -> (ObjectN ot -> CardTypeDef tribal ot) -> Token ot
 mkToken name = Token . mkCard name
+
+hasAbility :: AsWithThis ot => (ObjectN ot -> Ability ot) -> Requirement ot
+hasAbility = HasAbility . thisObject

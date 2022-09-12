@@ -21,7 +21,7 @@ where
 import safe Data.String (IsString (..))
 
 newtype CardName = CardName {unCardName :: String}
-  deriving (Eq)
+  deriving (Eq, Ord)
 
 instance IsString CardName where
   fromString = CardName

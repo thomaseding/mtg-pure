@@ -7,6 +7,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE Safe #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
@@ -26,3 +27,7 @@ data AbilityType :: EffectType -> Type where
   ManaAbility :: AbilityType 'OneShot
   StaticAbility :: AbilityType 'Continuous
   TriggeredAbility :: AbilityType 'OneShot
+
+deriving instance Eq (AbilityType e)
+
+deriving instance Ord (AbilityType e)

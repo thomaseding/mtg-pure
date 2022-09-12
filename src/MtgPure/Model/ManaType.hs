@@ -18,6 +18,8 @@ module MtgPure.Model.ManaType
   )
 where
 
+import Data.Typeable (Typeable)
+
 data ManaType
   = MTWhite
   | MTBlue
@@ -26,3 +28,4 @@ data ManaType
   | MTGreen
   | MTColorless
   | MTGeneric
+  deriving (Eq, Ord, Typeable)

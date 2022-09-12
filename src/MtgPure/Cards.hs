@@ -347,7 +347,7 @@ plummet = mkCard "Plummet" $ \this ->
   InstantDef (toColors G) cost [] $
     controllerOf this $
       \you -> A (Target you) $
-        object [HasAbility $ thisObject $ \_this -> Static Flying] $
+        object [hasAbility $ \_this -> Static Flying] $
           \target -> effect $ destroy target
   where
     cost = spellCost (1, G)

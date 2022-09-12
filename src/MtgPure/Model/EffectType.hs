@@ -24,4 +24,4 @@ import safe Data.Typeable (Typeable)
 data EffectType :: Type where
   OneShot :: EffectType
   Continuous :: EffectType
-  deriving (Show, Typeable)
+  deriving (Eq, Ord, Show, Typeable)

@@ -1,12 +1,16 @@
 {-# LANGUAGE Safe #-}
 
--- ghci -hidir .output -odir .output -fobject-code -Wall -Werror MtgPure
+-- ghci -hidir .output -odir .output -fobject-code -Wall -Werror -XDataKinds MtgPure
 
 module MtgPure
   ( module MtgPure.Cards,
+    module MtgPure.Model,
+    module MtgPure.ModelCombinators,
     codeGenToObjectN,
   )
 where
 
 import safe MtgPure.Cards
+import safe MtgPure.Model
 import safe MtgPure.Model.ToObjectN.CodeGen (codeGenToObjectN)
+import safe MtgPure.ModelCombinators
