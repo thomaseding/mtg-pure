@@ -22,7 +22,7 @@ import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
 
 data Rarity :: Type where
-  BasicLand :: Rarity -- Wow `Woodland Chasm` has this type in reality: https://boardgames.stackexchange.com/a/56457/2209
+  BasicLand' :: Rarity -- Wow `Woodland Chasm` has this type in reality: https://boardgames.stackexchange.com/a/56457/2209
   Common :: Rarity
   Uncommon :: Rarity
   Rare :: Rarity

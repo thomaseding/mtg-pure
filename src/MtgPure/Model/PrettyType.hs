@@ -36,18 +36,8 @@ import safe Data.Inst
     Inst9,
   )
 import safe Data.Proxy (Proxy (Proxy))
-import safe Data.Typeable (typeRep)
+import safe Data.Typeable (Typeable, typeRep)
 import safe MtgPure.Model.IsObjectType (IsObjectType (litObjectType))
-import safe MtgPure.Model.ObjectN (ObjectN (..))
-import safe MtgPure.Model.ObjectN.Type
-  ( OAny,
-    OCreaturePlaneswalker,
-    OCreaturePlayer,
-    OCreaturePlayerPlaneswalker,
-    OPermanent,
-    OPlayerPlaneswalker,
-    OSpell,
-  )
 import safe MtgPure.Model.ObjectType
   ( OT1,
     OT10,
@@ -64,16 +54,18 @@ import safe MtgPure.Model.ObjectType
     ObjectType (..),
   )
 import safe MtgPure.Model.ObjectType.Kind
-  ( OTCreaturePlaneswalker,
+  ( OTAny,
+    OTCreaturePlaneswalker,
     OTCreaturePlayer,
     OTCreaturePlayerPlaneswalker,
+    OTDamageSource,
     OTPermanent,
     OTPlayerPlaneswalker,
     OTSpell,
   )
 
-class PrettyType a where
-  prettyType :: Proxy a -> String
+class Typeable ty => PrettyType ty where
+  prettyType :: Proxy ty -> String
 
 instance IsObjectType a => PrettyType a where
   prettyType = show . litObjectType
@@ -93,21 +85,6 @@ instance IsObjectType a => PrettyType (OT1 a) where
     OTStaticAbility -> "OTStaticAbility"
     OTTriggeredAbility -> "OTTriggeredAbility"
 
-instance IsObjectType a => PrettyType (ObjectN (OT1 a)) where
-  prettyType _ = case litObjectType (Proxy @a) of
-    OTActivatedAbility -> "OActivatedAbility"
-    OTArtifact -> "OArtifact"
-    OTCreature -> "OCreature"
-    OTEmblem -> "OEmblem"
-    OTEnchantment -> "OEnchantment"
-    OTInstant -> "OInstant"
-    OTLand -> "OLand"
-    OTPlaneswalker -> "OPlaneswalker"
-    OTPlayer -> "OPlayer"
-    OTSorcery -> "OSorcery"
-    OTStaticAbility -> "OStaticAbility"
-    OTTriggeredAbility -> "OTriggeredAbility"
-
 instance Inst2 IsObjectType a b => PrettyType (OT2 a b) where
   prettyType proxy =
     if
@@ -120,21 +97,6 @@ instance Inst2 IsObjectType a b => PrettyType (OT2 a b) where
             ++ ", "
             ++ show (typeRep (Proxy @b))
             ++ ")"
-    where
-      rep = typeRep proxy
-
-instance Inst2 IsObjectType a b => PrettyType (ObjectN (OT2 a b)) where
-  prettyType proxy =
-    if
-        | rep == typeRep (Proxy @OCreaturePlaneswalker) -> "OCreaturePlaneswalker"
-        | rep == typeRep (Proxy @OCreaturePlayer) -> "OCreaturePlayer"
-        | rep == typeRep (Proxy @OPlayerPlaneswalker) -> "OPlayerPlaneswalker"
-        | otherwise ->
-          "ObjectN (OT '( '(), "
-            ++ show (typeRep (Proxy @a))
-            ++ ", "
-            ++ show (typeRep (Proxy @b))
-            ++ "))"
     where
       rep = typeRep proxy
 
@@ -153,21 +115,6 @@ instance Inst3 IsObjectType a b c => PrettyType (OT3 a b c) where
     where
       rep = typeRep proxy
 
-instance Inst3 IsObjectType a b c => PrettyType (ObjectN (OT3 a b c)) where
-  prettyType proxy =
-    if
-        | rep == typeRep (Proxy @OCreaturePlayerPlaneswalker) -> "OCreaturePlayerPlaneswalker"
-        | otherwise ->
-          "ObjectN (OT '( '(), "
-            ++ show (typeRep (Proxy @a))
-            ++ ", "
-            ++ show (typeRep (Proxy @b))
-            ++ ", "
-            ++ show (typeRep (Proxy @c))
-            ++ "))"
-    where
-      rep = typeRep proxy
-
 instance Inst4 IsObjectType a b c d => PrettyType (OT4 a b c d) where
   prettyType proxy =
     if
@@ -181,22 +128,6 @@ instance Inst4 IsObjectType a b c d => PrettyType (OT4 a b c d) where
             ++ ", "
             ++ show (typeRep (Proxy @d))
             ++ ")"
-    where
-      _rep = typeRep proxy
-
-instance Inst4 IsObjectType a b c d => PrettyType (ObjectN (OT4 a b c d)) where
-  prettyType proxy =
-    if
-        | otherwise ->
-          "ObjectN (OT '( '(), "
-            ++ show (typeRep (Proxy @a))
-            ++ ", "
-            ++ show (typeRep (Proxy @b))
-            ++ ", "
-            ++ show (typeRep (Proxy @c))
-            ++ ", "
-            ++ show (typeRep (Proxy @d))
-            ++ "))"
     where
       _rep = typeRep proxy
 
@@ -219,25 +150,6 @@ instance Inst5 IsObjectType a b c d e => PrettyType (OT5 a b c d e) where
     where
       rep = typeRep proxy
 
-instance Inst5 IsObjectType a b c d e => PrettyType (ObjectN (OT5 a b c d e)) where
-  prettyType proxy =
-    if
-        | rep == typeRep (Proxy @OPermanent) -> "OPermanent"
-        | otherwise ->
-          "ObjectN (OT '( '(), "
-            ++ show (typeRep (Proxy @a))
-            ++ ", "
-            ++ show (typeRep (Proxy @b))
-            ++ ", "
-            ++ show (typeRep (Proxy @c))
-            ++ ", "
-            ++ show (typeRep (Proxy @d))
-            ++ ", "
-            ++ show (typeRep (Proxy @e))
-            ++ "))"
-    where
-      rep = typeRep proxy
-
 instance Inst6 IsObjectType a b c d e f => PrettyType (OT6 a b c d e f) where
   prettyType proxy =
     if
@@ -256,27 +168,6 @@ instance Inst6 IsObjectType a b c d e f => PrettyType (OT6 a b c d e f) where
             ++ ", "
             ++ show (typeRep (Proxy @f))
             ++ ")"
-    where
-      rep = typeRep proxy
-
-instance Inst6 IsObjectType a b c d e f => PrettyType (ObjectN (OT6 a b c d e f)) where
-  prettyType proxy =
-    if
-        | rep == typeRep (Proxy @OSpell) -> "OSpell"
-        | otherwise ->
-          "ObjectN (OT '( '(), "
-            ++ show (typeRep (Proxy @a))
-            ++ ", "
-            ++ show (typeRep (Proxy @b))
-            ++ ", "
-            ++ show (typeRep (Proxy @c))
-            ++ ", "
-            ++ show (typeRep (Proxy @d))
-            ++ ", "
-            ++ show (typeRep (Proxy @e))
-            ++ ", "
-            ++ show (typeRep (Proxy @f))
-            ++ "))"
     where
       rep = typeRep proxy
 
@@ -302,34 +193,12 @@ instance Inst7 IsObjectType a b c d e f g => PrettyType (OT7 a b c d e f g) wher
     where
       _rep = typeRep proxy
 
-instance Inst7 IsObjectType a b c d e f g => PrettyType (ObjectN (OT7 a b c d e f g)) where
+instance Inst8 IsObjectType a b c d e f g h => PrettyType (OT8 a b c d e f g h) where
   prettyType proxy =
     if
+        | rep == typeRep (Proxy @OTDamageSource) -> "OTDamageSource"
         | otherwise ->
-          "ObjectN (OT '( '(), "
-            ++ show (typeRep (Proxy @a))
-            ++ ", "
-            ++ show (typeRep (Proxy @b))
-            ++ ", "
-            ++ show (typeRep (Proxy @c))
-            ++ ", "
-            ++ show (typeRep (Proxy @d))
-            ++ ", "
-            ++ show (typeRep (Proxy @e))
-            ++ ", "
-            ++ show (typeRep (Proxy @f))
-            ++ ", "
-            ++ show (typeRep (Proxy @g))
-            ++ "))"
-    where
-      _rep = typeRep proxy
-
-instance Inst8 IsObjectType a b c d e f g h => PrettyType (ObjectN (OT8 a b c d e f g h)) where
-  prettyType proxy =
-    if
-        | rep == typeRep (Proxy @OAny) -> "ODamageSource"
-        | otherwise ->
-          "ObjectN (OT '( '(), "
+          "OT '( '(), "
             ++ show (typeRep (Proxy @a))
             ++ ", "
             ++ show (typeRep (Proxy @b))
@@ -345,15 +214,15 @@ instance Inst8 IsObjectType a b c d e f g h => PrettyType (ObjectN (OT8 a b c d 
             ++ show (typeRep (Proxy @g))
             ++ ", "
             ++ show (typeRep (Proxy @h))
-            ++ "))"
+            ++ ")"
     where
       rep = typeRep proxy
 
-instance Inst9 IsObjectType a b c d e f g h i => PrettyType (ObjectN (OT9 a b c d e f g h i)) where
+instance Inst9 IsObjectType a b c d e f g h i => PrettyType (OT9 a b c d e f g h i) where
   prettyType proxy =
     if
         | otherwise ->
-          "ObjectN (OT '( '(), "
+          "OT '( '(), "
             ++ show (typeRep (Proxy @a))
             ++ ", "
             ++ show (typeRep (Proxy @b))
@@ -371,15 +240,15 @@ instance Inst9 IsObjectType a b c d e f g h i => PrettyType (ObjectN (OT9 a b c 
             ++ show (typeRep (Proxy @h))
             ++ ","
             ++ show (typeRep (Proxy @i))
-            ++ "))"
+            ++ ")"
     where
       _rep = typeRep proxy
 
-instance Inst10 IsObjectType a b c d e f g h i j => PrettyType (ObjectN (OT10 a b c d e f g h i j)) where
+instance Inst10 IsObjectType a b c d e f g h i j => PrettyType (OT10 a b c d e f g h i j) where
   prettyType proxy =
     if
         | otherwise ->
-          "ObjectN (OT '( '(), "
+          "OT '( '(), "
             ++ show (typeRep (Proxy @a))
             ++ ", "
             ++ show (typeRep (Proxy @b))
@@ -399,15 +268,15 @@ instance Inst10 IsObjectType a b c d e f g h i j => PrettyType (ObjectN (OT10 a 
             ++ show (typeRep (Proxy @i))
             ++ ","
             ++ show (typeRep (Proxy @j))
-            ++ "))"
+            ++ ")"
     where
       _rep = typeRep proxy
 
-instance Inst11 IsObjectType a b c d e f g h i j k => PrettyType (ObjectN (OT11 a b c d e f g h i j k)) where
+instance Inst11 IsObjectType a b c d e f g h i j k => PrettyType (OT11 a b c d e f g h i j k) where
   prettyType proxy =
     if
         | otherwise ->
-          "ObjectN (OT '( '(), "
+          "OT '( '(), "
             ++ show (typeRep (Proxy @a))
             ++ ", "
             ++ show (typeRep (Proxy @b))
@@ -429,16 +298,16 @@ instance Inst11 IsObjectType a b c d e f g h i j k => PrettyType (ObjectN (OT11 
             ++ show (typeRep (Proxy @j))
             ++ ","
             ++ show (typeRep (Proxy @k))
-            ++ "))"
+            ++ ")"
     where
       _rep = typeRep proxy
 
-instance Inst12 IsObjectType a b c d e f g h i j k l => PrettyType (ObjectN (OT12 a b c d e f g h i j k l)) where
+instance Inst12 IsObjectType a b c d e f g h i j k l => PrettyType (OT12 a b c d e f g h i j k l) where
   prettyType proxy =
     if
-        | rep == typeRep (Proxy @OAny) -> "OAny"
+        | rep == typeRep (Proxy @OTAny) -> "OTAny"
         | otherwise ->
-          "ObjectN (OT '( '(), "
+          "OT '( '(), "
             ++ show (typeRep (Proxy @a))
             ++ ", "
             ++ show (typeRep (Proxy @b))
@@ -462,6 +331,6 @@ instance Inst12 IsObjectType a b c d e f g h i j k l => PrettyType (ObjectN (OT1
             ++ show (typeRep (Proxy @k))
             ++ ","
             ++ show (typeRep (Proxy @l))
-            ++ "))"
+            ++ ")"
     where
       rep = typeRep proxy

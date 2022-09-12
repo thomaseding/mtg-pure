@@ -75,11 +75,22 @@ header =
   \    Inst12,\n\
   \  )\n\
   \import safe MtgPure.Model.IsObjectType (IsObjectType)\n\
-  \import safe MtgPure.Model.Object (Object)\n\
   \import safe MtgPure.Model.ObjectN (ObjectN (..))\n\
   \import safe MtgPure.Model.ObjectType (OT)\n\
   \import safe MtgPure.Model.ToObjectN.Classes\n\
-  \  ( ToObject1(..),\n\
+  \  ( ToObject1'(..),\n\
+  \    ToObject2'(..),\n\
+  \    ToObject3'(..),\n\
+  \    ToObject4'(..),\n\
+  \    ToObject5'(..),\n\
+  \    ToObject6'(..),\n\
+  \    ToObject7'(..),\n\
+  \    ToObject8'(..),\n\
+  \    ToObject9'(..),\n\
+  \    ToObject10'(..),\n\
+  \    ToObject11'(..),\n\
+  \    ToObject12'(..),\n\
+  \    ToObject1(..),\n\
   \    ToObject2(..),\n\
   \    ToObject3(..),\n\
   \    ToObject4(..),\n\
@@ -188,15 +199,15 @@ generateObjectToObjectN desc sym symN =
         ]
           ++ map (interpretSym desc) symN
           ++ [ "=>",
-               "ToObject" ++ show n,
-               "(Object " ++ interpretSym desc sym ++ ")"
+               "ToObject" ++ show n ++ "'",
+               interpretSym desc sym
              ]
           ++ map (interpretSym desc) symN
           ++ ["where"]
 
     funcLine =
       unwords
-        [ "toObject" ++ show n,
+        [ "toObject" ++ show n ++ "'",
           "=",
           "O"
             ++ if n == 1
@@ -233,9 +244,9 @@ generateObjectMsToObjectN desc m n = reverse $ do
 generateObjectMToObjectN :: SymDesc -> [Sym] -> [Sym] -> Maybe String
 generateObjectMToObjectN desc symsM symsN =
   if
+      | m == n -> Just $ instanceLine ++ "\n  toObject" ++ show n ++ " = id\n"
       | n <= 1 -> Nothing
       | m < 1 -> Nothing
-      | m == n -> Just $ instanceLine ++ "\n  toObject" ++ show n ++ " = id\n"
       | m + 1 == n -> Just $ instanceLine ++ "\n  toObject" ++ show n ++ " = ON" ++ show n ++ letterMissing ++ "\n"
       | otherwise -> Just $ instanceLine ++ "\n  toObject" ++ show n ++ " x = " ++ telescope ++ "\n"
   where
@@ -255,7 +266,7 @@ generateObjectMToObjectN desc symsM symsN =
           ++ map (interpretSym desc) symsN
           ++ [ "=>",
                "ToObject" ++ show n,
-               "(ObjectN (OT '(Z, " ++ seqSymsM ++ ")))"
+               "(OT '(Z, " ++ seqSymsM ++ "))"
              ]
           ++ map (interpretSym desc) symsN
           ++ ["where"]

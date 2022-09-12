@@ -18,6 +18,7 @@ module MtgPure.Model
     module MtgPure.Model.GenericMana,
     module MtgPure.Model.HasManaSymbol,
     module MtgPure.Model.IsObjectType,
+    module MtgPure.Model.LandType,
     module MtgPure.Model.Loyalty,
     module MtgPure.Model.Mana,
     module MtgPure.Model.ManaCost,
@@ -31,9 +32,11 @@ module MtgPure.Model
     module MtgPure.Model.ObjectN.Type,
     module MtgPure.Model.ObjectType,
     module MtgPure.Model.ObjectType.Any,
+    module MtgPure.Model.ObjectType.Card,
     module MtgPure.Model.ObjectType.Kind,
     module MtgPure.Model.ObjectType.NonCreatureCard,
     module MtgPure.Model.ObjectType.Permanent,
+    module MtgPure.Model.ObjectType.Spell,
     module MtgPure.Model.Phase,
     module MtgPure.Model.Power,
     module MtgPure.Model.PrettyType,
@@ -50,6 +53,8 @@ module MtgPure.Model
     module MtgPure.Model.Tribal,
     module MtgPure.Model.Variable,
     module MtgPure.Model.VisitObjectN,
+    module MtgPure.Model.Zone,
+    module MtgPure.Model.ZoneObject,
   )
 where
 
@@ -75,6 +80,7 @@ import safe MtgPure.Model.EffectType
 import safe MtgPure.Model.GenericMana
 import safe MtgPure.Model.HasManaSymbol
 import safe MtgPure.Model.IsObjectType
+import safe MtgPure.Model.LandType
 import safe MtgPure.Model.Loyalty
 import safe MtgPure.Model.Mana
 import safe MtgPure.Model.ManaCost
@@ -88,9 +94,11 @@ import safe MtgPure.Model.ObjectN
 import safe MtgPure.Model.ObjectN.Type
 import safe MtgPure.Model.ObjectType
 import safe MtgPure.Model.ObjectType.Any
+import safe MtgPure.Model.ObjectType.Card
 import safe MtgPure.Model.ObjectType.Kind
 import safe MtgPure.Model.ObjectType.NonCreatureCard
 import safe MtgPure.Model.ObjectType.Permanent
+import safe MtgPure.Model.ObjectType.Spell
 import safe MtgPure.Model.Phase
 import safe MtgPure.Model.Power
 import safe MtgPure.Model.PrettyType
@@ -109,3 +117,5 @@ import safe MtgPure.Model.Toughness
 import safe MtgPure.Model.Tribal
 import safe MtgPure.Model.Variable
 import safe MtgPure.Model.VisitObjectN
+import safe MtgPure.Model.Zone
+import safe MtgPure.Model.ZoneObject

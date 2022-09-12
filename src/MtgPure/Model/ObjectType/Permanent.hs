@@ -28,14 +28,6 @@ import safe Data.Kind (Type)
 import safe Data.Proxy (Proxy)
 import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.IsObjectType (IsObjectType)
-import safe MtgPure.Model.ObjectN.Type
-  ( OArtifact,
-    OCreature,
-    OEnchantment,
-    OLand,
-    ON1,
-    OPlaneswalker,
-  )
 import safe MtgPure.Model.ObjectType (OT1, OT2, OT3, OT4, ObjectType (..))
 import safe MtgPure.Model.ObjectType.Kind
   ( OTArtifact,
@@ -45,6 +37,7 @@ import safe MtgPure.Model.ObjectType.Kind
     OTPermanent,
     OTPlaneswalker,
   )
+import safe MtgPure.Model.ZoneObject (ZO)
 
 data PermanentType
   = PTArtifact
@@ -69,20 +62,25 @@ data WPermanent :: Type -> Type where
 
 deriving instance Show (WPermanent a)
 
-data PermanentVisitor a = PermanentVisitor
-  { visitPArtifact :: OArtifact -> a,
-    visitPCreature :: OCreature -> a,
-    visitPEnchantment :: OEnchantment -> a,
-    visitPLand :: OLand -> a,
-    visitPPlaneswalker :: OPlaneswalker -> a
+data PermanentVisitor zone z = PermanentVisitor
+  { visitPArtifact :: ZO zone OTArtifact -> z,
+    visitPCreature :: ZO zone OTCreature -> z,
+    visitPEnchantment :: ZO zone OTEnchantment -> z,
+    visitPLand :: ZO zone OTLand -> z,
+    visitPPlaneswalker :: ZO zone OTPlaneswalker -> z
   }
 
 class IsObjectType a => IsPermanentType a where
   singPermanentType :: Proxy a -> PermanentType
   singPermanent :: Proxy a -> WPermanent (OT1 a)
-  visitPermanent :: PermanentVisitor b -> WPermanent (OT1 a) -> ON1 a -> b
+  visitPermanent :: PermanentVisitor zone z -> WPermanent (OT1 a) -> ZO zone (OT1 a) -> z
 
-visitPermanent' :: IsPermanentType a => (forall b. IsPermanentType b => ON1 b -> x) -> WPermanent (OT1 a) -> ON1 a -> x
+visitPermanent' ::
+  IsPermanentType a =>
+  (forall a'. IsPermanentType a' => ZO zone (OT1 a') -> z) ->
+  WPermanent (OT1 a) ->
+  ZO zone (OT1 a) ->
+  z
 visitPermanent' f = visitPermanent $ PermanentVisitor f f f f f
 
 instance IsPermanentType 'OTArtifact where

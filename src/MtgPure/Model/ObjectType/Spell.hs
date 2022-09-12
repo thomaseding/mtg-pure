@@ -27,15 +27,6 @@ import safe Data.Inst (Inst2, Inst3, Inst4)
 import safe Data.Kind (Type)
 import safe Data.Proxy (Proxy)
 import safe MtgPure.Model.IsObjectType (IsObjectType)
-import safe MtgPure.Model.ObjectN.Type
-  ( OArtifact,
-    OCreature,
-    OEnchantment,
-    OInstant,
-    ON1,
-    OPlaneswalker,
-    OSorcery,
-  )
 import safe MtgPure.Model.ObjectType (OT1, OT2, OT3, OT4, ObjectType (..))
 import safe MtgPure.Model.ObjectType.Kind
   ( OTArtifact,
@@ -46,6 +37,7 @@ import safe MtgPure.Model.ObjectType.Kind
     OTSorcery,
     OTSpell,
   )
+import safe MtgPure.Model.ZoneObject (ZO)
 
 data SpellType
   = STArtifact
@@ -71,21 +63,26 @@ data WSpell :: Type -> Type where
 
 deriving instance Show (WSpell a)
 
-data SpellVisitor a = SpellVisitor
-  { visitSArtifact :: OArtifact -> a,
-    visitSCreature :: OCreature -> a,
-    visitSEnchantment :: OEnchantment -> a,
-    visitSInstant :: OInstant -> a,
-    visitSPlaneswalker :: OPlaneswalker -> a,
-    visitSSorcery :: OSorcery -> a
+data SpellVisitor zone z = SpellVisitor
+  { visitSArtifact :: ZO zone OTArtifact -> z,
+    visitSCreature :: ZO zone OTCreature -> z,
+    visitSEnchantment :: ZO zone OTEnchantment -> z,
+    visitSInstant :: ZO zone OTInstant -> z,
+    visitSPlaneswalker :: ZO zone OTPlaneswalker -> z,
+    visitSSorcery :: ZO zone OTSorcery -> z
   }
 
 class IsObjectType a => IsSpellType a where
   singSpellType :: Proxy a -> SpellType
   singSpell :: Proxy a -> WSpell (OT1 a)
-  visitSpell :: SpellVisitor b -> WSpell (OT1 a) -> ON1 a -> b
+  visitSpell :: SpellVisitor zone z -> WSpell (OT1 a) -> ZO zone (OT1 a) -> z
 
-visitSpell' :: IsSpellType a => (forall b. IsSpellType b => ON1 b -> x) -> WSpell (OT1 a) -> ON1 a -> x
+visitSpell' ::
+  IsSpellType a =>
+  (forall a'. IsSpellType a' => ZO zone (OT1 a') -> z) ->
+  WSpell (OT1 a) ->
+  ZO zone (OT1 a) ->
+  z
 visitSpell' f = visitSpell $ SpellVisitor f f f f f f
 
 instance IsSpellType 'OTArtifact where

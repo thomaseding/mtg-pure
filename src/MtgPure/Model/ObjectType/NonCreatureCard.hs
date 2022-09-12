@@ -27,15 +27,6 @@ import safe Data.Inst (Inst2, Inst3)
 import safe Data.Kind (Type)
 import safe Data.Proxy (Proxy)
 import safe MtgPure.Model.IsObjectType (IsObjectType)
-import safe MtgPure.Model.ObjectN.Type
-  ( OArtifact,
-    OEnchantment,
-    OInstant,
-    OLand,
-    ON1,
-    OPlaneswalker,
-    OSorcery,
-  )
 import safe MtgPure.Model.ObjectType (OT1, OT2, OT3, ObjectType (..))
 import safe MtgPure.Model.ObjectType.Kind
   ( OTArtifact,
@@ -46,6 +37,7 @@ import safe MtgPure.Model.ObjectType.Kind
     OTPlaneswalker,
     OTSorcery,
   )
+import MtgPure.Model.ZoneObject (ZO)
 
 data NonCreatureCardType
   = NCTArtifact
@@ -70,26 +62,26 @@ data WNonCreatureCard :: Type -> Type where
 
 deriving instance Show (WNonCreatureCard a)
 
-data NonCreatureCardVisitor a = NonCreatureCardVisitor
-  { visitNCArtifact :: OArtifact -> a,
-    visitNCInstant :: OInstant -> a,
-    visitNCEnchantment :: OEnchantment -> a,
-    visitNCLand :: OLand -> a,
-    visitNCPlaneswalker :: OPlaneswalker -> a,
-    visitNCSorcery :: OSorcery -> a
+data NonCreatureCardVisitor zone z = NonCreatureCardVisitor
+  { visitNCArtifact :: ZO zone OTArtifact -> z,
+    visitNCInstant :: ZO zone OTInstant -> z,
+    visitNCEnchantment :: ZO zone OTEnchantment -> z,
+    visitNCLand :: ZO zone OTLand -> z,
+    visitNCPlaneswalker :: ZO zone OTPlaneswalker -> z,
+    visitNCSorcery :: ZO zone OTSorcery -> z
   }
 
 class IsObjectType a => IsNonCreatureCardType a where
   singNonCreatureCardType :: Proxy a -> NonCreatureCardType
   singNonCreatureCard :: Proxy a -> WNonCreatureCard (OT1 a)
-  visitNonCreatureCard :: NonCreatureCardVisitor b -> WNonCreatureCard (OT1 a) -> ON1 a -> b
+  visitNonCreatureCard :: NonCreatureCardVisitor zone z -> WNonCreatureCard (OT1 a) -> ZO zone (OT1 a) -> z
 
 visitNonCreature' ::
   IsNonCreatureCardType a =>
-  (forall b. IsNonCreatureCardType b => ON1 b -> x) ->
+  (forall a'. IsNonCreatureCardType a' => ZO zone (OT1 a') -> z) ->
   WNonCreatureCard (OT1 a) ->
-  ON1 a ->
-  x
+  ZO zone (OT1 a) ->
+  z
 visitNonCreature' f = visitNonCreatureCard $ NonCreatureCardVisitor f f f f f f
 
 instance IsNonCreatureCardType 'OTArtifact where

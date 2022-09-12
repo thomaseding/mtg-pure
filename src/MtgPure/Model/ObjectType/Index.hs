@@ -23,6 +23,9 @@ where
 
 import Data.Inst
   ( Inst1,
+    Inst10,
+    Inst11,
+    Inst12,
     Inst2,
     Inst3,
     Inst4,
@@ -30,15 +33,17 @@ import Data.Inst
     Inst6,
     Inst7,
     Inst8,
+    Inst9,
   )
 import safe Data.Proxy (Proxy (..))
+import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.IsObjectType (IsObjectType (..), objectTypeIndex)
-import safe MtgPure.Model.ObjectType (OT1, OT2, OT3, OT4, OT5, OT6, OT7, OT8)
+import safe MtgPure.Model.ObjectType (OT1, OT10, OT11, OT12, OT2, OT3, OT4, OT5, OT6, OT7, OT8, OT9)
 
 oti :: forall ot. IsObjectType ot => Int
 oti = objectTypeIndex (Proxy @ot)
 
-class IndexOT ot where
+class Typeable ot => IndexOT ot where
   indexOT :: Proxy ot -> [Int]
 
 instance
@@ -88,3 +93,27 @@ instance
   IndexOT (OT8 a b c d e f g h)
   where
   indexOT _ = [oti @a, oti @b, oti @c, oti @d, oti @e, oti @f, oti @g, oti @h]
+
+instance
+  (Inst9 IsObjectType a b c d e f g h i) =>
+  IndexOT (OT9 a b c d e f g h i)
+  where
+  indexOT _ = [oti @a, oti @b, oti @c, oti @d, oti @e, oti @f, oti @g, oti @h, oti @i]
+
+instance
+  (Inst10 IsObjectType a b c d e f g h i j) =>
+  IndexOT (OT10 a b c d e f g h i j)
+  where
+  indexOT _ = [oti @a, oti @b, oti @c, oti @d, oti @e, oti @f, oti @g, oti @h, oti @i, oti @j]
+
+instance
+  (Inst11 IsObjectType a b c d e f g h i j k) =>
+  IndexOT (OT11 a b c d e f g h i j k)
+  where
+  indexOT _ = [oti @a, oti @b, oti @c, oti @d, oti @e, oti @f, oti @g, oti @h, oti @i, oti @j, oti @k]
+
+instance
+  (Inst12 IsObjectType a b c d e f g h i j k l) =>
+  IndexOT (OT12 a b c d e f g h i j k l)
+  where
+  indexOT _ = [oti @a, oti @b, oti @c, oti @d, oti @e, oti @f, oti @g, oti @h, oti @i, oti @j, oti @k, oti @l]

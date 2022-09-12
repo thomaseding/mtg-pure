@@ -28,31 +28,6 @@ module MtgPure.Model.ObjectN.Type
     ON10,
     ON11,
     ON12,
-    OAbility,
-    OActivatedAbility,
-    OActivatedOrTriggeredAbility,
-    OAny,
-    OArtifact,
-    OArtifactCreature,
-    OCard,
-    OCreature,
-    OCreaturePlaneswalker,
-    OCreaturePlayer,
-    OCreaturePlayerPlaneswalker,
-    ODamageSource,
-    OEmblem,
-    OEnchantment,
-    OInstant,
-    OLand,
-    ONonCreature,
-    OPermanent,
-    OPlaneswalker,
-    OPlayer,
-    OPlayerPlaneswalker,
-    OSorcery,
-    OSpell,
-    OStaticAbility,
-    OTriggeredAbility,
   )
 where
 
@@ -70,33 +45,6 @@ import safe MtgPure.Model.ObjectType
     OT7,
     OT8,
     OT9,
-  )
-import safe MtgPure.Model.ObjectType.Kind
-  ( OTAbility,
-    OTActivatedAbility,
-    OTActivatedOrTriggeredAbility,
-    OTAny,
-    OTArtifact,
-    OTArtifactCreature,
-    OTCard,
-    OTCreature,
-    OTCreaturePlaneswalker,
-    OTCreaturePlayer,
-    OTCreaturePlayerPlaneswalker,
-    OTDamageSource,
-    OTEmblem,
-    OTEnchantment,
-    OTInstant,
-    OTLand,
-    OTNonCreature,
-    OTPermanent,
-    OTPlaneswalker,
-    OTPlayer,
-    OTPlayerPlaneswalker,
-    OTSorcery,
-    OTSpell,
-    OTStaticAbility,
-    OTTriggeredAbility,
   )
 
 type ON1 a = ObjectN (OT1 a)
@@ -122,53 +70,3 @@ type ON10 a b c d e f g h i j = ObjectN (OT10 a b c d e f g h i j)
 type ON11 a b c d e f g h i j k = ObjectN (OT11 a b c d e f g h i j k)
 
 type ON12 a b c d e f g h i j k l = ObjectN (OT12 a b c d e f g h i j k l)
-
-type OAny = ObjectN OTAny
-
-type OAbility = ObjectN OTAbility
-
-type OActivatedAbility = ObjectN OTActivatedAbility
-
-type OActivatedOrTriggeredAbility = ObjectN OTActivatedOrTriggeredAbility
-
-type OArtifact = ObjectN OTArtifact
-
-type OArtifactCreature = ObjectN OTArtifactCreature
-
-type OCard = ObjectN OTCard
-
-type OCreature = ObjectN OTCreature
-
-type OCreaturePlaneswalker = ObjectN OTCreaturePlaneswalker
-
-type OCreaturePlayer = ObjectN OTCreaturePlayer
-
-type OCreaturePlayerPlaneswalker = ObjectN OTCreaturePlayerPlaneswalker
-
-type ODamageSource = ObjectN OTDamageSource
-
-type OEmblem = ObjectN OTEmblem
-
-type OEnchantment = ObjectN OTEnchantment
-
-type OInstant = ObjectN OTInstant
-
-type OLand = ObjectN OTLand
-
-type ONonCreature = ObjectN OTNonCreature
-
-type OPermanent = ObjectN OTPermanent
-
-type OPlaneswalker = ObjectN OTPlaneswalker
-
-type OPlayer = ObjectN OTPlayer
-
-type OPlayerPlaneswalker = ObjectN OTPlayerPlaneswalker
-
-type OSorcery = ObjectN OTSorcery
-
-type OSpell = ObjectN OTSpell
-
-type OStaticAbility = ObjectN OTStaticAbility
-
-type OTriggeredAbility = ObjectN OTTriggeredAbility

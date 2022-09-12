@@ -37,6 +37,7 @@ import safe Data.Inst
   )
 import safe Data.Kind (Type)
 import safe Data.Proxy (Proxy)
+import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.IsObjectType (IsObjectType)
 import safe MtgPure.Model.Object (Object)
 import safe MtgPure.Model.ObjectN (ObjectN (..))
@@ -97,7 +98,7 @@ data KnownObjectN :: Type -> Type where
   KO11 :: Inst11 IsObjectType a b c d e f g h i j k => ON11 a b c d e f g h i j k -> KnownObjectN (OT11 a b c d e f g h i j k)
   KO12 :: Inst12 IsObjectType a b c d e f g h i j k l => ON12 a b c d e f g h i j k l -> KnownObjectN (OT12 a b c d e f g h i j k l)
 
-class VisitObjectN ot where
+class Typeable ot => VisitObjectN ot where
   data ObjectVisitorN ot :: Type -> Type
   visitObjectN' :: (forall a. IsObjectType a => Object a -> x) -> ObjectN ot -> x
   visitObjectN :: ObjectVisitorN ot x -> ObjectN ot -> x

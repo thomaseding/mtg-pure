@@ -26,11 +26,13 @@ import safe Data.Proxy (Proxy)
 import safe Data.Typeable (Typeable)
 
 data Zone :: Type where
-  LibraryZone :: Zone
+  Battlefield :: Zone
+  Library :: Zone
   deriving (Eq, Ord, Show, Typeable)
 
 data SZone :: Zone -> Type where
-  SLibraryZone :: SZone 'LibraryZone
+  SBattlefield :: SZone 'Battlefield
+  SLibrary :: SZone 'Library
   deriving (Typeable)
 
 deriving instance Eq (SZone zone)
@@ -39,10 +41,14 @@ deriving instance Ord (SZone zone)
 
 deriving instance Show (SZone zone)
 
-class IsZone zone where
+class Typeable zone => IsZone zone where
   singZone :: Proxy zone -> SZone zone
   litZone :: Proxy zone -> Zone
 
-instance IsZone 'LibraryZone where
-  singZone _ = SLibraryZone
-  litZone _ = LibraryZone
+instance IsZone 'Battlefield where
+  singZone _ = SBattlefield
+  litZone _ = Battlefield
+
+instance IsZone 'Library where
+  singZone _ = SLibrary
+  litZone _ = Library

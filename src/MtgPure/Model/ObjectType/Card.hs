@@ -26,17 +26,8 @@ where
 import safe Data.Inst (Inst2, Inst3)
 import safe Data.Kind (Type)
 import safe Data.Proxy (Proxy)
+import safe MtgPure.Model.CardType (CardType (..))
 import safe MtgPure.Model.IsObjectType (IsObjectType)
-import safe MtgPure.Model.ObjectN.Type
-  ( OArtifact,
-    OCreature,
-    OEnchantment,
-    OInstant,
-    OLand,
-    ON1,
-    OPlaneswalker,
-    OSorcery,
-  )
 import safe MtgPure.Model.ObjectType (OT1, OT2, OT3, ObjectType (..))
 import safe MtgPure.Model.ObjectType.Kind
   ( OTArtifact,
@@ -48,15 +39,7 @@ import safe MtgPure.Model.ObjectType.Kind
     OTPlaneswalker,
     OTSorcery,
   )
-
-data CardType
-  = CTArtifact
-  | CTEnchantment
-  | CTInstant
-  | CTLand
-  | CTPlaneswalker
-  | CTSorcery
-  deriving (Bounded, Enum, Eq, Ord, Show)
+import safe MtgPure.Model.ZoneObject (ZO)
 
 -- Witness type
 data WCard :: Type -> Type where
@@ -73,27 +56,27 @@ data WCard :: Type -> Type where
 
 deriving instance Show (WCard a)
 
-data CardVisitor a = CardVisitor
-  { visitCArtifact :: OArtifact -> a,
-    visitCCreature :: OCreature -> a,
-    visitCInstant :: OInstant -> a,
-    visitCEnchantment :: OEnchantment -> a,
-    visitCLand :: OLand -> a,
-    visitCPlaneswalker :: OPlaneswalker -> a,
-    visitCSorcery :: OSorcery -> a
+data CardVisitor zone z = CardVisitor
+  { visitCArtifact :: ZO zone OTArtifact -> z,
+    visitCCreature :: ZO zone OTCreature -> z,
+    visitCInstant :: ZO zone OTInstant -> z,
+    visitCEnchantment :: ZO zone OTEnchantment -> z,
+    visitCLand :: ZO zone OTLand -> z,
+    visitCPlaneswalker :: ZO zone OTPlaneswalker -> z,
+    visitCSorcery :: ZO zone OTSorcery -> z
   }
 
 class IsObjectType a => IsCardType a where
   singCardType :: Proxy a -> CardType
   singCard :: Proxy a -> WCard (OT1 a)
-  visitCard :: CardVisitor b -> WCard (OT1 a) -> ON1 a -> b
+  visitCard :: CardVisitor zone z -> WCard (OT1 a) -> ZO zone (OT1 a) -> z
 
 visitCard' ::
   IsCardType a =>
-  (forall b. IsCardType b => ON1 b -> x) ->
+  (forall a'. IsCardType a' => ZO zone (OT1 a') -> z) ->
   WCard (OT1 a) ->
-  ON1 a ->
-  x
+  ZO zone (OT1 a) ->
+  z
 visitCard' f = visitCard $ CardVisitor f f f f f f f
 
 instance IsCardType 'OTArtifact where
