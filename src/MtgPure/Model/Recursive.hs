@@ -18,9 +18,9 @@ module MtgPure.Model.Recursive where
 import Data.Inst (Inst1, Inst2, Inst3, Inst4, Inst5)
 import Data.Kind (Type)
 import MtgPure.Model.AnyObject (AnyObject)
+import MtgPure.Model.BasicLandType (BasicLandType)
 import MtgPure.Model.CardName (CardName)
 import MtgPure.Model.CardSet (CardSet)
-import MtgPure.Model.Color (Color)
 import MtgPure.Model.Colors (Colors)
 import MtgPure.Model.CreatureType (CreatureType)
 import MtgPure.Model.Damage (Damage)
@@ -143,7 +143,7 @@ data EventListener :: forall a. a -> Type where
 data Requirement :: forall a. a -> Type where
   ControlledBy :: OPlayer -> Requirement a
   HasAbility :: Ability a -> Requirement a -- Non-unique differing representations will not be considered the same
-  HasBasicLandType :: Color -> Requirement OTLand
+  HasBasicLandType :: BasicLandType -> Requirement OTLand
   Impossible :: Requirement a
   Is :: AnyObject a -> ObjectN a -> Requirement a
   Basic :: Requirement OTLand

@@ -2,6 +2,7 @@
 
 module MtgPure.Model
   ( module MtgPure.Model.AnyObject,
+    module MtgPure.Model.BasicLandType,
     module MtgPure.Model.CardName,
     module MtgPure.Model.CardSet,
     module MtgPure.Model.CardType,
@@ -55,6 +56,7 @@ where
 -- stuff to Model.Authoring and Model.Runtime
 
 import MtgPure.Model.AnyObject
+import MtgPure.Model.BasicLandType
 import MtgPure.Model.CardName
 import MtgPure.Model.CardSet
 import MtgPure.Model.CardType

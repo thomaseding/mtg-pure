@@ -636,8 +636,8 @@ showRequirement = \case
   HasAbility ability -> yesParens $ do
     sAbility <- dollar <$> showAbility ability
     pure $ pure "HasAbility" <> sAbility
-  HasBasicLandType color -> yesParens $ do
-    pure $ pure $ fromString $ "HasBasicLandType " ++ show color
+  HasBasicLandType basic -> yesParens $ do
+    pure $ pure $ fromString $ "HasBasicLandType " ++ show basic
   Impossible -> noParens $ do
     pure $ pure "Impossible"
   Is anyObj objN -> yesParens $ do

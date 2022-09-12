@@ -312,7 +312,7 @@ conversion = Card1 "Conversion" $ \this ->
       Static $
         ContinuousEffect $
           All $
-            object [HasBasicLandType Red] $
+            object [HasBasicLandType Mountain] $
               \land -> effect $ changeTo land plains
     ]
   where
