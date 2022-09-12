@@ -112,6 +112,8 @@ import safe MtgPure.Model.Recursive (
   Effect (..),
   Elect (..),
   Else (..),
+  Enchant (..),
+  EnchantmentType (..),
   Event,
   EventListener,
   EventListener' (..),
@@ -543,11 +545,12 @@ showCardTypeDef = \case
           <> pure " "
           <> sToughness
           <> sAbilities
-  EnchantmentDef colors cost abilities -> yesParens $ do
+  EnchantmentDef colors cost types abilities -> yesParens $ do
     sColors <- parens <$> showColors colors
     sCost <- parens <$> showElect cost
+    sTypes <- parens <$> showEnchantmentTypes types
     sAbilities <- dollar <$> showAbilities abilities
-    pure $ pure "EnchantmentDef " <> sColors <> pure " " <> sCost <> sAbilities
+    pure $ pure "EnchantmentDef " <> sColors <> pure " " <> sCost <> pure " " <> sTypes <> sAbilities
   EnchantmentCreatureDef colors cost creatureTypes power toughness creatAbils enchAbils bothAbils ->
     yesParens $ do
       sColors <- parens <$> showColors colors
@@ -904,6 +907,21 @@ showElse = \case
     pure $ pure "ElseEffect" <> sElect
   ElseEvent -> noParens $ do
     pure $ pure "ElseEvent"
+
+showEnchant :: Enchant zone ot -> EnvM ParenItems
+showEnchant = \case
+  Enchant withObj -> yesParens $ do
+    sWithObj <- dollar <$> showWithLinkedObject showElect "enchanted" withObj
+    pure $ pure "Enchant" <> sWithObj
+
+showEnchantmentType :: EnchantmentType ot -> EnvM ParenItems
+showEnchantmentType = \case
+  Aura enchant -> yesParens $ do
+    sEnchant <- dollar <$> showEnchant enchant
+    pure $ pure "Aura" <> sEnchant
+
+showEnchantmentTypes :: [EnchantmentType ot] -> EnvM ParenItems
+showEnchantmentTypes = showListM showEnchantmentType
 
 showEvent :: Event -> EnvM ParenItems
 showEvent = showEventListener' $ \Proxy -> noParens $ pure $ pure "Proxy"
@@ -1455,12 +1473,10 @@ showStaticAbility = \case
   As electListener -> yesParens $ do
     sWithObject <- dollar <$> showElect electListener
     pure $ pure "As" <> sWithObject
-  Bestow cost -> yesParens $ do
-    sCost <- dollar <$> showElect cost
-    pure $ pure "Bestow" <> sCost
-  Enchant withObj -> yesParens $ do
-    sWithObj <- dollar <$> showWithLinkedObject showElect "enchanted" withObj
-    pure $ pure "Enchant" <> sWithObj
+  Bestow cost enchant -> yesParens $ do
+    sCost <- parens <$> showElect cost
+    sEnchant <- dollar <$> showEnchant enchant
+    pure $ pure "Bestow " <> sCost <> sEnchant
   FirstStrike -> noParens $ do
     pure $ pure "FirstStrike"
   Flying -> noParens $ do

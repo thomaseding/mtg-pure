@@ -28,7 +28,6 @@ import safe Data.Proxy (Proxy (Proxy))
 import safe Data.Typeable (Typeable, cast)
 import safe MtgPure.Model.Colors (Colors)
 import safe MtgPure.Model.Damage (Damage (..))
-import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.IsObjectType (IsObjectType (..))
 import safe MtgPure.Model.ManaCost (ManaCost)
 import safe MtgPure.Model.ManaPool (ManaPool)
@@ -59,6 +58,8 @@ import safe MtgPure.Model.Recursive (
   Effect (..),
   Elect (..),
   Else (..),
+  Enchant (..),
+  EnchantmentType (..),
   Event,
   EventListener,
   EventListener' (..),
@@ -420,11 +421,12 @@ ordCardTypeDef x = case x of
         , ordAbilities abilities1 abilities2
         ]
     y -> compareIndexM x y
-  EnchantmentDef colors1 cost1 abilities1 -> \case
-    EnchantmentDef colors2 cost2 abilities2 ->
+  EnchantmentDef colors1 cost1 types1 abilities1 -> \case
+    EnchantmentDef colors2 cost2 types2 abilities2 ->
       seqM
         [ ordColors colors1 colors2
         , ordElectE cost1 cost2
+        , ordEnchantmentTypes types1 types2
         , ordAbilities abilities1 abilities2
         ]
     y -> compareIndexM x y
@@ -775,6 +777,30 @@ ordElseE = \case
   ElseEvent -> \case
     ElseEvent -> pure EQ
 
+ordEnchant :: IsZO zone ot => Enchant zone ot -> Enchant zone ot -> EnvM Ordering
+ordEnchant = \case
+  Enchant withObj1 -> \case
+    Enchant withObj2 -> ordWithLinkedObject ordElectE withObj1 withObj2
+
+ordEnchantmentType :: EnchantmentType ot -> EnchantmentType ot -> EnvM Ordering
+ordEnchantmentType = \case
+  Aura enchant1 -> \case
+    Aura enchant2 ->
+      let go ::
+            forall zone ot zone' ot'.
+            IsZO zone ot =>
+            IsZO zone' ot' =>
+            Enchant zone ot ->
+            Enchant zone' ot' ->
+            EnvM Ordering
+          go enchant1 enchant2 = case cast enchant2 of
+            Nothing -> compareOT @ot (Proxy @ot')
+            Just enchant2 -> ordEnchant enchant1 enchant2
+       in go enchant1 enchant2
+
+ordEnchantmentTypes :: [EnchantmentType ot] -> [EnchantmentType ot] -> EnvM Ordering
+ordEnchantmentTypes = listM ordEnchantmentType
+
 ordEventListener' ::
   forall w.
   Typeable w =>
@@ -1091,22 +1117,8 @@ ordStaticAbility x = case x of
   As electListener1 -> \case
     As electListener2 -> ordElectE electListener1 electListener2
     y -> compareIndexM x y
-  Bestow elect1 -> \case
-    Bestow elect2 -> ordElectE elect1 elect2
-    y -> compareIndexM x y
-  Enchant withObj1 -> \case
-    Enchant withObj2 ->
-      let go ::
-            forall zone ot zone' ot'.
-            IsZO zone ot =>
-            IsZO zone' ot' =>
-            WithLinkedObject zone (Elect (Effect 'Continuous)) ot ->
-            WithLinkedObject zone' (Elect (Effect 'Continuous)) ot' ->
-            EnvM Ordering
-          go _ withObj2 = case cast withObj2 of
-            Nothing -> compareOT @ot (Proxy @ot')
-            Just withObj2 -> ordWithLinkedObject ordElectE withObj1 withObj2
-       in go withObj1 withObj2
+  Bestow elect1 enchant1 -> \case
+    Bestow elect2 enchant2 -> seqM [ordElectE elect1 elect2, ordEnchant enchant1 enchant2]
     y -> compareIndexM x y
   FirstStrike -> \case
     FirstStrike -> pure EQ

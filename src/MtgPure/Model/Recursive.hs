@@ -27,6 +27,8 @@ module MtgPure.Model.Recursive (
   Effect (..),
   Elect (..),
   Else (..),
+  Enchant (..),
+  EnchantmentType (..),
   Event,
   EventListener,
   EventListener' (..),
@@ -101,12 +103,14 @@ import safe MtgPure.Model.ZoneObject (
 
 -- Semantics legend:
 --
--- "ot is (at least) all of (a,b,c,...)"
+-- "ot is exactly (a,b,c,...)"
 --    Ability ot
 --    Card ot
+--    EnchantmentType ot
 --    WithThis zone litfOT ot
 --
 -- "ot is (at least) one of (a,b,c,...)"
+--    Enchant zone ot
 --    Requirement zone ot
 --    ZO zone ot
 
@@ -126,6 +130,10 @@ instance ConsIndex (Ability ot) where
     Activated{} -> 1
     Static{} -> 2
     Triggered{} -> 3
+
+-- data ArtifactType (ot :: Type) :: Type where
+--   Vehicle :: ArtifactType ot -- TODO: Stuff crew mechanic into here
+--   deriving (Bounded, Enum, Eq, Ord, Show)
 
 data Card (ot :: Type) :: Type where
   -- For now Instants and Sorceries will use 'Battlefield for it's THIS zone.
@@ -184,6 +192,7 @@ data CardTypeDef (tribal :: Tribal) (ot :: Type) :: Type where
   EnchantmentDef ::
     Colors ->
     Elect (Cost OTEnchantment) OTEnchantment ->
+    [EnchantmentType OTEnchantment] ->
     [Ability OTEnchantment] ->
     CardTypeDef 'NonTribal OTEnchantment
   EnchantmentCreatureDef ::
@@ -367,6 +376,20 @@ instance ConsIndex (Else el ot) where
     ElseEffect{} -> 2
     ElseEvent{} -> 3
 
+data Enchant (zone :: Zone) (ot :: Type) :: Type where
+  Enchant :: IsZO zone ot => WithLinkedObject zone (Elect (Effect 'Continuous)) ot -> Enchant zone ot
+
+instance ConsIndex (Enchant zone ot) where
+  consIndex = \case
+    Enchant{} -> 1
+
+data EnchantmentType (ot :: Type) :: Type where
+  Aura :: (ot ~ OTEnchantment, IsZO zone ot') => Enchant zone ot' -> EnchantmentType ot
+
+instance ConsIndex (EnchantmentType ot) where
+  consIndex = \case
+    Aura{} -> 1
+
 type Event = EventListener' Proxy
 
 type EventListener = EventListener' (Elect (Effect 'OneShot))
@@ -469,8 +492,7 @@ instance ConsIndex (SetToken ot) where
 
 data StaticAbility (ot :: Type) :: Type where
   As :: IsOT ot => Elect EventListener ot -> StaticAbility ot -- 603.6d: not a triggered ability
-  Bestow :: ot ~ OTEnchantmentCreature => Elect (Cost ot) ot -> StaticAbility ot
-  Enchant :: IsZO zone ot => WithLinkedObject zone (Elect (Effect 'Continuous)) ot -> StaticAbility OTEnchantment
+  Bestow :: ot ~ OTEnchantmentCreature => Elect (Cost ot) ot -> Enchant 'Battlefield OTCreature -> StaticAbility ot
   FirstStrike :: StaticAbility OTCreature
   Flying :: StaticAbility OTCreature
   Haste :: StaticAbility OTCreature
@@ -482,12 +504,11 @@ instance ConsIndex (StaticAbility ot) where
   consIndex = \case
     As{} -> 1
     Bestow{} -> 2
-    Enchant{} -> 3
-    FirstStrike{} -> 4
-    Flying{} -> 5
-    Haste{} -> 6
-    StaticContinuous{} -> 7
-    Suspend{} -> 8
+    FirstStrike{} -> 3
+    Flying{} -> 4
+    Haste{} -> 5
+    StaticContinuous{} -> 6
+    Suspend{} -> 7
 
 data Token (ot :: Type) :: Type where
   Token :: WPermanent ot -> Card ot -> Token ot
@@ -564,7 +585,6 @@ instance ConsIndex (WithLinkedObject zone liftOT ot) where
     L4{} -> 5
     L5{} -> 6
 
--- XXX Can this be encoded as `WithLinkedObject` under the hood?
 data WithMaskedObject (zone :: Zone) (liftedOT :: Type) :: Type where
   M1 ::
     (Typeable liftedOT, IsOT (OT1 a), Inst1 IsObjectType a) =>

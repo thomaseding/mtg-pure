@@ -34,6 +34,7 @@ import safe MtgPure.Cards (
   conversion,
   damnation,
   forest,
+  holyStrength,
   island,
   lavaAxe,
   mountain,
@@ -73,6 +74,7 @@ allCards =
   , toCard conversion
   , toCard damnation
   , toCard forest
+  , toCard holyStrength
   , toCard island
   , toCard lavaAxe
   , toCard mountain

@@ -30,6 +30,7 @@ module MtgPure.Cards (
   conversion,
   damnation,
   forest,
+  holyStrength,
   island,
   lavaAxe,
   mountain,
@@ -87,9 +88,11 @@ import safe MtgPure.Model.Recursive (
   Cost (AndCosts, DiscardRandomCost, ManaCost, PayLife),
   Effect (DrawCards, StatDelta),
   Elect (A, ActivePlayer, All, Cost, VariableFromPower),
+  Enchant (Enchant),
+  EnchantmentType (Aura),
   EventListener' (TimePoint),
   Requirement (HasLandType, Not, ROr),
-  StaticAbility (Bestow, Enchant, FirstStrike, Flying, Haste, StaticContinuous, Suspend),
+  StaticAbility (Bestow, FirstStrike, Flying, Haste, StaticContinuous, Suspend),
   Token,
   TriggeredAbility (When),
  )
@@ -229,6 +232,7 @@ bloodMoon = mkCard "Blood Moon" $ \_this ->
   EnchantmentDef
     (toColors R)
     cost
+    []
     [ Static $
         StaticContinuous $
           All $
@@ -267,6 +271,7 @@ conversion = mkCard "Conversion" $ \this ->
   EnchantmentDef
     (toColors W)
     cost
+    []
     [ Triggered $
         When $
           ActivePlayer $ \active -> controllerOf this $ \you ->
@@ -301,6 +306,20 @@ damnation = mkCard "Damnation" $ \_this ->
 forest :: Card OTLand
 forest = mkBasicLand Forest
 
+holyStrength :: Card OTEnchantment
+holyStrength = mkCard "Holy Strength" $ \_this ->
+  EnchantmentDef
+    (toColors W)
+    cost
+    [ Aura $
+        Enchant $
+          linked [] $
+            \enchanted -> effect $ StatDelta enchanted (Power 1) (Toughness 2)
+    ]
+    []
+ where
+  cost = spellCost W
+
 island :: Card OTLand
 island = mkBasicLand Island
 
@@ -326,12 +345,13 @@ nyxbornRollicker = mkCard "Nyxborn Rollicker" $ \_this ->
     (Power 1)
     (Toughness 1)
     []
+    []
     [ Static $
-        Enchant $
-          linked [] $
-            \enchanted -> effect $ StatDelta enchanted (Power 1) (Toughness 1)
+        Bestow (spellCost (1, R)) $
+          Enchant $
+            linked [] $
+              \enchanted -> effect $ StatDelta enchanted (Power 1) (Toughness 1)
     ]
-    [Static $ Bestow (spellCost (1, R))]
  where
   cost = spellCost R
 
