@@ -32,6 +32,7 @@ module MtgPure.Model.ObjectN
     OPlaneswalker,
     OPlayer,
     OSorcery,
+    OSpell,
   )
 where
 
@@ -65,12 +66,23 @@ import MtgPure.Model.ObjectType
     OTPlayer,
     OTPlayerPlaneswalker,
     OTSorcery,
+    OTSpell,
     ObjectType,
   )
 
+type OAny = ObjectN OTAny
+
 type OArtifact = ObjectN OTArtifact
 
+type OArtifactCreature = ObjectN OTArtifactCreature
+
 type OCreature = ObjectN OTCreature
+
+type OCreaturePlaneswalker = ObjectN OTCreaturePlaneswalker
+
+type OCreaturePlayer = ObjectN OTCreaturePlayer
+
+type OCreaturePlayerPlaneswalker = ObjectN OTCreaturePlayerPlaneswalker
 
 type OEnchantment = ObjectN OTEnchantment
 
@@ -78,25 +90,17 @@ type OInstant = ObjectN OTInstant
 
 type OLand = ObjectN OTLand
 
+type OPermanent = ObjectN OTPermanent
+
 type OPlaneswalker = ObjectN OTPlaneswalker
 
 type OPlayer = ObjectN OTPlayer
 
+type OPlayerPlaneswalker = ObjectN OTPlayerPlaneswalker
+
 type OSorcery = ObjectN OTSorcery
 
-type OAny = ObjectN OTAny
-
-type OArtifactCreature = ObjectN OTArtifactCreature
-
-type OCreaturePlayer = ObjectN OTCreaturePlayer
-
-type OCreaturePlaneswalker = ObjectN OTCreaturePlaneswalker
-
-type OCreaturePlayerPlaneswalker = ObjectN OTCreaturePlayerPlaneswalker
-
-type OPermanent = ObjectN OTPermanent
-
-type OPlayerPlaneswalker = ObjectN OTPlayerPlaneswalker
+type OSpell = ObjectN OTSpell
 
 data family ObjectN (a :: k)
 

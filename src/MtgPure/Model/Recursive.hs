@@ -36,6 +36,7 @@ import MtgPure.Model.ObjectN
     OPermanent,
     OPlaneswalker,
     OPlayer,
+    OSpell,
     ObjectN,
   )
 import MtgPure.Model.ObjectType
@@ -107,10 +108,11 @@ data Cost :: Type where
 
 data Effect :: EffectType -> Type where
   AddMana :: ManaPool -> OPlayer -> Effect 'OneShot
+  AddToBattlefield :: Permanent a -> OPlayer -> Token a -> Effect 'OneShot
   ChangeTo :: Permanent a -> OPermanent -> Card a -> Effect 'Continuous
+  CounterSpell :: OSpell -> Effect 'OneShot
   DealDamage :: OAny -> OCreaturePlayerPlaneswalker -> Damage -> Effect 'OneShot
   Destroy :: OPermanent -> Effect 'OneShot
-  DoNothing :: Effect e
   DrawCards :: OPlayer -> Int -> Effect 'OneShot
   Sacrifice :: Permanent a -> OPlayer -> [Requirement a] -> Effect 'OneShot
 
@@ -121,7 +123,7 @@ data Elect :: forall e a. e -> a -> Type where
   Condition :: Condition -> Elect Condition a
   ControllerOf :: OAny -> (OPlayer -> Elect e a) -> Elect e a
   Cost :: Cost -> Elect Cost a
-  Effect :: Effect e -> Elect e a
+  Effect :: [Effect e] -> Elect e a
 
 data EventListener :: forall a. a -> Type where
   Conditional :: Elect Condition a -> EventListener a -> EventListener a
@@ -156,6 +158,7 @@ data StaticAbility :: forall a. a -> Type where
   As :: WithObject EventListener a -> StaticAbility a -- 603.6d: not a triggered ability
   ContinuousEffect :: Elect 'Continuous a -> StaticAbility a
   FirstStrike :: StaticAbility OTCreature
+  Flying :: StaticAbility OTCreature
   Haste :: StaticAbility OTCreature
   Suspend :: Int -> Elect Cost a -> StaticAbility a
 

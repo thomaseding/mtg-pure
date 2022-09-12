@@ -32,7 +32,7 @@ where
 
 import qualified Control.Monad.State.Strict as State
 import qualified Data.DList as DList
-import Data.Inst (Inst2, Inst3, Inst4, Inst5, Inst8)
+import Data.Inst (Inst2, Inst3, Inst4, Inst5, Inst6, Inst8)
 import Data.Kind (Type)
 import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (Proxy))
@@ -71,6 +71,7 @@ import MtgPure.Model
     OCreaturePlayerPlaneswalker,
     OPermanent,
     OPlayerPlaneswalker,
+    OSpell,
     OTPlayer,
     Object (..),
     ObjectId (ObjectId),
@@ -261,6 +262,17 @@ showObject5 objN = visitObjectN' visit objN
             | rep == typeRep (Proxy @OPermanent) -> "asPermanent"
             | otherwise -> "toObject5"
 
+showObject6 :: Inst6 IsObjectType a b c d e f => ObjectN '(a, b, c, d, e, f) -> EnvM ParenItems
+showObject6 objN = visitObjectN' visit objN
+  where
+    rep = typeOf objN
+    visit :: IsObjectType x => Object x -> EnvM ParenItems
+    visit =
+      showObjectNImpl rep $
+        if
+            | rep == typeRep (Proxy @OSpell) -> "asSpell"
+            | otherwise -> "toObject6"
+
 showObject8 :: Inst8 IsObjectType a b c d e f g h => ObjectN '(a, b, c, d, e, f, g, h) -> EnvM ParenItems
 showObject8 objN = visitObjectN' visit objN
   where
@@ -320,6 +332,9 @@ showOCreaturePlayerPlaneswalker = showObject3
 showOPermanent :: OPermanent -> EnvM ParenItems
 showOPermanent = showObject5
 
+showOSpell :: OSpell -> EnvM ParenItems
+showOSpell = showObject6
+
 showOAny :: OAny -> EnvM ParenItems
 showOAny = showObject8
 
@@ -331,9 +346,6 @@ showSetToken depth (SetToken set rarity token) =
     ++ " $ "
     ++ showToken depth token
 
-showToken :: CardDepth -> Token a -> String
-showToken depth (Token card) = "Token $ " ++ showCard depth card
-
 showSetCard :: CardDepth -> SetCard a -> String
 showSetCard depth (SetCard set rarity card) =
   "SetCard " ++ show set
@@ -342,10 +354,16 @@ showSetCard depth (SetCard set rarity card) =
     ++ " $ "
     ++ showCard depth card
 
+showToken :: CardDepth -> Token a -> String
+showToken depth = runEnvM depth . showTokenM
+
 showCard :: CardDepth -> Card a -> String
-showCard depth card = concat $ State.evalState strsM $ mkEnv depth
+showCard depth = runEnvM depth . showCardM
+
+runEnvM :: CardDepth -> EnvM ParenItems -> String
+runEnvM depth m = concat $ State.evalState strsM $ mkEnv depth
   where
-    itemsM = DList.toList . dropParens <$> showCardM card
+    itemsM = DList.toList . dropParens <$> m
     strsM =
       itemsM >>= \items -> do
         let used = getUsed items
@@ -391,6 +409,11 @@ showItem used = \case
     pure $ case Map.findWithDefault False i (usedVariables used) of
       False -> "_" ++ name
       True -> name
+
+showTokenM :: forall x. Token x -> EnvM ParenItems
+showTokenM (Token card) = yesParens $ do
+  sCard <- dollar <$> showCardM card
+  pure $ pure "Token" <> sCard
 
 showCardM :: forall x. Card x -> EnvM ParenItems
 showCardM = \case
@@ -572,10 +595,10 @@ showSelection :: Selection -> EnvM ParenItems
 showSelection = \case
   Choose player -> yesParens $ do
     sPlayer <- dollar <$> showObject1 player
-    pure $ pure "Choose " <> sPlayer
+    pure $ pure "Choose" <> sPlayer
   Target player -> yesParens $ do
     sPlayer <- dollar <$> showObject1 player
-    pure $ pure "Target " <> sPlayer
+    pure $ pure "Target" <> sPlayer
   Random -> noParens $ pure $ pure "Random"
 
 showListM :: (a -> EnvM ParenItems) -> [a] -> EnvM ParenItems
@@ -998,8 +1021,12 @@ showStaticAbility = \case
   ContinuousEffect continuous -> yesParens $ do
     sContinuous <- dollar <$> showElect continuous
     pure $ pure "ContinuousEffect" <> sContinuous
-  FirstStrike -> noParens $ pure $ pure "FirstStrike"
-  Haste -> noParens $ pure $ pure "Haste"
+  FirstStrike -> noParens $ do
+    pure $ pure "FirstStrike"
+  Flying -> noParens $ do
+    pure $ pure "Flying"
+  Haste -> noParens $ do
+    pure $ pure "Haste"
   Suspend time cost -> yesParens $ do
     let sTime = pure $ fromString $ show time
     sCost <- dollar <$> showElect cost
@@ -1035,8 +1062,12 @@ showElect = \case
     sElect <- dropParens <$> showElect elect
     restoreObject snap
     pure $ pure "ControllerOf " <> sObj <> pure " $ \\" <> sController <> pure " -> " <> sElect
-  Cost cost -> yesParens $ (pure "Cost" <>) . dollar <$> showCost cost
-  Effect effect -> yesParens $ (pure "Effect" <>) . dollar <$> showEffect effect
+  Cost cost -> yesParens $ do
+    sCost <- dollar <$> showCost cost
+    pure $ pure "Cost" <> sCost
+  Effect effect -> yesParens $ do
+    sEffect <- dollar <$> showEffects effect
+    pure $ pure "Effect" <> sEffect
 
 showWithObject :: (forall a. x a -> EnvM ParenItems) -> String -> WithObject x b -> EnvM ParenItems
 showWithObject showM memo = \case
@@ -1197,11 +1228,19 @@ showEffect = \case
     sMana <- parens <$> showManaPool mana
     sPlayer <- dollar <$> showObject1 player
     pure $ pure "AddMana " <> sMana <> sPlayer
+  AddToBattlefield perm player token -> yesParens $ do
+    sPerm <- parens <$> showPermanent perm
+    sPlayer <- parens <$> showObject1 player
+    sCard <- dollar <$> showTokenM token
+    pure $ pure "AddToBattlefield " <> sPlayer <> pure " " <> sPerm <> sCard
   ChangeTo perm before after -> yesParens $ do
     sPerm <- parens <$> showPermanent perm
     sBefore <- parens <$> showOPermanent before
     sAfter <- dollar <$> showCardM after
     pure $ pure "ChangeTo " <> sPerm <> pure " " <> sBefore <> sAfter
+  CounterSpell obj -> yesParens $ do
+    sObj <- dollar <$> showOSpell obj
+    pure $ pure "CounterSpell" <> sObj
   DealDamage source victim damage -> yesParens $ do
     sSource <- parens <$> showOAny source
     sVictim <- parens <$> showOCreaturePlayerPlaneswalker victim
@@ -1210,8 +1249,6 @@ showEffect = \case
   Destroy obj -> yesParens $ do
     sObj <- dollar <$> showOPermanent obj
     pure $ pure "Destroy" <> sObj
-  DoNothing -> noParens $ do
-    pure $ pure "DoNothing"
   DrawCards player n -> yesParens $ do
     sPlayer <- parens <$> showObject1 player
     let amount = fromString $ show n
@@ -1221,3 +1258,6 @@ showEffect = \case
     sPlayer <- parens <$> showObject1 player
     sReqs <- dollar <$> showRequirements reqs
     pure $ pure "Sacrifice " <> sPerm <> pure " " <> sPlayer <> sReqs
+
+showEffects :: [Effect e] -> EnvM ParenItems
+showEffects = showListM showEffect

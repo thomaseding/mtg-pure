@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE Safe #-}
@@ -18,10 +19,13 @@ module MtgPure.ModelCombinators
     asAny,
     AsPermanent,
     asPermanent,
+    AsSpell,
+    asSpell,
     AsCreaturePlayerPlaneswalker,
     asCreaturePlayerPlaneswalker,
     AsDamage (..),
     AsCost (..),
+    ElectEffect (..),
     CoAny (..),
     CoPermanent (..),
     o1,
@@ -41,6 +45,7 @@ module MtgPure.ModelCombinators
     changeTo,
     sacrifice,
     destroy,
+    counterSpell,
     sacrificeCost,
     tapped,
   )
@@ -90,6 +95,19 @@ type AsPermanent a =
 
 asPermanent :: AsPermanent a => a -> OPermanent
 asPermanent = toObject5
+
+type AsSpell a =
+  ToObject6
+    a
+    OTArtifact
+    OTCreature
+    OTEnchantment
+    OTInstant
+    OTPlaneswalker
+    OTSorcery
+
+asSpell :: AsSpell a => a -> OSpell
+asSpell = toObject6
 
 type AsCreaturePlayerPlaneswalker a =
   ToObject3
@@ -144,6 +162,9 @@ tapCost = TapCost . asPermanent
 
 destroy :: AsPermanent o => o -> Effect 'OneShot
 destroy = Destroy . asPermanent
+
+counterSpell :: AsSpell o => o -> Effect 'OneShot
+counterSpell = CounterSpell . asSpell
 
 class CoPermanent ot where
   coPermanent :: Permanent ot
@@ -240,3 +261,12 @@ instance AsCost ManaCost where
 
 playerPays :: AsCost c => c -> Requirement OTPlayer
 playerPays = PlayerPays . asCost
+
+class ElectEffect effect elect where
+  effect :: effect -> elect ot
+
+instance ElectEffect (Effect e) (Elect e) where
+  effect = Effect . pure
+
+instance ElectEffect [Effect e] (Elect e) where
+  effect = Effect

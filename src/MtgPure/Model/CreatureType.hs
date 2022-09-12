@@ -19,7 +19,8 @@ module MtgPure.Model.CreatureType
 where
 
 data CreatureType
-  = Devil
+  = Bird
+  | Devil
   | Eldrazi
   | Elf
   | Goblin
