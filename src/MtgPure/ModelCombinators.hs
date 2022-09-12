@@ -194,7 +194,7 @@ sacrifice = Sacrifice coPermanent
 changeTo :: (AsPermanent o, CoPermanent ot) => o -> Card ot -> Effect 'Continuous
 changeTo = ChangeTo coPermanent . asPermanent
 
-tapCost :: AsPermanent o => o -> Cost
+tapCost :: AsPermanent o => o -> Cost ot
 tapCost = TapCost . asPermanent
 
 destroy :: AsPermanent o => o -> Effect 'OneShot
@@ -281,7 +281,7 @@ is = Is coAny
 satisfies :: CoAny ot => ObjectN ot -> [Requirement ot] -> Condition
 satisfies = Satisfies coAny
 
-sacrificeCost :: CoPermanent ot => OPlayer -> [Requirement ot] -> Cost
+sacrificeCost :: CoPermanent ot => [Requirement ot] -> Cost ot
 sacrificeCost = SacrificeCost coPermanent
 
 tapped :: CoPermanent ot => Requirement ot
@@ -293,16 +293,16 @@ addToBattlefield = AddToBattlefield coPermanent
 ofColors :: ColorsLike c => c -> Requirement ot
 ofColors = OfColors . toColors
 
-class AsCost c where
-  asCost :: c -> Cost
+class AsCost c ot where
+  asCost :: c -> Cost ot
 
-instance AsCost Cost where
+instance AsCost (Cost ot) ot where
   asCost = id
 
-instance AsCost ManaCost where
+instance AsCost ManaCost ot where
   asCost = ManaCost
 
-playerPays :: AsCost c => c -> Requirement OTPlayer
+playerPays :: AsCost c OTPlayer => c -> Requirement OTPlayer
 playerPays = PlayerPays . asCost
 
 class ElectEffect effect elect where

@@ -34,7 +34,6 @@ import MtgPure.Model.ObjectN
     OCreaturePlayerPlaneswalker,
     ODamageSource,
     OPermanent,
-    OPlaneswalker,
     OPlayer,
     OSpell,
     ObjectN,
@@ -103,15 +102,15 @@ data Condition :: Type where
   COr :: [Condition] -> Condition
   Satisfies :: WAny a -> ObjectN a -> [Requirement a] -> Condition
 
-data Cost :: Type where
-  AndCosts :: [Cost] -> Cost
-  DiscardRandomCost :: OPlayer -> Int -> Cost
-  LoyaltyCost :: OPlaneswalker -> Loyalty -> Cost
-  ManaCost :: ManaCost -> Cost
-  OrCosts :: [Cost] -> Cost
-  PayLife :: OPlayer -> Int -> Cost
-  SacrificeCost :: WPermanent a -> OPlayer -> [Requirement a] -> Cost
-  TapCost :: OPermanent -> Cost
+data Cost :: forall a. a -> Type where
+  AndCosts :: [Cost a] -> Cost a
+  DiscardRandomCost :: Int -> Cost a -- TODO: PositiveInt
+  LoyaltyCost :: Loyalty -> Cost OTPlaneswalker
+  ManaCost :: ManaCost -> Cost a
+  OrCosts :: [Cost a] -> Cost a
+  PayLife :: Int -> Cost a -- TODO: PositiveInt
+  SacrificeCost :: WPermanent a -> [Requirement a] -> Cost a
+  TapCost :: OPermanent -> Cost a
 
 data Effect :: EffectType -> Type where
   AddMana :: ManaPool -> OPlayer -> Effect 'OneShot
@@ -130,7 +129,7 @@ data Elect :: forall e a. e -> a -> Type where
   All :: WithObject (Elect e) a -> Elect e a
   Condition :: Condition -> Elect Condition a
   ControllerOf :: OAny -> (OPlayer -> Elect e a) -> Elect e a
-  Cost :: Cost -> Elect Cost a
+  Cost :: Cost a -> Elect Cost a
   Effect :: [Effect e] -> Elect e a
   Event :: EventListener a -> Elect EventListener a
   If :: Condition -> Elect e a -> Elect e a -> Elect e a
@@ -149,7 +148,7 @@ data Requirement :: forall a. a -> Type where
   Not :: Requirement a -> Requirement a
   OfColors :: Colors -> Requirement a -- needs `WCard a` witness
   OwnedBy :: OPlayer -> Requirement a
-  PlayerPays :: Cost -> Requirement OTPlayer
+  PlayerPays :: Cost OTPlayer -> Requirement OTPlayer
   RAnd :: [Requirement a] -> Requirement a
   ROr :: [Requirement a] -> Requirement a
   Tapped :: WPermanent a -> Requirement a

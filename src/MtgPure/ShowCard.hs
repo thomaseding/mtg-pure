@@ -698,34 +698,30 @@ showAbility = \case
   Static ability -> yesParens $ (pure "Static" <>) . dollar <$> showStaticAbility ability
   Triggered ability -> yesParens $ (pure "Triggered" <>) . dollar <$> showTriggeredAbility ability
 
-showCost :: Cost -> EnvM ParenItems
+showCost :: Cost a -> EnvM ParenItems
 showCost = \case
   AndCosts costs -> yesParens $ do
     sCosts <- parens <$> showListM showCost costs
     pure $ pure "AndCosts " <> sCosts
-  DiscardRandomCost player amount -> yesParens $ do
-    sPlayer <- parens <$> showObject1 player
+  DiscardRandomCost amount -> yesParens $ do
     let sAmount = pure $ fromString $ show amount
-    pure $ pure "DiscardRandomCost " <> sPlayer <> pure " " <> sAmount
-  LoyaltyCost planeswalker loyalty -> yesParens $ do
-    sPlaneswalker <- parens <$> showObject1 planeswalker
+    pure $ pure "DiscardRandomCost " <> sAmount
+  LoyaltyCost loyalty -> yesParens $ do
     sLoyalty <- dollar <$> showLoyalty loyalty
-    pure $ pure "LoyaltyCost " <> sPlaneswalker <> sLoyalty
+    pure $ pure "LoyaltyCost " <> sLoyalty
   ManaCost cost -> yesParens $ do
     sCost <- dollar <$> showManaCost cost
     pure $ pure (fromString "ManaCost") <> sCost
   OrCosts costs -> yesParens $ do
     sCosts <- parens <$> showListM showCost costs
     pure $ pure "OrCosts " <> sCosts
-  PayLife player amount -> yesParens $ do
-    sPlayer <- parens <$> showObject1 player
+  PayLife amount -> yesParens $ do
     let sAmount = pure $ fromString $ show amount
-    pure $ pure "PayLife " <> sPlayer <> sAmount
-  SacrificeCost perm player reqs -> yesParens $ do
+    pure $ pure "PayLife " <> sAmount
+  SacrificeCost perm reqs -> yesParens $ do
     sPerm <- parens <$> showPermanent perm
-    sPlayer <- parens <$> showObject1 player
     sReqs <- dollar <$> showRequirements reqs
-    pure $ pure "SacrificeCost " <> sPerm <> sPlayer <> sReqs
+    pure $ pure "SacrificeCost " <> sPerm <> sReqs
   TapCost obj -> yesParens $ do
     sObj <- dollar <$> showOPermanent obj
     pure $ pure "TapCost" <> sObj

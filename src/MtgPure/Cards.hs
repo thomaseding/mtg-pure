@@ -199,11 +199,11 @@ wastes = mkBasicLand "Wastes" C
 
 acceptableLosses :: Card OTSorcery
 acceptableLosses = Card1 "Acceptable Losses" $ \this ->
-  let cost = controllerOf this $ \you ->
+  let cost =
         Cost $
           AndCosts
             [ ManaCost $ toManaCost (3, R),
-              DiscardRandomCost you 1
+              DiscardRandomCost 1
             ]
    in SorceryDef (toColors R) cost [] $
         controllerOf this $
