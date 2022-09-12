@@ -561,6 +561,12 @@ showToughness = yesParens . pure . pure . fromString . show
 showColors :: Colors -> EnvM ParenItems
 showColors = yesParens . pure . pure . fromString . show
 
+selectionMemo :: Selection -> String
+selectionMemo = \case
+  Choose {} -> "choice"
+  Target {} -> "target"
+  Random -> "random"
+
 showSelection :: Selection -> EnvM ParenItems
 showSelection = \case
   Choose player -> yesParens $ do
@@ -581,26 +587,26 @@ showRequirements = showListM showRequirement
 
 showRequirement :: forall a. Requirement a -> EnvM ParenItems
 showRequirement = \case
+  ControlledBy obj -> yesParens $ do
+    sObj <- dollar <$> showObject1 obj
+    pure $ pure "ControlledBy " <> sObj
+  HasBasicLandType color -> yesParens $ do
+    pure $ pure $ fromString $ "HasBasicLandType " ++ show color
   Impossible -> noParens $ pure $ pure "Impossible"
-  OfColors colors -> yesParens $ pure $ pure $ fromString $ "OfColors $ " ++ show colors
-  Not req -> yesParens $ (pure "Not" <>) . dollar <$> showRequirement req
   Is anyObj objN -> yesParens $ do
     sAnyObj <- parens <$> showAnyObject anyObj
     sObjN <- dollar <$> showAnyObjectN anyObj objN
     pure $ pure "Is " <> sAnyObj <> pure " " <> sObjN
-  ControlledBy obj -> yesParens $ do
-    sObj <- dollar <$> showObject1 obj
-    pure $ pure "ControlledBy " <> sObj
+  NonBasic -> noParens $ pure $ pure "NonBasic"
+  Not req -> yesParens $ (pure "Not" <>) . dollar <$> showRequirement req
+  OfColors colors -> yesParens $ pure $ pure $ fromString $ "OfColors $ " ++ show colors
   OwnedBy obj -> yesParens $ do
     sObj <- dollar <$> showObject1 obj
     pure $ pure "OwnedBy " <> sObj
-  Tapped perm -> yesParens $ pure $ pure $ fromString $ "Tapped " ++ show perm
-  NonBasic -> noParens $ pure $ pure "NonBasic"
   PlayerPays cost -> yesParens $ do
     sCost <- dollar <$> showCost cost
     pure $ pure "PlayerPays" <> sCost
-  HasBasicLandType color -> yesParens $ do
-    pure $ pure $ fromString $ "HasBasicLandType " ++ show color
+  Tapped perm -> yesParens $ pure $ pure $ fromString $ "Tapped " ++ show perm
 
 showAbilities :: [Ability a] -> EnvM ParenItems
 showAbilities = showListM showAbility
@@ -616,24 +622,23 @@ showAbility = \case
 
 showCost :: Cost -> EnvM ParenItems
 showCost = \case
-  ManaCostCost cost -> yesParens $ do
-    sCost <- dollar <$> showManaCost cost
-    pure $ pure (fromString "ManaCostCost") <> sCost
   AndCosts costs -> yesParens $ do
     sCosts <- parens <$> showListM showCost costs
     pure $ pure "AndCosts " <> sCosts
-  OrCosts costs -> yesParens $ do
-    sCosts <- parens <$> showListM showCost costs
-    pure $ pure "OrCosts " <> sCosts
-  TapCost obj -> yesParens $ (pure "TapCost" <>) . dollar <$> showOPermanent obj
-  LoyaltyCost planeswalker loyalty -> yesParens $ do
-    sPlaneswalker <- parens <$> showObject1 planeswalker
-    sLoyalty <- dollar <$> showLoyalty loyalty
-    pure $ pure "LoyaltyCost " <> sPlaneswalker <> sLoyalty
   DiscardRandomCost player amount -> yesParens $ do
     sPlayer <- parens <$> showObject1 player
     let sAmount = pure $ fromString $ show amount
     pure $ pure "DiscardRandomCost " <> sPlayer <> pure " " <> sAmount
+  LoyaltyCost planeswalker loyalty -> yesParens $ do
+    sPlaneswalker <- parens <$> showObject1 planeswalker
+    sLoyalty <- dollar <$> showLoyalty loyalty
+    pure $ pure "LoyaltyCost " <> sPlaneswalker <> sLoyalty
+  ManaCostCost cost -> yesParens $ do
+    sCost <- dollar <$> showManaCost cost
+    pure $ pure (fromString "ManaCostCost") <> sCost
+  OrCosts costs -> yesParens $ do
+    sCosts <- parens <$> showListM showCost costs
+    pure $ pure "OrCosts " <> sCosts
   PayLife player amount -> yesParens $ do
     sPlayer <- parens <$> showObject1 player
     let sAmount = pure $ fromString $ show amount
@@ -643,6 +648,7 @@ showCost = \case
     sPlayer <- parens <$> showObject1 player
     sReqs <- dollar <$> showRequirements reqs
     pure $ pure "SacrificeCost " <> sPerm <> sPlayer <> sReqs
+  TapCost obj -> yesParens $ (pure "TapCost" <>) . dollar <$> showOPermanent obj
 
 class LiteralMana a where
   literalMana :: a -> Maybe Int
@@ -899,12 +905,12 @@ showConditions = showListM showCondition
 
 showCondition :: Condition -> EnvM ParenItems
 showCondition = \case
-  Or conds -> yesParens $ do
-    sConds <- parens <$> showConditions conds
-    pure $ pure "Or " <> sConds
   And conds -> yesParens $ do
     sConds <- parens <$> showConditions conds
     pure $ pure "And " <> sConds
+  Or conds -> yesParens $ do
+    sConds <- parens <$> showConditions conds
+    pure $ pure "Or " <> sConds
   Satisfies anyObj objN reqs -> yesParens $ do
     sAnyObj <- parens <$> showAnyObject anyObj
     sObjN <- parens <$> showAnyObjectN anyObj objN
@@ -960,21 +966,25 @@ showTimePoint = yesParens . pure . pure . fromString . show
 
 showStaticAbility :: StaticAbility a -> EnvM ParenItems
 showStaticAbility = \case
+  As withObject -> yesParens $ do
+    sWithObject <- dollar <$> showWithObject showEventListener "this" withObject
+    pure $ pure "As" <> sWithObject
   ContinuousEffect continuous -> yesParens $ do
     sContinuous <- dollar <$> showElect continuous
     pure $ pure "ContinuousEffect" <> sContinuous
-  Haste -> noParens $ pure $ pure "Haste"
   FirstStrike -> noParens $ pure $ pure "FirstStrike"
+  Haste -> noParens $ pure $ pure "Haste"
   Suspend time cost -> yesParens $ do
     let sTime = pure $ fromString $ show time
     sCost <- dollar <$> showElect cost
     pure $ pure "Suspend " <> sTime <> sCost
-  As withObject -> yesParens $ do
-    sWithObject <- dollar <$> showWithObject showEventListener "this" withObject
-    pure $ pure "As" <> sWithObject
 
 showElect :: Elect e a -> EnvM ParenItems
 showElect = \case
+  A sel withObject -> yesParens $ do
+    sSel <- parens <$> showSelection sel
+    sWithObject <- dollar <$> showWithObject showElect (selectionMemo sel) withObject
+    pure $ pure "A " <> sSel <> sWithObject
   ActivePlayer contElect -> yesParens $ do
     (active, snap) <- newObjectN @OTPlayer O "active"
     sActive <- parens <$> showObject1 active
@@ -982,6 +992,9 @@ showElect = \case
     sElect <- dropParens <$> showElect elect
     restoreObject snap
     pure $ pure "ActivePlayer $ \\" <> sActive <> pure " -> " <> sElect
+  All withObject -> yesParens $ do
+    sWithObject <- dollar <$> showWithObject showElect "all" withObject
+    pure $ pure "All" <> sWithObject
   Condition cond -> yesParens $ do
     sCond <- dollar <$> showCondition cond
     pure $ pure "Condition" <> sCond
@@ -996,21 +1009,8 @@ showElect = \case
     sElect <- dropParens <$> showElect elect
     restoreObject snap
     pure $ pure "ControllerOf " <> sObj <> pure " $ \\" <> sController <> pure " -> " <> sElect
-  A sel withObject -> yesParens $ do
-    sSel <- parens <$> showSelection sel
-    sWithObject <- dollar <$> showWithObject showElect (selectionMemo sel) withObject
-    pure $ pure "A " <> sSel <> sWithObject
-  All withObject -> yesParens $ do
-    sWithObject <- dollar <$> showWithObject showElect "all" withObject
-    pure $ pure "All" <> sWithObject
-  Effect effect -> yesParens $ (pure "Effect" <>) . dollar <$> showEffect effect
   Cost cost -> yesParens $ (pure "Cost" <>) . dollar <$> showCost cost
-
-selectionMemo :: Selection -> String
-selectionMemo = \case
-  Choose {} -> "choice"
-  Target {} -> "target"
-  Random -> "random"
+  Effect effect -> yesParens $ (pure "Effect" <>) . dollar <$> showEffect effect
 
 showWithObject :: (forall a. x a -> EnvM ParenItems) -> String -> WithObject x b -> EnvM ParenItems
 showWithObject showM memo = \case
@@ -1207,31 +1207,32 @@ showPermanentN perm obj = case perm of
 
 showEffect :: Effect e -> EnvM ParenItems
 showEffect = \case
-  DoNothing -> noParens $ pure $ pure "DoNothing"
   AddMana mana player -> yesParens $ do
     sMana <- parens <$> showManaPool mana
     sPlayer <- dollar <$> showObject1 player
     pure $ pure "AddMana " <> sMana <> sPlayer
-  DealDamage source victim damage -> yesParens $ do
-    sSource <- parens <$> showOAny source
-    sVictim <- parens <$> showOCreaturePlayerPlaneswalker victim
-    sDamage <- dollar <$> showDamage damage
-    pure $ pure "DealDamage " <> sSource <> pure " " <> sVictim <> sDamage
-  Sacrifice perm player reqs -> yesParens $ do
-    sPerm <- parens <$> showPermanent perm
-    sPlayer <- parens <$> showObject1 player
-    sReqs <- dollar <$> showRequirements reqs
-    pure $ pure "Sacrifice " <> sPerm <> pure " " <> sPlayer <> sReqs
-  Destroy perm obj -> yesParens $ do
-    sPerm <- parens <$> showPermanent perm
-    sObj <- dollar <$> showPermanentN perm obj
-    pure $ pure "Destroy " <> sPerm <> sObj
-  DrawCards player n -> yesParens $ do
-    sPlayer <- parens <$> showObject1 player
-    let amount = fromString $ show n
-    pure $ pure "DrawCards " <> sPlayer <> pure " " <> pure amount
   ChangeTo perm before after -> yesParens $ do
     sPerm <- parens <$> showPermanent perm
     sBefore <- parens <$> showOPermanent before
     sAfter <- dollar <$> showCardM after
     pure $ pure "ChangeTo " <> sPerm <> pure " " <> sBefore <> sAfter
+  DealDamage source victim damage -> yesParens $ do
+    sSource <- parens <$> showOAny source
+    sVictim <- parens <$> showOCreaturePlayerPlaneswalker victim
+    sDamage <- dollar <$> showDamage damage
+    pure $ pure "DealDamage " <> sSource <> pure " " <> sVictim <> sDamage
+  Destroy perm obj -> yesParens $ do
+    sPerm <- parens <$> showPermanent perm
+    sObj <- dollar <$> showPermanentN perm obj
+    pure $ pure "Destroy " <> sPerm <> sObj
+  DoNothing -> noParens $ do
+    pure $ pure "DoNothing"
+  DrawCards player n -> yesParens $ do
+    sPlayer <- parens <$> showObject1 player
+    let amount = fromString $ show n
+    pure $ pure "DrawCards " <> sPlayer <> pure " " <> pure amount
+  Sacrifice perm player reqs -> yesParens $ do
+    sPerm <- parens <$> showPermanent perm
+    sPlayer <- parens <$> showObject1 player
+    sReqs <- dollar <$> showRequirements reqs
+    pure $ pure "Sacrifice " <> sPerm <> pure " " <> sPlayer <> sReqs
