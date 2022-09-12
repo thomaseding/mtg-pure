@@ -65,6 +65,8 @@ header =
   \    ToObject6 (..),\n\
   \    ToObject7 (..),\n\
   \    ToObject8 (..),\n\
+  \    ToObject9 (..),\n\
+  \    ToObject10 (..),\n\
   \  )\n\
   \where\n\
   \\n\
@@ -77,6 +79,8 @@ header =
   \    Inst6,\n\
   \    Inst7,\n\
   \    Inst8,\n\
+  \    Inst9,\n\
+  \    Inst10,\n\
   \  )\n\
   \import MtgPure.Model.IsObjectType (IsObjectType)\n\
   \import MtgPure.Model.Object (Object)\n\
@@ -90,6 +94,8 @@ header =
   \    ToObject6(..),\n\
   \    ToObject7(..),\n\
   \    ToObject8(..),\n\
+  \    ToObject9(..),\n\
+  \    ToObject10(..),\n\
   \  )\n\
   \\n\
   \"

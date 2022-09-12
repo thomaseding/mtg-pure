@@ -18,20 +18,23 @@
 
 module MtgPure.Model.ObjectN
   ( ObjectN (..),
+    OAbility,
     OAny,
+    OArtifact,
     OArtifactCreature,
+    OCreature,
     OCreaturePlaneswalker,
     OCreaturePlayer,
     OCreaturePlayerPlaneswalker,
-    OPermanent,
-    OPlayerPlaneswalker,
-    OArtifact,
-    OCreature,
+    ODamageSource,
+    OEmblem,
     OEnchantment,
     OInstant,
     OLand,
+    OPermanent,
     OPlaneswalker,
     OPlayer,
+    OPlayerPlaneswalker,
     OSorcery,
     OSpell,
   )
@@ -39,6 +42,7 @@ where
 
 import Data.Inst
   ( Inst1,
+    Inst10,
     Inst2,
     Inst3,
     Inst4,
@@ -46,19 +50,23 @@ import Data.Inst
     Inst6,
     Inst7,
     Inst8,
+    Inst9,
   )
 import Data.Kind (Type)
 import Data.Typeable (Typeable)
 import MtgPure.Model.IsObjectType (IsObjectType)
 import MtgPure.Model.Object (Object)
 import MtgPure.Model.ObjectType
-  ( OTAny,
+  ( OTAbility,
+    OTAny,
     OTArtifact,
     OTArtifactCreature,
     OTCreature,
     OTCreaturePlaneswalker,
     OTCreaturePlayer,
     OTCreaturePlayerPlaneswalker,
+    OTDamageSource,
+    OTEmblem,
     OTEnchantment,
     OTInstant,
     OTLand,
@@ -73,6 +81,8 @@ import MtgPure.Model.ObjectType
 
 type OAny = ObjectN OTAny
 
+type OAbility = ObjectN OTAbility
+
 type OArtifact = ObjectN OTArtifact
 
 type OArtifactCreature = ObjectN OTArtifactCreature
@@ -84,6 +94,10 @@ type OCreaturePlaneswalker = ObjectN OTCreaturePlaneswalker
 type OCreaturePlayer = ObjectN OTCreaturePlayer
 
 type OCreaturePlayerPlaneswalker = ObjectN OTCreaturePlayerPlaneswalker
+
+type ODamageSource = ObjectN OTDamageSource
+
+type OEmblem = ObjectN OTEmblem
 
 type OEnchantment = ObjectN OTEnchantment
 
@@ -204,6 +218,50 @@ data instance ObjectN :: (ObjectType, ObjectType, ObjectType, ObjectType, Object
   ON8h :: Inst8 IsObjectType a b c d e f g h => ObjectN '(a, b, c, d, e, f, g) -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType)
   deriving (Typeable)
 
+data instance ObjectN :: (ObjectType, ObjectType, ObjectType, ObjectType, ObjectType, ObjectType, ObjectType, ObjectType, ObjectType) -> Type where
+  O9a :: Inst9 IsObjectType a b c d e f g h i => Object a -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType)
+  O9b :: Inst9 IsObjectType a b c d e f g h i => Object b -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType)
+  O9c :: Inst9 IsObjectType a b c d e f g h i => Object c -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType)
+  O9d :: Inst9 IsObjectType a b c d e f g h i => Object d -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType)
+  O9e :: Inst9 IsObjectType a b c d e f g h i => Object e -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType)
+  O9f :: Inst9 IsObjectType a b c d e f g h i => Object f -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType)
+  O9g :: Inst9 IsObjectType a b c d e f g h i => Object g -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType)
+  O9h :: Inst9 IsObjectType a b c d e f g h i => Object h -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType)
+  O9i :: Inst9 IsObjectType a b c d e f g h i => Object i -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType)
+  ON9a :: Inst9 IsObjectType a b c d e f g h i => ObjectN '(b, c, d, e, f, g, h, i) -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType)
+  ON9b :: Inst9 IsObjectType a b c d e f g h i => ObjectN '(a, c, d, e, f, g, h, i) -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType)
+  ON9c :: Inst9 IsObjectType a b c d e f g h i => ObjectN '(a, b, d, e, f, g, h, i) -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType)
+  ON9d :: Inst9 IsObjectType a b c d e f g h i => ObjectN '(a, b, c, e, f, g, h, i) -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType)
+  ON9e :: Inst9 IsObjectType a b c d e f g h i => ObjectN '(a, b, c, d, f, g, h, i) -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType)
+  ON9f :: Inst9 IsObjectType a b c d e f g h i => ObjectN '(a, b, c, d, e, g, h, i) -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType)
+  ON9g :: Inst9 IsObjectType a b c d e f g h i => ObjectN '(a, b, c, d, e, f, h, i) -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType)
+  ON9h :: Inst9 IsObjectType a b c d e f g h i => ObjectN '(a, b, c, d, e, f, g, i) -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType)
+  ON9i :: Inst9 IsObjectType a b c d e f g h i => ObjectN '(a, b, c, d, e, f, g, h) -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType)
+  deriving (Typeable)
+
+data instance ObjectN :: (ObjectType, ObjectType, ObjectType, ObjectType, ObjectType, ObjectType, ObjectType, ObjectType, ObjectType, ObjectType) -> Type where
+  O10b :: Inst10 IsObjectType a b c d e f g h i j => Object b -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType)
+  O10a :: Inst10 IsObjectType a b c d e f g h i j => Object a -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType)
+  O10c :: Inst10 IsObjectType a b c d e f g h i j => Object c -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType)
+  O10d :: Inst10 IsObjectType a b c d e f g h i j => Object d -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType)
+  O10e :: Inst10 IsObjectType a b c d e f g h i j => Object e -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType)
+  O10f :: Inst10 IsObjectType a b c d e f g h i j => Object f -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType)
+  O10g :: Inst10 IsObjectType a b c d e f g h i j => Object g -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType)
+  O10h :: Inst10 IsObjectType a b c d e f g h i j => Object h -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType)
+  O10i :: Inst10 IsObjectType a b c d e f g h i j => Object i -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType)
+  O10j :: Inst10 IsObjectType a b c d e f g h i j => Object j -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType)
+  ON10a :: Inst10 IsObjectType a b c d e f g h i j => ObjectN '(b, c, d, e, f, g, h, i, j) -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType)
+  ON10b :: Inst10 IsObjectType a b c d e f g h i j => ObjectN '(a, c, d, e, f, g, h, i, j) -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType)
+  ON10c :: Inst10 IsObjectType a b c d e f g h i j => ObjectN '(a, b, d, e, f, g, h, i, j) -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType)
+  ON10d :: Inst10 IsObjectType a b c d e f g h i j => ObjectN '(a, b, c, e, f, g, h, i, j) -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType)
+  ON10e :: Inst10 IsObjectType a b c d e f g h i j => ObjectN '(a, b, c, d, f, g, h, i, j) -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType)
+  ON10f :: Inst10 IsObjectType a b c d e f g h i j => ObjectN '(a, b, c, d, e, g, h, i, j) -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType)
+  ON10g :: Inst10 IsObjectType a b c d e f g h i j => ObjectN '(a, b, c, d, e, f, h, i, j) -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType)
+  ON10h :: Inst10 IsObjectType a b c d e f g h i j => ObjectN '(a, b, c, d, e, f, g, i, j) -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType)
+  ON10i :: Inst10 IsObjectType a b c d e f g h i j => ObjectN '(a, b, c, d, e, f, g, h, j) -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType)
+  ON10j :: Inst10 IsObjectType a b c d e f g h i j => ObjectN '(a, b, c, d, e, f, g, h, i) -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType)
+  deriving (Typeable)
+
 deriving instance Inst1 IsObjectType a => Show (ObjectN a)
 
 deriving instance Inst2 IsObjectType a b => Show (ObjectN '(a, b))
@@ -219,3 +277,7 @@ deriving instance Inst6 IsObjectType a b c d e f => Show (ObjectN '(a, b, c, d, 
 deriving instance Inst7 IsObjectType a b c d e f g => Show (ObjectN '(a, b, c, d, e, f, g))
 
 deriving instance Inst8 IsObjectType a b c d e f g h => Show (ObjectN '(a, b, c, d, e, f, g, h))
+
+deriving instance Inst9 IsObjectType a b c d e f g h i => Show (ObjectN '(a, b, c, d, e, f, g, h, i))
+
+deriving instance Inst10 IsObjectType a b c d e f g h i j => Show (ObjectN '(a, b, c, d, e, f, g, h, i, j))

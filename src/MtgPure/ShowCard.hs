@@ -32,7 +32,7 @@ where
 
 import qualified Control.Monad.State.Strict as State
 import qualified Data.DList as DList
-import Data.Inst (Inst2, Inst3, Inst4, Inst5, Inst6, Inst8)
+import Data.Inst (Inst10, Inst2, Inst3, Inst4, Inst5, Inst6, Inst8)
 import Data.Kind (Type)
 import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (Proxy))
@@ -69,6 +69,7 @@ import MtgPure.Model
     OCreaturePlaneswalker,
     OCreaturePlayer,
     OCreaturePlayerPlaneswalker,
+    ODamageSource,
     OPermanent,
     OPlayerPlaneswalker,
     OSpell,
@@ -281,8 +282,19 @@ showObject8 objN = visitObjectN' visit objN
     visit =
       showObjectNImpl rep $
         if
-            | rep == typeRep (Proxy @OAny) -> "asAny"
+            | rep == typeRep (Proxy @ODamageSource) -> "asDamageSource"
             | otherwise -> "toObject8"
+
+showObject10 :: Inst10 IsObjectType a b c d e f g h i j => ObjectN '(a, b, c, d, e, f, g, h, i, j) -> EnvM ParenItems
+showObject10 objN = visitObjectN' visit objN
+  where
+    rep = typeOf objN
+    visit :: IsObjectType x => Object x -> EnvM ParenItems
+    visit =
+      showObjectNImpl rep $
+        if
+            | rep == typeRep (Proxy @OAny) -> "asAny"
+            | otherwise -> "toObject10"
 
 newtype ObjectIdState = ObjectIdState ObjectId
 
@@ -335,8 +347,11 @@ showOPermanent = showObject5
 showOSpell :: OSpell -> EnvM ParenItems
 showOSpell = showObject6
 
+showODamageSource :: ODamageSource -> EnvM ParenItems
+showODamageSource = showObject8
+
 showOAny :: OAny -> EnvM ParenItems
-showOAny = showObject8
+showOAny = showObject10
 
 showSetToken :: CardDepth -> SetToken a -> String
 showSetToken depth (SetToken set rarity token) =
@@ -1242,7 +1257,7 @@ showEffect = \case
     sObj <- dollar <$> showOSpell obj
     pure $ pure "CounterSpell" <> sObj
   DealDamage source victim damage -> yesParens $ do
-    sSource <- parens <$> showOAny source
+    sSource <- parens <$> showODamageSource source
     sVictim <- parens <$> showOCreaturePlayerPlaneswalker victim
     sDamage <- dollar <$> showDamage damage
     pure $ pure "DealDamage " <> sSource <> pure " " <> sVictim <> sDamage

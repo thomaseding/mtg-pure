@@ -20,7 +20,7 @@ module MtgPure.Model.VisitObjectN
   )
 where
 
-import Data.Inst (Inst1, Inst2, Inst3, Inst4, Inst5, Inst6, Inst7, Inst8)
+import Data.Inst (Inst1, Inst10, Inst2, Inst3, Inst4, Inst5, Inst6, Inst7, Inst8, Inst9)
 import Data.Kind (Type)
 import MtgPure.Model.IsObjectType (IsObjectType)
 import MtgPure.Model.Object (Object)
@@ -230,3 +230,93 @@ instance Inst8 IsObjectType a b c d e f g h => VisitObjectN '(a, b, c, d, e, f, 
       f = visitObject8f v
       g = visitObject8g v
       h = visitObject8h v
+
+instance Inst9 IsObjectType a b c d e f g h i => VisitObjectN '(a, b, c, d, e, f, g, h, i) where
+  data ObjectVisitorN '(a, b, c, d, e, f, g, h, i) x = ObjectVisitor9
+    { visitObject9a :: Object a -> x,
+      visitObject9b :: Object b -> x,
+      visitObject9c :: Object c -> x,
+      visitObject9d :: Object d -> x,
+      visitObject9e :: Object e -> x,
+      visitObject9f :: Object f -> x,
+      visitObject9g :: Object g -> x,
+      visitObject9h :: Object h -> x,
+      visitObject9i :: Object i -> x
+    }
+  visitObjectN' f = visitObjectN $ ObjectVisitor9 f f f f f f f f f
+  visitObjectN v = \case
+    O9a x -> visitObject9a v x
+    O9b x -> visitObject9b v x
+    O9c x -> visitObject9c v x
+    O9d x -> visitObject9d v x
+    O9e x -> visitObject9e v x
+    O9f x -> visitObject9f v x
+    O9g x -> visitObject9g v x
+    O9h x -> visitObject9h v x
+    O9i x -> visitObject9i v x
+    ON9a x -> vn (ObjectVisitor8 b c d e f g h i) x
+    ON9b x -> vn (ObjectVisitor8 a c d e f g h i) x
+    ON9c x -> vn (ObjectVisitor8 a b d e f g h i) x
+    ON9d x -> vn (ObjectVisitor8 a b c e f g h i) x
+    ON9e x -> vn (ObjectVisitor8 a b c d f g h i) x
+    ON9f x -> vn (ObjectVisitor8 a b c d e g h i) x
+    ON9g x -> vn (ObjectVisitor8 a b c d e f h i) x
+    ON9h x -> vn (ObjectVisitor8 a b c d e f g i) x
+    ON9i x -> vn (ObjectVisitor8 a b c d e f g h) x
+    where
+      a = visitObject9a v
+      b = visitObject9b v
+      c = visitObject9c v
+      d = visitObject9d v
+      e = visitObject9e v
+      f = visitObject9f v
+      g = visitObject9g v
+      h = visitObject9h v
+      i = visitObject9i v
+
+instance Inst10 IsObjectType a b c d e f g h i j => VisitObjectN '(a, b, c, d, e, f, g, h, i, j) where
+  data ObjectVisitorN '(a, b, c, d, e, f, g, h, i, j) x = ObjectVisitor10
+    { visitObject10a :: Object a -> x,
+      visitObject10b :: Object b -> x,
+      visitObject10c :: Object c -> x,
+      visitObject10d :: Object d -> x,
+      visitObject10e :: Object e -> x,
+      visitObject10f :: Object f -> x,
+      visitObject10g :: Object g -> x,
+      visitObject10h :: Object h -> x,
+      visitObject10i :: Object i -> x,
+      visitObject10j :: Object j -> x
+    }
+  visitObjectN' f = visitObjectN $ ObjectVisitor10 f f f f f f f f f f
+  visitObjectN v = \case
+    O10a x -> visitObject10a v x
+    O10b x -> visitObject10b v x
+    O10c x -> visitObject10c v x
+    O10d x -> visitObject10d v x
+    O10e x -> visitObject10e v x
+    O10f x -> visitObject10f v x
+    O10g x -> visitObject10g v x
+    O10h x -> visitObject10h v x
+    O10i x -> visitObject10i v x
+    O10j x -> visitObject10j v x
+    ON10a x -> vn (ObjectVisitor9 b c d e f g h i j) x
+    ON10b x -> vn (ObjectVisitor9 a c d e f g h i j) x
+    ON10c x -> vn (ObjectVisitor9 a b d e f g h i j) x
+    ON10d x -> vn (ObjectVisitor9 a b c e f g h i j) x
+    ON10e x -> vn (ObjectVisitor9 a b c d f g h i j) x
+    ON10f x -> vn (ObjectVisitor9 a b c d e g h i j) x
+    ON10g x -> vn (ObjectVisitor9 a b c d e f h i j) x
+    ON10h x -> vn (ObjectVisitor9 a b c d e f g i j) x
+    ON10i x -> vn (ObjectVisitor9 a b c d e f g h j) x
+    ON10j x -> vn (ObjectVisitor9 a b c d e f g h i) x
+    where
+      a = visitObject10a v
+      b = visitObject10b v
+      c = visitObject10c v
+      d = visitObject10d v
+      e = visitObject10e v
+      f = visitObject10f v
+      g = visitObject10g v
+      h = visitObject10h v
+      i = visitObject10i v
+      j = visitObject10j v

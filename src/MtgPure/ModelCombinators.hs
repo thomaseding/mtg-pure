@@ -70,6 +70,23 @@ o5 :: Inst5 IsObjectType a b c d e => [Requirement '(a, b, c, d, e)] -> (ObjectN
 o5 = O5
 
 type AsAny a =
+  ToObject10
+    a
+    OTAbility
+    OTArtifact
+    OTCreature
+    OTEmblem
+    OTEnchantment
+    OTInstant
+    OTLand
+    OTPlaneswalker
+    OTPlayer
+    OTSorcery
+
+asAny :: AsAny a => a -> OAny
+asAny = toObject10
+
+type AsDamageSource a =
   ToObject8
     a
     OTArtifact
@@ -81,8 +98,8 @@ type AsAny a =
     OTPlayer
     OTSorcery
 
-asAny :: AsAny a => a -> OAny
-asAny = toObject8
+asDamageSource :: AsDamageSource a => a -> ODamageSource
+asDamageSource = toObject8
 
 type AsPermanent a =
   ToObject5
@@ -141,12 +158,12 @@ noCost :: Elect Cost a
 noCost = Cost $ OrCosts []
 
 dealDamage ::
-  (AsAny source, AsCreaturePlayerPlaneswalker target, AsDamage damage) =>
+  (AsDamageSource source, AsCreaturePlayerPlaneswalker target, AsDamage damage) =>
   source ->
   target ->
   damage ->
   Effect 'OneShot
-dealDamage source target = DealDamage (asAny source) (asCreaturePlayerPlaneswalker target) . asDamage
+dealDamage source target = DealDamage (asDamageSource source) (asCreaturePlayerPlaneswalker target) . asDamage
 
 controllerOf :: AsAny o => o -> (OPlayer -> Elect e a) -> Elect e a
 controllerOf = ControllerOf . asAny

@@ -33,6 +33,7 @@ import MtgPure.Model.NonCreature (NonCreature)
 import MtgPure.Model.ObjectN
   ( OAny,
     OCreaturePlayerPlaneswalker,
+    ODamageSource,
     OPermanent,
     OPlaneswalker,
     OPlayer,
@@ -111,7 +112,7 @@ data Effect :: EffectType -> Type where
   AddToBattlefield :: Permanent a -> OPlayer -> Token a -> Effect 'OneShot
   ChangeTo :: Permanent a -> OPermanent -> Card a -> Effect 'Continuous
   CounterSpell :: OSpell -> Effect 'OneShot
-  DealDamage :: OAny -> OCreaturePlayerPlaneswalker -> Damage -> Effect 'OneShot
+  DealDamage :: ODamageSource -> OCreaturePlayerPlaneswalker -> Damage -> Effect 'OneShot
   Destroy :: OPermanent -> Effect 'OneShot
   DrawCards :: OPlayer -> Int -> Effect 'OneShot
   Sacrifice :: Permanent a -> OPlayer -> [Requirement a] -> Effect 'OneShot
@@ -134,7 +135,7 @@ data Requirement :: forall a. a -> Type where
   ControlledBy :: OPlayer -> Requirement a
   HasBasicLandType :: Color -> Requirement OTLand
   Impossible :: Requirement a
-  Is :: AnyObject a -> ObjectN a -> Requirement a
+  Is :: AnyObject a -> ObjectN a -> Requirement a -- XXX does this need the AnyObject witness?
   NonBasic :: Requirement OTLand
   Not :: Requirement a -> Requirement a
   OfColors :: Colors -> Requirement a

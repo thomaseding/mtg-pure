@@ -16,8 +16,10 @@
 module MtgPure.Model.ObjectType
   ( ObjectType (..),
     SObjectType (..),
+    OTAbility,
     OTArtifact,
     OTCreature,
+    OTEmblem,
     OTEnchantment,
     OTInstant,
     OTLand,
@@ -32,6 +34,7 @@ module MtgPure.Model.ObjectType
     OTNonArtifactPermanent,
     OTNonCreaturePermanent,
     OTNonEnchantmentPermanent,
+    OTDamageSource,
     OTNonLandPermanent,
     OTNonPlaneswalkerPermanent,
     OTPermanent,
@@ -45,9 +48,12 @@ where
 import Data.Kind (Type)
 import Data.Typeable (Typeable)
 
+-- This generalizes the notion of "object" in MTG (e.g. contains "player")
 data ObjectType
-  = OTArtifact
+  = OTAbility
+  | OTArtifact
   | OTCreature
+  | OTEmblem
   | OTEnchantment
   | OTInstant
   | OTLand
@@ -58,8 +64,10 @@ data ObjectType
 
 -- XXX: Data.Sing
 data SObjectType :: ObjectType -> Type where
+  SAbility :: SObjectType OTAbility
   SArtifact :: SObjectType OTArtifact
   SCreature :: SObjectType OTCreature
+  SEmblem :: SObjectType OTEmblem
   SEnchantment :: SObjectType OTEnchantment
   SInstant :: SObjectType OTInstant
   SLand :: SObjectType OTLand
@@ -70,9 +78,13 @@ data SObjectType :: ObjectType -> Type where
 
 deriving instance Show (SObjectType a)
 
+type OTAbility = 'OTAbility
+
 type OTArtifact = 'OTArtifact
 
 type OTCreature = 'OTCreature
+
+type OTEmblem = 'OTEmblem
 
 type OTEnchantment = 'OTEnchantment
 
@@ -183,9 +195,22 @@ type OTCard =
      OTSorcery
    )
 
-type OTAny =
+type OTDamageSource =
   '( OTArtifact,
      OTCreature,
+     OTEnchantment,
+     OTInstant,
+     OTLand,
+     OTPlaneswalker,
+     OTPlayer,
+     OTSorcery
+   )
+
+type OTAny =
+  '( OTAbility,
+     OTArtifact,
+     OTCreature,
+     OTEmblem,
      OTEnchantment,
      OTInstant,
      OTLand,

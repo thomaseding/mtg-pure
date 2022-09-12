@@ -26,8 +26,10 @@ import MtgPure.Model.Object
   )
 import MtgPure.Model.ObjectId (ObjectId)
 import MtgPure.Model.ObjectType
-  ( OTArtifact,
+  ( OTAbility,
+    OTArtifact,
     OTCreature,
+    OTEmblem,
     OTEnchantment,
     OTInstant,
     OTLand,
@@ -39,8 +41,10 @@ import MtgPure.Model.ObjectType
   )
 
 data ObjectVisitor a = ObjectVisitor
-  { visitOArtifact :: Object 'OTArtifact -> a,
+  { visitOAbility :: Object 'OTAbility -> a,
+    visitOArtifact :: Object 'OTArtifact -> a,
     visitOCreature :: Object 'OTCreature -> a,
+    visitOEmblem :: Object 'OTEmblem -> a,
     visitOEnchantment :: Object 'OTEnchantment -> a,
     visitOInstant :: Object 'OTInstant -> a,
     visitOLand :: Object 'OTLand -> a,
@@ -56,7 +60,13 @@ class Typeable a => IsObjectType (a :: ObjectType) where
   visitObject :: ObjectVisitor b -> Object a -> b
 
 visitObject' :: IsObjectType a => (forall b. IsObjectType b => Object b -> x) -> Object a -> x
-visitObject' f = visitObject $ ObjectVisitor f f f f f f f f
+visitObject' f = visitObject $ ObjectVisitor f f f f f f f f f f
+
+instance IsObjectType OTAbility where
+  idToObject = Object SAbility
+  objectToId (Object SAbility i) = i
+  singObjectType _ = OTAbility
+  visitObject = visitOAbility
 
 instance IsObjectType OTArtifact where
   idToObject = Object SArtifact
@@ -69,6 +79,12 @@ instance IsObjectType OTCreature where
   objectToId (Object SCreature i) = i
   singObjectType _ = OTCreature
   visitObject = visitOCreature
+
+instance IsObjectType OTEmblem where
+  idToObject = Object SEmblem
+  objectToId (Object SEmblem i) = i
+  singObjectType _ = OTEmblem
+  visitObject = visitOEmblem
 
 instance IsObjectType OTEnchantment where
   idToObject = Object SEnchantment
