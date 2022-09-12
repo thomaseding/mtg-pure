@@ -29,6 +29,7 @@ data CreatureType
   | Merfolk
   | Nomad
   | Rebel
+  | Satyr
   | Soldier
   | Zombie
   deriving (Eq, Ord, Show)

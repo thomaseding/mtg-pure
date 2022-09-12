@@ -28,6 +28,7 @@ module MtgPure.Model.ObjectType.Kind (
   OTDamageSource,
   OTEmblem,
   OTEnchantment,
+  OTEnchantmentCreature,
   OTInstant,
   OTLand,
   OTNonArtifactPermanent,
@@ -127,6 +128,13 @@ type OTPlayerPlaneswalker =
     '( '()
      , 'OTPlaneswalker
      , 'OTPlayer
+     )
+
+type OTEnchantmentCreature =
+  OT
+    '( '()
+     , 'OTCreature
+     , 'OTEnchantment
      )
 
 type OTCreaturePlayerPlaneswalker =

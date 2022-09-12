@@ -459,6 +459,9 @@ showCard = \case
   EnchantmentCard card -> yesParens $ do
     sCard <- dollar <$> showCard card
     pure $ pure "EnchantmentCard" <> sCard
+  EnchantmentCreatureCard card -> yesParens $ do
+    sCard <- dollar <$> showCard card
+    pure $ pure "EnchantmentCreatureCard" <> sCard
   InstantCard card -> yesParens $ do
     sCard <- dollar <$> showCard card
     pure $ pure "InstantCard" <> sCard
@@ -545,6 +548,32 @@ showCardTypeDef = \case
     sCost <- parens <$> showElect cost
     sAbilities <- dollar <$> showAbilities abilities
     pure $ pure "EnchantmentDef " <> sColors <> pure " " <> sCost <> sAbilities
+  EnchantmentCreatureDef colors cost creatureTypes power toughness creatAbils enchAbils bothAbils ->
+    yesParens $ do
+      sColors <- parens <$> showColors colors
+      sCost <- parens <$> showElect cost
+      sCreatureTypes <- parens <$> showCreatureTypes creatureTypes
+      sPower <- parens <$> showPower power
+      sToughness <- parens <$> showToughness toughness
+      sCreatAbils <- parens <$> showAbilities creatAbils
+      sEnchAbils <- parens <$> showAbilities enchAbils
+      sBothAbils <- dollar <$> showAbilities bothAbils
+      pure $
+        pure "EnchantmentCreatureDef "
+          <> sColors
+          <> pure " "
+          <> sCost
+          <> pure " "
+          <> sCreatureTypes
+          <> pure " "
+          <> sPower
+          <> pure " "
+          <> sToughness
+          <> pure " "
+          <> sCreatAbils
+          <> pure " "
+          <> sEnchAbils
+          <> sBothAbils
   InstantDef colors cost abilities electOneShot -> do
     showOneShot "InstantDef " colors cost abilities electOneShot
   LandDef landTypes abilities -> yesParens $ do
@@ -718,7 +747,7 @@ showEffect = \case
     sPerm <- parens <$> showWPermanent perm
     sPlayer <- parens <$> showZoneObject player
     sCard <- dollar <$> showToken token
-    pure $ pure "AddToBattlefield " <> sPlayer <> pure " " <> sPerm <> sCard
+    pure $ pure "AddToBattlefield " <> sPerm <> pure " " <> sPlayer <> sCard
   ChangeTo perm before after -> yesParens $ do
     sPerm <- parens <$> showWPermanent perm
     sBefore <- parens <$> showOPermanent before
@@ -762,7 +791,7 @@ showEffect = \case
     sWPerm <- parens <$> showWPermanent wPerm
     sPlayer <- parens <$> showZoneObject player
     sCard <- dollar <$> showZoneObject obj
-    pure $ pure "PutOntOBattlefield " <> sWPerm <> pure " " <> sPlayer <> sCard
+    pure $ pure "PutOntoBattlefield " <> sWPerm <> pure " " <> sPlayer <> sCard
   Sacrifice perm player reqs -> yesParens $ do
     sPerm <- parens <$> showWPermanent perm
     sPlayer <- parens <$> showZoneObject player
@@ -777,7 +806,7 @@ showEffect = \case
     sCreature <- parens <$> showZoneObject creature
     sPower <- parens <$> showPower power
     sToughness <- dollar <$> showToughness toughness
-    pure $ pure "StatsDelta " <> sCreature <> pure " " <> sPower <> sToughness
+    pure $ pure "StatDelta " <> sCreature <> pure " " <> sPower <> sToughness
   Until electEvent effect -> yesParens $ do
     sElectEvent <- parens <$> showElect electEvent
     sEffect <- dollar <$> showEffect effect
@@ -1426,15 +1455,21 @@ showStaticAbility = \case
   As electListener -> yesParens $ do
     sWithObject <- dollar <$> showElect electListener
     pure $ pure "As" <> sWithObject
-  StaticContinuous continuous -> yesParens $ do
-    sContinuous <- dollar <$> showElect continuous
-    pure $ pure "StaticContinuous" <> sContinuous
+  Bestow cost -> yesParens $ do
+    sCost <- dollar <$> showElect cost
+    pure $ pure "Bestow" <> sCost
+  Enchant withObj -> yesParens $ do
+    sWithObj <- dollar <$> showWithLinkedObject showElect "enchanted" withObj
+    pure $ pure "Enchant" <> sWithObj
   FirstStrike -> noParens $ do
     pure $ pure "FirstStrike"
   Flying -> noParens $ do
     pure $ pure "Flying"
   Haste -> noParens $ do
     pure $ pure "Haste"
+  StaticContinuous continuous -> yesParens $ do
+    sContinuous <- dollar <$> showElect continuous
+    pure $ pure "StaticContinuous" <> sContinuous
   Suspend time cost -> yesParens $ do
     let sTime = pure $ fromString $ show time
     sCost <- dollar <$> showElect cost
@@ -1461,6 +1496,9 @@ showToken = \case
   EnchantmentToken token -> yesParens $ do
     sToken <- dollar <$> showToken token
     pure $ pure "EnchantmentToken" <> sToken
+  EnchantmentCreatureToken token -> yesParens $ do
+    sToken <- dollar <$> showToken token
+    pure $ pure "EnchantmentCreatureToken" <> sToken
   LandToken token -> yesParens $ do
     sToken <- dollar <$> showToken token
     pure $ pure "LandToken" <> sToken

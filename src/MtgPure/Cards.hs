@@ -33,6 +33,7 @@ module MtgPure.Cards (
   island,
   lavaAxe,
   mountain,
+  nyxbornRollicker,
   ornithopter,
   ragingGoblin,
   plains,
@@ -69,9 +70,11 @@ import safe MtgPure.Model.ObjectType.Kind (
   OTCreature,
   OTCreaturePlayerPlaneswalker,
   OTEnchantment,
+  OTEnchantmentCreature,
   OTInstant,
   OTLand,
   OTPermanent,
+  OTPlayerPlaneswalker,
   OTSorcery,
  )
 import safe MtgPure.Model.ObjectType.NonCreatureCard (WNonCreatureCard (..))
@@ -86,7 +89,7 @@ import safe MtgPure.Model.Recursive (
   Elect (A, ActivePlayer, All, Cost, VariableFromPower),
   EventListener' (TimePoint),
   Requirement (HasLandType, Not, ROr),
-  StaticAbility (FirstStrike, Flying, Haste, StaticContinuous, Suspend),
+  StaticAbility (Bestow, Enchant, FirstStrike, Flying, Haste, StaticContinuous, Suspend),
   Token,
   TriggeredAbility (When),
  )
@@ -306,13 +309,31 @@ lavaAxe = mkCard "Lava Axe" $ \this ->
   SorceryDef (toColors R) cost [] $
     controllerOf this $ \you ->
       A Target you $
-        masked @OTCreature [] $ \target ->
+        masked @OTPlayerPlaneswalker [] $ \target ->
           effect $ dealDamage this target 5
  where
   cost = spellCost (4, R)
 
 mountain :: Card OTLand
 mountain = mkBasicLand Mountain
+
+nyxbornRollicker :: Card OTEnchantmentCreature
+nyxbornRollicker = mkCard "Nyxborn Rollicker" $ \_this ->
+  EnchantmentCreatureDef
+    (toColors R)
+    cost
+    [Satyr]
+    (Power 1)
+    (Toughness 1)
+    []
+    [ Static $
+        Enchant $
+          linked [] $
+            \enchanted -> effect $ StatDelta enchanted (Power 1) (Toughness 1)
+    ]
+    [Static $ Bestow (spellCost (1, R))]
+ where
+  cost = spellCost R
 
 ornithopter :: Card OTArtifactCreature
 ornithopter = mkCard "Ornithopter" $ \_this ->

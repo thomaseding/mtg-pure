@@ -28,6 +28,7 @@ import safe Data.Proxy (Proxy (Proxy))
 import safe Data.Typeable (Typeable, cast)
 import safe MtgPure.Model.Colors (Colors)
 import safe MtgPure.Model.Damage (Damage (..))
+import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.IsObjectType (IsObjectType (..))
 import safe MtgPure.Model.ManaCost (ManaCost)
 import safe MtgPure.Model.ManaPool (ManaPool)
@@ -44,7 +45,7 @@ import safe MtgPure.Model.ObjectType (
   ObjectType (..),
  )
 import safe MtgPure.Model.ObjectType.Any (WAny (..))
-import MtgPure.Model.ObjectType.Card (WCard (..))
+import safe MtgPure.Model.ObjectType.Card (WCard (..))
 import safe MtgPure.Model.ObjectType.Index (IndexOT (indexOT))
 import safe MtgPure.Model.ObjectType.NonCreatureCard (WNonCreatureCard (..))
 import safe MtgPure.Model.ObjectType.Permanent (WPermanent (..))
@@ -369,6 +370,9 @@ ordCard x = case x of
   EnchantmentCard card1 -> \case
     EnchantmentCard card2 -> ordCard card1 card2
     y -> compareIndexM x y
+  EnchantmentCreatureCard card1 -> \case
+    EnchantmentCreatureCard card2 -> ordCard card1 card2
+    y -> compareIndexM x y
   InstantCard card1 -> \case
     InstantCard card2 -> ordCard card1 card2
     y -> compareIndexM x y
@@ -424,6 +428,20 @@ ordCardTypeDef x = case x of
         , ordAbilities abilities1 abilities2
         ]
     y -> compareIndexM x y
+  EnchantmentCreatureDef colors1 cost1 types1 power1 toughness1 creatAbils1 enchAbils1 bothAbils1 ->
+    \case
+      EnchantmentCreatureDef colors2 cost2 types2 power2 toughness2 creatAbils2 enchAbils2 bothAbils2 ->
+        seqM
+          [ ordColors colors1 colors2
+          , ordElectE cost1 cost2
+          , pure $ compare types1 types2
+          , pure $ compare power1 power2
+          , pure $ compare toughness1 toughness2
+          , ordAbilities creatAbils1 creatAbils2
+          , ordAbilities enchAbils1 enchAbils2
+          , ordAbilities bothAbils1 bothAbils2
+          ]
+      y -> compareIndexM x y
   InstantDef colors1 cost1 abilities1 effect1 -> \case
     InstantDef colors2 cost2 abilities2 effect2 ->
       seqM
@@ -1073,8 +1091,22 @@ ordStaticAbility x = case x of
   As electListener1 -> \case
     As electListener2 -> ordElectE electListener1 electListener2
     y -> compareIndexM x y
-  StaticContinuous elect1 -> \case
-    StaticContinuous elect2 -> ordElectE elect1 elect2
+  Bestow elect1 -> \case
+    Bestow elect2 -> ordElectE elect1 elect2
+    y -> compareIndexM x y
+  Enchant withObj1 -> \case
+    Enchant withObj2 ->
+      let go ::
+            forall zone ot zone' ot'.
+            IsZO zone ot =>
+            IsZO zone' ot' =>
+            WithLinkedObject zone (Elect (Effect 'Continuous)) ot ->
+            WithLinkedObject zone' (Elect (Effect 'Continuous)) ot' ->
+            EnvM Ordering
+          go _ withObj2 = case cast withObj2 of
+            Nothing -> compareOT @ot (Proxy @ot')
+            Just withObj2 -> ordWithLinkedObject ordElectE withObj1 withObj2
+       in go withObj1 withObj2
     y -> compareIndexM x y
   FirstStrike -> \case
     FirstStrike -> pure EQ
@@ -1084,6 +1116,9 @@ ordStaticAbility x = case x of
     y -> compareIndexM x y
   Haste -> \case
     Haste -> pure EQ
+    y -> compareIndexM x y
+  StaticContinuous elect1 -> \case
+    StaticContinuous elect2 -> ordElectE elect1 elect2
     y -> compareIndexM x y
   Suspend duration1 elect1 -> \case
     Suspend duration2 elect2 ->
@@ -1123,6 +1158,9 @@ ordToken x = case x of
   EnchantmentToken token1 -> \case
     EnchantmentToken token2 -> ordToken token1 token2
     y -> compareIndexM x y
+  EnchantmentCreatureToken token1 -> \case
+    EnchantmentCreatureToken token2 -> ordToken token1 token2
+    y -> compareIndexM x y
   LandToken token1 -> \case
     LandToken token2 -> ordToken token1 token2
     y -> compareIndexM x y
@@ -1146,20 +1184,20 @@ ordWithLinkedObject ordM x = case x of
   LProxy reqs1 -> \case
     LProxy reqs2 -> ordRequirements reqs1 reqs2
     y -> compareIndexM x y
-  L1 NonProxyElectEffectOneShot reqs1 cont1 -> \case
-    L1 NonProxyElectEffectOneShot reqs2 cont2 ->
+  L1 NonProxyElectEffect reqs1 cont1 -> \case
+    L1 NonProxyElectEffect reqs2 cont2 ->
       ordO1 ordM reqs1 reqs2 cont1 cont2
-  L2 NonProxyElectEffectOneShot reqs1 cont1 -> \case
-    L2 NonProxyElectEffectOneShot reqs2 cont2 ->
+  L2 NonProxyElectEffect reqs1 cont1 -> \case
+    L2 NonProxyElectEffect reqs2 cont2 ->
       ordO2 ordM reqs1 reqs2 cont1 cont2
-  L3 NonProxyElectEffectOneShot reqs1 cont1 -> \case
-    L3 NonProxyElectEffectOneShot reqs2 cont2 ->
+  L3 NonProxyElectEffect reqs1 cont1 -> \case
+    L3 NonProxyElectEffect reqs2 cont2 ->
       ordO3 ordM reqs1 reqs2 cont1 cont2
-  L4 NonProxyElectEffectOneShot reqs1 cont1 -> \case
-    L4 NonProxyElectEffectOneShot reqs2 cont2 ->
+  L4 NonProxyElectEffect reqs1 cont1 -> \case
+    L4 NonProxyElectEffect reqs2 cont2 ->
       ordO4 ordM reqs1 reqs2 cont1 cont2
-  L5 NonProxyElectEffectOneShot reqs1 cont1 -> \case
-    L5 NonProxyElectEffectOneShot reqs2 cont2 ->
+  L5 NonProxyElectEffect reqs1 cont1 -> \case
+    L5 NonProxyElectEffect reqs2 cont2 ->
       ordO5 ordM reqs1 reqs2 cont1 cont2
 
 ordWithMaskedObjectElectE ::
@@ -1249,6 +1287,38 @@ ordWithThisCardTypeDef = \case
   ordM = ordCardTypeDef
   reqs1 = []
   reqs2 = []
+
+-- ordWithThisElectE ::
+--   forall zone ot el.
+--   (Typeable el, IsZO zone ot) =>
+--   WithThis zone (Elect el) ot ->
+--   WithThis zone (Elect el) ot ->
+--   EnvM Ordering
+-- ordWithThisElectE = \case
+--   T1 cont1 -> \case
+--     T1 cont2 -> ordO1 ordM reqs1 reqs2 cont1 cont2
+--   T2 cont1 -> \case
+--     T2 cont2 ->
+--       let go ::
+--             forall a b.
+--             (IsOT (OT2 a b), Inst2 IsObjectType a b) =>
+--             ((ZO zone (OT1 a), ZO zone (OT1 b)) -> Elect el (OT2 a b)) ->
+--             ((ZO zone (OT1 a), ZO zone (OT1 b)) -> Elect el (OT2 a b)) ->
+--             EnvM Ordering
+--           go cont1 cont2 = do
+--             objNa' <- newObjectN @a O
+--             objNb' <- newObjectN @b O
+--             let objNa = toZone objNa'
+--             let objNb = toZone objNb'
+--             let elect1 = cont1 (objNa, objNb)
+--             let elect2 = cont2 (objNa, objNb)
+--             ordM elect1 elect2
+--        in go cont1 cont2
+--  where
+--   ordM :: IsOT ot' => Elect el ot' -> Elect el ot' -> EnvM Ordering
+--   ordM = ordElectE
+--   reqs1 = []
+--   reqs2 = []
 
 ordW2 ::
   forall witness ot1 a1 b1 ot2 a2 b2.

@@ -16,6 +16,7 @@
 {-# HLINT ignore "Use const" #-}
 
 module MtgPure.ModelCombinators (
+  Proxy (Proxy),
   tyAp,
   ToCard (..),
   ToToken (..),
@@ -104,6 +105,7 @@ import safe MtgPure.Model.ObjectType.Kind (
   OTCreaturePlayerPlaneswalker,
   OTDamageSource,
   OTEnchantment,
+  OTEnchantmentCreature,
   OTInstant,
   OTLand,
   OTPermanent,
@@ -183,6 +185,9 @@ instance ToCard (Card OTCreature) where
 
 instance ToCard (Card OTEnchantment) where
   toCard = EnchantmentCard
+
+instance ToCard (Card OTEnchantmentCreature) where
+  toCard = EnchantmentCreatureCard
 
 instance ToCard (Card OTInstant) where
   toCard = InstantCard
@@ -283,8 +288,8 @@ instance ToSetToken (SetToken OTPlaneswalker) where
 class Typeable x => CoNonProxy x where
   coNonProxy :: NonProxy x
 
-instance CoNonProxy (Elect (Effect 'OneShot)) where
-  coNonProxy = NonProxyElectEffectOneShot
+instance Typeable ef => CoNonProxy (Elect (Effect ef)) where
+  coNonProxy = NonProxyElectEffect
 
 class (IsOT ot, Typeable liftOT) => AsWithLinkedObject ot zone liftOT where
   linked :: [Requirement zone ot] -> (ZO zone ot -> liftOT ot) -> WithLinkedObject zone liftOT ot
@@ -693,6 +698,14 @@ instance
     'NonTribal
     OTArtifactCreature
     (ZO 'Battlefield OTArtifact, ZO 'Battlefield OTCreature)
+  where
+  mkCard name = Card name coCard . T2
+
+instance
+  MkCard
+    'NonTribal
+    OTEnchantmentCreature
+    (ZO 'Battlefield OTCreature, ZO 'Battlefield OTEnchantment)
   where
   mkCard name = Card name coCard . T2
 

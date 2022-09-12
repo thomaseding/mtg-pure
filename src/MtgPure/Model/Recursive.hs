@@ -67,6 +67,7 @@ import safe MtgPure.Model.ObjectType.Kind (
   OTArtifactCreature,
   OTCreature,
   OTEnchantment,
+  OTEnchantmentCreature,
   OTInstant,
   OTLand,
   OTPlaneswalker,
@@ -135,6 +136,7 @@ data Card (ot :: Type) :: Type where
   ArtifactCreatureCard :: Card OTArtifactCreature -> Card ()
   CreatureCard :: Card OTCreature -> Card ()
   EnchantmentCard :: Card OTEnchantment -> Card ()
+  EnchantmentCreatureCard :: Card OTEnchantmentCreature -> Card ()
   InstantCard :: Card OTInstant -> Card ()
   LandCard :: Card OTLand -> Card ()
   PlaneswalkerCard :: Card OTPlaneswalker -> Card ()
@@ -149,10 +151,11 @@ instance ConsIndex (Card ot) where
     ArtifactCreatureCard{} -> 4
     CreatureCard{} -> 5
     EnchantmentCard{} -> 6
-    InstantCard{} -> 7
-    LandCard{} -> 8
-    PlaneswalkerCard{} -> 9
-    SorceryCard{} -> 10
+    EnchantmentCreatureCard{} -> 7
+    InstantCard{} -> 8
+    LandCard{} -> 9
+    PlaneswalkerCard{} -> 10
+    SorceryCard{} -> 11
 
 data CardTypeDef (tribal :: Tribal) (ot :: Type) :: Type where
   ArtifactDef ::
@@ -183,6 +186,16 @@ data CardTypeDef (tribal :: Tribal) (ot :: Type) :: Type where
     Elect (Cost OTEnchantment) OTEnchantment ->
     [Ability OTEnchantment] ->
     CardTypeDef 'NonTribal OTEnchantment
+  EnchantmentCreatureDef ::
+    Colors ->
+    Elect (Cost OTEnchantmentCreature) OTEnchantmentCreature ->
+    [CreatureType] ->
+    Power ->
+    Toughness ->
+    [Ability OTCreature] ->
+    [Ability OTEnchantment] ->
+    [Ability OTEnchantmentCreature] ->
+    CardTypeDef 'NonTribal OTEnchantmentCreature
   InstantDef ::
     Colors ->
     Elect (Cost OTInstant) OTInstant ->
@@ -221,12 +234,13 @@ instance ConsIndex (CardTypeDef tribe ot) where
     ArtifactDef{} -> 2
     CreatureDef{} -> 3
     EnchantmentDef{} -> 4
-    InstantDef{} -> 5
-    LandDef{} -> 6
-    PlaneswalkerDef{} -> 7
-    SorceryDef{} -> 8
-    TribalDef{} -> 9
-    VariableDef{} -> 10
+    EnchantmentCreatureDef{} -> 5
+    InstantDef{} -> 6
+    LandDef{} -> 7
+    PlaneswalkerDef{} -> 8
+    SorceryDef{} -> 9
+    TribalDef{} -> 10
+    VariableDef{} -> 11
 
 data Condition :: Type where
   CAnd :: [Condition] -> Condition
@@ -372,11 +386,11 @@ instance ConsIndex (EventListener' liftOT) where
     TimePoint{} -> 4
 
 data NonProxy (liftOT :: Type -> Type) :: Type where
-  NonProxyElectEffectOneShot :: NonProxy (Elect (Effect 'OneShot))
+  NonProxyElectEffect :: NonProxy (Elect (Effect ef))
 
 instance ConsIndex (NonProxy liftOT) where
   consIndex = \case
-    NonProxyElectEffectOneShot -> 1
+    NonProxyElectEffect -> 1
 
 data Requirement (zone :: Zone) (ot :: Type) :: Type where
   ControlledBy :: OPlayer -> Requirement 'Battlefield ot
@@ -455,22 +469,25 @@ instance ConsIndex (SetToken ot) where
 
 data StaticAbility (ot :: Type) :: Type where
   As :: IsOT ot => Elect EventListener ot -> StaticAbility ot -- 603.6d: not a triggered ability
-  --Bestow :: Cost ot -> StaticAbility OTEnchantmentCreature ????
-  StaticContinuous :: Elect (Effect 'Continuous) ot -> StaticAbility ot -- 611.3
+  Bestow :: ot ~ OTEnchantmentCreature => Elect (Cost ot) ot -> StaticAbility ot
+  Enchant :: IsZO zone ot => WithLinkedObject zone (Elect (Effect 'Continuous)) ot -> StaticAbility OTEnchantment
   FirstStrike :: StaticAbility OTCreature
   Flying :: StaticAbility OTCreature
   Haste :: StaticAbility OTCreature
+  StaticContinuous :: Elect (Effect 'Continuous) ot -> StaticAbility ot -- 611.3
   Suspend :: Int -> Elect (Cost ot) ot -> StaticAbility ot -- PositiveInt
   deriving (Typeable)
 
 instance ConsIndex (StaticAbility ot) where
   consIndex = \case
     As{} -> 1
-    StaticContinuous{} -> 2
-    FirstStrike{} -> 3
-    Flying{} -> 4
-    Haste{} -> 5
-    Suspend{} -> 6
+    Bestow{} -> 2
+    Enchant{} -> 3
+    FirstStrike{} -> 4
+    Flying{} -> 5
+    Haste{} -> 6
+    StaticContinuous{} -> 7
+    Suspend{} -> 8
 
 data Token (ot :: Type) :: Type where
   Token :: WPermanent ot -> Card ot -> Token ot
@@ -478,6 +495,7 @@ data Token (ot :: Type) :: Type where
   ArtifactCreatureToken :: Token OTArtifactCreature -> Token ()
   CreatureToken :: Token OTCreature -> Token ()
   EnchantmentToken :: Token OTEnchantment -> Token ()
+  EnchantmentCreatureToken :: Token OTEnchantmentCreature -> Token ()
   LandToken :: Token OTLand -> Token ()
   PlaneswalkerToken :: Token OTPlaneswalker -> Token ()
   deriving (Typeable)
@@ -489,8 +507,9 @@ instance ConsIndex (Token ot) where
     ArtifactCreatureToken{} -> 3
     CreatureToken{} -> 4
     EnchantmentToken{} -> 5
-    LandToken{} -> 6
-    PlaneswalkerToken{} -> 7
+    EnchantmentCreatureToken{} -> 6
+    LandToken{} -> 7
+    PlaneswalkerToken{} -> 8
 
 -- https://www.mtgsalvation.com/forums/magic-fundamentals/magic-rulings/magic-rulings-archives/611601-whenever-what-does-it-mean?comment=3
 -- https://www.reddit.com/r/magicTCG/comments/asmecb/noob_question_difference_between_as_and_when/
@@ -545,6 +564,7 @@ instance ConsIndex (WithLinkedObject zone liftOT ot) where
     L4{} -> 5
     L5{} -> 6
 
+-- XXX Can this be encoded as `WithLinkedObject` under the hood?
 data WithMaskedObject (zone :: Zone) (liftedOT :: Type) :: Type where
   M1 ::
     (Typeable liftedOT, IsOT (OT1 a), Inst1 IsObjectType a) =>

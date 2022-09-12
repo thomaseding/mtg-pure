@@ -37,6 +37,7 @@ import safe MtgPure.Cards (
   island,
   lavaAxe,
   mountain,
+  nyxbornRollicker,
   ornithopter,
   plains,
   plummet,
@@ -75,6 +76,7 @@ allCards =
   , toCard island
   , toCard lavaAxe
   , toCard mountain
+  , toCard nyxbornRollicker
   , toCard ornithopter
   , toCard ragingGoblin
   , toCard plains
