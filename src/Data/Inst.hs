@@ -14,7 +14,8 @@
 {-# HLINT ignore "Use const" #-}
 
 module Data.Inst
-  ( Inst2,
+  ( Inst1,
+    Inst2,
     Inst3,
     Inst4,
     Inst5,
@@ -25,6 +26,8 @@ module Data.Inst
 where
 
 import Data.Kind (Constraint)
+
+type Inst1 (x :: k -> Constraint) a = x a
 
 type Inst2 (x :: k -> Constraint) a b = (x a, x b)
 
