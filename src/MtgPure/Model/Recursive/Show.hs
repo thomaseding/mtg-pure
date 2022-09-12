@@ -614,9 +614,9 @@ showCardTypeDef = \case
       IsObjectType a =>
       Item ->
       Colors ->
-      Elect Cost '(OT, a) ->
+      Elect (Cost '(OT, a)) '(OT, a) ->
       [Ability '(OT, a)] ->
-      Elect 'OneShot '(OT, a) ->
+      Elect (Effect 'OneShot) '(OT, a) ->
       EnvM ParenItems
     showOneShot def colors cost abilities oneShot = yesParens $ do
       sColors <- parens <$> showColors colors

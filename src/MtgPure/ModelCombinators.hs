@@ -231,10 +231,10 @@ instance AsDamage Damage where
 instance AsDamage Variable where
   asDamage = VariableDamage
 
-spellCost :: ToManaCost a => a -> Elect Cost x
+spellCost :: ToManaCost a => a -> Elect (Cost ot) ot
 spellCost = Cost . ManaCost . toManaCost
 
-noCost :: Elect Cost a
+noCost :: Elect (Cost ot) ot
 noCost = Cost $ OrCosts []
 
 dealDamage ::
@@ -245,7 +245,7 @@ dealDamage ::
   Effect 'OneShot
 dealDamage source target = DealDamage (asDamageSource source) (asCreaturePlayerPlaneswalker target) . asDamage
 
-controllerOf :: AsAny o => o -> (OPlayer -> Elect e a) -> Elect e a
+controllerOf :: AsAny o => o -> (OPlayer -> Elect e ot) -> Elect e ot
 controllerOf = ControllerOf . asAny
 
 sacrifice :: CoPermanent k ot => OPlayer -> [Requirement ot] -> Effect 'OneShot
@@ -368,31 +368,31 @@ playerPays = PlayerPays . asCost
 class ElectEffect effect elect where
   effect :: effect -> elect ot
 
-instance ElectEffect (Effect e) (Elect e) where
+instance ElectEffect (Effect e) (Elect (Effect e)) where
   effect = Effect . pure
 
-instance ElectEffect [Effect e] (Elect e) where
+instance ElectEffect [Effect e] (Elect (Effect e)) where
   effect = Effect
 
-event :: EventListener a -> Elect EventListener a
+event :: EventListener ot -> Elect (EventListener ot) ot
 event = Event
 
-class Branchable e where
-  branchEmpty :: Elect e a
+class Branchable e ot where
+  branchEmpty :: Elect e ot
 
-instance Branchable Cost where
+instance Branchable (Cost ot) ot where
   branchEmpty = Cost $ AndCosts []
 
-instance Branchable EventListener where
+instance Branchable (EventListener ot) ot where
   branchEmpty = Event $ Events []
 
-instance Branchable (e :: EffectType) where
+instance Branchable (Effect e) ot where
   branchEmpty = Effect []
 
-ifThen :: Branchable e => Condition -> Elect e a -> Elect e a
+ifThen :: Branchable e ot => Condition -> Elect e ot -> Elect e ot
 ifThen cond elect = If cond elect branchEmpty
 
-ifElse :: Branchable e => Condition -> Elect e a -> Elect e a
+ifElse :: Branchable e ot => Condition -> Elect e ot -> Elect e ot
 ifElse cond = If cond branchEmpty
 
 nonBasic :: Requirement OTLand

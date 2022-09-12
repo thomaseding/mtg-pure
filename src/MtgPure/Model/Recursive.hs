@@ -62,13 +62,14 @@ import safe MtgPure.Model.TimePoint (TimePoint)
 import safe MtgPure.Model.Toughness (Toughness)
 import safe MtgPure.Model.Tribal (Tribal (..))
 import safe MtgPure.Model.Variable (Variable)
+import safe MtgPure.Model.VisitObjectN (VisitObjectN)
 
-type TypeableOT k ot = (Typeable k, Typeable (ot :: k))
+type TypeableOT k ot = (Typeable k, Typeable (ot :: k), VisitObjectN ot)
 
-type TypeableOT2 k ot x = (Typeable k, Typeable (ot :: k), Typeable (x :: k -> Type))
+type TypeableOT2 k ot x = (Typeable k, Typeable (ot :: k), Typeable (x :: k -> Type), VisitObjectN ot)
 
 data Ability :: forall ot. ot -> Type where
-  Activated :: Elect Cost ot -> Elect 'OneShot ot -> Ability ot
+  Activated :: Elect (Cost ot) ot -> Elect (Effect 'OneShot) ot -> Ability ot
   Static :: StaticAbility ot -> Ability ot
   Triggered :: TriggeredAbility ot -> Ability ot
   deriving (Typeable)
@@ -86,22 +87,67 @@ data Card :: forall ot. ot -> Type where
   deriving (Typeable)
 
 data CardTypeDef :: forall ot. Tribal -> ot -> Type where
-  ArtifactCreatureDef :: Colors -> Elect Cost OTArtifactCreature -> [CreatureType] -> Power -> Toughness -> [Ability OTArtifactCreature] -> CardTypeDef t OTArtifactCreature
-  ArtifactDef :: Colors -> Elect Cost OTArtifact -> [Ability OTArtifact] -> CardTypeDef t OTArtifact
-  CreatureDef :: Colors -> Elect Cost OTCreature -> [CreatureType] -> Power -> Toughness -> [Ability OTCreature] -> CardTypeDef t OTCreature
-  EnchantmentDef :: Colors -> Elect Cost OTEnchantment -> [Ability OTEnchantment] -> CardTypeDef t OTEnchantment
-  InstantDef :: Colors -> Elect Cost OTInstant -> [Ability OTInstant] -> Elect 'OneShot OTInstant -> CardTypeDef t OTInstant
-  LandDef :: [Ability OTLand] -> CardTypeDef t OTLand
-  PlaneswalkerDef :: Colors -> Elect Cost OTPlaneswalker -> Loyalty -> [Ability OTPlaneswalker] -> CardTypeDef t OTPlaneswalker
-  SorceryDef :: Colors -> Elect Cost OTSorcery -> [Ability OTSorcery] -> Elect 'OneShot OTSorcery -> CardTypeDef t OTSorcery
-  TribalDef :: [CreatureType] -> WNonCreatureCard ot -> CardTypeDef 'NonTribal ot -> CardTypeDef 'Tribal ot
-  VariableDef :: (Variable -> CardTypeDef t ot) -> CardTypeDef t ot
+  ArtifactCreatureDef ::
+    Colors ->
+    Elect (Cost OTArtifactCreature) OTArtifactCreature ->
+    [CreatureType] ->
+    Power ->
+    Toughness ->
+    [Ability OTArtifactCreature] ->
+    CardTypeDef t OTArtifactCreature
+  ArtifactDef ::
+    Colors ->
+    Elect (Cost OTArtifact) OTArtifact ->
+    [Ability OTArtifact] ->
+    CardTypeDef t OTArtifact
+  CreatureDef ::
+    Colors ->
+    Elect (Cost OTCreature) OTCreature ->
+    [CreatureType] ->
+    Power ->
+    Toughness ->
+    [Ability OTCreature] ->
+    CardTypeDef t OTCreature
+  EnchantmentDef ::
+    Colors ->
+    Elect (Cost OTEnchantment) OTEnchantment ->
+    [Ability OTEnchantment] ->
+    CardTypeDef t OTEnchantment
+  InstantDef ::
+    Colors ->
+    Elect (Cost OTInstant) OTInstant ->
+    [Ability OTInstant] ->
+    Elect (Effect 'OneShot) OTInstant ->
+    CardTypeDef t OTInstant
+  LandDef ::
+    [Ability OTLand] ->
+    CardTypeDef t OTLand
+  PlaneswalkerDef ::
+    Colors ->
+    Elect (Cost OTPlaneswalker) OTPlaneswalker ->
+    Loyalty ->
+    [Ability OTPlaneswalker] ->
+    CardTypeDef t OTPlaneswalker
+  SorceryDef ::
+    Colors ->
+    Elect (Cost OTSorcery) OTSorcery ->
+    [Ability OTSorcery] ->
+    Elect (Effect 'OneShot) OTSorcery ->
+    CardTypeDef t OTSorcery
+  TribalDef ::
+    [CreatureType] ->
+    WNonCreatureCard ot ->
+    CardTypeDef 'NonTribal ot ->
+    CardTypeDef 'Tribal ot
+  VariableDef ::
+    (Variable -> CardTypeDef t ot) ->
+    CardTypeDef t ot
   deriving (Typeable)
 
 data Condition :: Type where
   CAnd :: [Condition] -> Condition
   COr :: [Condition] -> Condition
-  Satisfies :: WAny ot -> ObjectN ot -> [Requirement ot] -> Condition
+  Satisfies :: TypeableOT k ot => WAny ot -> ObjectN ot -> [Requirement ot] -> Condition
   deriving (Typeable)
 
 data Cost :: forall ot. ot -> Type where
@@ -111,38 +157,38 @@ data Cost :: forall ot. ot -> Type where
   ManaCost :: ManaCost -> Cost ot
   OrCosts :: [Cost ot] -> Cost ot
   PayLife :: Int -> Cost ot -- TODO: PositiveInt
-  SacrificeCost :: WPermanent ot -> [Requirement ot] -> Cost ot
+  SacrificeCost :: TypeableOT k ot => WPermanent ot -> [Requirement ot] -> Cost ot
   TapCost :: OPermanent -> Cost ot
   deriving (Typeable)
 
 data Effect :: EffectType -> Type where
   AddMana :: ManaPool -> OPlayer -> Effect 'OneShot
   AddToBattlefield :: TypeableOT k ot => WPermanent ot -> OPlayer -> Token ot -> Effect 'OneShot
-  ChangeTo :: WPermanent ot -> OPermanent -> Card ot -> Effect 'Continuous
+  ChangeTo :: TypeableOT k ot => WPermanent ot -> OPermanent -> Card ot -> Effect 'Continuous
   CounterAbility :: OActivatedOrTriggeredAbility -> Effect 'OneShot
   CounterSpell :: OSpell -> Effect 'OneShot
   DealDamage :: ODamageSource -> OCreaturePlayerPlaneswalker -> Damage -> Effect 'OneShot
   Destroy :: OPermanent -> Effect 'OneShot
   DrawCards :: OPlayer -> Int -> Effect 'OneShot
-  Sacrifice :: WPermanent ot -> OPlayer -> [Requirement ot] -> Effect 'OneShot
+  Sacrifice :: TypeableOT k ot => WPermanent ot -> OPlayer -> [Requirement ot] -> Effect 'OneShot
   deriving (Typeable)
 
-data Elect :: forall e ot. e -> ot -> Type where
-  A :: (TypeableOT2 k ot (Elect e), Typeable e) => Selection -> WithObject (Elect e) ot -> Elect e ot
+data Elect :: forall ot. Type -> ot -> Type where
+  A :: TypeableOT2 k ot (Elect e) => Selection -> WithObject (Elect e) ot -> Elect e ot
   ActivePlayer :: (OPlayer -> Elect e ot) -> Elect e ot
   All :: WithObject (Elect e) ot -> Elect e ot
   Condition :: Condition -> Elect Condition ot
   ControllerOf :: OAny -> (OPlayer -> Elect e ot) -> Elect e ot
-  Cost :: Cost ot -> Elect Cost ot
-  Effect :: [Effect e] -> Elect e ot
-  Event :: EventListener ot -> Elect EventListener ot
+  Cost :: Cost ot -> Elect (Cost ot) ot
+  Effect :: [Effect e] -> Elect (Effect e) ot
+  Event :: EventListener ot -> Elect (EventListener ot) ot
   If :: Condition -> Elect e ot -> Elect e ot -> Elect e ot
   deriving (Typeable)
 
 data EventListener :: forall ot. ot -> Type where
   Events :: [EventListener ot] -> EventListener ot
-  SpellIsCast :: WithObject (Elect 'OneShot) ot -> EventListener ot
-  TimePoint :: TimePoint p -> Elect 'OneShot ot -> EventListener ot
+  SpellIsCast :: WithObject (Elect (Effect 'OneShot)) ot -> EventListener ot
+  TimePoint :: Typeable p => TimePoint p -> Elect (Effect 'OneShot) ot -> EventListener ot
   deriving (Typeable)
 
 data Requirement :: forall ot. ot -> Type where
@@ -157,7 +203,7 @@ data Requirement :: forall ot. ot -> Type where
   PlayerPays :: Cost OTPlayer -> Requirement OTPlayer
   RAnd :: [Requirement ot] -> Requirement ot
   ROr :: [Requirement ot] -> Requirement ot
-  Tapped :: WPermanent ot -> Requirement ot
+  Tapped :: TypeableOT k ot => WPermanent ot -> Requirement ot
   -- TODO: Try to add some combinators that go from: forall a b. [forall x. Requirement x] -> Requirement '(OT, a, b)
   R2 :: Inst2 IsObjectType a b => [Requirement '(OT, a)] -> [Requirement '(OT, b)] -> Requirement '(OT, a, b)
   R3 :: Inst3 IsObjectType a b c => [Requirement '(OT, a)] -> [Requirement '(OT, b)] -> [Requirement '(OT, c)] -> Requirement '(OT, a, b, c)
@@ -174,12 +220,12 @@ data SetToken :: forall ot. ot -> Type where
   deriving (Typeable)
 
 data StaticAbility :: forall ot. ot -> Type where
-  As :: WithObject EventListener ot -> StaticAbility ot -- 603.6d: not a triggered ability
-  ContinuousEffect :: Elect 'Continuous ot -> StaticAbility ot
+  As :: TypeableOT2 k ot EventListener => WithObject EventListener ot -> StaticAbility ot -- 603.6d: not a triggered ability
+  ContinuousEffect :: Elect (Effect 'Continuous) ot -> StaticAbility ot
   FirstStrike :: StaticAbility OTCreature
   Flying :: StaticAbility OTCreature
   Haste :: StaticAbility OTCreature
-  Suspend :: Int -> Elect Cost ot -> StaticAbility ot
+  Suspend :: Int -> Elect (Cost ot) ot -> StaticAbility ot
   deriving (Typeable)
 
 data Token :: forall ot. ot -> Type where
@@ -189,7 +235,7 @@ data Token :: forall ot. ot -> Type where
 -- https://www.mtgsalvation.com/forums/magic-fundamentals/magic-rulings/magic-rulings-archives/611601-whenever-what-does-it-mean?comment=3
 -- https://www.reddit.com/r/magicTCG/comments/asmecb/noob_question_difference_between_as_and_when/
 data TriggeredAbility :: forall ot. ot -> Type where
-  When :: Elect EventListener ot -> TriggeredAbility ot
+  When :: TypeableOT k ot => Elect (EventListener ot) ot -> TriggeredAbility ot
   deriving (Typeable)
 
 data WithObject :: forall ot x. x -> ot -> Type where

@@ -21,6 +21,7 @@ module MtgPure.Model.Phase
 where
 
 import safe Data.Kind (Type)
+import safe Data.Typeable (Typeable)
 
 data Phase :: Type where
   BeginningPhase :: Phase
@@ -28,7 +29,7 @@ data Phase :: Type where
   CombatPhase :: Phase
   PostCombatMainPhase :: Phase
   EndingPhase :: Phase
-  deriving (Show)
+  deriving (Show, Typeable)
 
 data SPhase :: Phase -> Type where
   SBeginningPhase :: SPhase 'BeginningPhase
@@ -36,5 +37,6 @@ data SPhase :: Phase -> Type where
   SCombatPhase :: SPhase 'CombatPhase
   SPostCombatMainPhase :: SPhase 'PostCombatMainPhase
   SEndingPhase :: SPhase 'EndingPhase
+  deriving (Typeable)
 
 deriving instance Show (SPhase a)

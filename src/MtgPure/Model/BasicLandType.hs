@@ -27,4 +27,4 @@ data BasicLandType
   | Plains
   | Swamp
   | Wastes
-  deriving (Bounded, Enum, Show, Typeable)
+  deriving (Bounded, Enum, Eq, Show, Typeable)
