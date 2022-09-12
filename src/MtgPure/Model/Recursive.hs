@@ -15,20 +15,21 @@
 
 module MtgPure.Model.Recursive where
 
-import Data.Inst (Inst1, Inst2, Inst3, Inst4, Inst5)
-import Data.Kind (Type)
-import MtgPure.Model.BasicLandType (BasicLandType)
-import MtgPure.Model.CardName (CardName)
-import MtgPure.Model.CardSet (CardSet)
-import MtgPure.Model.Colors (Colors)
-import MtgPure.Model.CreatureType (CreatureType)
-import MtgPure.Model.Damage (Damage)
-import MtgPure.Model.EffectType (EffectType (..))
-import MtgPure.Model.IsObjectType (IsObjectType)
-import MtgPure.Model.Loyalty (Loyalty)
-import MtgPure.Model.ManaCost (ManaCost)
-import MtgPure.Model.ManaPool (ManaPool)
-import MtgPure.Model.ObjectN
+import safe Data.Inst (Inst1, Inst2, Inst3, Inst4, Inst5)
+import safe Data.Kind (Type)
+import safe MtgPure.Model.BasicLandType (BasicLandType)
+import safe MtgPure.Model.CardName (CardName)
+import safe MtgPure.Model.CardSet (CardSet)
+import safe MtgPure.Model.Colors (Colors)
+import safe MtgPure.Model.CreatureType (CreatureType)
+import safe MtgPure.Model.Damage (Damage)
+import safe MtgPure.Model.EffectType (EffectType (..))
+import safe MtgPure.Model.IsObjectType (IsObjectType)
+import safe MtgPure.Model.Loyalty (Loyalty)
+import safe MtgPure.Model.ManaCost (ManaCost)
+import safe MtgPure.Model.ManaPool (ManaPool)
+import safe MtgPure.Model.ObjectN (ObjectN)
+import safe MtgPure.Model.ObjectN.Type
   ( OActivatedOrTriggeredAbility,
     OAny,
     OCreaturePlayerPlaneswalker,
@@ -36,10 +37,9 @@ import MtgPure.Model.ObjectN
     OPermanent,
     OPlayer,
     OSpell,
-    ObjectN,
   )
-import MtgPure.Model.ObjectType.Any (WAny)
-import MtgPure.Model.ObjectType.Kind
+import safe MtgPure.Model.ObjectType.Any (WAny)
+import safe MtgPure.Model.ObjectType.Kind
   ( OTArtifact,
     OTArtifactCreature,
     OTCard,
@@ -51,15 +51,15 @@ import MtgPure.Model.ObjectType.Kind
     OTPlayer,
     OTSorcery,
   )
-import MtgPure.Model.ObjectType.NonCreatureCard (WNonCreatureCard)
-import MtgPure.Model.ObjectType.Permanent (WPermanent)
-import MtgPure.Model.Power (Power)
-import MtgPure.Model.Rarity (Rarity)
-import MtgPure.Model.Selection (Selection)
-import MtgPure.Model.TimePoint (TimePoint)
-import MtgPure.Model.Toughness (Toughness)
-import MtgPure.Model.Tribal (Tribal (..))
-import MtgPure.Model.Variable (Variable)
+import safe MtgPure.Model.ObjectType.NonCreatureCard (WNonCreatureCard)
+import safe MtgPure.Model.ObjectType.Permanent (WPermanent)
+import safe MtgPure.Model.Power (Power)
+import safe MtgPure.Model.Rarity (Rarity)
+import safe MtgPure.Model.Selection (Selection)
+import safe MtgPure.Model.TimePoint (TimePoint)
+import safe MtgPure.Model.Toughness (Toughness)
+import safe MtgPure.Model.Tribal (Tribal (..))
+import safe MtgPure.Model.Variable (Variable)
 
 data Ability :: forall a. a -> Type where
   Activated :: Elect Cost a -> Elect 'OneShot a -> Ability a
@@ -180,9 +180,3 @@ data WithObject :: forall o x. x -> o -> Type where
   O3 :: Inst3 IsObjectType a b c => [Requirement '(a, b, c)] -> (ObjectN '(a, b, c) -> x o) -> WithObject x o
   O4 :: Inst4 IsObjectType a b c d => [Requirement '(a, b, c, d)] -> (ObjectN '(a, b, c, d) -> x o) -> WithObject x o
   O5 :: Inst5 IsObjectType a b c d e => [Requirement '(a, b, c, d, e)] -> (ObjectN '(a, b, c, d, e) -> x o) -> WithObject x o
-
-fromSetCard :: SetCard a -> Card a
-fromSetCard (SetCard _ _ card) = card
-
-fromSetToken :: SetToken a -> Token a
-fromSetToken (SetToken _ _ token) = token

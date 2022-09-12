@@ -18,8 +18,8 @@ module MtgPure.Model.Selection
   )
 where
 
-import Data.Kind (Type)
-import MtgPure.Model.ObjectN (OPlayer)
+import safe Data.Kind (Type)
+import safe MtgPure.Model.ObjectN.Type (OPlayer)
 
 data Selection :: Type where
   Choose :: OPlayer -> Selection

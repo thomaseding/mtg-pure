@@ -18,13 +18,13 @@ module MtgPure.Model.ObjectType.Any
   )
 where
 
-import Data.Kind (Type)
-import MtgPure.Model.ObjectType.Kind
+import safe Data.Kind (Type)
+import safe MtgPure.Model.ObjectType.Kind
   ( OTInstant,
     OTPlayer,
     OTSorcery,
   )
-import MtgPure.Model.ObjectType.Permanent (WPermanent)
+import safe MtgPure.Model.ObjectType.Permanent (WPermanent)
 
 -- Witness type
 data WAny :: forall a. a -> Type where

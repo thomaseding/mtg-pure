@@ -20,7 +20,7 @@ module MtgPure.Model.Phase
   )
 where
 
-import Data.Kind (Type)
+import safe Data.Kind (Type)
 
 data Phase :: Type where
   BeginningPhase :: Phase

@@ -19,12 +19,12 @@ module MtgPure.Model.Mana
   )
 where
 
-import Data.Kind (Type)
-import MtgPure.Model.Color (Color (..))
-import MtgPure.Model.ColoredMana (ColoredMana)
-import MtgPure.Model.ColorlessMana (ColorlessMana)
-import MtgPure.Model.GenericMana (GenericMana)
-import MtgPure.Model.ManaType (ManaType (..))
+import safe Data.Kind (Type)
+import safe MtgPure.Model.Color (Color (..))
+import safe MtgPure.Model.ColoredMana (ColoredMana)
+import safe MtgPure.Model.ColorlessMana (ColorlessMana)
+import safe MtgPure.Model.GenericMana (GenericMana)
+import safe MtgPure.Model.ManaType (ManaType (..))
 
 data Mana :: ManaType -> Type where
   WhiteMana :: ColoredMana 'White -> Mana 'MTWhite

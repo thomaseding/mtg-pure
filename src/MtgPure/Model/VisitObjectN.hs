@@ -20,7 +20,7 @@ module MtgPure.Model.VisitObjectN
   )
 where
 
-import Data.Inst
+import safe Data.Inst
   ( Inst1,
     Inst10,
     Inst11,
@@ -34,10 +34,10 @@ import Data.Inst
     Inst8,
     Inst9,
   )
-import Data.Kind (Type)
-import MtgPure.Model.IsObjectType (IsObjectType)
-import MtgPure.Model.Object (Object)
-import MtgPure.Model.ObjectN (ObjectN (..))
+import safe Data.Kind (Type)
+import safe MtgPure.Model.IsObjectType (IsObjectType)
+import safe MtgPure.Model.Object (Object)
+import safe MtgPure.Model.ObjectN (ObjectN (..))
 
 class VisitObjectN (a :: k) where
   data ObjectVisitorN a :: Type -> Type

@@ -18,7 +18,7 @@ module MtgPure.Model.EffectType
   )
 where
 
-import Data.Kind (Type)
+import safe Data.Kind (Type)
 
 data EffectType :: Type where
   OneShot :: EffectType

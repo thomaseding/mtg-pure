@@ -20,8 +20,8 @@ module MtgPure.Model.ObjectType
   )
 where
 
-import Data.Kind (Type)
-import Data.Typeable (Typeable)
+import safe Data.Kind (Type)
+import safe Data.Typeable (Typeable)
 
 -- This generalizes the notion of "object" in MTG (e.g. contains "player")
 --

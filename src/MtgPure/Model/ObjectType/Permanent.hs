@@ -23,12 +23,19 @@ module MtgPure.Model.ObjectType.Permanent
   )
 where
 
-import Data.Inst (Inst2, Inst3, Inst4)
-import Data.Kind (Type)
-import Data.Proxy (Proxy)
-import MtgPure.Model.IsObjectType (IsObjectType)
-import MtgPure.Model.ObjectN (OArtifact, OCreature, OEnchantment, OLand, OPlaneswalker, ObjectN)
-import MtgPure.Model.ObjectType.Kind
+import safe Data.Inst (Inst2, Inst3, Inst4)
+import safe Data.Kind (Type)
+import safe Data.Proxy (Proxy)
+import safe MtgPure.Model.IsObjectType (IsObjectType)
+import safe MtgPure.Model.ObjectN (ObjectN)
+import safe MtgPure.Model.ObjectN.Type
+  ( OArtifact,
+    OCreature,
+    OEnchantment,
+    OLand,
+    OPlaneswalker,
+  )
+import safe MtgPure.Model.ObjectType.Kind
   ( OTArtifact,
     OTCreature,
     OTEnchantment,

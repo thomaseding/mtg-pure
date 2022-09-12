@@ -18,7 +18,7 @@ module MtgPure.Model.Color
   )
 where
 
-import Data.Kind (Type)
+import safe Data.Kind (Type)
 
 data Colorless :: Type
 

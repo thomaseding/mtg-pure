@@ -19,8 +19,8 @@ module MtgPure.Model.ManaSymbol
   )
 where
 
-import Data.Kind (Type)
-import MtgPure.Model.ManaType (ManaType (..))
+import safe Data.Kind (Type)
+import safe MtgPure.Model.ManaType (ManaType (..))
 
 data ManaSymbol :: ManaType -> Type where
   W :: ManaSymbol 'MTWhite

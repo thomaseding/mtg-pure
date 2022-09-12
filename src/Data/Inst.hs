@@ -29,7 +29,7 @@ module Data.Inst
   )
 where
 
-import Data.Kind (Constraint)
+import safe Data.Kind (Constraint)
 
 type Inst1 (x :: k -> Constraint) a = x a
 

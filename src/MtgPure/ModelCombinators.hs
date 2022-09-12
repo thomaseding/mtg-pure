@@ -57,8 +57,61 @@ module MtgPure.ModelCombinators
   )
 where
 
-import Data.Inst (Inst1, Inst2, Inst3, Inst4, Inst5)
-import MtgPure.Model
+import safe Data.Inst (Inst1, Inst2, Inst3, Inst4, Inst5)
+import safe MtgPure.Model.Color (Color)
+import safe MtgPure.Model.ColorsLike (ColorsLike (..))
+import safe MtgPure.Model.Damage (Damage (..))
+import safe MtgPure.Model.EffectType (EffectType (..))
+import safe MtgPure.Model.IsObjectType (IsObjectType)
+import safe MtgPure.Model.ManaCost (ManaCost)
+import safe MtgPure.Model.ObjectN (ObjectN)
+import safe MtgPure.Model.ObjectN.Type
+  ( OActivatedOrTriggeredAbility,
+    OAny,
+    OCreaturePlayerPlaneswalker,
+    ODamageSource,
+    OPermanent,
+    OPlayer,
+    OSpell,
+  )
+import safe MtgPure.Model.ObjectType.Any (WAny (..))
+import safe MtgPure.Model.ObjectType.Kind
+  ( OTActivatedAbility,
+    OTArtifact,
+    OTCreature,
+    OTEmblem,
+    OTEnchantment,
+    OTInstant,
+    OTLand,
+    OTPermanent,
+    OTPlaneswalker,
+    OTPlayer,
+    OTSorcery,
+    OTStaticAbility,
+    OTTriggeredAbility,
+  )
+import safe MtgPure.Model.ObjectType.Permanent (IsPermanentType, WPermanent (..))
+import safe MtgPure.Model.Recursive
+  ( Card,
+    Condition (..),
+    Cost (..),
+    Effect (..),
+    Elect (..),
+    EventListener (..),
+    Requirement (..),
+    Token,
+    WithObject (..),
+  )
+import safe MtgPure.Model.ToManaCost (ToManaCost (..))
+import safe MtgPure.Model.ToObjectN.Classes
+  ( ToObject12 (..),
+    ToObject2 (..),
+    ToObject3 (..),
+    ToObject5 (..),
+    ToObject6 (..),
+    ToObject8 (..),
+  )
+import safe MtgPure.Model.Variable (Variable)
 
 class AsWithObject ot where
   object :: [Requirement ot] -> (ObjectN ot -> x o) -> WithObject x o

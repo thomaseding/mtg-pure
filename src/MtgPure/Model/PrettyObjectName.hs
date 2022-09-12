@@ -22,7 +22,7 @@ module MtgPure.Model.PrettyObjectName
   )
 where
 
-import Data.Inst
+import safe Data.Inst
   ( Inst10,
     Inst11,
     Inst12,
@@ -35,10 +35,11 @@ import Data.Inst
     Inst8,
     Inst9,
   )
-import Data.Proxy (Proxy (Proxy))
-import Data.Typeable (typeRep)
-import MtgPure.Model.IsObjectType (IsObjectType (singObjectType))
-import MtgPure.Model.ObjectN
+import safe Data.Proxy (Proxy (Proxy))
+import safe Data.Typeable (typeRep)
+import safe MtgPure.Model.IsObjectType (IsObjectType (singObjectType))
+import safe MtgPure.Model.ObjectN (ObjectN (..))
+import safe MtgPure.Model.ObjectN.Type
   ( OAny,
     OCreaturePlaneswalker,
     OCreaturePlayer,
@@ -46,10 +47,9 @@ import MtgPure.Model.ObjectN
     OPermanent,
     OPlayerPlaneswalker,
     OSpell,
-    ObjectN (..),
   )
-import MtgPure.Model.ObjectType (ObjectType (..))
-import MtgPure.Model.ObjectType.Kind
+import safe MtgPure.Model.ObjectType (ObjectType (..))
+import safe MtgPure.Model.ObjectType.Kind
   ( OTCreaturePlaneswalker,
     OTCreaturePlayer,
     OTCreaturePlayerPlaneswalker,

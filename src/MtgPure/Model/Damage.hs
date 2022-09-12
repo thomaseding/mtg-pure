@@ -18,9 +18,9 @@ module MtgPure.Model.Damage
   )
 where
 
-import Data.Kind (Type)
-import MtgPure.Model.ObjectN (OCreature)
-import MtgPure.Model.Variable (Variable)
+import safe Data.Kind (Type)
+import safe MtgPure.Model.ObjectN.Type (OCreature)
+import safe MtgPure.Model.Variable (Variable)
 
 data Damage :: Type where
   Damage :: Int -> Damage

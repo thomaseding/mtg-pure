@@ -18,7 +18,7 @@ module Data.At
   )
 where
 
-import GHC.TypeLits (Nat)
+import safe GHC.TypeLits (Nat)
 
 type family At (i :: Nat) (a :: k) :: k2
 

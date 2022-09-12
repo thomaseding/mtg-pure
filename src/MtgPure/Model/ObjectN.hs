@@ -18,33 +18,10 @@
 
 module MtgPure.Model.ObjectN
   ( ObjectN (..),
-    OAbility,
-    OActivatedAbility,
-    OActivatedOrTriggeredAbility,
-    OAny,
-    OArtifact,
-    OArtifactCreature,
-    OCreature,
-    OCreaturePlaneswalker,
-    OCreaturePlayer,
-    OCreaturePlayerPlaneswalker,
-    ODamageSource,
-    OEmblem,
-    OEnchantment,
-    OInstant,
-    OLand,
-    OPermanent,
-    OPlaneswalker,
-    OPlayer,
-    OPlayerPlaneswalker,
-    OSorcery,
-    OSpell,
-    OStaticAbility,
-    OTriggeredAbility,
   )
 where
 
-import Data.Inst
+import safe Data.Inst
   ( Inst1,
     Inst10,
     Inst11,
@@ -58,82 +35,11 @@ import Data.Inst
     Inst8,
     Inst9,
   )
-import Data.Kind (Type)
-import Data.Typeable (Typeable)
-import MtgPure.Model.IsObjectType (IsObjectType)
-import MtgPure.Model.Object (Object)
-import MtgPure.Model.ObjectType (ObjectType)
-import MtgPure.Model.ObjectType.Kind
-  ( OTAbility,
-    OTActivatedAbility,
-    OTActivatedOrTriggeredAbility,
-    OTAny,
-    OTArtifact,
-    OTArtifactCreature,
-    OTCreature,
-    OTCreaturePlaneswalker,
-    OTCreaturePlayer,
-    OTCreaturePlayerPlaneswalker,
-    OTDamageSource,
-    OTEmblem,
-    OTEnchantment,
-    OTInstant,
-    OTLand,
-    OTPermanent,
-    OTPlaneswalker,
-    OTPlayer,
-    OTPlayerPlaneswalker,
-    OTSorcery,
-    OTSpell,
-    OTStaticAbility,
-    OTTriggeredAbility,
-  )
-
-type OAny = ObjectN OTAny
-
-type OAbility = ObjectN OTAbility
-
-type OActivatedAbility = ObjectN OTActivatedAbility
-
-type OActivatedOrTriggeredAbility = ObjectN OTActivatedOrTriggeredAbility
-
-type OArtifact = ObjectN OTArtifact
-
-type OArtifactCreature = ObjectN OTArtifactCreature
-
-type OCreature = ObjectN OTCreature
-
-type OCreaturePlaneswalker = ObjectN OTCreaturePlaneswalker
-
-type OCreaturePlayer = ObjectN OTCreaturePlayer
-
-type OCreaturePlayerPlaneswalker = ObjectN OTCreaturePlayerPlaneswalker
-
-type ODamageSource = ObjectN OTDamageSource
-
-type OEmblem = ObjectN OTEmblem
-
-type OEnchantment = ObjectN OTEnchantment
-
-type OInstant = ObjectN OTInstant
-
-type OLand = ObjectN OTLand
-
-type OPermanent = ObjectN OTPermanent
-
-type OPlaneswalker = ObjectN OTPlaneswalker
-
-type OPlayer = ObjectN OTPlayer
-
-type OPlayerPlaneswalker = ObjectN OTPlayerPlaneswalker
-
-type OSorcery = ObjectN OTSorcery
-
-type OSpell = ObjectN OTSpell
-
-type OStaticAbility = ObjectN OTStaticAbility
-
-type OTriggeredAbility = ObjectN OTTriggeredAbility
+import safe Data.Kind (Type)
+import safe Data.Typeable (Typeable)
+import safe MtgPure.Model.IsObjectType (IsObjectType)
+import safe MtgPure.Model.Object (Object)
+import safe MtgPure.Model.ObjectType (ObjectType)
 
 data family ObjectN (a :: k)
 

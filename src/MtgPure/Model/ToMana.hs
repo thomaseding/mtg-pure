@@ -19,13 +19,13 @@ module MtgPure.Model.ToMana
   )
 where
 
-import MtgPure.Model.Color (Color (..))
-import MtgPure.Model.ColoredMana (ColoredMana (..))
-import MtgPure.Model.ColorlessMana (ColorlessMana (..))
-import MtgPure.Model.GenericMana (GenericMana (..))
-import MtgPure.Model.Mana (Mana (..))
-import MtgPure.Model.ManaSymbol (ManaSymbol (..))
-import MtgPure.Model.ManaType (ManaType (..))
+import safe MtgPure.Model.Color (Color (..))
+import safe MtgPure.Model.ColoredMana (ColoredMana (..))
+import safe MtgPure.Model.ColorlessMana (ColorlessMana (..))
+import safe MtgPure.Model.GenericMana (GenericMana (..))
+import safe MtgPure.Model.Mana (Mana (..))
+import safe MtgPure.Model.ManaSymbol (ManaSymbol (..))
+import safe MtgPure.Model.ManaType (ManaType (..))
 
 class ToMana a b | a -> b where
   toMana :: a -> Mana b

@@ -42,8 +42,8 @@ module MtgPure.Model.ObjectN.Type
   )
 where
 
-import MtgPure.Model.ObjectN (ObjectN)
-import MtgPure.Model.ObjectType.Kind
+import safe MtgPure.Model.ObjectN (ObjectN)
+import safe MtgPure.Model.ObjectType.Kind
   ( OTAbility,
     OTActivatedAbility,
     OTActivatedOrTriggeredAbility,

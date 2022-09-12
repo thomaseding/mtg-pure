@@ -28,6 +28,7 @@ module MtgPure.Model
     module MtgPure.Model.Object,
     module MtgPure.Model.ObjectId,
     module MtgPure.Model.ObjectN,
+    module MtgPure.Model.ObjectN.Type,
     module MtgPure.Model.ObjectType,
     module MtgPure.Model.ObjectType.Any,
     module MtgPure.Model.ObjectType.Kind,
@@ -57,51 +58,52 @@ where
 -- Instead have Model as the master repr and export the corresponding
 -- stuff to Model.Authoring and Model.Runtime
 
-import MtgPure.Model.AbilityType
-import MtgPure.Model.BasicLandType
-import MtgPure.Model.CardName
-import MtgPure.Model.CardSet
-import MtgPure.Model.CardType
-import MtgPure.Model.Color
-import MtgPure.Model.ColorToManaType
-import MtgPure.Model.ColoredMana
-import MtgPure.Model.ColorlessMana
-import MtgPure.Model.Colors
-import MtgPure.Model.ColorsLike
-import MtgPure.Model.CreatureType
-import MtgPure.Model.Damage
-import MtgPure.Model.EffectType
-import MtgPure.Model.GenericMana
-import MtgPure.Model.HasManaSymbol
-import MtgPure.Model.IsObjectType
-import MtgPure.Model.Loyalty
-import MtgPure.Model.Mana
-import MtgPure.Model.ManaCost
-import MtgPure.Model.ManaPool
-import MtgPure.Model.ManaSymbol
-import MtgPure.Model.ManaType
-import MtgPure.Model.ManaTypeToColor
-import MtgPure.Model.Object
-import MtgPure.Model.ObjectId
-import MtgPure.Model.ObjectN
-import MtgPure.Model.ObjectType
-import MtgPure.Model.ObjectType.Any
-import MtgPure.Model.ObjectType.Kind
-import MtgPure.Model.ObjectType.NonCreatureCard
-import MtgPure.Model.ObjectType.Permanent
-import MtgPure.Model.Phase
-import MtgPure.Model.Power
-import MtgPure.Model.PrettyObjectName
-import MtgPure.Model.Rarity
-import MtgPure.Model.Recursive
-import MtgPure.Model.Selection
-import MtgPure.Model.Step
-import MtgPure.Model.TimePoint
-import MtgPure.Model.ToMana
-import MtgPure.Model.ToManaCost
-import MtgPure.Model.ToManaPool
-import MtgPure.Model.ToObjectN
-import MtgPure.Model.Toughness
-import MtgPure.Model.Tribal
-import MtgPure.Model.Variable
-import MtgPure.Model.VisitObjectN
+import safe MtgPure.Model.AbilityType
+import safe MtgPure.Model.BasicLandType
+import safe MtgPure.Model.CardName
+import safe MtgPure.Model.CardSet
+import safe MtgPure.Model.CardType
+import safe MtgPure.Model.Color
+import safe MtgPure.Model.ColorToManaType
+import safe MtgPure.Model.ColoredMana
+import safe MtgPure.Model.ColorlessMana
+import safe MtgPure.Model.Colors
+import safe MtgPure.Model.ColorsLike
+import safe MtgPure.Model.CreatureType
+import safe MtgPure.Model.Damage
+import safe MtgPure.Model.EffectType
+import safe MtgPure.Model.GenericMana
+import safe MtgPure.Model.HasManaSymbol
+import safe MtgPure.Model.IsObjectType
+import safe MtgPure.Model.Loyalty
+import safe MtgPure.Model.Mana
+import safe MtgPure.Model.ManaCost
+import safe MtgPure.Model.ManaPool
+import safe MtgPure.Model.ManaSymbol
+import safe MtgPure.Model.ManaType
+import safe MtgPure.Model.ManaTypeToColor
+import safe MtgPure.Model.Object
+import safe MtgPure.Model.ObjectId
+import safe MtgPure.Model.ObjectN
+import safe MtgPure.Model.ObjectN.Type
+import safe MtgPure.Model.ObjectType
+import safe MtgPure.Model.ObjectType.Any
+import safe MtgPure.Model.ObjectType.Kind
+import safe MtgPure.Model.ObjectType.NonCreatureCard
+import safe MtgPure.Model.ObjectType.Permanent
+import safe MtgPure.Model.Phase
+import safe MtgPure.Model.Power
+import safe MtgPure.Model.PrettyObjectName
+import safe MtgPure.Model.Rarity
+import safe MtgPure.Model.Recursive
+import safe MtgPure.Model.Selection
+import safe MtgPure.Model.Step
+import safe MtgPure.Model.TimePoint
+import safe MtgPure.Model.ToMana
+import safe MtgPure.Model.ToManaCost
+import safe MtgPure.Model.ToManaPool
+import safe MtgPure.Model.ToObjectN
+import safe MtgPure.Model.Toughness
+import safe MtgPure.Model.Tribal
+import safe MtgPure.Model.Variable
+import safe MtgPure.Model.VisitObjectN

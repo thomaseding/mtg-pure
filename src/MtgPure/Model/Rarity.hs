@@ -18,7 +18,7 @@ module MtgPure.Model.Rarity
   )
 where
 
-import Data.Kind (Type)
+import safe Data.Kind (Type)
 
 data Rarity :: Type where
   BasicLand :: Rarity -- Wow `Woodland Chasm` has this type in reality: https://boardgames.stackexchange.com/a/56457/2209

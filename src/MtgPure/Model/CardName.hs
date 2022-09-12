@@ -18,7 +18,7 @@ module MtgPure.Model.CardName
   )
 where
 
-import Data.String (IsString (..))
+import safe Data.String (IsString (..))
 
 newtype CardName = CardName {unCardName :: String}
 

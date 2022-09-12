@@ -20,16 +20,16 @@ module MtgPure.Model.IsObjectType
   )
 where
 
-import Data.Typeable (Proxy, Typeable)
-import MtgPure.Model.Object
+import safe Data.Typeable (Proxy, Typeable)
+import safe MtgPure.Model.Object
   ( Object (Object),
   )
-import MtgPure.Model.ObjectId (ObjectId)
-import MtgPure.Model.ObjectType
+import safe MtgPure.Model.ObjectId (ObjectId)
+import safe MtgPure.Model.ObjectType
   ( ObjectType (..),
     SObjectType (..),
   )
-import MtgPure.Model.ObjectType.Kind
+import safe MtgPure.Model.ObjectType.Kind
   ( OTActivatedAbility,
     OTArtifact,
     OTCreature,

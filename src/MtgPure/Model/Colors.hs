@@ -18,9 +18,9 @@ module MtgPure.Model.Colors
   )
 where
 
-import Data.Kind (Type)
-import MtgPure.Model.ManaSymbol (ManaSymbol)
-import MtgPure.Model.ManaType (ManaType (..))
+import safe Data.Kind (Type)
+import safe MtgPure.Model.ManaSymbol (ManaSymbol)
+import safe MtgPure.Model.ManaType (ManaType (..))
 
 data Colors :: Type where
   Colors ::

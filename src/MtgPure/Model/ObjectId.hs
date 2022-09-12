@@ -18,7 +18,7 @@ module MtgPure.Model.ObjectId
   )
 where
 
-import Data.Typeable (Typeable)
+import safe Data.Typeable (Typeable)
 
 newtype ObjectId = ObjectId Int
   deriving (Show, Eq, Ord, Typeable)

@@ -19,8 +19,8 @@ module MtgPure.Model.Step
   )
 where
 
-import Data.Kind (Type)
-import MtgPure.Model.Phase (Phase (..))
+import safe Data.Kind (Type)
+import safe MtgPure.Model.Phase (Phase (..))
 
 data Step :: Phase -> Type where
   UntapStep :: Step 'BeginningPhase

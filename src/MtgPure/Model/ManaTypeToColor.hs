@@ -18,8 +18,8 @@ module MtgPure.Model.ManaTypeToColor
   )
 where
 
-import MtgPure.Model.Color (Color (..))
-import MtgPure.Model.ManaType (ManaType (..))
+import safe MtgPure.Model.Color (Color (..))
+import safe MtgPure.Model.ManaType (ManaType (..))
 
 type family ManaTypeToColor (mt :: ManaType) = (c :: Color) | c -> mt where
   ManaTypeToColor 'MTWhite = 'White

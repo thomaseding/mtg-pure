@@ -47,7 +47,7 @@ module MtgPure.Model.ObjectType.Kind
   )
 where
 
-import MtgPure.Model.ObjectType (ObjectType (..))
+import safe MtgPure.Model.ObjectType (ObjectType (..))
 
 type OTActivatedAbility = 'OTActivatedAbility
 

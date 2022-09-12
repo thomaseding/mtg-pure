@@ -18,9 +18,9 @@ module MtgPure.Model.TimePoint
   )
 where
 
-import Data.Kind (Type)
-import MtgPure.Model.Phase (Phase, SPhase)
-import MtgPure.Model.Step (Step)
+import safe Data.Kind (Type)
+import safe MtgPure.Model.Phase (Phase, SPhase)
+import safe MtgPure.Model.Step (Step)
 
 data TimePoint (a :: Phase) :: Type where
   PhaseBegin :: SPhase a -> TimePoint a

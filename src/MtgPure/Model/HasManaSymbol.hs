@@ -18,8 +18,8 @@ module MtgPure.Model.HasManaSymbol
   )
 where
 
-import MtgPure.Model.ManaSymbol (ManaSymbol)
-import MtgPure.Model.ManaType (ManaType (..))
+import safe MtgPure.Model.ManaSymbol (ManaSymbol)
+import safe MtgPure.Model.ManaType (ManaType (..))
 
 class HasManaSymbol a where
   manaSymbol :: ManaSymbol a

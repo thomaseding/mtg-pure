@@ -19,13 +19,13 @@ module MtgPure.Model.ToManaCost
   )
 where
 
-import Data.Inst (Inst2, Inst3, Inst4, Inst5, Inst6, Inst7)
-import MtgPure.Model.GenericMana (GenericMana (GenericMana'))
-import MtgPure.Model.Mana (Mana (..))
-import MtgPure.Model.ManaCost (ManaCost (..), emptyManaCost)
-import MtgPure.Model.ManaPool (ManaPool (..))
-import MtgPure.Model.ManaSymbol (ManaSymbol (..))
-import MtgPure.Model.ToMana (toMana)
+import safe Data.Inst (Inst2, Inst3, Inst4, Inst5, Inst6, Inst7)
+import safe MtgPure.Model.GenericMana (GenericMana (GenericMana'))
+import safe MtgPure.Model.Mana (Mana (..))
+import safe MtgPure.Model.ManaCost (ManaCost (..), emptyManaCost)
+import safe MtgPure.Model.ManaPool (ManaPool (..))
+import safe MtgPure.Model.ManaSymbol (ManaSymbol (..))
+import safe MtgPure.Model.ToMana (toMana)
 
 class ToManaCost a where
   toManaCost :: a -> ManaCost

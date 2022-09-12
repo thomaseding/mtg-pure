@@ -19,11 +19,11 @@ module MtgPure.Model.ColoredMana
   )
 where
 
-import Data.Kind (Type)
-import MtgPure.Model.Color (Color (..))
-import MtgPure.Model.ColorToManaType (ColorToManaType)
-import MtgPure.Model.ManaSymbol (ManaSymbol)
-import MtgPure.Model.Variable (Variable)
+import safe Data.Kind (Type)
+import safe MtgPure.Model.Color (Color (..))
+import safe MtgPure.Model.ColorToManaType (ColorToManaType)
+import safe MtgPure.Model.ManaSymbol (ManaSymbol)
+import safe MtgPure.Model.Variable (Variable)
 
 data ColoredMana :: Color -> Type where
   ColoredMana' :: ManaSymbol (ColorToManaType c) -> Int -> ColoredMana c

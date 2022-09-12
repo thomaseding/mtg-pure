@@ -23,20 +23,20 @@ module MtgPure.Model.ObjectType.NonCreatureCard
   )
 where
 
-import Data.Inst (Inst2, Inst3)
-import Data.Kind (Type)
-import Data.Proxy (Proxy)
-import MtgPure.Model.IsObjectType (IsObjectType)
-import MtgPure.Model.ObjectN
+import safe Data.Inst (Inst2, Inst3)
+import safe Data.Kind (Type)
+import safe Data.Proxy (Proxy)
+import safe MtgPure.Model.IsObjectType (IsObjectType)
+import safe MtgPure.Model.ObjectN (ObjectN)
+import safe MtgPure.Model.ObjectN.Type
   ( OArtifact,
     OEnchantment,
     OInstant,
     OLand,
     OPlaneswalker,
     OSorcery,
-    ObjectN,
   )
-import MtgPure.Model.ObjectType.Kind
+import safe MtgPure.Model.ObjectType.Kind
   ( OTArtifact,
     OTEnchantment,
     OTInstant,

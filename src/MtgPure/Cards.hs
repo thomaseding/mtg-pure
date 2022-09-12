@@ -18,10 +18,16 @@
 
 module MtgPure.Cards where
 
-import MtgPure.Model
-import MtgPure.ModelCombinators
+import safe MtgPure.Model
+import safe MtgPure.ModelCombinators
 
 ----------------------------------------
+
+fromSetCard :: SetCard a -> Card a
+fromSetCard (SetCard _ _ card) = card
+
+fromSetToken :: SetToken a -> Token a
+fromSetToken (SetToken _ _ token) = token
 
 class ToCard card where
   toCard :: card -> Card OTCard

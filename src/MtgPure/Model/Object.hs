@@ -18,10 +18,10 @@ module MtgPure.Model.Object
   )
 where
 
-import Data.Kind (Type)
-import Data.Typeable (Typeable)
-import MtgPure.Model.ObjectId (ObjectId)
-import MtgPure.Model.ObjectType
+import safe Data.Kind (Type)
+import safe Data.Typeable (Typeable)
+import safe MtgPure.Model.ObjectId (ObjectId)
+import safe MtgPure.Model.ObjectType
   ( ObjectType (..),
     SObjectType,
   )

@@ -18,8 +18,8 @@ module MtgPure.Model.AbilityType
   )
 where
 
-import Data.Kind (Type)
-import MtgPure.Model.EffectType (EffectType (..))
+import safe Data.Kind (Type)
+import safe MtgPure.Model.EffectType (EffectType (..))
 
 data AbilityType :: EffectType -> Type where
   ActivatedAbility :: AbilityType 'OneShot

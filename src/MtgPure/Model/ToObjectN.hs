@@ -19,5 +19,5 @@ module MtgPure.Model.ToObjectN
   )
 where
 
-import MtgPure.Model.ToObjectN.Classes
-import MtgPure.Model.ToObjectN.Instances ()
+import safe MtgPure.Model.ToObjectN.Classes
+import safe MtgPure.Model.ToObjectN.Instances ()

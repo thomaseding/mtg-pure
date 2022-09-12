@@ -19,12 +19,12 @@ module MtgPure.Model.ToManaPool
   )
 where
 
-import Data.Inst (Inst2, Inst3, Inst4, Inst5, Inst6)
-import MtgPure.Model.Mana (Mana (..))
-import MtgPure.Model.ManaPool (ManaPool (..), emptyManaPool)
-import MtgPure.Model.ManaSymbol (ManaSymbol (..))
-import MtgPure.Model.ManaType (ManaType (..))
-import MtgPure.Model.ToMana (toMana)
+import safe Data.Inst (Inst2, Inst3, Inst4, Inst5, Inst6)
+import safe MtgPure.Model.Mana (Mana (..))
+import safe MtgPure.Model.ManaPool (ManaPool (..), emptyManaPool)
+import safe MtgPure.Model.ManaSymbol (ManaSymbol (..))
+import safe MtgPure.Model.ManaType (ManaType (..))
+import safe MtgPure.Model.ToMana (toMana)
 
 class ToManaPool a where
   toManaPool :: a -> ManaPool

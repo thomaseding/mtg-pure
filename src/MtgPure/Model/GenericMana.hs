@@ -19,8 +19,8 @@ module MtgPure.Model.GenericMana
   )
 where
 
-import Data.Kind (Type)
-import MtgPure.Model.Variable (Variable)
+import safe Data.Kind (Type)
+import safe MtgPure.Model.Variable (Variable)
 
 data GenericMana :: Type where
   GenericMana' :: Int -> GenericMana

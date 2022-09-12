@@ -19,8 +19,8 @@ module MtgPure.Model.ManaPool
   )
 where
 
-import MtgPure.Model.Mana (Mana)
-import MtgPure.Model.ManaType (ManaType (..))
+import safe MtgPure.Model.Mana (Mana)
+import safe MtgPure.Model.ManaType (ManaType (..))
 
 data ManaPool = ManaPool
   { poolWhite :: Mana 'MTWhite,

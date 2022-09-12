@@ -32,7 +32,7 @@ module MtgPure.Model.ToObjectN.Classes
   )
 where
 
-import Data.Inst
+import safe Data.Inst
   ( Inst1,
     Inst10,
     Inst11,
@@ -46,8 +46,8 @@ import Data.Inst
     Inst8,
     Inst9,
   )
-import MtgPure.Model.IsObjectType (IsObjectType)
-import MtgPure.Model.ObjectN (ObjectN (..))
+import safe MtgPure.Model.IsObjectType (IsObjectType)
+import safe MtgPure.Model.ObjectN (ObjectN (..))
 
 class Inst1 IsObjectType a => ToObject1 o a where
   toObject1 :: o -> (ObjectN a)

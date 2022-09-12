@@ -18,7 +18,7 @@ module MtgPure.Model.CardType
   )
 where
 
-import Data.Kind (Type)
+import safe Data.Kind (Type)
 
 data CardType :: Type where
   CTArtifact :: CardType
