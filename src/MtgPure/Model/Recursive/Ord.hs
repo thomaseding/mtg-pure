@@ -596,9 +596,9 @@ ordEffect x = case x of
 
 ordElectE :: Elect e ot -> Elect e ot -> EnvM Ordering
 ordElectE x = case x of
-  A sel1 with1 -> \case
-    A sel2 with2 ->
-      seqM [ordSelection sel1 sel2, ordWithObjectElectE with1 with2]
+  A sel1 player1 with1 -> \case
+    A sel2 player2 with2 ->
+      seqM [ordSelection sel1 sel2, ordOPlayer player1 player2, ordWithObjectElectE with1 with2]
     y -> compareIndexM x y
   ActivePlayer playerToElect1 -> \case
     ActivePlayer playerToElect2 -> do
@@ -631,6 +631,9 @@ ordElectE x = case x of
     y -> compareIndexM x y
   If cond1 then1 else1 -> \case
     If cond2 then2 else2 -> seqM [ordCondition cond1 cond2, ordElectE then1 then2, ordElectE else1 else2]
+    y -> compareIndexM x y
+  Random with1 -> \case
+    Random with2 -> ordWithObjectElectE with1 with2
     y -> compareIndexM x y
   VariableFromPower obj1 varToElect1 -> \case
     VariableFromPower obj2 varToElect2 -> do
@@ -842,14 +845,11 @@ ordRequirements = listM ordRequirement
 
 ordSelection :: Selection -> Selection -> EnvM Ordering
 ordSelection x = case x of
-  Choose player1 -> \case
-    Choose player2 -> ordOPlayer player1 player2
+  Choose -> \case
+    Choose -> pure EQ
     y -> compareIndexM x y
-  Target player1 -> \case
-    Target player2 -> ordOPlayer player1 player2
-    y -> compareIndexM x y
-  Random -> \case
-    Random -> pure EQ
+  Target -> \case
+    Target -> pure EQ
     y -> compareIndexM x y
 
 ordSetCard :: SetCard ot -> SetCard ot -> EnvM Ordering

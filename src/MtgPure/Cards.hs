@@ -214,7 +214,7 @@ acceptableLosses = mkCard "Acceptable Losses" $ \this ->
             ]
    in SorceryDef (toColors R) cost [] $
         controllerOf this $
-          \you -> A (Target you) $
+          \you -> A Target you $
             object [] $
               \(target :: OCreature) -> effect $ dealDamage this target 5
 
@@ -234,7 +234,7 @@ ancestralVision :: Card OTSorcery
 ancestralVision = mkCard "Ancestral Vision" $ \this ->
   SorceryDef (toColors U) cost [Static $ Suspend 4 $ spellCost U] $
     controllerOf this $
-      \you -> A (Target you) $
+      \you -> A Target you $
         object [] $
           \target -> effect $ DrawCards target 3
   where
@@ -244,7 +244,7 @@ backlash :: Card OTInstant
 backlash = mkCard "Backlash" $ \this ->
   InstantDef (toColors (B, R)) cost [] $
     controllerOf this $
-      \you -> A (Target you) $
+      \you -> A Target you $
         object [Not tapped] $
           \target -> VariableFromPower target $
             \power -> controllerOf target $
@@ -270,7 +270,7 @@ blaze = mkCard "Blaze" $ \this ->
     let cost = spellCost (VariableGenericMana x, R)
      in SorceryDef (toColors R) cost [] $
           controllerOf this $
-            \you -> A (Target you) $
+            \you -> A Target you $
               object [] $
                 \(target :: OCreaturePlayerPlaneswalker) -> effect $ dealDamage this target x
 
@@ -353,7 +353,7 @@ lavaAxe :: Card OTSorcery
 lavaAxe = mkCard "Lava Axe" $ \this ->
   SorceryDef (toColors R) cost [] $
     controllerOf this $
-      \you -> A (Target you) $
+      \you -> A Target you $
         object [] $
           \(target :: OPlayerPlaneswalker) -> effect $ dealDamage this target 5
   where
@@ -363,7 +363,7 @@ plummet :: Card OTInstant
 plummet = mkCard "Plummet" $ \this ->
   InstantDef (toColors G) cost [] $
     controllerOf this $
-      \you -> A (Target you) $
+      \you -> A Target you $
         object [hasAbility $ \_this -> Static Flying] $
           \target -> effect $ destroy target
   where
@@ -380,7 +380,7 @@ pradeshGypsies = mkCard "Pradesh Gypsies" $ \this ->
     [ Activated
         (Cost $ AndCosts [tapCost this, ManaCost $ toManaCost (1, G)])
         $ controllerOf this $
-          \you -> A (Target you) $
+          \you -> A Target you $
             object [] $
               \creature ->
                 let statsChange =
@@ -412,7 +412,7 @@ shock :: Card OTInstant
 shock = mkCard "Shock" $ \this ->
   InstantDef (toColors R) cost [] $
     controllerOf this $
-      \you -> A (Target you) $
+      \you -> A Target you $
         object [] $
           \(target :: OCreaturePlayerPlaneswalker) -> effect $ dealDamage this target 2
   where
@@ -422,7 +422,7 @@ sinkhole :: Card OTSorcery
 sinkhole = mkCard "Sinkhole" $ \this ->
   SorceryDef (toColors B) cost [] $
     controllerOf this $
-      \you -> A (Target you) $
+      \you -> A Target you $
         object [] $
           \(target :: OLand) -> effect $ destroy target
   where
@@ -444,7 +444,7 @@ stifle :: Card OTInstant
 stifle = mkCard "Stifle" $ \this ->
   InstantDef (toColors U) cost [] $
     controllerOf this $
-      \you -> A (Target you) $
+      \you -> A Target you $
         object [] $
           \(target :: OActivatedOrTriggeredAbility) ->
             effect $ counterAbility target
@@ -455,7 +455,7 @@ stoneRain :: Card OTSorcery
 stoneRain = mkCard "Stone Rain" $ \this ->
   SorceryDef (toColors R) cost [] $
     controllerOf this $
-      \you -> A (Target you) $
+      \you -> A Target you $
         object [] $
           \(target :: OLand) -> effect $ destroy target
   where
@@ -477,7 +477,7 @@ swanSong :: Card OTInstant
 swanSong = mkCard "Swan Song" $ \this ->
   InstantDef (toColors U) cost [] $
     controllerOf this $
-      \you -> A (Target you) $
+      \you -> A Target you $
         object [] $
           \(target :: ObjectN '(OT, 'OTEnchantment, 'OTInstant, 'OTSorcery)) ->
             controllerOf target $ \controller ->
@@ -492,7 +492,7 @@ vindicate :: Card OTSorcery
 vindicate = mkCard "Vindicate" $ \this ->
   SorceryDef (toColors (W, B)) cost [] $
     controllerOf this $
-      \you -> A (Target you) $
+      \you -> A Target you $
         object [] $
           \(target :: OPermanent) -> effect $ destroy target
   where

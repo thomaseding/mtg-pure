@@ -252,7 +252,7 @@ instance ConsIndex (Effect e) where
     Until {} -> 15
 
 data Elect :: forall ot. Type -> ot -> Type where
-  A :: TypeableOT2 k ot (Elect e) => Selection -> WithObject (Elect e) ot -> Elect e ot
+  A :: (e ~ Effect 'OneShot, TypeableOT2 k ot (Elect e)) => Selection -> OPlayer -> WithObject (Elect e) ot -> Elect e ot
   ActivePlayer :: (OPlayer -> Elect e ot) -> Elect e ot
   All :: WithObject (Elect e) ot -> Elect e ot
   Condition :: Condition -> Elect Condition ot
@@ -261,6 +261,7 @@ data Elect :: forall ot. Type -> ot -> Type where
   Effect :: [Effect e] -> Elect (Effect e) ot
   Event :: EventListener ot -> Elect (EventListener ot) ot
   If :: Condition -> Elect e ot -> Elect e ot -> Elect e ot
+  Random :: TypeableOT2 k ot (Elect e) => WithObject (Elect e) ot -> Elect e ot
   VariableFromPower :: OCreature -> (Variable -> Elect e ot) -> Elect e ot
   deriving (Typeable)
 
@@ -275,7 +276,8 @@ instance ConsIndex (Elect e ot) where
     Effect {} -> 7
     Event {} -> 8
     If {} -> 9
-    VariableFromPower {} -> 10
+    Random {} -> 10
+    VariableFromPower {} -> 11
 
 data EventListener :: forall ot. ot -> Type where
   BecomesTapped :: WPermanent ot -> WithObject (Elect (Effect 'OneShot)) ot -> EventListener ot
@@ -340,7 +342,6 @@ data SetToken :: forall ot. ot -> Type where
 
 data StaticAbility :: forall ot. ot -> Type where
   As :: TypeableOT2 k ot EventListener => WithObject EventListener ot -> StaticAbility ot -- 603.6d: not a triggered ability
-  -- TODO: `StaticContinuous` should not be able to elect `A`
   StaticContinuous :: Elect (Effect 'Continuous) ot -> StaticAbility ot -- 611.3
   FirstStrike :: StaticAbility OTCreature
   Flying :: StaticAbility OTCreature

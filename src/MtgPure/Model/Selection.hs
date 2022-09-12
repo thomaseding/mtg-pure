@@ -21,15 +21,12 @@ where
 
 import safe Data.ConsIndex (ConsIndex (..))
 import safe Data.Kind (Type)
-import safe MtgPure.Model.ObjectN.Type (OPlayer)
 
 data Selection :: Type where
-  Choose :: OPlayer -> Selection
-  Target :: OPlayer -> Selection
-  Random :: Selection
+  Choose :: Selection
+  Target :: Selection
 
 instance ConsIndex Selection where
   consIndex = \case
     Choose {} -> 1
     Target {} -> 2
-    Random {} -> 3

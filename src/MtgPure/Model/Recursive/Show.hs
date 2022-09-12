@@ -628,17 +628,13 @@ selectionMemo :: Selection -> String
 selectionMemo = \case
   Choose {} -> "choice"
   Target {} -> "target"
-  Random -> "random"
 
 showSelection :: Selection -> EnvM ParenItems
 showSelection = \case
-  Choose player -> yesParens $ do
-    sPlayer <- dollar <$> showObject1 player
-    pure $ pure "Choose" <> sPlayer
-  Target player -> yesParens $ do
-    sPlayer <- dollar <$> showObject1 player
-    pure $ pure "Target" <> sPlayer
-  Random -> noParens $ pure $ pure "Random"
+  Choose -> noParens $ do
+    pure $ pure "Choose"
+  Target -> noParens $ do
+    pure $ pure "Target"
 
 showListM :: (a -> EnvM ParenItems) -> [a] -> EnvM ParenItems
 showListM f xs = noParens $ do
@@ -1144,10 +1140,11 @@ showStaticAbility = \case
 
 showElect :: Elect e a -> EnvM ParenItems
 showElect = \case
-  A sel withObject -> yesParens $ do
+  A sel player withObject -> yesParens $ do
     sSel <- parens <$> showSelection sel
+    sPlayer <- dollar <$> showObject1 player
     sWithObject <- dollar <$> showWithObject showElect (selectionMemo sel) withObject
-    pure $ pure "A " <> sSel <> sWithObject
+    pure $ pure "A " <> sSel <> sPlayer <> pure " " <> sWithObject
   ActivePlayer contElect -> yesParens $ do
     (active, snap) <- newObjectN @'OTPlayer O "active"
     sActive <- parens <$> showObject1 active
@@ -1186,6 +1183,9 @@ showElect = \case
     sThen <- parens <$> showElect then_
     sElse <- dollar <$> showElect else_
     pure $ pure "If " <> sCond <> pure " " <> sThen <> sElse
+  Random withObject -> yesParens $ do
+    sWithObject <- dollar <$> showWithObject showElect "rand" withObject
+    pure $ pure "Random" <> sWithObject
   VariableFromPower creature varToElect -> yesParens $ do
     sCreature <- parens <$> showObject1 creature
     i <- State.gets nextVariableId
