@@ -13,7 +13,7 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.Internal.ObjectId
+module MtgPure.Model.ObjectId
   ( ObjectId (..),
   )
 where

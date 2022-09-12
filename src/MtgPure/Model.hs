@@ -25,6 +25,7 @@ module MtgPure.Model
     module MtgPure.Model.ManaType,
     module MtgPure.Model.ManaTypeToColor,
     module MtgPure.Model.Object,
+    module MtgPure.Model.ObjectId,
     module MtgPure.Model.ObjectN,
     module MtgPure.Model.ObjectType,
     module MtgPure.Model.Permanent,
@@ -74,6 +75,7 @@ import MtgPure.Model.ManaSymbol
 import MtgPure.Model.ManaType
 import MtgPure.Model.ManaTypeToColor
 import MtgPure.Model.Object
+import MtgPure.Model.ObjectId
 import MtgPure.Model.ObjectN
 import MtgPure.Model.ObjectType
 import MtgPure.Model.Permanent

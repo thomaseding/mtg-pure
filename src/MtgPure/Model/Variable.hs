@@ -13,6 +13,10 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.Variable (Variable) where
+module MtgPure.Model.Variable
+  ( Variable (..),
+  )
+where
 
-import MtgPure.Model.Internal.Variable (Variable)
+newtype Variable = ReifiedVariable Int -- e.g. X
+  deriving (Eq, Show)

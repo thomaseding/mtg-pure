@@ -14,7 +14,7 @@
 {-# HLINT ignore "Use const" #-}
 
 module MtgPure.Model.Object
-  ( Object,
+  ( Object (..),
     OArtifact,
     OCreature,
     OEnchantment,
@@ -26,7 +26,9 @@ module MtgPure.Model.Object
   )
 where
 
-import MtgPure.Model.Internal.Object (Object)
+import Data.Kind (Type)
+import Data.Typeable (Typeable)
+import MtgPure.Model.ObjectId (ObjectId)
 import MtgPure.Model.ObjectType
   ( OTArtifact,
     OTCreature,
@@ -36,7 +38,13 @@ import MtgPure.Model.ObjectType
     OTPlaneswalker,
     OTPlayer,
     OTSorcery,
+    ObjectType (..),
+    SObjectType,
   )
+
+data Object :: ObjectType -> Type where
+  Object :: SObjectType a -> ObjectId -> Object a
+  deriving (Show, Typeable)
 
 type OArtifact = Object OTArtifact
 

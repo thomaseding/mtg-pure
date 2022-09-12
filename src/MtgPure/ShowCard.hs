@@ -57,7 +57,7 @@ import MtgPure.Model
     Elect (..),
     EventListener (..),
     GenericMana (..),
-    IsObjectType,
+    IsObjectType (..),
     Loyalty,
     Mana (..),
     ManaCost (..),
@@ -71,7 +71,8 @@ import MtgPure.Model
     OPlayer,
     OPlayerPlaneswalker,
     OTPlayer,
-    Object,
+    Object (..),
+    ObjectId (ObjectId),
     ObjectN (..),
     Permanent (..),
     Phase (..),
@@ -79,23 +80,18 @@ import MtgPure.Model
     PrettyObjectName (..),
     Requirement (..),
     Selection (..),
-    SetCard,
-    SetToken,
+    SetCard (SetCard),
+    SetToken (SetToken),
     SpellCost,
     StaticAbility (..),
     Step (..),
     Token (..),
     Toughness,
     TriggeredAbility (..),
-    Variable,
+    Variable (ReifiedVariable),
     VisitObjectN (visitObjectN'),
     WithObject (..),
   )
-import MtgPure.Model.Internal.IsObjectType (IsObjectType (..))
-import MtgPure.Model.Internal.Object (Object (..))
-import MtgPure.Model.Internal.ObjectId (ObjectId (ObjectId))
-import MtgPure.Model.Internal.Variable (Variable (ReifiedVariable))
-import MtgPure.Model.Recursive (SetCard (SetCard), SetToken (SetToken))
 
 defaultDepthLimit :: Maybe Int
 defaultDepthLimit = Nothing
