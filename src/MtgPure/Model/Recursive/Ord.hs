@@ -77,6 +77,7 @@ import safe MtgPure.Model.Recursive
     Cost (..),
     Effect (..),
     Elect (..),
+    Else (..),
     Event,
     EventListener,
     EventListener' (..),
@@ -471,6 +472,9 @@ ordCondition x = case x of
   CAnd conds1 -> \case
     CAnd conds2 -> ordConditions conds1 conds2
     y -> compareIndexM x y
+  CNot cond1 -> \case
+    CNot cond2 -> ordCondition cond1 cond2
+    y -> compareIndexM x y
   COr conds1 -> \case
     COr conds2 -> ordConditions conds1 conds2
     y -> compareIndexM x y
@@ -639,7 +643,7 @@ ordElectE x = case x of
     Event event2 -> ordEvent event1 event2
     y -> compareIndexM x y
   If cond1 then1 else1 -> \case
-    If cond2 then2 else2 -> seqM [ordCondition cond1 cond2, ordElectE then1 then2, ordElectE else1 else2]
+    If cond2 then2 else2 -> seqM [ordCondition cond1 cond2, ordElectE then1 then2, ordElseE else1 else2]
     y -> compareIndexM x y
   Listen listener1 -> \case
     Listen listener2 -> ordEventListener listener1 listener2
@@ -654,6 +658,15 @@ ordElectE x = case x of
           elect2 = varToElect2 var
       seqM [ordOCreature obj1 obj2, ordElectE elect1 elect2]
     y -> compareIndexM x y
+
+ordElseE :: Else e ot -> Else e ot -> EnvM Ordering
+ordElseE = \case
+  ElseCost elect1 -> \case
+    ElseCost elect2 -> ordElectE elect1 elect2
+  ElseEffect elect1 -> \case
+    ElseEffect elect2 -> ordElectE elect1 elect2
+  ElseEvent -> \case
+    ElseEvent -> pure EQ
 
 ordEventListener' :: forall w. Typeable w => (forall ot. w ot -> w ot -> EnvM Ordering) -> EventListener' w -> EventListener' w -> EnvM Ordering
 ordEventListener' ordM x = case x of

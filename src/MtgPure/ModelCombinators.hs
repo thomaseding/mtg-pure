@@ -1,5 +1,6 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -38,12 +39,15 @@ module MtgPure.ModelCombinators
     AsWithLinkedObject (..),
     AsWithThis (..),
     HasLandType (..),
+    AsIfThen (..),
+    AsIfThenElse (..),
     mkCard,
     mkToken,
     becomesTapped,
     event,
     ifThen,
     ifElse,
+    ifThenElse,
     nonBasic,
     tapCost,
     ofColors,
@@ -126,6 +130,7 @@ import safe MtgPure.Model.Recursive
     Cost (..),
     Effect (..),
     Elect (..),
+    Else (..),
     Event,
     EventListener,
     EventListener' (..),
@@ -571,23 +576,39 @@ instance EventLike Event where
 instance EventLike EventListener where
   event = Listen
 
-class Branchable e ot where
-  branchEmpty :: Elect e ot
+class AsIfThen e ot where
+  thenEmpty :: Elect e ot
+  elseEmpty :: Else e ot
+  default elseEmpty :: AsIfThenElse e ot => Else e ot
+  elseEmpty = liftElse thenEmpty
 
-instance Branchable (Cost ot) ot where
-  branchEmpty = Cost $ AndCosts []
+instance AsIfThen (Cost ot) ot where
+  thenEmpty = Cost $ AndCosts []
 
-instance Branchable EventListener ot where
-  branchEmpty = event $ Events []
+instance AsIfThen (Effect 'OneShot) ot where
+  thenEmpty = Effect []
 
-instance Branchable (Effect e) ot where
-  branchEmpty = Effect []
+instance AsIfThen EventListener ot where
+  thenEmpty = event $ Events []
+  elseEmpty = ElseEvent
 
-ifThen :: Branchable e ot => Condition -> Elect e ot -> Elect e ot
-ifThen cond elect = If cond elect branchEmpty
+class AsIfThen e ot => AsIfThenElse e ot where
+  liftElse :: Elect e ot -> Else e ot
 
-ifElse :: Branchable e ot => Condition -> Elect e ot -> Elect e ot
-ifElse cond = If cond branchEmpty
+instance AsIfThenElse (Cost ot) ot where
+  liftElse = ElseCost
+
+instance AsIfThenElse (Effect 'OneShot) ot where
+  liftElse = ElseEffect
+
+ifThen :: AsIfThen e ot => Condition -> Elect e ot -> Elect e ot
+ifThen cond then_ = If cond then_ elseEmpty
+
+ifElse :: AsIfThen e ot => Condition -> Elect e ot -> Elect e ot
+ifElse cond else_ = If (CNot cond) else_ elseEmpty
+
+ifThenElse :: AsIfThenElse e ot => Condition -> Elect e ot -> Elect e ot -> Elect e ot
+ifThenElse cond then_ else_ = If cond then_ $ liftElse else_
 
 nonBasic :: Requirement OLand
 nonBasic = RAnd $ map (Not . HasLandType . BasicLand) [minBound ..]

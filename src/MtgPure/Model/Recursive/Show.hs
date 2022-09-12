@@ -98,6 +98,7 @@ import safe MtgPure.Model.Recursive
     Cost (..),
     Effect (..),
     Elect (..),
+    Else (..),
     Event,
     EventListener,
     EventListener' (..),
@@ -1058,6 +1059,9 @@ showCondition = \case
   CAnd conds -> yesParens $ do
     sConds <- parens <$> showConditions conds
     pure $ pure "CAnd " <> sConds
+  CNot cond -> yesParens $ do
+    sCond <- parens <$> showCondition cond
+    pure $ pure "CNot " <> sCond
   COr conds -> yesParens $ do
     sConds <- parens <$> showConditions conds
     pure $ pure "COr " <> sConds
@@ -1184,7 +1188,7 @@ showStaticAbility = \case
     sCost <- dollar <$> showElect cost
     pure $ pure "Suspend " <> sTime <> sCost
 
-showElect :: Elect e a -> EnvM ParenItems
+showElect :: Elect e ot -> EnvM ParenItems
 showElect = \case
   A sel player withObject -> yesParens $ do
     sSel <- parens <$> showSelection sel
@@ -1227,7 +1231,7 @@ showElect = \case
   If cond then_ else_ -> yesParens $ do
     sCond <- parens <$> showCondition cond
     sThen <- parens <$> showElect then_
-    sElse <- dollar <$> showElect else_
+    sElse <- dollar <$> showElse else_
     pure $ pure "If " <> sCond <> pure " " <> sThen <> sElse
   Listen listener -> yesParens $ do
     sListener <- dollar <$> showEventListener listener
@@ -1244,6 +1248,17 @@ showElect = \case
         elect = varToElect var
     sElect <- dropParens <$> showElect elect
     pure $ pure "VariableFromPower " <> sCreature <> pure " $ \\" <> pure varName <> pure " -> " <> sElect
+
+showElse :: Else e ot -> EnvM ParenItems
+showElse = \case
+  ElseCost elect -> yesParens $ do
+    sElect <- dollar <$> showElect elect
+    pure $ pure "ElseCost" <> sElect
+  ElseEffect elect -> yesParens $ do
+    sElect <- dollar <$> showElect elect
+    pure $ pure "ElseEffect" <> sElect
+  ElseEvent -> noParens $ do
+    pure $ pure "ElseEvent"
 
 showWithLinkedObject :: (forall ot'. x ot' -> EnvM ParenItems) -> String -> WithLinkedObject x ot -> EnvM ParenItems
 showWithLinkedObject showM memo = \case

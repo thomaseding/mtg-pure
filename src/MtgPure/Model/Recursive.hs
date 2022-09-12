@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE Safe #-}
@@ -24,6 +25,7 @@ module MtgPure.Model.Recursive
     Cost (..),
     Effect (..),
     Elect (..),
+    Else (..),
     Event,
     EventListener,
     EventListener' (..),
@@ -213,6 +215,7 @@ instance ConsIndex (CardTypeDef tribe ot) where
 
 data Condition :: Type where
   CAnd :: [Condition] -> Condition
+  CNot :: Condition -> Condition
   COr :: [Condition] -> Condition
   Satisfies :: TypeableOT ot => WAny ot -> ObjectN ot -> [Requirement (ObjectN ot)] -> Condition
   deriving (Typeable)
@@ -220,8 +223,9 @@ data Condition :: Type where
 instance ConsIndex Condition where
   consIndex = \case
     CAnd {} -> 1
-    COr {} -> 2
-    Satisfies {} -> 3
+    CNot {} -> 2
+    COr {} -> 3
+    Satisfies {} -> 4
 
 data Cost :: Type -> Type where
   AndCosts :: [Cost ot] -> Cost ot
@@ -290,7 +294,7 @@ data Elect :: Type -> Type -> Type where
   Cost :: Cost ot -> Elect (Cost ot) ot
   Effect :: [Effect e] -> Elect (Effect e) ot
   Event :: Event -> Elect Event ot
-  If :: Condition -> Elect e ot -> Elect e ot -> Elect e ot
+  If :: Condition -> Elect e ot -> Else e ot -> Elect e ot
   Listen :: EventListener -> Elect EventListener ot
   Random :: TypeableOT2 ot (Elect e) => WithMaskedObject (Elect e) ot -> Elect e ot
   VariableFromPower :: OCreature -> (Variable -> Elect e ot) -> Elect e ot
@@ -310,6 +314,18 @@ instance ConsIndex (Elect e ot) where
     Listen {} -> 10
     Random {} -> 11
     VariableFromPower {} -> 12
+
+data Else :: Type -> Type -> Type where
+  ElseCost :: (e ~ Cost ot) => Elect e ot -> Else e ot
+  ElseEffect :: (e ~ Effect 'OneShot) => Elect e ot -> Else e ot
+  ElseEvent :: Else (EventListener' x) ot -- NB: Events need linear history to make sense of election costs tied to it, hence this hole
+  deriving (Typeable)
+
+instance ConsIndex (Else e ot) where
+  consIndex = \case
+    ElseCost {} -> 1
+    ElseEffect {} -> 2
+    ElseEvent {} -> 3
 
 type Event = EventListener' Proxy
 
