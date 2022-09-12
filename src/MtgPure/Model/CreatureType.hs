@@ -20,7 +20,14 @@ where
 
 data CreatureType
   = Devil
+  | Eldrazi
+  | Elf
   | Goblin
+  | Horror
   | Human
+  | Mercenary
+  | Merfolk
+  | Rebel
   | Soldier
+  | Zombie
   deriving (Show)

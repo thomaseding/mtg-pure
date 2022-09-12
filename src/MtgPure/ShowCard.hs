@@ -516,10 +516,11 @@ showCardTypeDef = \case
         <> sAbilities
   SorceryDef colors cost abilities electOneShot -> do
     showOneShot "SorceryDef " colors cost abilities electOneShot
-  TribalDef nonCreature cardDef -> yesParens $ do
+  TribalDef creatureTypes nonCreature cardDef -> yesParens $ do
+    sCreatureTypes <- parens <$> showCreatureTypes creatureTypes
     sNonCreature <- parens <$> showNonCreature nonCreature
     sCardDef <- dollar <$> showCardTypeDef cardDef
-    pure $ pure "TribalDef " <> sNonCreature <> sCardDef
+    pure $ pure "TribalDef " <> sCreatureTypes <> pure " " <> sNonCreature <> sCardDef
   VariableDef contCardDef -> yesParens $ do
     i <- State.gets nextVariableId
     State.modify' $ \st -> st {nextVariableId = i + 1}
@@ -527,7 +528,7 @@ showCardTypeDef = \case
         varName = getVarName var
         cardDef = contCardDef var
     sCardDef <- dropParens <$> showCardTypeDef cardDef
-    pure $ pure "Variable $ \\" <> pure varName <> pure " -> " <> sCardDef
+    pure $ pure "VariableDef $ \\" <> pure varName <> pure " -> " <> sCardDef
   where
     showOneShot ::
       forall a.
@@ -596,7 +597,7 @@ showRequirement = \case
   Is anyObj objN -> yesParens $ do
     sAnyObj <- parens <$> showAnyObject anyObj
     sObjN <- dollar <$> showAnyObjectN anyObj objN
-    pure $ pure "Is " <> sAnyObj <> pure " " <> sObjN
+    pure $ pure "Is " <> sAnyObj <> sObjN
   NonBasic -> noParens $ pure $ pure "NonBasic"
   Not req -> yesParens $ (pure "Not" <>) . dollar <$> showRequirement req
   OfColors colors -> yesParens $ pure $ pure $ fromString $ "OfColors $ " ++ show colors
@@ -606,7 +607,36 @@ showRequirement = \case
   PlayerPays cost -> yesParens $ do
     sCost <- dollar <$> showCost cost
     pure $ pure "PlayerPays" <> sCost
-  Tapped perm -> yesParens $ pure $ pure $ fromString $ "Tapped " ++ show perm
+  Tapped perm -> yesParens $ do
+    pure $ pure $ fromString $ "Tapped " ++ show perm
+  RAnd reqs -> yesParens $ do
+    sReqs <- dollar <$> showRequirements reqs
+    pure $ pure "RAnd " <> sReqs
+  ROr reqs -> yesParens $ do
+    sReqs <- dollar <$> showRequirements reqs
+    pure $ pure "ROr " <> sReqs
+  R2 reqsA reqsB -> yesParens $ do
+    sReqsA <- parens <$> showRequirements reqsA
+    sReqsB <- dollar <$> showRequirements reqsB
+    pure $ pure "R2 " <> sReqsA <> sReqsB
+  R3 reqsA reqsB reqsC -> yesParens $ do
+    sReqsA <- parens <$> showRequirements reqsA
+    sReqsB <- parens <$> showRequirements reqsB
+    sReqsC <- dollar <$> showRequirements reqsC
+    pure $ pure "R3 " <> sReqsA <> pure " " <> sReqsB <> sReqsC
+  R4 reqsA reqsB reqsC reqsD -> yesParens $ do
+    sReqsA <- parens <$> showRequirements reqsA
+    sReqsB <- parens <$> showRequirements reqsB
+    sReqsC <- parens <$> showRequirements reqsC
+    sReqsD <- dollar <$> showRequirements reqsD
+    pure $ pure "R4 " <> sReqsA <> pure " " <> sReqsB <> pure " " <> sReqsC <> sReqsD
+  R5 reqsA reqsB reqsC reqsD reqsE -> yesParens $ do
+    sReqsA <- parens <$> showRequirements reqsA
+    sReqsB <- parens <$> showRequirements reqsB
+    sReqsC <- parens <$> showRequirements reqsC
+    sReqsD <- parens <$> showRequirements reqsD
+    sReqsE <- dollar <$> showRequirements reqsE
+    pure $ pure "R4 " <> sReqsA <> pure " " <> sReqsB <> pure " " <> sReqsC <> pure " " <> sReqsD <> sReqsE
 
 showAbilities :: [Ability a] -> EnvM ParenItems
 showAbilities = showListM showAbility
@@ -905,12 +935,12 @@ showConditions = showListM showCondition
 
 showCondition :: Condition -> EnvM ParenItems
 showCondition = \case
-  And conds -> yesParens $ do
+  CAnd conds -> yesParens $ do
     sConds <- parens <$> showConditions conds
-    pure $ pure "And " <> sConds
-  Or conds -> yesParens $ do
+    pure $ pure "CAnd " <> sConds
+  COr conds -> yesParens $ do
     sConds <- parens <$> showConditions conds
-    pure $ pure "Or " <> sConds
+    pure $ pure "COr " <> sConds
   Satisfies anyObj objN reqs -> yesParens $ do
     sAnyObj <- parens <$> showAnyObject anyObj
     sObjN <- parens <$> showAnyObjectN anyObj objN
@@ -933,19 +963,15 @@ showAnyObjectN :: AnyObject a -> ObjectN a -> EnvM ParenItems
 showAnyObjectN anyObj objN = case anyObj of
   AnyInstant -> yesParens $ do
     let O obj = objN
-    sObj <- showObject obj
-    pure $ pure "AnyInstant " <> sObj
+    showObject obj
   AnySorcery -> yesParens $ do
     let O obj = objN
-    sObj <- showObject obj
-    pure $ pure "AnySorcery " <> sObj
+    showObject obj
   AnyPlayer -> yesParens $ do
     let O obj = objN
-    sObj <- showObject obj
-    pure $ pure "AnyPlayer " <> sObj
-  AnyPermanent perm -> yesParens $ do
-    sObjN <- dollar <$> showPermanentN perm objN
-    pure $ pure "AnyPermanent " <> sObjN
+    showObject obj
+  AnyPermanent perm -> do
+    showPermanentN perm objN
 
 showEventListener :: EventListener a -> EnvM ParenItems
 showEventListener = \case
@@ -1014,11 +1040,11 @@ showElect = \case
 
 showWithObject :: (forall a. x a -> EnvM ParenItems) -> String -> WithObject x b -> EnvM ParenItems
 showWithObject showM memo = \case
-  O1 rA cont -> showO1 showM memo rA cont
-  O2 rA rB cont -> showO2 showM memo rA rB cont
-  O3 rA rB rC cont -> showO3 showM memo rA rB rC cont
-  O4 rA rB rC rD cont -> showO4 showM memo rA rB rC rD cont
-  O5 rA rB rC rD rE cont -> showO5 showM memo rA rB rC rD rE cont
+  O1 reqs cont -> showO1 showM memo reqs cont
+  O2 reqs cont -> showO2 showM memo reqs cont
+  O3 reqs cont -> showO3 showM memo reqs cont
+  O4 reqs cont -> showO4 showM memo reqs cont
+  O5 reqs cont -> showO5 showM memo reqs cont
 
 showO1 ::
   forall a b x.
@@ -1048,13 +1074,11 @@ showO2 ::
   Inst2 IsObjectType b c =>
   (a -> EnvM ParenItems) ->
   String ->
-  [Requirement b] ->
-  [Requirement c] ->
+  [Requirement '(b, c)] ->
   (ObjectN '(b, c) -> a) ->
   EnvM ParenItems
-showO2 showM memo reqsA reqsB cont = yesParens $ do
-  sReqsA <- parens <$> showRequirements reqsA
-  sReqsB <- parens <$> showRequirements reqsB
+showO2 showM memo reqs cont = yesParens $ do
+  sReqs <- parens <$> showRequirements reqs
   (obj, snap) <- newObjectN @b O2a memo
   objName <- parens <$> showObjectDecl showObject2 obj
   let elect = cont obj
@@ -1062,9 +1086,7 @@ showO2 showM memo reqsA reqsB cont = yesParens $ do
   restoreObject snap
   pure $
     pure "O2 "
-      <> sReqsA
-      <> pure " "
-      <> sReqsB
+      <> sReqs
       <> pure " $ \\"
       <> objName
       <> pure " -> "
@@ -1075,15 +1097,11 @@ showO3 ::
   Inst3 IsObjectType b c d =>
   (a -> EnvM ParenItems) ->
   String ->
-  [Requirement b] ->
-  [Requirement c] ->
-  [Requirement d] ->
+  [Requirement '(b, c, d)] ->
   (ObjectN '(b, c, d) -> a) ->
   EnvM ParenItems
-showO3 showM memo reqsA reqsB reqsC cont = yesParens $ do
-  sReqsA <- parens <$> showRequirements reqsA
-  sReqsB <- parens <$> showRequirements reqsB
-  sReqsC <- parens <$> showRequirements reqsC
+showO3 showM memo reqs cont = yesParens $ do
+  sReqs <- parens <$> showRequirements reqs
   (obj, snap) <- newObjectN @b O3a memo
   objName <- parens <$> showObjectDecl showObject3 obj
   let elect = cont obj
@@ -1091,11 +1109,7 @@ showO3 showM memo reqsA reqsB reqsC cont = yesParens $ do
   restoreObject snap
   pure $
     pure "O3 "
-      <> sReqsA
-      <> pure " "
-      <> sReqsB
-      <> pure " "
-      <> sReqsC
+      <> sReqs
       <> pure " $ \\"
       <> objName
       <> pure " -> "
@@ -1106,17 +1120,11 @@ showO4 ::
   Inst4 IsObjectType b c d e =>
   (a -> EnvM ParenItems) ->
   String ->
-  [Requirement b] ->
-  [Requirement c] ->
-  [Requirement d] ->
-  [Requirement e] ->
+  [Requirement '(b, c, d, e)] ->
   (ObjectN '(b, c, d, e) -> a) ->
   EnvM ParenItems
-showO4 showM memo reqsA reqsB reqsC reqsD cont = yesParens $ do
-  sReqsA <- parens <$> showRequirements reqsA
-  sReqsB <- parens <$> showRequirements reqsB
-  sReqsC <- parens <$> showRequirements reqsC
-  sReqsD <- parens <$> showRequirements reqsD
+showO4 showM memo reqs cont = yesParens $ do
+  sReqs <- parens <$> showRequirements reqs
   (obj, snap) <- newObjectN @b O4a memo
   objName <- parens <$> showObjectDecl showObject4 obj
   let elect = cont obj
@@ -1124,13 +1132,7 @@ showO4 showM memo reqsA reqsB reqsC reqsD cont = yesParens $ do
   restoreObject snap
   pure $
     pure "O4 "
-      <> sReqsA
-      <> pure " "
-      <> sReqsB
-      <> pure " "
-      <> sReqsC
-      <> pure " "
-      <> sReqsD
+      <> sReqs
       <> pure " $ \\"
       <> objName
       <> pure " -> "
@@ -1141,19 +1143,11 @@ showO5 ::
   Inst5 IsObjectType b c d e f =>
   (a -> EnvM ParenItems) ->
   String ->
-  [Requirement b] ->
-  [Requirement c] ->
-  [Requirement d] ->
-  [Requirement e] ->
-  [Requirement f] ->
+  [Requirement '(b, c, d, e, f)] ->
   (ObjectN '(b, c, d, e, f) -> a) ->
   EnvM ParenItems
-showO5 showM memo reqsA reqsB reqsC reqsD reqsE cont = yesParens $ do
-  sReqsA <- parens <$> showRequirements reqsA
-  sReqsB <- parens <$> showRequirements reqsB
-  sReqsC <- parens <$> showRequirements reqsC
-  sReqsD <- parens <$> showRequirements reqsD
-  sReqsE <- parens <$> showRequirements reqsE
+showO5 showM memo reqs cont = yesParens $ do
+  sReqs <- parens <$> showRequirements reqs
   (obj, snap) <- newObjectN @b O5a memo
   objName <- parens <$> showObjectDecl showObject5 obj
   let elect = cont obj
@@ -1161,15 +1155,7 @@ showO5 showM memo reqsA reqsB reqsC reqsD reqsE cont = yesParens $ do
   restoreObject snap
   pure $
     pure "O5 "
-      <> sReqsA
-      <> pure " "
-      <> sReqsB
-      <> pure " "
-      <> sReqsC
-      <> pure " "
-      <> sReqsD
-      <> pure " "
-      <> sReqsE
+      <> sReqs
       <> pure " $ \\"
       <> objName
       <> pure " -> "

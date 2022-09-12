@@ -86,12 +86,12 @@ data CardTypeDef :: forall a. Tribal -> a -> Type where
   LandDef :: [Ability OTLand] -> CardTypeDef t OTLand
   PlaneswalkerDef :: Colors -> Elect Cost OTPlaneswalker -> Loyalty -> [Ability OTPlaneswalker] -> CardTypeDef t OTPlaneswalker
   SorceryDef :: Colors -> Elect Cost OTSorcery -> [Ability OTSorcery] -> Elect 'OneShot OTSorcery -> CardTypeDef t OTSorcery
-  TribalDef :: NonCreature a -> CardTypeDef 'NonTribal a -> CardTypeDef 'Tribal a
+  TribalDef :: [CreatureType] -> NonCreature a -> CardTypeDef 'NonTribal a -> CardTypeDef 'Tribal a
   VariableDef :: (Variable -> CardTypeDef t a) -> CardTypeDef t a
 
 data Condition :: Type where
-  And :: [Condition] -> Condition
-  Or :: [Condition] -> Condition
+  CAnd :: [Condition] -> Condition
+  COr :: [Condition] -> Condition
   Satisfies :: AnyObject a -> ObjectN a -> [Requirement a] -> Condition
   Unless :: Condition -> Condition
 
@@ -138,7 +138,13 @@ data Requirement :: forall a. a -> Type where
   OfColors :: Colors -> Requirement a
   OwnedBy :: OPlayer -> Requirement a
   PlayerPays :: Cost -> Requirement OTPlayer
+  RAnd :: [Requirement a] -> Requirement a
+  ROr :: [Requirement a] -> Requirement a
   Tapped :: Permanent a -> Requirement a
+  R2 :: Inst2 IsObjectType a b => [Requirement a] -> [Requirement b] -> Requirement '(a, b)
+  R3 :: Inst3 IsObjectType a b c => [Requirement a] -> [Requirement b] -> [Requirement c] -> Requirement '(a, b, c)
+  R4 :: Inst4 IsObjectType a b c d => [Requirement a] -> [Requirement b] -> [Requirement c] -> [Requirement d] -> Requirement '(a, b, c, d)
+  R5 :: Inst5 IsObjectType a b c d e => [Requirement a] -> [Requirement b] -> [Requirement c] -> [Requirement d] -> [Requirement e] -> Requirement '(a, b, c, d, e)
 
 data SetCard :: forall a. a -> Type where
   SetCard :: CardSet -> Rarity -> Card a -> SetCard a
@@ -162,11 +168,11 @@ data TriggeredAbility :: forall a. a -> Type where
   When :: EventListener a -> TriggeredAbility a
 
 data WithObject :: forall a x. x -> a -> Type where
-  O1 :: Inst1 IsObjectType b => [Requirement b] -> (ObjectN b -> x a) -> WithObject x a
-  O2 :: Inst2 IsObjectType b c => [Requirement b] -> [Requirement c] -> (ObjectN '(b, c) -> x a) -> WithObject x a
-  O3 :: Inst3 IsObjectType b c d => [Requirement b] -> [Requirement c] -> [Requirement d] -> (ObjectN '(b, c, d) -> x a) -> WithObject x a
-  O4 :: Inst4 IsObjectType b c d e => [Requirement b] -> [Requirement c] -> [Requirement d] -> [Requirement e] -> (ObjectN '(b, c, d, e) -> x a) -> WithObject x a
-  O5 :: Inst5 IsObjectType b c d e f => [Requirement b] -> [Requirement c] -> [Requirement d] -> [Requirement e] -> [Requirement f] -> (ObjectN '(b, c, d, e, f) -> x a) -> WithObject x a
+  O1 :: Inst1 IsObjectType a => [Requirement a] -> (ObjectN a -> x o) -> WithObject x o
+  O2 :: Inst2 IsObjectType a b => [Requirement '(a, b)] -> (ObjectN '(a, b) -> x o) -> WithObject x o
+  O3 :: Inst3 IsObjectType a b c => [Requirement '(a, b, c)] -> (ObjectN '(a, b, c) -> x o) -> WithObject x o
+  O4 :: Inst4 IsObjectType a b c d => [Requirement '(a, b, c, d)] -> (ObjectN '(a, b, c, d) -> x o) -> WithObject x o
+  O5 :: Inst5 IsObjectType a b c d e => [Requirement '(a, b, c, d, e)] -> (ObjectN '(a, b, c, d, e) -> x o) -> WithObject x o
 
 fromSetCard :: SetCard a -> Card a
 fromSetCard (SetCard _ _ card) = card
