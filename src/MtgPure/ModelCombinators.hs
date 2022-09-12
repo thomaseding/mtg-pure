@@ -3,8 +3,8 @@
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE Safe #-}
@@ -16,6 +16,7 @@
 {-# HLINT ignore "Use const" #-}
 
 module MtgPure.ModelCombinators (
+  tyAp,
   ToCard (..),
   ToToken (..),
   ToSetCard (..),
@@ -93,11 +94,11 @@ import safe MtgPure.Model.ManaSymbol (ManaSymbol (..))
 import safe MtgPure.Model.ObjectType (OT1, OT2, OT3, OT4, OT5, ObjectType (..))
 import safe MtgPure.Model.ObjectType.Any (WAny (..))
 import safe MtgPure.Model.ObjectType.Card (IsCardType, WCard (..))
-import safe MtgPure.Model.ObjectType.Index (IndexOT)
 import safe MtgPure.Model.ObjectType.Kind (
   OTActivatedOrTriggeredAbility,
   OTAny,
   OTArtifact,
+  OTArtifactCreature,
   OTCard,
   OTCreature,
   OTCreaturePlayerPlaneswalker,
@@ -150,7 +151,6 @@ import safe MtgPure.Model.ToObjectN.Classes (
 import safe MtgPure.Model.ToObjectN.Instances ()
 import safe MtgPure.Model.Tribal (Tribal (..))
 import safe MtgPure.Model.Variable (Variable)
-import safe MtgPure.Model.VisitObjectN (VisitObjectN)
 import safe MtgPure.Model.Zone (IsZone, Zone (..))
 import safe MtgPure.Model.ZoneObject (
   OPlayer,
@@ -163,6 +163,9 @@ import safe MtgPure.Model.ZoneObject (
   toZO8,
  )
 
+tyAp :: forall a f. f a -> f a
+tyAp = id
+
 class ToCard card where
   toCard :: card -> Card ()
 
@@ -171,6 +174,9 @@ instance ToCard (Card ()) where
 
 instance ToCard (Card OTArtifact) where
   toCard = ArtifactCard
+
+instance ToCard (Card OTArtifactCreature) where
+  toCard = ArtifactCreatureCard
 
 instance ToCard (Card OTCreature) where
   toCard = CreatureCard
@@ -199,6 +205,9 @@ instance ToSetCard (SetCard ()) where
 instance ToSetCard (SetCard OTArtifact) where
   toSetCard (SetCard s r c) = SetCard s r $ ArtifactCard c
 
+instance ToSetCard (SetCard OTArtifactCreature) where
+  toSetCard (SetCard s r c) = SetCard s r $ ArtifactCreatureCard c
+
 instance ToSetCard (SetCard OTCreature) where
   toSetCard (SetCard s r c) = SetCard s r $ CreatureCard c
 
@@ -226,6 +235,9 @@ instance ToToken (Token ()) where
 instance ToToken (Token OTArtifact) where
   toToken (Token _ x) = ArtifactToken $ Token coPermanent x
 
+instance ToToken (Token OTArtifactCreature) where
+  toToken (Token _ x) = ArtifactCreatureToken $ Token coPermanent x
+
 instance ToToken (Token OTCreature) where
   toToken (Token _ x) = CreatureToken $ Token coPermanent x
 
@@ -247,6 +259,10 @@ instance ToSetToken (SetToken ()) where
 instance ToSetToken (SetToken OTArtifact) where
   toSetToken (SetToken s r (Token _ x)) =
     SetToken s r $ ArtifactToken $ Token coPermanent x
+
+instance ToSetToken (SetToken OTArtifactCreature) where
+  toSetToken (SetToken s r (Token _ x)) =
+    SetToken s r $ ArtifactCreatureToken $ Token coPermanent x
 
 instance ToSetToken (SetToken OTCreature) where
   toSetToken (SetToken s r (Token _ x)) =
@@ -270,8 +286,8 @@ class Typeable x => CoNonProxy x where
 instance CoNonProxy (Elect (Effect 'OneShot)) where
   coNonProxy = NonProxyElectEffectOneShot
 
-class (IsOT ot, Typeable x) => AsWithLinkedObject ot zone x where
-  linked :: [Requirement zone ot] -> (ZO zone ot -> x ot) -> WithLinkedObject zone x ot
+class (IsOT ot, Typeable liftOT) => AsWithLinkedObject ot zone liftOT where
+  linked :: [Requirement zone ot] -> (ZO zone ot -> liftOT ot) -> WithLinkedObject zone liftOT ot
 
 instance (CoNonProxy x, Inst1 IsObjectType a) => AsWithLinkedObject (OT1 a) zone x where
   linked = L1 coNonProxy
@@ -306,23 +322,14 @@ instance Inst4 IsObjectType a b c d => AsWithMaskedObject (OT4 a b c d) where
 instance Inst5 IsObjectType a b c d e => AsWithMaskedObject (OT5 a b c d e) where
   masked = M5
 
-class AsWithThis ot where
-  thisObject :: (ZO zone ot -> x ot) -> WithThis zone x ot
+class IsZO zone ot => AsWithThis ot zone liftOT ot1s | ot zone liftOT -> ot1s, ot1s -> ot zone where
+  thisObject :: (ot1s -> liftOT ot) -> WithThis zone liftOT ot
 
-instance Inst1 IsObjectType a => AsWithThis (OT1 a) where
+instance (IsZO zone (OT1 a), Inst1 IsObjectType a) => AsWithThis (OT1 a) zone liftOT (ZO zone (OT1 a)) where
   thisObject = T1
 
-instance Inst2 IsObjectType a b => AsWithThis (OT2 a b) where
+instance (IsZO zone (OT2 a b), Inst2 IsObjectType a b) => AsWithThis (OT2 a b) zone liftOT (ZO zone (OT1 a), ZO zone (OT1 b)) where
   thisObject = T2
-
-instance Inst3 IsObjectType a b c => AsWithThis (OT3 a b c) where
-  thisObject = T3
-
-instance Inst4 IsObjectType a b c d => AsWithThis (OT4 a b c d) where
-  thisObject = T4
-
-instance Inst5 IsObjectType a b c d e => AsWithThis (OT5 a b c d e) where
-  thisObject = T5
 
 type AsActivatedOrTriggeredAbility ot =
   ToObject2 ot 'OTActivatedAbility 'OTTriggeredAbility
@@ -675,25 +682,54 @@ addManaAnyColor player amount =
     , AddMana player $ toManaPool (G, amount)
     ]
 
-class (AsWithThis ot, IndexOT ot, VisitObjectN ot) => MkCard t ot where
-  mkCard :: CardName -> (ZO 'Battlefield ot -> CardTypeDef t ot) -> Card ot
+class
+  (AsWithThis ot 'Battlefield (CardTypeDef tribal) ot1s) =>
+  MkCard tribal ot ot1s
+  where
+  mkCard :: CardName -> (ot1s -> CardTypeDef tribal ot) -> Card ot
 
-instance (AsWithThis ot, CoCard ot, IndexOT ot, VisitObjectN ot) => MkCard 'NonTribal ot where
+instance
+  MkCard
+    'NonTribal
+    OTArtifactCreature
+    (ZO 'Battlefield OTArtifact, ZO 'Battlefield OTCreature)
+  where
+  mkCard name = Card name coCard . T2
+
+instance
+  (CoCard (OT1 a), IsObjectType a) =>
+  MkCard 'NonTribal (OT1 a) (ZO 'Battlefield (OT1 a))
+  where
   mkCard name = Card name coCard . thisObject
 
-instance (AsWithThis ot, CoCard ot, IndexOT ot, VisitObjectN ot) => MkCard 'Tribal ot where
+instance
+  (CoCard (OT1 a), IsObjectType a) =>
+  MkCard 'Tribal (OT1 a) (ZO 'Battlefield (OT1 a))
+  where
   mkCard name = TribalCard name coCard . thisObject
 
+-- instance
+--   (CoCard (OT2 a b), Inst2 IsObjectType a b) =>
+--   MkCard 'NonTribal (OT2 a b) (ZO 'Battlefield (OT1 a), ZO 'Battlefield (OT1 b))
+--   where
+--   mkCard name = Card name coCard . thisObject
+
+-- instance
+--   (CoCard (OT2 a b), Inst2 IsObjectType a b) =>
+--   MkCard 'Tribal (OT2 a b) (ZO 'Battlefield (OT1 a), ZO 'Battlefield (OT1 b))
+--   where
+--   mkCard name = TribalCard name coCard . thisObject
+
 mkToken ::
-  (CoPermanent ot, MkCard tribal ot) =>
+  (CoPermanent ot, MkCard tribal ot ot1s) =>
   CardName ->
-  (ZO 'Battlefield ot -> CardTypeDef tribal ot) ->
+  (ot1s -> CardTypeDef tribal ot) ->
   Token ot
 mkToken name = Token coPermanent . mkCard name
 
 hasAbility ::
-  (AsWithThis ot, IsZO zone ot) =>
-  (ZO zone ot -> Ability ot) ->
+  (AsWithThis ot zone Ability ot1s, IsZO zone ot) =>
+  (ot1s -> Ability ot) ->
   Requirement zone ot
 hasAbility = HasAbility . thisObject
 

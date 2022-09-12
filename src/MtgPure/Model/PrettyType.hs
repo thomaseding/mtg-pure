@@ -54,6 +54,7 @@ import safe MtgPure.Model.ObjectType (
  )
 import safe MtgPure.Model.ObjectType.Kind (
   OTAny,
+  OTArtifactCreature,
   OTCreaturePlaneswalker,
   OTCreaturePlayer,
   OTCreaturePlayerPlaneswalker,
@@ -87,6 +88,8 @@ instance IsObjectType a => PrettyType (OT1 a) where
 instance Inst2 IsObjectType a b => PrettyType (OT2 a b) where
   prettyType proxy =
     if
+        | rep == typeRep (Proxy @OTArtifactCreature) ->
+          "OTArtifactCreature"
         | rep == typeRep (Proxy @OTCreaturePlaneswalker) ->
           "OTCreaturePlaneswalker"
         | rep == typeRep (Proxy @OTCreaturePlayer) ->

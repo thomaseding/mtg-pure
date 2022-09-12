@@ -33,6 +33,7 @@ module MtgPure.Cards (
   island,
   lavaAxe,
   mountain,
+  ornithopter,
   ragingGoblin,
   plains,
   plummet,
@@ -64,6 +65,7 @@ import safe MtgPure.Model.ManaSymbol (ManaSymbol (..))
 import safe MtgPure.Model.ObjectType (OT3, ObjectType (..))
 import safe MtgPure.Model.ObjectType.Kind (
   OTActivatedOrTriggeredAbility,
+  OTArtifactCreature,
   OTCreature,
   OTCreaturePlayerPlaneswalker,
   OTEnchantment,
@@ -175,8 +177,9 @@ allIsDust = mkCard "All Is Dust" $ \_this ->
       All $
         masked [] $
           \player -> All $
-            masked @OTPermanent [colored] $ \perm ->
-              effect $ sacrifice player [is perm]
+            masked @OTPermanent [colored] $
+              \perm ->
+                effect $ sacrifice player [is perm]
  where
   cost = spellCost 7
 
@@ -310,6 +313,19 @@ lavaAxe = mkCard "Lava Axe" $ \this ->
 
 mountain :: Card OTLand
 mountain = mkBasicLand Mountain
+
+ornithopter :: Card OTArtifactCreature
+ornithopter = mkCard "Ornithopter" $ \_this ->
+  ArtifactCreatureDef
+    (toColors ())
+    cost
+    []
+    (Power 0)
+    (Toughness 2)
+    []
+    [Static Flying]
+ where
+  cost = spellCost 0
 
 plains :: Card OTLand
 plains = mkBasicLand Plains

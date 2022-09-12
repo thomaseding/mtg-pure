@@ -98,6 +98,17 @@ import safe MtgPure.Model.ZoneObject (
   ZO,
  )
 
+-- Semantics legend:
+--
+-- "ot is (at least) all of (a,b,c,...)"
+--    Ability ot
+--    Card ot
+--    WithThis zone litfOT ot
+--
+-- "ot is (at least) one of (a,b,c,...)"
+--    Requirement zone ot
+--    ZO zone ot
+
 type IsOT (ot :: Type) = (IndexOT ot, VisitObjectN ot, PrettyType ot)
 
 type IsZO (zone :: Zone) (ot :: Type) =
@@ -121,6 +132,7 @@ data Card (ot :: Type) :: Type where
   TribalCard :: IsOT ot => CardName -> WCard ot -> WithThis 'Battlefield (CardTypeDef 'Tribal) ot -> Card ot
   --
   ArtifactCard :: Card OTArtifact -> Card ()
+  ArtifactCreatureCard :: Card OTArtifactCreature -> Card ()
   CreatureCard :: Card OTCreature -> Card ()
   EnchantmentCard :: Card OTEnchantment -> Card ()
   InstantCard :: Card OTInstant -> Card ()
@@ -134,27 +146,30 @@ instance ConsIndex (Card ot) where
     Card{} -> 1
     TribalCard{} -> 2
     ArtifactCard{} -> 3
-    CreatureCard{} -> 4
-    EnchantmentCard{} -> 5
-    InstantCard{} -> 6
-    LandCard{} -> 7
-    PlaneswalkerCard{} -> 8
-    SorceryCard{} -> 9
+    ArtifactCreatureCard{} -> 4
+    CreatureCard{} -> 5
+    EnchantmentCard{} -> 6
+    InstantCard{} -> 7
+    LandCard{} -> 8
+    PlaneswalkerCard{} -> 9
+    SorceryCard{} -> 10
 
 data CardTypeDef (tribal :: Tribal) (ot :: Type) :: Type where
+  ArtifactDef ::
+    Colors ->
+    Elect (Cost OTArtifact) OTArtifact ->
+    [Ability OTArtifact] ->
+    CardTypeDef 'NonTribal OTArtifact
   ArtifactCreatureDef ::
     Colors ->
     Elect (Cost OTArtifactCreature) OTArtifactCreature ->
     [CreatureType] ->
     Power ->
     Toughness ->
-    [Ability OTArtifactCreature] ->
-    CardTypeDef 'NonTribal OTArtifactCreature
-  ArtifactDef ::
-    Colors ->
-    Elect (Cost OTArtifact) OTArtifact ->
     [Ability OTArtifact] ->
-    CardTypeDef 'NonTribal OTArtifact
+    [Ability OTCreature] ->
+    -- [Ability OTArtifactCreature] -> -- I don't think there exist any abilities in MTG yet that appear only on cards that are both artifacts and creatures.
+    CardTypeDef 'NonTribal OTArtifactCreature
   CreatureDef ::
     Colors ->
     Elect (Cost OTCreature) OTCreature ->
@@ -440,6 +455,7 @@ instance ConsIndex (SetToken ot) where
 
 data StaticAbility (ot :: Type) :: Type where
   As :: IsOT ot => Elect EventListener ot -> StaticAbility ot -- 603.6d: not a triggered ability
+  --Bestow :: Cost ot -> StaticAbility OTEnchantmentCreature ????
   StaticContinuous :: Elect (Effect 'Continuous) ot -> StaticAbility ot -- 611.3
   FirstStrike :: StaticAbility OTCreature
   Flying :: StaticAbility OTCreature
@@ -459,6 +475,7 @@ instance ConsIndex (StaticAbility ot) where
 data Token (ot :: Type) :: Type where
   Token :: WPermanent ot -> Card ot -> Token ot
   ArtifactToken :: Token OTArtifact -> Token ()
+  ArtifactCreatureToken :: Token OTArtifactCreature -> Token ()
   CreatureToken :: Token OTCreature -> Token ()
   EnchantmentToken :: Token OTEnchantment -> Token ()
   LandToken :: Token OTLand -> Token ()
@@ -469,10 +486,11 @@ instance ConsIndex (Token ot) where
   consIndex = \case
     Token{} -> 1
     ArtifactToken{} -> 2
-    CreatureToken{} -> 3
-    EnchantmentToken{} -> 4
-    LandToken{} -> 5
-    PlaneswalkerToken{} -> 6
+    ArtifactCreatureToken{} -> 3
+    CreatureToken{} -> 4
+    EnchantmentToken{} -> 5
+    LandToken{} -> 6
+    PlaneswalkerToken{} -> 7
 
 -- https://www.mtgsalvation.com/forums/magic-fundamentals/magic-rulings/magic-rulings-archives/611601-whenever-what-does-it-mean?comment=3
 -- https://www.reddit.com/r/magicTCG/comments/asmecb/noob_question_difference_between_as_and_when/
@@ -570,26 +588,12 @@ data WithThis (zone :: Zone) (liftOT :: Type -> Type) (ot :: Type) :: Type where
     WithThis zone liftOT (OT1 a)
   T2 ::
     (IsOT (OT2 a b), Inst2 IsObjectType a b) =>
-    (ZO zone (OT2 a b) -> liftOT (OT2 a b)) ->
+    -- TODO: Add a additional full (ZO zone (OT2 a b)) to the input tuple?
+    ((ZO zone (OT1 a), ZO zone (OT1 b)) -> liftOT (OT2 a b)) ->
     WithThis zone liftOT (OT2 a b)
-  T3 ::
-    (IsOT (OT3 a b c), Inst3 IsObjectType a b c) =>
-    (ZO zone (OT3 a b c) -> liftOT (OT3 a b c)) ->
-    WithThis zone liftOT (OT3 a b c)
-  T4 ::
-    (IsOT (OT4 a b c d), Inst4 IsObjectType a b c d) =>
-    (ZO zone (OT4 a b c d) -> liftOT (OT4 a b c d)) ->
-    WithThis zone liftOT (OT4 a b c d)
-  T5 ::
-    (IsOT (OT5 a b c d e), Inst5 IsObjectType a b c d e) =>
-    (ZO zone (OT5 a b c d e) -> liftOT (OT5 a b c d e)) ->
-    WithThis zone liftOT (OT5 a b c d e)
   deriving (Typeable)
 
 instance ConsIndex (WithThis zone liftOT ot) where
   consIndex = \case
     T1{} -> 1
     T2{} -> 2
-    T3{} -> 3
-    T4{} -> 4
-    T5{} -> 5

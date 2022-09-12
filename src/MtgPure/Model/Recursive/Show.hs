@@ -94,14 +94,13 @@ import safe MtgPure.Model.ObjectType (
   OT6,
   ObjectType (..),
  )
-import safe MtgPure.Model.ObjectType.Any (IsAnyType, WAny (..))
-import safe MtgPure.Model.ObjectType.Card (IsCardType, WCard (..))
+import safe MtgPure.Model.ObjectType.Any (WAny (..))
+import safe MtgPure.Model.ObjectType.Card (WCard (..))
 import safe MtgPure.Model.ObjectType.NonCreatureCard (
-  IsNonCreatureCardType,
   WNonCreatureCard (..),
  )
-import safe MtgPure.Model.ObjectType.Permanent (IsPermanentType, WPermanent (..))
-import safe MtgPure.Model.ObjectType.Spell (IsSpellType, WSpell (..))
+import safe MtgPure.Model.ObjectType.Permanent (WPermanent (..))
+import safe MtgPure.Model.ObjectType.Spell (WSpell (..))
 import safe MtgPure.Model.Power (Power)
 import safe MtgPure.Model.PrettyType (PrettyType (..))
 import safe MtgPure.Model.Recursive (
@@ -451,6 +450,9 @@ showCard = \case
   ArtifactCard card -> yesParens $ do
     sCard <- dollar <$> showCard card
     pure $ pure "ArtifactCard" <> sCard
+  ArtifactCreatureCard card -> yesParens $ do
+    sCard <- dollar <$> showCard card
+    pure $ pure "ArtifactCreatureCard" <> sCard
   CreatureCard card -> yesParens $ do
     sCard <- dollar <$> showCard card
     pure $ pure "CreatureCard" <> sCard
@@ -495,14 +497,15 @@ showCardTypeDef = \case
     sCost <- parens <$> showElect cost
     sAbilities <- dollar <$> showAbilities abilities
     pure $ pure "ArtifactDef " <> sColors <> pure " " <> sCost <> sAbilities
-  ArtifactCreatureDef colors cost creatureTypes power toughness abilities ->
+  ArtifactCreatureDef colors cost creatureTypes power toughness artAbils creatAbils ->
     yesParens $ do
       sColors <- parens <$> showColors colors
       sCost <- parens <$> showElect cost
       sCreatureTypes <- parens <$> showCreatureTypes creatureTypes
       sPower <- parens <$> showPower power
       sToughness <- parens <$> showToughness toughness
-      sAbilities <- dollar <$> showAbilities abilities
+      sArtAbils <- parens <$> showAbilities artAbils
+      sCreatAbils <- dollar <$> showAbilities creatAbils
       pure $
         pure "ArtifactCreatureDef "
           <> sColors
@@ -514,7 +517,9 @@ showCardTypeDef = \case
           <> sPower
           <> pure " "
           <> sToughness
-          <> sAbilities
+          <> pure " "
+          <> sArtAbils
+          <> sCreatAbils
   CreatureDef colors cost creatureTypes power toughness abilities ->
     yesParens $ do
       sColors <- parens <$> showColors colors
@@ -1447,6 +1452,9 @@ showToken = \case
   ArtifactToken token -> yesParens $ do
     sToken <- dollar <$> showToken token
     pure $ pure "ArtifactToken" <> sToken
+  ArtifactCreatureToken token -> yesParens $ do
+    sToken <- dollar <$> showToken token
+    pure $ pure "ArtifactCreatureToken" <> sToken
   CreatureToken token -> yesParens $ do
     sToken <- dollar <$> showToken token
     pure $ pure "CreatureToken" <> sToken
@@ -1544,196 +1552,162 @@ showWithMaskedObject showM memo = \case
     pure $ pure "masked @" <> sTy <> pure " " <> sReqs <> sCont'
 
 showWithThis ::
-  forall zone x ot.
+  forall zone liftOT ot.
   IsZO zone ot =>
   PrettyType (ZO zone ot) =>
-  (forall ot'. x ot' -> EnvM ParenItems) ->
+  (forall ot'. liftOT ot' -> EnvM ParenItems) ->
   String ->
-  WithThis zone x ot ->
+  WithThis zone liftOT ot ->
   EnvM ParenItems
 showWithThis showM memo = \case
   T1 cont ->
-    let ty = getType cont in go ty $ showO1 showM memo (cont . toZone)
+    let go = yesParens $ do
+          sTy <- parens <$> showTypeOf (Proxy @ot)
+          sCont <- dollar <$> showO1 showM memo (cont . toZone)
+          pure $ pure "thisObject @" <> sTy <> sCont
+     in go
   T2 cont ->
-    let ty = getType cont in go ty $ showO2 showM memo (cont . toZone)
-  T3 cont ->
-    let ty = getType cont in go ty $ showO3 showM memo (cont . toZone)
-  T4 cont ->
-    let ty = getType cont in go ty $ showO4 showM memo (cont . toZone)
-  T5 cont ->
-    let ty = getType cont in go ty $ showO5 showM memo (cont . toZone)
- where
-  getType :: (ZO zone ot -> x ot) -> Proxy ot
-  getType _ = Proxy
+    let go ::
+          forall a b.
+          (IsOT (OT2 a b), Inst2 IsObjectType a b) =>
+          ((ZO zone (OT1 a), ZO zone (OT1 b)) -> liftOT (OT2 a b)) ->
+          EnvM ParenItems
+        go cont' = yesParens $ do
+          sTy <- parens <$> showTypeOf (Proxy @ot)
+          (objNa, snap) <- newObjectN @a O memo
+          (objNb, _) <- newObjectN @b O memo
+          sObjNa <- parens <$> showObjectN objNa
+          sObjNb <- parens <$> showObjectN objNb
+          let elect = cont' (toZone objNa, toZone objNb)
+          sElect <- dropParens <$> showM elect
+          restoreObject snap
+          pure $
+            pure "thisObject @"
+              <> sTy
+              <> pure " $ \\("
+              <> sObjNa
+              <> pure ", "
+              <> sObjNb
+              <> pure ") -> "
+              <> sElect
+     in go cont
 
-  go ty sCont = yesParens $ do
-    sTy <- parens <$> showTypeOf ty
-    sCont' <- dollar <$> sCont
-    pure $ pure "thisObject @" <> sTy <> sCont'
+showW2 :: forall wit a b. Inst2 IsObjectType a b => Item -> wit (OT2 a b) -> EnvM ParenItems
+showW2 tyName _ = yesParens $ do
+  sTy <- parens <$> showTypeOf (Proxy @(OT2 a b))
+  pure $ pure "tyAp @" <> sTy <> pure " " <> pure tyName <> pure "2"
+
+showW3 :: forall wit a b c. Inst3 IsObjectType a b c => Item -> wit (OT3 a b c) -> EnvM ParenItems
+showW3 tyName _ = yesParens $ do
+  sTy <- parens <$> showTypeOf (Proxy @(OT3 a b c))
+  pure $ pure "tyAp @" <> sTy <> pure " " <> pure tyName <> pure "3"
+
+showW4 :: forall wit a b c d. Inst4 IsObjectType a b c d => Item -> wit (OT4 a b c d) -> EnvM ParenItems
+showW4 tyName _ = yesParens $ do
+  sTy <- parens <$> showTypeOf (Proxy @(OT4 a b c d))
+  pure $ pure "tyAp @" <> sTy <> pure " " <> pure tyName <> pure "4"
+
+showW5 :: forall wit a b c d e. Inst5 IsObjectType a b c d e => Item -> wit (OT5 a b c d e) -> EnvM ParenItems
+showW5 tyName _ = yesParens $ do
+  sTy <- parens <$> showTypeOf (Proxy @(OT5 a b c d e))
+  pure $ pure "tyAp @" <> sTy <> pure " " <> pure tyName <> pure "5"
+
+showW6 :: forall wit a b c d e f. Inst6 IsObjectType a b c d e f => Item -> wit (OT6 a b c d e f) -> EnvM ParenItems
+showW6 tyName _ = yesParens $ do
+  sTy <- parens <$> showTypeOf (Proxy @(OT6 a b c d e f))
+  pure $ pure "tyAp @" <> sTy <> pure " " <> pure tyName <> pure "6"
 
 showWAny :: WAny ot -> EnvM ParenItems
-showWAny any' = case any' of
-  WAnyArtifact -> noParens sAny
-  WAnyCreature -> noParens sAny
-  WAnyEnchantment -> noParens sAny
-  WAnyInstant -> noParens sAny
-  WAnyLand -> noParens sAny
-  WAnyPlaneswalker -> noParens sAny
-  WAnyPlayer -> noParens sAny
-  WAnySorcery -> noParens sAny
-  WAny -> noParens sAny
-  WAny2 -> yesParens $ do
-    let go :: forall a b. Inst2 IsAnyType a b => WAny (OT2 a b) -> Item
-        go _ = fromString $ prettyType (Proxy :: Proxy (OT2 a b))
-    pure $ pure "WAny2 :: @" <> pure (go any')
-  WAny3 -> yesParens $ do
-    let go :: forall a b c. Inst3 IsAnyType a b c => WAny (OT3 a b c) -> Item
-        go _ = fromString $ prettyType (Proxy :: Proxy (OT3 a b c))
-    pure $ pure "WAny3 :: @" <> pure (go any')
-  WAny4 -> yesParens $ do
-    let go ::
-          forall a b c d.
-          Inst4 IsAnyType a b c d =>
-          WAny (OT4 a b c d) ->
-          Item
-        go _ = fromString $ prettyType (Proxy :: Proxy (OT4 a b c d))
-    pure $ pure "WAny4 :: @" <> pure (go any')
-  WAny5 -> yesParens $ do
-    let go ::
-          forall a b c d e.
-          Inst5 IsAnyType a b c d e =>
-          WAny (OT5 a b c d e) ->
-          Item
-        go _ = fromString $ prettyType (Proxy :: Proxy (OT5 a b c d e))
-    pure $ pure "WAny5 :: @" <> pure (go any')
-  WAny6 -> yesParens $ do
-    let go ::
-          forall a b c d e f.
-          Inst6 IsAnyType a b c d e f =>
-          WAny (OT6 a b c d e f) ->
-          Item
-        go _ = fromString $ prettyType (Proxy :: Proxy (OT6 a b c d e f))
-    pure $ pure "WAny6 :: @" <> pure (go any')
+showWAny wit = case wit of
+  WAnyArtifact -> noParens sWit
+  WAnyCreature -> noParens sWit
+  WAnyEnchantment -> noParens sWit
+  WAnyInstant -> noParens sWit
+  WAnyLand -> noParens sWit
+  WAnyPlaneswalker -> noParens sWit
+  WAnyPlayer -> noParens sWit
+  WAnySorcery -> noParens sWit
+  WAny -> noParens sWit
+  WAny2 -> showW2 tyName wit
+  WAny3 -> showW3 tyName wit
+  WAny4 -> showW4 tyName wit
+  WAny5 -> showW5 tyName wit
+  WAny6 -> showW6 tyName wit
  where
-  sAny :: EnvM Items
-  sAny = pure $ pure $ fromString $ show any'
+  tyName :: Item
+  tyName = "WAny"
+  sWit :: EnvM Items
+  sWit = pure $ pure $ fromString $ show wit
 
 showWCard :: WCard ot -> EnvM ParenItems
-showWCard card = case card of
-  WCardArtifact -> noParens sCard
-  WCardCreature -> noParens sCard
-  WCardEnchantment -> noParens sCard
-  WCardInstant -> noParens sCard
-  WCardLand -> noParens sCard
-  WCardPlaneswalker -> noParens sCard
-  WCardSorcery -> noParens sCard
-  WCard -> noParens sCard
-  WCard2 -> yesParens $ do
-    let go :: forall a b. Inst2 IsCardType a b => WCard (OT2 a b) -> Item
-        go _ = fromString $ prettyType (Proxy :: Proxy (OT2 a b))
-    pure $ pure "WCard2 :: @" <> pure (go card)
-  WCard3 -> yesParens $ do
-    let go :: forall a b c. Inst3 IsCardType a b c => WCard (OT3 a b c) -> Item
-        go _ = fromString $ prettyType (Proxy :: Proxy (OT3 a b c))
-    pure $ pure "WCard3 :: @" <> pure (go card)
+showWCard wit = case wit of
+  WCardArtifact -> noParens sWit
+  WCardCreature -> noParens sWit
+  WCardEnchantment -> noParens sWit
+  WCardInstant -> noParens sWit
+  WCardLand -> noParens sWit
+  WCardPlaneswalker -> noParens sWit
+  WCardSorcery -> noParens sWit
+  WCard -> noParens sWit
+  WCard2 -> showW2 tyName wit
+  WCard3 -> showW3 tyName wit
  where
-  sCard :: EnvM Items
-  sCard = pure $ pure $ fromString $ show card
+  tyName :: Item
+  tyName = "WCard"
+  sWit :: EnvM Items
+  sWit = pure $ pure $ fromString $ show wit
 
 showWNonCreatureCard :: WNonCreatureCard ot -> EnvM ParenItems
-showWNonCreatureCard nonCreature = case nonCreature of
-  WNonCreatureArtifact -> noParens sNonCreature
-  WNonCreatureEnchantment -> noParens sNonCreature
-  WNonCreatureInstant -> noParens sNonCreature
-  WNonCreatureLand -> noParens sNonCreature
-  WNonCreaturePlaneswalker -> noParens sNonCreature
-  WNonCreatureSorcery -> noParens sNonCreature
-  WNonCreatureCard -> noParens sNonCreature
-  WNonCreatureCard2 -> yesParens $ do
-    let go ::
-          forall a b.
-          Inst2 IsNonCreatureCardType a b =>
-          WNonCreatureCard (OT2 a b) ->
-          Item
-        go _ = fromString $ prettyType (Proxy :: Proxy (OT2 a b))
-    pure $ pure "WNonCreatureCard2 :: @" <> pure (go nonCreature)
-  WNonCreatureCard3 -> yesParens $ do
-    let go ::
-          forall a b c.
-          Inst3 IsNonCreatureCardType a b c =>
-          WNonCreatureCard (OT3 a b c) ->
-          Item
-        go _ = fromString $ prettyType (Proxy :: Proxy (OT3 a b c))
-    pure $ pure "WNonCreatureCard3 :: @" <> pure (go nonCreature)
+showWNonCreatureCard wit = case wit of
+  WNonCreatureArtifact -> noParens sWit
+  WNonCreatureEnchantment -> noParens sWit
+  WNonCreatureInstant -> noParens sWit
+  WNonCreatureLand -> noParens sWit
+  WNonCreaturePlaneswalker -> noParens sWit
+  WNonCreatureSorcery -> noParens sWit
+  WNonCreatureCard -> noParens sWit
+  WNonCreatureCard2 -> showW2 tyName wit
+  WNonCreatureCard3 -> showW3 tyName wit
  where
-  sNonCreature :: EnvM Items
-  sNonCreature = pure $ pure $ fromString $ show nonCreature
+  tyName :: Item
+  tyName = "WNonCreatureCard"
+  sWit :: EnvM Items
+  sWit = pure $ pure $ fromString $ show wit
 
 showWPermanent :: WPermanent ot -> EnvM ParenItems
-showWPermanent permanent = case permanent of
-  WPermanentArtifact -> noParens sPermanent
-  WPermanentCreature -> noParens sPermanent
-  WPermanentEnchantment -> noParens sPermanent
-  WPermanentLand -> noParens sPermanent
-  WPermanentPlaneswalker -> noParens sPermanent
-  WPermanent -> noParens sPermanent
-  WPermanent2 -> yesParens $ do
-    let go ::
-          forall a b.
-          Inst2 IsPermanentType a b =>
-          WPermanent (OT2 a b) ->
-          Item
-        go _ = fromString $ prettyType (Proxy :: Proxy (OT2 a b))
-    pure $ pure "WPermanent2 :: @" <> pure (go permanent)
-  WPermanent3 -> yesParens $ do
-    let go ::
-          forall a b c.
-          Inst3 IsPermanentType a b c =>
-          WPermanent (OT3 a b c) ->
-          Item
-        go _ = fromString $ prettyType (Proxy :: Proxy (OT3 a b c))
-    pure $ pure "WPermanent3 :: @" <> pure (go permanent)
-  WPermanent4 -> yesParens $ do
-    let go ::
-          forall a b c d.
-          Inst4 IsPermanentType a b c d =>
-          WPermanent (OT4 a b c d) ->
-          Item
-        go _ = fromString $ prettyType (Proxy :: Proxy (OT4 a b c d))
-    pure $ pure "WPermanent4 :: @" <> pure (go permanent)
+showWPermanent wit = case wit of
+  WPermanentArtifact -> noParens sWit
+  WPermanentCreature -> noParens sWit
+  WPermanentEnchantment -> noParens sWit
+  WPermanentLand -> noParens sWit
+  WPermanentPlaneswalker -> noParens sWit
+  WPermanent -> noParens sWit
+  WPermanent2 -> showW2 tyName wit
+  WPermanent3 -> showW3 tyName wit
+  WPermanent4 -> showW4 tyName wit
  where
-  sPermanent :: EnvM Items
-  sPermanent = pure $ pure $ fromString $ show permanent
+  tyName :: Item
+  tyName = "WPermanent"
+  sWit :: EnvM Items
+  sWit = pure $ pure $ fromString $ show wit
 
 showWSpell :: WSpell ot -> EnvM ParenItems
-showWSpell spell = case spell of
-  WSpellArtifact -> noParens sSpell
-  WSpellCreature -> noParens sSpell
-  WSpellEnchantment -> noParens sSpell
-  WSpellInstant -> noParens sSpell
-  WSpellPlaneswalker -> noParens sSpell
-  WSpellSorcery -> noParens sSpell
-  WSpell -> noParens sSpell
-  WSpell2 -> yesParens $ do
-    let go :: forall a b. Inst2 IsSpellType a b => WSpell (OT2 a b) -> Item
-        go _ = fromString $ prettyType (Proxy :: Proxy (OT2 a b))
-    pure $ pure "WSpell2 :: @" <> pure (go spell)
-  WSpell3 -> yesParens $ do
-    let go ::
-          forall a b c. Inst3 IsSpellType a b c => WSpell (OT3 a b c) -> Item
-        go _ = fromString $ prettyType (Proxy :: Proxy (OT3 a b c))
-    pure $ pure "WSpell3 :: @" <> pure (go spell)
-  WSpell4 -> yesParens $ do
-    let go ::
-          forall a b c d.
-          Inst4 IsSpellType a b c d =>
-          WSpell (OT4 a b c d) ->
-          Item
-        go _ = fromString $ prettyType (Proxy :: Proxy (OT4 a b c d))
-    pure $ pure "WSpell4 :: @" <> pure (go spell)
+showWSpell wit = case wit of
+  WSpellArtifact -> noParens sWit
+  WSpellCreature -> noParens sWit
+  WSpellEnchantment -> noParens sWit
+  WSpellInstant -> noParens sWit
+  WSpellPlaneswalker -> noParens sWit
+  WSpellSorcery -> noParens sWit
+  WSpell -> noParens sWit
+  WSpell2 -> showW2 tyName wit
+  WSpell3 -> showW3 tyName wit
+  WSpell4 -> showW4 tyName wit
  where
-  sSpell :: EnvM Items
-  sSpell = pure $ pure $ fromString $ show spell
+  tyName :: Item
+  tyName = "WSpell"
+  sWit :: EnvM Items
+  sWit = pure $ pure $ fromString $ show wit
 
 showZoneObject :: IsZO zone ot => ZO zone ot -> EnvM ParenItems
 showZoneObject = \case

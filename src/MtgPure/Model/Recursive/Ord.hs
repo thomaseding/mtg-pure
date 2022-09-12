@@ -360,6 +360,9 @@ ordCard x = case x of
   ArtifactCard card1 -> \case
     ArtifactCard card2 -> ordCard card1 card2
     y -> compareIndexM x y
+  ArtifactCreatureCard card1 -> \case
+    ArtifactCreatureCard card2 -> ordCard card1 card2
+    y -> compareIndexM x y
   CreatureCard card1 -> \case
     CreatureCard card2 -> ordCard card1 card2
     y -> compareIndexM x y
@@ -389,16 +392,17 @@ ordCardTypeDef x = case x of
         , ordAbilities abilities1 abilities2
         ]
     y -> compareIndexM x y
-  ArtifactCreatureDef colors1 cost1 types1 power1 toughness1 abilities1 ->
+  ArtifactCreatureDef colors1 cost1 types1 power1 toughness1 artAbils1 creatAbils1 ->
     \case
-      ArtifactCreatureDef colors2 cost2 types2 power2 toughness2 abilities2 ->
+      ArtifactCreatureDef colors2 cost2 types2 power2 toughness2 artAbils2 creatAbils2 ->
         seqM
           [ ordColors colors1 colors2
           , ordElectE cost1 cost2
           , pure $ compare types1 types2
           , pure $ compare power1 power2
           , pure $ compare toughness1 toughness2
-          , ordAbilities abilities1 abilities2
+          , ordAbilities artAbils1 artAbils2
+          , ordAbilities creatAbils1 creatAbils2
           ]
       y -> compareIndexM x y
   CreatureDef colors1 cost1 types1 power1 toughness1 abilities1 -> \case
@@ -810,18 +814,17 @@ ordO1 ::
   forall zone a x ot.
   (Typeable x, IsZO zone ot, Inst1 IsObjectType a, IsZO zone (OT1 a)) =>
   (x -> x -> EnvM Ordering) ->
-  (Object a -> ObjectN (OT1 a)) ->
   [Requirement zone (OT1 a)] ->
   [Requirement zone ot] ->
   (ZO zone (OT1 a) -> x) ->
   (ZO zone ot -> x) ->
   EnvM Ordering
-ordO1 ordM mkO reqs1 reqs2 cont1 cont2 = case cast' (reqs2, cont2) of
+ordO1 ordM reqs1 reqs2 cont1 cont2 = case cast' (reqs2, cont2) of
   Nothing -> compareOT @(OT1 a) (Proxy :: Proxy ot)
   Just (reqs2, cont2) ->
     seqM
       [ ordRequirements reqs1 reqs2
-      , withObjectCont @a ordM mkO (cont1 . toZone) (cont2 . toZone)
+      , withObjectCont @a ordM O (cont1 . toZone) (cont2 . toZone)
       ]
  where
   cast' ::
@@ -1111,6 +1114,9 @@ ordToken x = case x of
   ArtifactToken token1 -> \case
     ArtifactToken token2 -> ordToken token1 token2
     y -> compareIndexM x y
+  ArtifactCreatureToken token1 -> \case
+    ArtifactCreatureToken token2 -> ordToken token1 token2
+    y -> compareIndexM x y
   CreatureToken token1 -> \case
     CreatureToken token2 -> ordToken token1 token2
     y -> compareIndexM x y
@@ -1142,7 +1148,7 @@ ordWithLinkedObject ordM x = case x of
     y -> compareIndexM x y
   L1 NonProxyElectEffectOneShot reqs1 cont1 -> \case
     L1 NonProxyElectEffectOneShot reqs2 cont2 ->
-      ordO1 ordM O reqs1 reqs2 cont1 cont2
+      ordO1 ordM reqs1 reqs2 cont1 cont2
   L2 NonProxyElectEffectOneShot reqs1 cont1 -> \case
     L2 NonProxyElectEffectOneShot reqs2 cont2 ->
       ordO2 ordM reqs1 reqs2 cont1 cont2
@@ -1163,7 +1169,7 @@ ordWithMaskedObjectElectE ::
   EnvM Ordering
 ordWithMaskedObjectElectE x = case x of
   M1 reqs1 cont1 -> \case
-    M1 reqs2 cont2 -> ordO1 ordM O reqs1 reqs2 cont1 cont2
+    M1 reqs2 cont2 -> ordO1 ordM reqs1 reqs2 cont1 cont2
     y -> pure $ compare (consIndex x) (consIndex y)
   M2 reqs1 cont1 -> \case
     M2 reqs2 cont2 -> ordO2 ordM reqs1 reqs2 cont1 cont2
@@ -1181,28 +1187,39 @@ ordWithMaskedObjectElectE x = case x of
   ordM = ordElectE
 
 ordWithThisAbility ::
+  forall zone ot.
   IsZO zone ot =>
   WithThis zone Ability ot ->
   WithThis zone Ability ot ->
   EnvM Ordering
 ordWithThisAbility = \case
   T1 cont1 -> \case
-    T1 cont2 -> ordO1 ordM O reqs1 reqs2 cont1 cont2
+    T1 cont2 -> ordO1 ordM reqs1 reqs2 cont1 cont2
   T2 cont1 -> \case
-    T2 cont2 -> ordO2 ordM reqs1 reqs2 cont1 cont2
-  T3 cont1 -> \case
-    T3 cont2 -> ordO3 ordM reqs1 reqs2 cont1 cont2
-  T4 cont1 -> \case
-    T4 cont2 -> ordO4 ordM reqs1 reqs2 cont1 cont2
-  T5 cont1 -> \case
-    T5 cont2 -> ordO5 ordM reqs1 reqs2 cont1 cont2
+    T2 cont2 ->
+      let go ::
+            forall a b.
+            (IsOT (OT2 a b), Inst2 IsObjectType a b) =>
+            ((ZO zone (OT1 a), ZO zone (OT1 b)) -> Ability (OT2 a b)) ->
+            ((ZO zone (OT1 a), ZO zone (OT1 b)) -> Ability (OT2 a b)) ->
+            EnvM Ordering
+          go cont1 cont2 = do
+            objNa' <- newObjectN @a O
+            objNb' <- newObjectN @b O
+            let objNa = toZone objNa'
+            let objNb = toZone objNb'
+            let ability1 = cont1 (objNa, objNb)
+            let ability2 = cont2 (objNa, objNb)
+            ordM ability1 ability2
+       in go cont1 cont2
  where
-  ordM :: IsOT ot => Ability ot -> Ability ot -> EnvM Ordering
+  ordM :: IsOT ot' => Ability ot' -> Ability ot' -> EnvM Ordering
   ordM = ordAbility
   reqs1 = []
   reqs2 = []
 
 ordWithThisCardTypeDef ::
+  forall tribal zone ot.
   IsZO zone ot =>
   Typeable tribal =>
   WithThis zone (CardTypeDef tribal) ot ->
@@ -1210,15 +1227,24 @@ ordWithThisCardTypeDef ::
   EnvM Ordering
 ordWithThisCardTypeDef = \case
   T1 cont1 -> \case
-    T1 cont2 -> ordO1 ordM O reqs1 reqs2 cont1 cont2
+    T1 cont2 -> ordO1 ordM reqs1 reqs2 cont1 cont2
   T2 cont1 -> \case
-    T2 cont2 -> ordO2 ordM reqs1 reqs2 cont1 cont2
-  T3 cont1 -> \case
-    T3 cont2 -> ordO3 ordM reqs1 reqs2 cont1 cont2
-  T4 cont1 -> \case
-    T4 cont2 -> ordO4 ordM reqs1 reqs2 cont1 cont2
-  T5 cont1 -> \case
-    T5 cont2 -> ordO5 ordM reqs1 reqs2 cont1 cont2
+    T2 cont2 ->
+      let go ::
+            forall a b.
+            (IsOT (OT2 a b), Inst2 IsObjectType a b) =>
+            ((ZO zone (OT1 a), ZO zone (OT1 b)) -> CardTypeDef tribal (OT2 a b)) ->
+            ((ZO zone (OT1 a), ZO zone (OT1 b)) -> CardTypeDef tribal (OT2 a b)) ->
+            EnvM Ordering
+          go cont1 cont2 = do
+            objNa' <- newObjectN @a O
+            objNb' <- newObjectN @b O
+            let objNa = toZone objNa'
+            let objNb = toZone objNb'
+            let def1 = cont1 (objNa, objNb)
+            let def2 = cont2 (objNa, objNb)
+            ordM def1 def2
+       in go cont1 cont2
  where
   ordM = ordCardTypeDef
   reqs1 = []
