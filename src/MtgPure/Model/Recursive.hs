@@ -86,7 +86,6 @@ import safe MtgPure.Model.ObjectType.Index (IndexOT)
 import safe MtgPure.Model.ObjectType.Kind
   ( OTArtifact,
     OTArtifactCreature,
-    OTCard,
     OTCreature,
     OTEnchantment,
     OTInstant,
@@ -135,13 +134,13 @@ data Card :: Type -> Type where
   Card :: CardName -> WCard ot -> WithThis (CardTypeDef 'NonTribal) ot -> Card ot
   TribalCard :: CardName -> WCard ot -> WithThis (CardTypeDef 'Tribal) ot -> Card ot
   --
-  ArtifactCard :: Card OTArtifact -> Card OTCard
-  CreatureCard :: Card OTCreature -> Card OTCard
-  EnchantmentCard :: Card OTEnchantment -> Card OTCard
-  InstantCard :: Card OTInstant -> Card OTCard
-  LandCard :: Card OTLand -> Card OTCard
-  PlaneswalkerCard :: Card OTPlaneswalker -> Card OTCard
-  SorceryCard :: Card OTSorcery -> Card OTCard
+  ArtifactCard :: Card OTArtifact -> Card ()
+  CreatureCard :: Card OTCreature -> Card ()
+  EnchantmentCard :: Card OTEnchantment -> Card ()
+  InstantCard :: Card OTInstant -> Card ()
+  LandCard :: Card OTLand -> Card ()
+  PlaneswalkerCard :: Card OTPlaneswalker -> Card ()
+  SorceryCard :: Card OTSorcery -> Card ()
   deriving (Typeable)
 
 instance ConsIndex (Card ot) where
@@ -445,14 +444,23 @@ instance ConsIndex (StaticAbility ot) where
     Haste {} -> 5
     Suspend {} -> 6
 
--- TODO: This needs a witness for a token object (`WToken`)
 data Token :: Type -> Type where
-  Token :: Card ot -> Token ot
+  Token :: WPermanent ot -> Card ot -> Token ot
+  ArtifactToken :: Token OTArtifact -> Token ()
+  CreatureToken :: Token OTCreature -> Token ()
+  EnchantmentToken :: Token OTEnchantment -> Token ()
+  LandToken :: Token OTLand -> Token ()
+  PlaneswalkerToken :: Token OTPlaneswalker -> Token ()
   deriving (Typeable)
 
 instance ConsIndex (Token ot) where
   consIndex = \case
     Token {} -> 1
+    ArtifactToken {} -> 2
+    CreatureToken {} -> 3
+    EnchantmentToken {} -> 4
+    LandToken {} -> 5
+    PlaneswalkerToken {} -> 6
 
 -- https://www.mtgsalvation.com/forums/magic-fundamentals/magic-rulings/magic-rulings-archives/611601-whenever-what-does-it-mean?comment=3
 -- https://www.reddit.com/r/magicTCG/comments/asmecb/noob_question_difference_between_as_and_when/

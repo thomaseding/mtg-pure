@@ -465,25 +465,25 @@ showCard = \case
   --
   ArtifactCard card -> yesParens $ do
     sCard <- dollar <$> showCard card
-    pure $ pure "Artifact" <> sCard
+    pure $ pure "ArtifactCard" <> sCard
   CreatureCard card -> yesParens $ do
     sCard <- dollar <$> showCard card
-    pure $ pure "Creature" <> sCard
+    pure $ pure "CreatureCard" <> sCard
   EnchantmentCard card -> yesParens $ do
     sCard <- dollar <$> showCard card
-    pure $ pure "Enchantment" <> sCard
+    pure $ pure "EnchantmentCard" <> sCard
   InstantCard card -> yesParens $ do
     sCard <- dollar <$> showCard card
-    pure $ pure "Instant" <> sCard
+    pure $ pure "InstantCard" <> sCard
   LandCard card -> yesParens $ do
     sCard <- dollar <$> showCard card
-    pure $ pure "Land" <> sCard
+    pure $ pure "LandCard" <> sCard
   PlaneswalkerCard card -> yesParens $ do
     sCard <- dollar <$> showCard card
-    pure $ pure "Planeswalker" <> sCard
+    pure $ pure "PlaneswalkerCard" <> sCard
   SorceryCard card -> yesParens $ do
     sCard <- dollar <$> showCard card
-    pure $ pure "Sorcery" <> sCard
+    pure $ pure "SorceryCard" <> sCard
   where
     showCard' consName (CardName name) wCard withCardTypeDef = yesParens $ do
       depth <- State.gets cardDepth
@@ -1361,9 +1361,26 @@ showTimePoint :: TimePoint p -> EnvM ParenItems
 showTimePoint = yesParens . pure . pure . fromString . show
 
 showToken :: Token ot -> EnvM ParenItems
-showToken (Token card) = yesParens $ do
-  sCard <- dollar <$> showCard card
-  pure $ pure "Token" <> sCard
+showToken = \case
+  Token wPerm card -> yesParens $ do
+    sWPerm <- parens <$> showWPermanent wPerm
+    sCard <- dollar <$> showCard card
+    pure $ pure "Token " <> sWPerm <> sCard
+  ArtifactToken token -> yesParens $ do
+    sToken <- dollar <$> showToken token
+    pure $ pure "ArtifactToken" <> sToken
+  CreatureToken token -> yesParens $ do
+    sToken <- dollar <$> showToken token
+    pure $ pure "CreatureToken" <> sToken
+  EnchantmentToken token -> yesParens $ do
+    sToken <- dollar <$> showToken token
+    pure $ pure "EnchantmentToken" <> sToken
+  LandToken token -> yesParens $ do
+    sToken <- dollar <$> showToken token
+    pure $ pure "LandToken" <> sToken
+  PlaneswalkerToken token -> yesParens $ do
+    sToken <- dollar <$> showToken token
+    pure $ pure "PlaneswalkerToken" <> sToken
 
 showToughness :: Toughness -> EnvM ParenItems
 showToughness = yesParens . pure . pure . fromString . show

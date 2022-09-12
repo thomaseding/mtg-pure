@@ -1112,9 +1112,25 @@ ordTimePoint x = case x of
     y -> compareIndexM x y
 
 ordToken :: Token ot -> Token ot -> EnvM Ordering
-ordToken = \case
-  Token card1 -> \case
-    Token card2 -> ordCard card1 card2
+ordToken x = case x of
+  Token wPerm1 card1 -> \case
+    Token wPerm2 card2 -> seqM [ordWPermanent wPerm1 wPerm2, ordCard card1 card2]
+    y -> compareIndexM x y
+  ArtifactToken token1 -> \case
+    ArtifactToken token2 -> ordToken token1 token2
+    y -> compareIndexM x y
+  CreatureToken token1 -> \case
+    CreatureToken token2 -> ordToken token1 token2
+    y -> compareIndexM x y
+  EnchantmentToken token1 -> \case
+    EnchantmentToken token2 -> ordToken token1 token2
+    y -> compareIndexM x y
+  LandToken token1 -> \case
+    LandToken token2 -> ordToken token1 token2
+    y -> compareIndexM x y
+  PlaneswalkerToken token1 -> \case
+    PlaneswalkerToken token2 -> ordToken token1 token2
+    y -> compareIndexM x y
 
 ordTriggeredAbility :: forall ot. TriggeredAbility ot -> TriggeredAbility ot -> EnvM Ordering
 ordTriggeredAbility = \case

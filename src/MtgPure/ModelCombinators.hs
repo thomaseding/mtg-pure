@@ -143,7 +143,7 @@ import safe MtgPure.Model.Recursive
     Requirement (..),
     SetCard (..),
     SetToken (..),
-    Token (Token),
+    Token (..),
     TypeableOT,
     TypeableOT2,
     WithLinkedCard (..),
@@ -170,9 +170,9 @@ import safe MtgPure.Model.VisitObjectN (VisitObjectN)
 import MtgPure.Model.Zone (Zone (..))
 
 class ToCard card where
-  toCard :: card -> Card OTCard
+  toCard :: card -> Card ()
 
-instance ToCard (Card OTCard) where
+instance ToCard (Card ()) where
   toCard = id
 
 instance ToCard (Card OTArtifact) where
@@ -197,9 +197,9 @@ instance ToCard (Card OTSorcery) where
   toCard = SorceryCard
 
 class ToSetCard card where
-  toSetCard :: card -> SetCard OTCard
+  toSetCard :: card -> SetCard ()
 
-instance ToSetCard (SetCard OTCard) where
+instance ToSetCard (SetCard ()) where
   toSetCard = id
 
 instance ToSetCard (SetCard OTArtifact) where
@@ -224,58 +224,46 @@ instance ToSetCard (SetCard OTSorcery) where
   toSetCard (SetCard s r c) = SetCard s r $ SorceryCard c
 
 class ToToken token where
-  toToken :: token -> Token OTCard
+  toToken :: token -> Token ()
 
-instance ToToken (Token OTCard) where
+instance ToToken (Token ()) where
   toToken = id
 
 instance ToToken (Token OTArtifact) where
-  toToken (Token x) = Token $ toCard x
+  toToken (Token _ x) = ArtifactToken $ Token coPermanent x
 
 instance ToToken (Token OTCreature) where
-  toToken (Token x) = Token $ toCard x
+  toToken (Token _ x) = CreatureToken $ Token coPermanent x
 
 instance ToToken (Token OTEnchantment) where
-  toToken (Token x) = Token $ toCard x
-
-instance ToToken (Token OTInstant) where
-  toToken (Token x) = Token $ toCard x
+  toToken (Token _ x) = EnchantmentToken $ Token coPermanent x
 
 instance ToToken (Token OTLand) where
-  toToken (Token x) = Token $ toCard x
+  toToken (Token _ x) = LandToken $ Token coPermanent x
 
 instance ToToken (Token OTPlaneswalker) where
-  toToken (Token x) = Token $ toCard x
-
-instance ToToken (Token OTSorcery) where
-  toToken (Token x) = Token $ toCard x
+  toToken (Token _ x) = PlaneswalkerToken $ Token coPermanent x
 
 class ToSetToken token where
-  toSetToken :: token -> SetToken OTCard
+  toSetToken :: token -> SetToken ()
 
-instance ToSetToken (SetToken OTCard) where
+instance ToSetToken (SetToken ()) where
   toSetToken = id
 
 instance ToSetToken (SetToken OTArtifact) where
-  toSetToken (SetToken s r (Token x)) = SetToken s r $ Token $ toCard x
+  toSetToken (SetToken s r (Token _ x)) = SetToken s r $ ArtifactToken $ Token coPermanent x
 
 instance ToSetToken (SetToken OTCreature) where
-  toSetToken (SetToken s r (Token x)) = SetToken s r $ Token $ toCard x
+  toSetToken (SetToken s r (Token _ x)) = SetToken s r $ CreatureToken $ Token coPermanent x
 
 instance ToSetToken (SetToken OTEnchantment) where
-  toSetToken (SetToken s r (Token x)) = SetToken s r $ Token $ toCard x
-
-instance ToSetToken (SetToken OTInstant) where
-  toSetToken (SetToken s r (Token x)) = SetToken s r $ Token $ toCard x
+  toSetToken (SetToken s r (Token _ x)) = SetToken s r $ EnchantmentToken $ Token coPermanent x
 
 instance ToSetToken (SetToken OTLand) where
-  toSetToken (SetToken s r (Token x)) = SetToken s r $ Token $ toCard x
+  toSetToken (SetToken s r (Token _ x)) = SetToken s r $ LandToken $ Token coPermanent x
 
 instance ToSetToken (SetToken OTPlaneswalker) where
-  toSetToken (SetToken s r (Token x)) = SetToken s r $ Token $ toCard x
-
-instance ToSetToken (SetToken OTSorcery) where
-  toSetToken (SetToken s r (Token x)) = SetToken s r $ Token $ toCard x
+  toSetToken (SetToken s r (Token _ x)) = SetToken s r $ PlaneswalkerToken $ Token coPermanent x
 
 class Typeable x => CoNonProxy x where
   coNonProxy :: NonProxy x
@@ -698,8 +686,8 @@ instance (AsWithThis ot, CoCard ot, IndexOT ot, VisitObjectN ot) => MkCard 'NonT
 instance (AsWithThis ot, CoCard ot, IndexOT ot, VisitObjectN ot) => MkCard 'Tribal ot where
   mkCard name = TribalCard name coCard . thisObject
 
-mkToken :: MkCard tribal ot => CardName -> (ObjectN ot -> CardTypeDef tribal ot) -> Token ot
-mkToken name = Token . mkCard name
+mkToken :: (CoPermanent ot, MkCard tribal ot) => CardName -> (ObjectN ot -> CardTypeDef tribal ot) -> Token ot
+mkToken name = Token coPermanent . mkCard name
 
 hasAbility :: AsWithThis ot => (ObjectN ot -> Ability ot) -> Requirement (ObjectN ot)
 hasAbility = HasAbility . thisObject

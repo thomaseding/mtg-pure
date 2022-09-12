@@ -43,6 +43,7 @@ module MtgPure.Model.ObjectType.Kind
     OTSorcery,
     OTSpell,
     OTStaticAbility,
+    OTToken,
     OTTriggeredAbility,
   )
 where
@@ -83,6 +84,8 @@ type OTSorcery = OT '( '(), 'OTSorcery)
 type OTStaticAbility = OT '( '(), 'OTStaticAbility)
 
 type OTTriggeredAbility = OT '( '(), 'OTTriggeredAbility)
+
+type OTToken = OTPermanent
 
 type OTAbility =
   OT
