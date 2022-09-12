@@ -37,7 +37,7 @@ import safe Data.Inst
   )
 import safe Data.Proxy (Proxy (Proxy))
 import safe Data.Typeable (typeRep)
-import safe MtgPure.Model.IsObjectType (IsObjectType (singObjectType))
+import safe MtgPure.Model.IsObjectType (IsObjectType (litObjectType))
 import safe MtgPure.Model.ObjectN (ObjectN (..))
 import safe MtgPure.Model.ObjectN.Type
   ( OAny,
@@ -76,10 +76,10 @@ class PrettyType a where
   prettyType :: Proxy a -> String
 
 instance IsObjectType a => PrettyType a where
-  prettyType = show . singObjectType
+  prettyType = show . litObjectType
 
 instance IsObjectType a => PrettyType (OT1 a) where
-  prettyType _ = case singObjectType (Proxy @a) of
+  prettyType _ = case litObjectType (Proxy @a) of
     OTActivatedAbility -> "OTActivatedAbility"
     OTArtifact -> "OTArtifact"
     OTCreature -> "OTCreature"
@@ -94,7 +94,7 @@ instance IsObjectType a => PrettyType (OT1 a) where
     OTTriggeredAbility -> "OTTriggeredAbility"
 
 instance IsObjectType a => PrettyType (ObjectN (OT1 a)) where
-  prettyType _ = case singObjectType (Proxy @a) of
+  prettyType _ = case litObjectType (Proxy @a) of
     OTActivatedAbility -> "OActivatedAbility"
     OTArtifact -> "OArtifact"
     OTCreature -> "OCreature"

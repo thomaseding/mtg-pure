@@ -692,11 +692,11 @@ addManaAnyColor player amount =
 class (AsWithThis ot, Typeable ot, IndexOT ot, VisitObjectN ot) => MkCard t ot where
   mkCard :: CardName -> (ObjectN ot -> CardTypeDef t ot) -> Card ot
 
-instance (AsWithThis ot, Typeable ot, IndexOT ot, VisitObjectN ot) => MkCard 'NonTribal ot where
-  mkCard name = Card name . thisObject
+instance (AsWithThis ot, CoCard ot, IndexOT ot, VisitObjectN ot) => MkCard 'NonTribal ot where
+  mkCard name = Card name coCard . thisObject
 
-instance (AsWithThis ot, Typeable ot, IndexOT ot, VisitObjectN ot) => MkCard 'Tribal ot where
-  mkCard name = TribalCard name . thisObject
+instance (AsWithThis ot, CoCard ot, IndexOT ot, VisitObjectN ot) => MkCard 'Tribal ot where
+  mkCard name = TribalCard name coCard . thisObject
 
 mkToken :: MkCard tribal ot => CardName -> (ObjectN ot -> CardTypeDef tribal ot) -> Token ot
 mkToken name = Token . mkCard name

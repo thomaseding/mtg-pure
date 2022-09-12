@@ -107,7 +107,7 @@ import safe MtgPure.Model.Toughness (Toughness)
 import safe MtgPure.Model.Tribal (Tribal (..))
 import safe MtgPure.Model.Variable (Variable)
 import safe MtgPure.Model.VisitObjectN (VisitObjectN)
-import safe MtgPure.Model.Zone (Zone (..))
+import safe MtgPure.Model.Zone (IsZone (..), Zone (..))
 
 type TypeableOT ot =
   ( Typeable ot,
@@ -132,8 +132,8 @@ instance ConsIndex (Ability ot) where
     Triggered {} -> 3
 
 data Card :: Type -> Type where
-  Card :: CardName -> WithThis (CardTypeDef 'NonTribal) ot -> Card ot
-  TribalCard :: CardName -> WithThis (CardTypeDef 'Tribal) ot -> Card ot
+  Card :: CardName -> WCard ot -> WithThis (CardTypeDef 'NonTribal) ot -> Card ot
+  TribalCard :: CardName -> WCard ot -> WithThis (CardTypeDef 'Tribal) ot -> Card ot
   --
   ArtifactCard :: Card OTArtifact -> Card OTCard
   CreatureCard :: Card OTCreature -> Card OTCard
@@ -372,8 +372,6 @@ instance ConsIndex (NonProxy x) where
     NonProxyElectEffectOneShot -> 1
 
 -- Idea is to allow both these:
--- Requirement (Library (ObjectN ot))
--- Requirement (ObjectN ot)
 data Requirement :: Type -> Type where
   ControlledBy :: OPlayer -> Requirement (ObjectN ot)
   HasAbility :: WithThis Ability ot -> Requirement (ObjectN ot) -- Non-unique differing representations will not be considered the same
@@ -558,10 +556,11 @@ instance ConsIndex (ZoneCard zone ot) where
   consIndex = \case
     LibraryCard {} -> 1
 
-instance PrettyType ot => PrettyType (ZoneCard 'LibraryZone ot) where
-  prettyType _ = "ZoneCard 'LibraryZone " ++ open ++ s ++ close
+instance (IsZone zone, PrettyType ot) => PrettyType (ZoneCard zone ot) where
+  prettyType _ = "ZoneCard '" ++ sZone ++ " " ++ open ++ sOT ++ close
     where
-      s = prettyType (Proxy @ot)
-      (open, close) = case ' ' `elem` s of
+      sZone = show $ litZone (Proxy @zone)
+      sOT = prettyType (Proxy @ot)
+      (open, close) = case ' ' `elem` sOT of
         True -> ("(", ")")
         False -> ("", "")

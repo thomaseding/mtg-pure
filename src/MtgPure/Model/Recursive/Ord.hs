@@ -355,11 +355,21 @@ ordAbilities = listM ordAbility
 
 ordCard :: Card ot -> Card ot -> EnvM Ordering
 ordCard x = case x of
-  Card name1 def1 -> \case
-    Card name2 def2 -> seqM [pure $ compare name1 name2, ordWithThisCardTypeDef def1 def2]
+  Card name1 wCard1 def1 -> \case
+    Card name2 wCard2 def2 ->
+      seqM
+        [ pure $ compare name1 name2,
+          ordWCard wCard1 wCard2,
+          ordWithThisCardTypeDef def1 def2
+        ]
     y -> compareIndexM x y
-  TribalCard name1 def1 -> \case
-    TribalCard name2 def2 -> seqM [pure $ compare name1 name2, ordWithThisCardTypeDef def1 def2]
+  TribalCard name1 wCard1 def1 -> \case
+    TribalCard name2 wCard2 def2 ->
+      seqM
+        [ pure $ compare name1 name2,
+          ordWCard wCard1 wCard2,
+          ordWithThisCardTypeDef def1 def2
+        ]
     y -> compareIndexM x y
   --
   ArtifactCard card1 -> \case
@@ -776,153 +786,158 @@ ordManaPool :: ManaPool -> ManaPool -> EnvM Ordering
 ordManaPool x y = pure $ compare x y
 
 ordCardO1 ::
-  forall a x ot'.
-  (Typeable x, TypeableOT ot', Inst1 IsObjectType a, TypeableOT (OT1 a)) =>
+  forall zone a x ot.
+  (Typeable zone, Typeable x, TypeableOT ot, Inst1 IsObjectType a, TypeableOT (OT1 a)) =>
+  (forall ot'. TypeableOT ot' => ObjectN ot' -> ZoneCard zone ot') ->
   (x -> x -> EnvM Ordering) ->
-  [Requirement (ZoneCard 'LibraryZone (OT1 a))] ->
-  [Requirement (ZoneCard 'LibraryZone ot')] ->
-  (ZoneCard 'LibraryZone (OT1 a) -> x) ->
-  (ZoneCard 'LibraryZone ot' -> x) ->
+  [Requirement (ZoneCard zone (OT1 a))] ->
+  [Requirement (ZoneCard zone ot)] ->
+  (ZoneCard zone (OT1 a) -> x) ->
+  (ZoneCard zone ot -> x) ->
   EnvM Ordering
-ordCardO1 ordM reqs1 reqs2 cont1 cont2 = case cast (reqs2, cont2) of
-  Nothing -> compareOT @(OT1 a) (Proxy :: Proxy ot')
+ordCardO1 toZone ordM reqs1 reqs2 cont1 cont2 = case cast (reqs2, cont2) of
+  Nothing -> compareOT @(OT1 a) (Proxy :: Proxy ot)
   Just (reqs2, cont2) ->
     seqM
       [ ordRequirements reqs1 reqs2,
-        withObjectCont @a ordM O (cont1 . LibraryCard) (cont2 . LibraryCard)
+        withObjectCont @a ordM O (cont1 . toZone) (cont2 . toZone)
       ]
 
 ordCardO2 ::
-  forall a b x ot'.
-  (Typeable x, TypeableOT ot', Inst2 IsObjectType a b, TypeableOT (OT2 a b)) =>
+  forall zone a b x ot.
+  (Typeable zone, Typeable x, TypeableOT ot, Inst2 IsObjectType a b, TypeableOT (OT2 a b)) =>
+  (forall ot'. TypeableOT ot' => ObjectN ot' -> ZoneCard zone ot') ->
   (x -> x -> EnvM Ordering) ->
-  [Requirement (ZoneCard 'LibraryZone (OT2 a b))] ->
-  [Requirement (ZoneCard 'LibraryZone ot')] ->
-  (ZoneCard 'LibraryZone (OT2 a b) -> x) ->
-  (ZoneCard 'LibraryZone ot' -> x) ->
+  [Requirement (ZoneCard zone (OT2 a b))] ->
+  [Requirement (ZoneCard zone ot)] ->
+  (ZoneCard zone (OT2 a b) -> x) ->
+  (ZoneCard zone ot -> x) ->
   EnvM Ordering
-ordCardO2 ordM reqs1 reqs2 cont1 cont2 = case cast (reqs2, cont2) of
-  Nothing -> compareOT @(OT2 a b) (Proxy :: Proxy ot')
+ordCardO2 toZone ordM reqs1 reqs2 cont1 cont2 = case cast (reqs2, cont2) of
+  Nothing -> compareOT @(OT2 a b) (Proxy :: Proxy ot)
   Just (reqs2, cont2) ->
     seqM
       [ ordRequirements reqs1 reqs2,
-        withObjectCont @a ordM O2a (cont1 . LibraryCard) (cont2 . LibraryCard)
+        withObjectCont @a ordM O2a (cont1 . toZone) (cont2 . toZone)
       ]
 
 ordCardO3 ::
-  forall a b c x ot'.
-  (Typeable x, TypeableOT ot', Inst3 IsObjectType a b c, TypeableOT (OT3 a b c)) =>
+  forall zone a b c x ot.
+  (Typeable zone, Typeable x, TypeableOT ot, Inst3 IsObjectType a b c, TypeableOT (OT3 a b c)) =>
+  (forall ot'. TypeableOT ot' => ObjectN ot' -> ZoneCard zone ot') ->
   (x -> x -> EnvM Ordering) ->
-  [Requirement (ZoneCard 'LibraryZone (OT3 a b c))] ->
-  [Requirement (ZoneCard 'LibraryZone ot')] ->
-  (ZoneCard 'LibraryZone (OT3 a b c) -> x) ->
-  (ZoneCard 'LibraryZone ot' -> x) ->
+  [Requirement (ZoneCard zone (OT3 a b c))] ->
+  [Requirement (ZoneCard zone ot)] ->
+  (ZoneCard zone (OT3 a b c) -> x) ->
+  (ZoneCard zone ot -> x) ->
   EnvM Ordering
-ordCardO3 ordM reqs1 reqs2 cont1 cont2 = case cast (reqs2, cont2) of
-  Nothing -> compareOT @(OT3 a b c) (Proxy :: Proxy ot')
+ordCardO3 toZone ordM reqs1 reqs2 cont1 cont2 = case cast (reqs2, cont2) of
+  Nothing -> compareOT @(OT3 a b c) (Proxy :: Proxy ot)
   Just (reqs2, cont2) ->
     seqM
       [ ordRequirements reqs1 reqs2,
-        withObjectCont @a ordM O3a (cont1 . LibraryCard) (cont2 . LibraryCard)
+        withObjectCont @a ordM O3a (cont1 . toZone) (cont2 . toZone)
       ]
 
 ordCardO4 ::
-  forall a b c d x ot'.
-  (Typeable x, TypeableOT ot', Inst4 IsObjectType a b c d, TypeableOT (OT4 a b c d)) =>
+  forall zone a b c d x ot.
+  (Typeable zone, Typeable x, TypeableOT ot, Inst4 IsObjectType a b c d, TypeableOT (OT4 a b c d)) =>
+  (forall ot'. TypeableOT ot' => ObjectN ot' -> ZoneCard zone ot') ->
   (x -> x -> EnvM Ordering) ->
-  [Requirement (ZoneCard 'LibraryZone (OT4 a b c d))] ->
-  [Requirement (ZoneCard 'LibraryZone ot')] ->
-  (ZoneCard 'LibraryZone (OT4 a b c d) -> x) ->
-  (ZoneCard 'LibraryZone ot' -> x) ->
+  [Requirement (ZoneCard zone (OT4 a b c d))] ->
+  [Requirement (ZoneCard zone ot)] ->
+  (ZoneCard zone (OT4 a b c d) -> x) ->
+  (ZoneCard zone ot -> x) ->
   EnvM Ordering
-ordCardO4 ordM reqs1 reqs2 cont1 cont2 = case cast (reqs2, cont2) of
-  Nothing -> compareOT @(OT4 a b c d) (Proxy :: Proxy ot')
+ordCardO4 toZone ordM reqs1 reqs2 cont1 cont2 = case cast (reqs2, cont2) of
+  Nothing -> compareOT @(OT4 a b c d) (Proxy :: Proxy ot)
   Just (reqs2, cont2) ->
     seqM
       [ ordRequirements reqs1 reqs2,
-        withObjectCont @a ordM O4a (cont1 . LibraryCard) (cont2 . LibraryCard)
+        withObjectCont @a ordM O4a (cont1 . toZone) (cont2 . toZone)
       ]
 
 ordCardO5 ::
-  forall a b c d e x ot'.
-  (Typeable x, TypeableOT ot', Inst5 IsObjectType a b c d e, TypeableOT (OT5 a b c d e)) =>
+  forall zone a b c d e x ot.
+  (Typeable zone, Typeable x, TypeableOT ot, Inst5 IsObjectType a b c d e, TypeableOT (OT5 a b c d e)) =>
+  (forall ot'. TypeableOT ot' => ObjectN ot' -> ZoneCard zone ot') ->
   (x -> x -> EnvM Ordering) ->
-  [Requirement (ZoneCard 'LibraryZone (OT5 a b c d e))] ->
-  [Requirement (ZoneCard 'LibraryZone ot')] ->
-  (ZoneCard 'LibraryZone (OT5 a b c d e) -> x) ->
-  (ZoneCard 'LibraryZone ot' -> x) ->
+  [Requirement (ZoneCard zone (OT5 a b c d e))] ->
+  [Requirement (ZoneCard zone ot)] ->
+  (ZoneCard zone (OT5 a b c d e) -> x) ->
+  (ZoneCard zone ot -> x) ->
   EnvM Ordering
-ordCardO5 ordM reqs1 reqs2 cont1 cont2 = case cast (reqs2, cont2) of
-  Nothing -> compareOT @(OT5 a b c d e) (Proxy :: Proxy ot')
+ordCardO5 toZone ordM reqs1 reqs2 cont1 cont2 = case cast (reqs2, cont2) of
+  Nothing -> compareOT @(OT5 a b c d e) (Proxy :: Proxy ot)
   Just (reqs2, cont2) ->
     seqM
       [ ordRequirements reqs1 reqs2,
-        withObjectCont @a ordM O5a (cont1 . LibraryCard) (cont2 . LibraryCard)
+        withObjectCont @a ordM O5a (cont1 . toZone) (cont2 . toZone)
       ]
 
 ordObjectO1 ::
-  forall a x ot'.
-  (Typeable x, TypeableOT ot', Inst1 IsObjectType a, TypeableOT (OT1 a)) =>
+  forall a x ot.
+  (Typeable x, TypeableOT ot, Inst1 IsObjectType a, TypeableOT (OT1 a)) =>
   (x -> x -> EnvM Ordering) ->
   [Requirement (ON1 a)] ->
-  [Requirement (ObjectN ot')] ->
+  [Requirement (ObjectN ot)] ->
   (ON1 a -> x) ->
-  (ObjectN ot' -> x) ->
+  (ObjectN ot -> x) ->
   EnvM Ordering
 ordObjectO1 ordM reqs1 reqs2 cont1 cont2 = case cast (reqs2, cont2) of
-  Nothing -> compareOT @(OT1 a) (Proxy :: Proxy ot')
+  Nothing -> compareOT @(OT1 a) (Proxy :: Proxy ot)
   Just (reqs2, cont2) -> seqM [ordRequirements reqs1 reqs2, withObjectCont @a ordM O cont1 cont2]
 
 ordObjectO2 ::
-  forall a b x ot'.
-  (Typeable x, TypeableOT ot', Inst2 IsObjectType a b, TypeableOT (OT2 a b)) =>
+  forall a b x ot.
+  (Typeable x, TypeableOT ot, Inst2 IsObjectType a b, TypeableOT (OT2 a b)) =>
   (x -> x -> EnvM Ordering) ->
   [Requirement (ON2 a b)] ->
-  [Requirement (ObjectN ot')] ->
+  [Requirement (ObjectN ot)] ->
   (ON2 a b -> x) ->
-  (ObjectN ot' -> x) ->
+  (ObjectN ot -> x) ->
   EnvM Ordering
 ordObjectO2 ordM reqs1 reqs2 cont1 cont2 = case cast (reqs2, cont2) of
-  Nothing -> compareOT @(OT2 a b) (Proxy :: Proxy ot')
+  Nothing -> compareOT @(OT2 a b) (Proxy :: Proxy ot)
   Just (reqs2, cont2) -> seqM [ordRequirements reqs1 reqs2, withObjectCont @a ordM O2a cont1 cont2]
 
 ordObjectO3 ::
-  forall a b c x ot'.
-  (Typeable x, TypeableOT ot', Inst3 IsObjectType a b c, TypeableOT (OT3 a b c)) =>
+  forall a b c x ot.
+  (Typeable x, TypeableOT ot, Inst3 IsObjectType a b c, TypeableOT (OT3 a b c)) =>
   (x -> x -> EnvM Ordering) ->
   [Requirement (ON3 a b c)] ->
-  [Requirement (ObjectN ot')] ->
+  [Requirement (ObjectN ot)] ->
   (ON3 a b c -> x) ->
-  (ObjectN ot' -> x) ->
+  (ObjectN ot -> x) ->
   EnvM Ordering
 ordObjectO3 ordM reqs1 reqs2 cont1 cont2 = case cast (reqs2, cont2) of
-  Nothing -> compareOT @(OT3 a b c) (Proxy :: Proxy ot')
+  Nothing -> compareOT @(OT3 a b c) (Proxy :: Proxy ot)
   Just (reqs2, cont2) -> seqM [ordRequirements reqs1 reqs2, withObjectCont @a ordM O3a cont1 cont2]
 
 ordObjectO4 ::
-  forall a b c d x ot'.
-  (Typeable x, TypeableOT ot', Inst4 IsObjectType a b c d, TypeableOT (OT4 a b c d)) =>
+  forall a b c d x ot.
+  (Typeable x, TypeableOT ot, Inst4 IsObjectType a b c d, TypeableOT (OT4 a b c d)) =>
   (x -> x -> EnvM Ordering) ->
   [Requirement (ON4 a b c d)] ->
-  [Requirement (ObjectN ot')] ->
+  [Requirement (ObjectN ot)] ->
   (ON4 a b c d -> x) ->
-  (ObjectN ot' -> x) ->
+  (ObjectN ot -> x) ->
   EnvM Ordering
 ordObjectO4 ordM reqs1 reqs2 cont1 cont2 = case cast (reqs2, cont2) of
-  Nothing -> compareOT @(OT4 a b c d) (Proxy :: Proxy ot')
+  Nothing -> compareOT @(OT4 a b c d) (Proxy :: Proxy ot)
   Just (reqs2, cont2) -> seqM [ordRequirements reqs1 reqs2, withObjectCont @a ordM O4a cont1 cont2]
 
 ordObjectO5 ::
-  forall a b c d e x ot'.
-  (Typeable x, TypeableOT ot', Inst5 IsObjectType a b c d e, TypeableOT (OT5 a b c d e)) =>
+  forall a b c d e x ot.
+  (Typeable x, TypeableOT ot, Inst5 IsObjectType a b c d e, TypeableOT (OT5 a b c d e)) =>
   (x -> x -> EnvM Ordering) ->
   [Requirement (ON5 a b c d e)] ->
-  [Requirement (ObjectN ot')] ->
+  [Requirement (ObjectN ot)] ->
   (ON5 a b c d e -> x) ->
-  (ObjectN ot' -> x) ->
+  (ObjectN ot -> x) ->
   EnvM Ordering
 ordObjectO5 ordM reqs1 reqs2 cont1 cont2 = case cast (reqs2, cont2) of
-  Nothing -> compareOT @(OT5 a b c d e) (Proxy :: Proxy ot')
+  Nothing -> compareOT @(OT5 a b c d e) (Proxy :: Proxy ot)
   Just (reqs2, cont2) -> seqM [ordRequirements reqs1 reqs2, withObjectCont @a ordM O5a cont1 cont2]
 
 ordObjectN :: VisitObjectN ot => ObjectN ot -> ObjectN ot -> EnvM Ordering
@@ -1117,15 +1132,15 @@ ordWithLinkedCard ordM x = case x of
     LcProxy reqs2 -> ordRequirements reqs1 reqs2
     y -> compareIndexM x y
   Lc1 NonProxyElectEffectOneShot reqs1 cont1 -> \case
-    Lc1 NonProxyElectEffectOneShot reqs2 cont2 -> ordCardO1 ordM reqs1 reqs2 cont1 cont2
+    Lc1 NonProxyElectEffectOneShot reqs2 cont2 -> ordCardO1 LibraryCard ordM reqs1 reqs2 cont1 cont2
   Lc2 NonProxyElectEffectOneShot reqs1 cont1 -> \case
-    Lc2 NonProxyElectEffectOneShot reqs2 cont2 -> ordCardO2 ordM reqs1 reqs2 cont1 cont2
+    Lc2 NonProxyElectEffectOneShot reqs2 cont2 -> ordCardO2 LibraryCard ordM reqs1 reqs2 cont1 cont2
   Lc3 NonProxyElectEffectOneShot reqs1 cont1 -> \case
-    Lc3 NonProxyElectEffectOneShot reqs2 cont2 -> ordCardO3 ordM reqs1 reqs2 cont1 cont2
+    Lc3 NonProxyElectEffectOneShot reqs2 cont2 -> ordCardO3 LibraryCard ordM reqs1 reqs2 cont1 cont2
   Lc4 NonProxyElectEffectOneShot reqs1 cont1 -> \case
-    Lc4 NonProxyElectEffectOneShot reqs2 cont2 -> ordCardO4 ordM reqs1 reqs2 cont1 cont2
+    Lc4 NonProxyElectEffectOneShot reqs2 cont2 -> ordCardO4 LibraryCard ordM reqs1 reqs2 cont1 cont2
   Lc5 NonProxyElectEffectOneShot reqs1 cont1 -> \case
-    Lc5 NonProxyElectEffectOneShot reqs2 cont2 -> ordCardO5 ordM reqs1 reqs2 cont1 cont2
+    Lc5 NonProxyElectEffectOneShot reqs2 cont2 -> ordCardO5 LibraryCard ordM reqs1 reqs2 cont1 cont2
 
 ordWithLinkedObject ::
   Typeable x =>

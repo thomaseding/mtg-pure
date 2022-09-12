@@ -141,7 +141,6 @@ import safe MtgPure.Model.VisitObjectN
   ( KnownObjectN (..),
     VisitObjectN (..),
   )
-import safe MtgPure.Model.Zone (Zone (LibraryZone))
 
 defaultDepthLimit :: Maybe Int
 defaultDepthLimit = Nothing
@@ -562,10 +561,10 @@ showToken (Token card) = yesParens $ do
 
 showCard :: Card ot -> EnvM ParenItems
 showCard = \case
-  Card name def ->
-    showCard' "Card" name def
-  TribalCard name def ->
-    showCard' "TribalCard" name def
+  Card name wCard def ->
+    showCard' "Card" name wCard def
+  TribalCard name wCard def ->
+    showCard' "TribalCard" name wCard def
   --
   ArtifactCard card -> yesParens $ do
     sCard <- dollar <$> showCard card
@@ -589,15 +588,16 @@ showCard = \case
     sCard <- dollar <$> showCard card
     pure $ pure "Sorcery" <> sCard
   where
-    showCard' consName (CardName name) withCardTypeDef = yesParens $ do
+    showCard' consName (CardName name) wCard withCardTypeDef = yesParens $ do
       depth <- State.gets cardDepth
       State.modify' $ \st -> st {cardDepth = subtract 1 <$> depth}
       let sName = pure (fromString $ show name)
       case depth of
         Just 0 -> pure $ pure consName <> pure " " <> sName <> pure " ..."
         _ -> do
+          sWCard <- parens <$> showWCard wCard
           sWithCardTypeDef <- dollar <$> showWithThis showCardTypeDef "this" withCardTypeDef
-          pure $ pure consName <> pure " " <> sName <> sWithCardTypeDef
+          pure $ pure consName <> pure " " <> sName <> pure " " <> sWCard <> sWithCardTypeDef
 
 showZoneCard :: ZoneCard zone ot -> EnvM ParenItems
 showZoneCard = \case
@@ -1294,9 +1294,9 @@ showElect :: Elect e ot -> EnvM ParenItems
 showElect = \case
   A sel player withObject -> yesParens $ do
     sSel <- parens <$> showSelection sel
-    sPlayer <- dollar <$> showObject1 player
+    sPlayer <- parens <$> showObject1 player
     sWithObject <- dollar <$> showWithMaskedObject showElect (selectionMemo sel) withObject
-    pure $ pure "A " <> sSel <> sPlayer <> pure " " <> sWithObject
+    pure $ pure "A " <> sSel <> pure " " <> sPlayer <> sWithObject
   ActivePlayer contElect -> yesParens $ do
     (active, snap) <- newObjectN @'OTPlayer O "active"
     sActive <- parens <$> showObject1 active
@@ -1384,23 +1384,25 @@ showWithLinkedObject showM memo = \case
       sCont' <- dollar <$> sCont
       pure $ pure sCons <> pure " " <> sNonProxy <> pure " " <> sReqs <> sCont'
 
-showWithLinkedLibraryCard ::
-  forall x ot.
+showWithLinkedCard ::
+  forall zone x ot.
+  PrettyType (ZoneCard zone ot) =>
+  (ObjectN ot -> ZoneCard zone ot) ->
   (forall ot'. x ot' -> EnvM ParenItems) ->
   String ->
-  WithLinkedCard 'LibraryZone x ot ->
+  WithLinkedCard zone x ot ->
   EnvM ParenItems
-showWithLinkedLibraryCard showM memo = \case
+showWithLinkedCard toZone showM memo = \case
   LcProxy reqs -> yesParens $ do
     sReqs <- dollar <$> showRequirements reqs
     pure $ pure "LcProxy" <> sReqs
-  Lc1 nonProxy reqs cont -> go "Lc1" nonProxy reqs $ showO1 showM memo (cont . LibraryCard) $ getType reqs
-  Lc2 nonProxy reqs cont -> go "Lc2" nonProxy reqs $ showO2 showM memo (cont . LibraryCard) $ getType reqs
-  Lc3 nonProxy reqs cont -> go "Lc3" nonProxy reqs $ showO3 showM memo (cont . LibraryCard) $ getType reqs
-  Lc4 nonProxy reqs cont -> go "Lc4" nonProxy reqs $ showO4 showM memo (cont . LibraryCard) $ getType reqs
-  Lc5 nonProxy reqs cont -> go "Lc5" nonProxy reqs $ showO5 showM memo (cont . LibraryCard) $ getType reqs
+  Lc1 nonProxy reqs cont -> go "Lc1" nonProxy reqs $ showO1 showM memo (cont . toZone) $ getType reqs
+  Lc2 nonProxy reqs cont -> go "Lc2" nonProxy reqs $ showO2 showM memo (cont . toZone) $ getType reqs
+  Lc3 nonProxy reqs cont -> go "Lc3" nonProxy reqs $ showO3 showM memo (cont . toZone) $ getType reqs
+  Lc4 nonProxy reqs cont -> go "Lc4" nonProxy reqs $ showO4 showM memo (cont . toZone) $ getType reqs
+  Lc5 nonProxy reqs cont -> go "Lc5" nonProxy reqs $ showO5 showM memo (cont . toZone) $ getType reqs
   where
-    getType :: [Requirement (ZoneCard zone ot)] -> Proxy (ZoneCard 'LibraryZone ot)
+    getType :: [Requirement (ZoneCard zone ot)] -> Proxy (ZoneCard zone ot)
     getType _ = Proxy
     go sCons nonProxy reqs sCont = yesParens $ do
       sNonProxy <- parens <$> showNonProxy nonProxy
@@ -1612,7 +1614,7 @@ showEffect = \case
   SearchLibrary wCard player withCard -> yesParens $ do
     sWCard <- parens <$> showWCard wCard
     sPlayer <- parens <$> showObject1 player
-    sWithCard <- dollar <$> showWithLinkedLibraryCard showElect "card" withCard
+    sWithCard <- dollar <$> showWithLinkedCard LibraryCard showElect "card" withCard
     pure $ pure "SearchLibrary " <> sWCard <> pure " " <> sPlayer <> sWithCard
   StatDelta creature power toughness -> yesParens $ do
     sCreature <- parens <$> showObject1 creature
