@@ -43,11 +43,13 @@ header =
   \{-# LANGUAGE FlexibleInstances #-}\n\
   \{-# LANGUAGE GADTs #-}\n\
   \{-# LANGUAGE MultiParamTypeClasses #-}\n\
+  \{-# LANGUAGE NoMonomorphismRestriction #-}\n\
   \{-# LANGUAGE PolyKinds #-}\n\
   \{-# LANGUAGE RankNTypes #-}\n\
   \{-# LANGUAGE Safe #-}\n\
   \{-# LANGUAGE ScopedTypeVariables #-}\n\
   \{-# LANGUAGE TypeFamilyDependencies #-}\n\
+  \{-# OPTIONS_GHC -Wno-missing-signatures #-}\n\
   \{-# OPTIONS_GHC -Wno-orphans #-}\n\
   \{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}\n\
   \\n\
@@ -67,6 +69,8 @@ header =
   \    ToObject8 (..),\n\
   \    ToObject9 (..),\n\
   \    ToObject10 (..),\n\
+  \    ToObject11 (..),\n\
+  \    ToObject12 (..),\n\
   \  )\n\
   \where\n\
   \\n\
@@ -81,6 +85,8 @@ header =
   \    Inst8,\n\
   \    Inst9,\n\
   \    Inst10,\n\
+  \    Inst11,\n\
+  \    Inst12,\n\
   \  )\n\
   \import MtgPure.Model.IsObjectType (IsObjectType)\n\
   \import MtgPure.Model.Object (Object)\n\
@@ -96,8 +102,22 @@ header =
   \    ToObject8(..),\n\
   \    ToObject9(..),\n\
   \    ToObject10(..),\n\
+  \    ToObject11(..),\n\
+  \    ToObject12(..),\n\
   \  )\n\
   \\n\
+  \type ON = ObjectN\n\
+  \to2 = toObject2\n\
+  \to3 = toObject3\n\
+  \to4 = toObject4\n\
+  \to5 = toObject5\n\
+  \to6 = toObject6\n\
+  \to7 = toObject7\n\
+  \to8 = toObject8\n\
+  \to9 = toObject9\n\
+  \to10 = toObject10\n\
+  \to11 = toObject11\n\
+  \to12 = toObject12\n\
   \"
 
 limit :: Int
@@ -261,10 +281,10 @@ telescopeToObjectN desc acc symsM symsN = case m < n of
   where
     m = length symsM
     n = length symsN
-    toObjectSucc = "toObject" ++ show (m + 1)
+    toObjectSucc = "to" ++ show (m + 1)
     newSym = head $ symsN \\ symsM
     symsSucc = sort $ newSym : symsM
-    typeSucc = "(ObjectN '(" ++ commas (map (interpretSym desc) symsSucc) ++ "))"
+    typeSucc = "(ON '(" ++ commas (map (interpretSym desc) symsSucc) ++ "))"
     acc' = "(" ++ toObjectSucc ++ " " ++ acc ++ " :: " ++ typeSucc ++ ")"
 
 commas :: [String] -> String

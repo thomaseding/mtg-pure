@@ -17,6 +17,8 @@
 module MtgPure.ModelCombinators
   ( AsAny,
     asAny,
+    AsActivatedOrTriggeredAbility,
+    asActivatedOrTriggeredAbility,
     AsPermanent,
     asPermanent,
     AsSpell,
@@ -28,11 +30,8 @@ module MtgPure.ModelCombinators
     ElectEffect (..),
     CoAny (..),
     CoPermanent (..),
-    o1,
-    o2,
-    o3,
-    o4,
-    o5,
+    AsWithObject (..),
+    object,
     tapCost,
     ofColors,
     playerPays,
@@ -45,6 +44,7 @@ module MtgPure.ModelCombinators
     changeTo,
     sacrifice,
     destroy,
+    counterAbility,
     counterSpell,
     sacrificeCost,
     tapped,
@@ -54,25 +54,40 @@ where
 import Data.Inst (Inst1, Inst2, Inst3, Inst4, Inst5)
 import MtgPure.Model
 
-o1 :: Inst1 IsObjectType a => [Requirement a] -> (ObjectN a -> x o) -> WithObject x o
-o1 = O1
+class AsWithObject ot where
+  withObject :: [Requirement ot] -> (ObjectN ot -> x o) -> WithObject x o
 
-o2 :: Inst2 IsObjectType a b => [Requirement '(a, b)] -> (ObjectN '(a, b) -> x o) -> WithObject x o
-o2 = O2
+instance Inst1 IsObjectType a => AsWithObject a where
+  withObject = O1
 
-o3 :: Inst3 IsObjectType a b c => [Requirement '(a, b, c)] -> (ObjectN '(a, b, c) -> x o) -> WithObject x o
-o3 = O3
+instance Inst2 IsObjectType a b => AsWithObject '(a, b) where
+  withObject = O2
 
-o4 :: Inst4 IsObjectType a b c d => [Requirement '(a, b, c, d)] -> (ObjectN '(a, b, c, d) -> x o) -> WithObject x o
-o4 = O4
+instance Inst3 IsObjectType a b c => AsWithObject '(a, b, c) where
+  withObject = O3
 
-o5 :: Inst5 IsObjectType a b c d e => [Requirement '(a, b, c, d, e)] -> (ObjectN '(a, b, c, d, e) -> x o) -> WithObject x o
-o5 = O5
+instance Inst4 IsObjectType a b c d => AsWithObject '(a, b, c, d) where
+  withObject = O4
+
+instance Inst5 IsObjectType a b c d e => AsWithObject '(a, b, c, d, e) where
+  withObject = O5
+
+object :: AsWithObject ot => [Requirement ot] -> (ObjectN ot -> x o) -> WithObject x o
+object = withObject
+
+type AsActivatedOrTriggeredAbility a =
+  ToObject2
+    a
+    OTActivatedAbility
+    OTTriggeredAbility
+
+asActivatedOrTriggeredAbility :: AsActivatedOrTriggeredAbility a => a -> OActivatedOrTriggeredAbility
+asActivatedOrTriggeredAbility = toObject2
 
 type AsAny a =
-  ToObject10
+  ToObject12
     a
-    OTAbility
+    OTActivatedAbility
     OTArtifact
     OTCreature
     OTEmblem
@@ -82,9 +97,11 @@ type AsAny a =
     OTPlaneswalker
     OTPlayer
     OTSorcery
+    OTStaticAbility
+    OTTriggeredAbility
 
 asAny :: AsAny a => a -> OAny
-asAny = toObject10
+asAny = toObject12
 
 type AsDamageSource a =
   ToObject8
@@ -179,6 +196,9 @@ tapCost = TapCost . asPermanent
 
 destroy :: AsPermanent o => o -> Effect 'OneShot
 destroy = Destroy . asPermanent
+
+counterAbility :: AsActivatedOrTriggeredAbility o => o -> Effect 'OneShot
+counterAbility = CounterAbility . asActivatedOrTriggeredAbility
 
 counterSpell :: AsSpell o => o -> Effect 'OneShot
 counterSpell = CounterSpell . asSpell

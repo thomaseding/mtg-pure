@@ -32,7 +32,7 @@ where
 
 import qualified Control.Monad.State.Strict as State
 import qualified Data.DList as DList
-import Data.Inst (Inst10, Inst2, Inst3, Inst4, Inst5, Inst6, Inst8)
+import Data.Inst (Inst12, Inst2, Inst3, Inst4, Inst5, Inst6, Inst8)
 import Data.Kind (Type)
 import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (Proxy))
@@ -65,6 +65,7 @@ import MtgPure.Model
     ManaPool (..),
     ManaSymbol (..),
     NonCreature (..),
+    OActivatedOrTriggeredAbility,
     OAny,
     OCreaturePlaneswalker,
     OCreaturePlayer,
@@ -285,8 +286,8 @@ showObject8 objN = visitObjectN' visit objN
             | rep == typeRep (Proxy @ODamageSource) -> "asDamageSource"
             | otherwise -> "toObject8"
 
-showObject10 :: Inst10 IsObjectType a b c d e f g h i j => ObjectN '(a, b, c, d, e, f, g, h, i, j) -> EnvM ParenItems
-showObject10 objN = visitObjectN' visit objN
+showObject12 :: Inst12 IsObjectType a b c d e f g h i j k l => ObjectN '(a, b, c, d, e, f, g, h, i, j, k, l) -> EnvM ParenItems
+showObject12 objN = visitObjectN' visit objN
   where
     rep = typeOf objN
     visit :: IsObjectType x => Object x -> EnvM ParenItems
@@ -294,7 +295,7 @@ showObject10 objN = visitObjectN' visit objN
       showObjectNImpl rep $
         if
             | rep == typeRep (Proxy @OAny) -> "asAny"
-            | otherwise -> "toObject10"
+            | otherwise -> "toObject12"
 
 newtype ObjectIdState = ObjectIdState ObjectId
 
@@ -344,6 +345,9 @@ showOCreaturePlayerPlaneswalker = showObject3
 showOPermanent :: OPermanent -> EnvM ParenItems
 showOPermanent = showObject5
 
+showOActivatedOrTriggeredAbility :: OActivatedOrTriggeredAbility -> EnvM ParenItems
+showOActivatedOrTriggeredAbility = showObject2
+
 showOSpell :: OSpell -> EnvM ParenItems
 showOSpell = showObject6
 
@@ -351,7 +355,7 @@ showODamageSource :: ODamageSource -> EnvM ParenItems
 showODamageSource = showObject8
 
 showOAny :: OAny -> EnvM ParenItems
-showOAny = showObject10
+showOAny = showObject12
 
 showSetToken :: CardDepth -> SetToken a -> String
 showSetToken depth (SetToken set rarity token) =
@@ -1253,6 +1257,9 @@ showEffect = \case
     sBefore <- parens <$> showOPermanent before
     sAfter <- dollar <$> showCardM after
     pure $ pure "ChangeTo " <> sPerm <> pure " " <> sBefore <> sAfter
+  CounterAbility obj -> yesParens $ do
+    sObj <- dollar <$> showOActivatedOrTriggeredAbility obj
+    pure $ pure "CounterAbility" <> sObj
   CounterSpell obj -> yesParens $ do
     sObj <- dollar <$> showOSpell obj
     pure $ pure "CounterSpell" <> sObj

@@ -7,41 +7,46 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE Safe #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# HLINT ignore "Avoid lambda" #-}
-{-# HLINT ignore "Use const" #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{-# HLINT ignore "Avoid lambda" #-}
+{-# HLINT ignore "Use const" #-}
 
 module MtgPure.Model.ObjectType
   ( ObjectType (..),
     SObjectType (..),
     OTAbility,
+    OTActivatedAbility,
+    OTActivatedOrTriggeredAbility,
+    OTAny,
     OTArtifact,
+    OTArtifactCreature,
+    OTCard,
     OTCreature,
+    OTCreaturePlaneswalker,
+    OTCreaturePlayer,
+    OTCreaturePlayerPlaneswalker,
+    OTDamageSource,
     OTEmblem,
     OTEnchantment,
     OTInstant,
     OTLand,
-    OTPlaneswalker,
-    OTPlayer,
-    OTSorcery,
-    OTArtifactCreature,
-    OTCreaturePlayer,
-    OTCreaturePlaneswalker,
-    OTPlayerPlaneswalker,
-    OTCreaturePlayerPlaneswalker,
     OTNonArtifactPermanent,
+    OTNonCreature,
     OTNonCreaturePermanent,
     OTNonEnchantmentPermanent,
-    OTDamageSource,
     OTNonLandPermanent,
     OTNonPlaneswalkerPermanent,
     OTPermanent,
-    OTNonCreature,
+    OTPlaneswalker,
+    OTPlayer,
+    OTPlayerPlaneswalker,
+    OTSorcery,
     OTSpell,
-    OTCard,
-    OTAny,
+    OTStaticAbility,
+    OTTriggeredAbility,
   )
 where
 
@@ -49,8 +54,9 @@ import Data.Kind (Type)
 import Data.Typeable (Typeable)
 
 -- This generalizes the notion of "object" in MTG (e.g. contains "player")
+-- Don't bother encoding OTManaAbility; since mana abilities are activated/triggered abilities and cannot be interacted with (605.3b)
 data ObjectType
-  = OTAbility
+  = OTActivatedAbility
   | OTArtifact
   | OTCreature
   | OTEmblem
@@ -60,11 +66,13 @@ data ObjectType
   | OTPlaneswalker
   | OTPlayer
   | OTSorcery
+  | OTStaticAbility
+  | OTTriggeredAbility
   deriving (Bounded, Enum, Eq, Ord, Show)
 
 -- XXX: Data.Sing
 data SObjectType :: ObjectType -> Type where
-  SAbility :: SObjectType OTAbility
+  SActivatedAbility :: SObjectType OTActivatedAbility
   SArtifact :: SObjectType OTArtifact
   SCreature :: SObjectType OTCreature
   SEmblem :: SObjectType OTEmblem
@@ -74,11 +82,13 @@ data SObjectType :: ObjectType -> Type where
   SPlaneswalker :: SObjectType OTPlaneswalker
   SPlayer :: SObjectType OTPlayer
   SSorcery :: SObjectType OTSorcery
+  SStaticAbility :: SObjectType OTStaticAbility
+  STriggeredAbility :: SObjectType OTTriggeredAbility
   deriving (Typeable)
 
 deriving instance Show (SObjectType a)
 
-type OTAbility = 'OTAbility
+type OTActivatedAbility = 'OTActivatedAbility
 
 type OTArtifact = 'OTArtifact
 
@@ -97,6 +107,21 @@ type OTPlaneswalker = 'OTPlaneswalker
 type OTPlayer = 'OTPlayer
 
 type OTSorcery = 'OTSorcery
+
+type OTStaticAbility = 'OTStaticAbility
+
+type OTTriggeredAbility = 'OTTriggeredAbility
+
+type OTAbility =
+  '( OTActivatedAbility,
+     OTStaticAbility,
+     OTTriggeredAbility
+   )
+
+type OTActivatedOrTriggeredAbility =
+  '( OTActivatedAbility,
+     OTTriggeredAbility
+   )
 
 type OTArtifactCreature =
   '( OTArtifact,
@@ -207,7 +232,7 @@ type OTDamageSource =
    )
 
 type OTAny =
-  '( OTAbility,
+  '( OTActivatedAbility,
      OTArtifact,
      OTCreature,
      OTEmblem,
@@ -216,5 +241,7 @@ type OTAny =
      OTLand,
      OTPlaneswalker,
      OTPlayer,
-     OTSorcery
+     OTSorcery,
+     OTStaticAbility,
+     OTTriggeredAbility
    )

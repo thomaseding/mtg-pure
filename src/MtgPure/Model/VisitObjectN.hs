@@ -20,7 +20,20 @@ module MtgPure.Model.VisitObjectN
   )
 where
 
-import Data.Inst (Inst1, Inst10, Inst2, Inst3, Inst4, Inst5, Inst6, Inst7, Inst8, Inst9)
+import Data.Inst
+  ( Inst1,
+    Inst10,
+    Inst11,
+    Inst12,
+    Inst2,
+    Inst3,
+    Inst4,
+    Inst5,
+    Inst6,
+    Inst7,
+    Inst8,
+    Inst9,
+  )
 import Data.Kind (Type)
 import MtgPure.Model.IsObjectType (IsObjectType)
 import MtgPure.Model.Object (Object)
@@ -320,3 +333,109 @@ instance Inst10 IsObjectType a b c d e f g h i j => VisitObjectN '(a, b, c, d, e
       h = visitObject10h v
       i = visitObject10i v
       j = visitObject10j v
+
+instance Inst11 IsObjectType a b c d e f g h i j k => VisitObjectN '(a, b, c, d, e, f, g, h, i, j, k) where
+  data ObjectVisitorN '(a, b, c, d, e, f, g, h, i, j, k) x = ObjectVisitor11
+    { visitObject11a :: Object a -> x,
+      visitObject11b :: Object b -> x,
+      visitObject11c :: Object c -> x,
+      visitObject11d :: Object d -> x,
+      visitObject11e :: Object e -> x,
+      visitObject11f :: Object f -> x,
+      visitObject11g :: Object g -> x,
+      visitObject11h :: Object h -> x,
+      visitObject11i :: Object i -> x,
+      visitObject11j :: Object j -> x,
+      visitObject11k :: Object k -> x
+    }
+  visitObjectN' f = visitObjectN $ ObjectVisitor11 f f f f f f f f f f f
+  visitObjectN v = \case
+    O11a x -> visitObject11a v x
+    O11b x -> visitObject11b v x
+    O11c x -> visitObject11c v x
+    O11d x -> visitObject11d v x
+    O11e x -> visitObject11e v x
+    O11f x -> visitObject11f v x
+    O11g x -> visitObject11g v x
+    O11h x -> visitObject11h v x
+    O11i x -> visitObject11i v x
+    O11j x -> visitObject11j v x
+    O11k x -> visitObject11k v x
+    ON11a x -> vn (ObjectVisitor10 b c d e f g h i j k) x
+    ON11b x -> vn (ObjectVisitor10 a c d e f g h i j k) x
+    ON11c x -> vn (ObjectVisitor10 a b d e f g h i j k) x
+    ON11d x -> vn (ObjectVisitor10 a b c e f g h i j k) x
+    ON11e x -> vn (ObjectVisitor10 a b c d f g h i j k) x
+    ON11f x -> vn (ObjectVisitor10 a b c d e g h i j k) x
+    ON11g x -> vn (ObjectVisitor10 a b c d e f h i j k) x
+    ON11h x -> vn (ObjectVisitor10 a b c d e f g i j k) x
+    ON11i x -> vn (ObjectVisitor10 a b c d e f g h j k) x
+    ON11j x -> vn (ObjectVisitor10 a b c d e f g h i k) x
+    ON11k x -> vn (ObjectVisitor10 a b c d e f g h i j) x
+    where
+      a = visitObject11a v
+      b = visitObject11b v
+      c = visitObject11c v
+      d = visitObject11d v
+      e = visitObject11e v
+      f = visitObject11f v
+      g = visitObject11g v
+      h = visitObject11h v
+      i = visitObject11i v
+      j = visitObject11j v
+      k = visitObject11k v
+
+instance Inst12 IsObjectType a b c d e f g h i j k l => VisitObjectN '(a, b, c, d, e, f, g, h, i, j, k, l) where
+  data ObjectVisitorN '(a, b, c, d, e, f, g, h, i, j, k, l) x = ObjectVisitor12
+    { visitObject12a :: Object a -> x,
+      visitObject12b :: Object b -> x,
+      visitObject12c :: Object c -> x,
+      visitObject12d :: Object d -> x,
+      visitObject12e :: Object e -> x,
+      visitObject12f :: Object f -> x,
+      visitObject12g :: Object g -> x,
+      visitObject12h :: Object h -> x,
+      visitObject12i :: Object i -> x,
+      visitObject12j :: Object j -> x,
+      visitObject12k :: Object k -> x,
+      visitObject12l :: Object l -> x
+    }
+  visitObjectN' f = visitObjectN $ ObjectVisitor12 f f f f f f f f f f f f
+  visitObjectN v = \case
+    O12a x -> visitObject12a v x
+    O12b x -> visitObject12b v x
+    O12c x -> visitObject12c v x
+    O12d x -> visitObject12d v x
+    O12e x -> visitObject12e v x
+    O12f x -> visitObject12f v x
+    O12g x -> visitObject12g v x
+    O12h x -> visitObject12h v x
+    O12i x -> visitObject12i v x
+    O12j x -> visitObject12j v x
+    O12k x -> visitObject12k v x
+    O12l x -> visitObject12l v x
+    ON12a x -> vn (ObjectVisitor11 b c d e f g h i j k l) x
+    ON12b x -> vn (ObjectVisitor11 a c d e f g h i j k l) x
+    ON12c x -> vn (ObjectVisitor11 a b d e f g h i j k l) x
+    ON12d x -> vn (ObjectVisitor11 a b c e f g h i j k l) x
+    ON12e x -> vn (ObjectVisitor11 a b c d f g h i j k l) x
+    ON12f x -> vn (ObjectVisitor11 a b c d e g h i j k l) x
+    ON12g x -> vn (ObjectVisitor11 a b c d e f h i j k l) x
+    ON12h x -> vn (ObjectVisitor11 a b c d e f g i j k l) x
+    ON12i x -> vn (ObjectVisitor11 a b c d e f g h j k l) x
+    ON12j x -> vn (ObjectVisitor11 a b c d e f g h i k l) x
+    ON12k x -> vn (ObjectVisitor11 a b c d e f g h i j l) x
+    ON12l x -> vn (ObjectVisitor11 a b c d e f g h i j k) x
+    where
+      a = visitObject12a v
+      b = visitObject12b v
+      c = visitObject12c v
+      d = visitObject12d v
+      e = visitObject12e v
+      f = visitObject12f v
+      g = visitObject12g v
+      h = visitObject12h v
+      i = visitObject12i v
+      j = visitObject12j v
+      k = visitObject12k v
+      l = visitObject12l v

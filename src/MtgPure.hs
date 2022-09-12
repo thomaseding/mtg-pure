@@ -1,3 +1,5 @@
+-- ghci -hidir output -odir output -fobject-code -Wall -Werror MtgPure
+
 module MtgPure
   ( module MtgPure.Cards,
     module MtgPure.ShowCard,

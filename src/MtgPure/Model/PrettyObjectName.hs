@@ -24,6 +24,8 @@ where
 
 import Data.Inst
   ( Inst10,
+    Inst11,
+    Inst12,
     Inst2,
     Inst3,
     Inst4,
@@ -56,7 +58,7 @@ instance IsObjectType a => PrettyObjectName a where
 
 instance IsObjectType a => PrettyObjectName (ObjectN a) where
   prettyObjectName _ = case singObjectType (Proxy @a) of
-    OTAbility -> "OAbility"
+    OTActivatedAbility -> "OActivatedAbility"
     OTArtifact -> "OArtifact"
     OTCreature -> "OCreature"
     OTEmblem -> "OEmblem"
@@ -66,6 +68,8 @@ instance IsObjectType a => PrettyObjectName (ObjectN a) where
     OTPlaneswalker -> "OPlaneswalker"
     OTPlayer -> "OPlayer"
     OTSorcery -> "OSorcery"
+    OTStaticAbility -> "OStaticAbility"
+    OTTriggeredAbility -> "OTriggeredAbility"
 
 instance Inst2 IsObjectType a b => PrettyObjectName '(a, b) where
   prettyObjectName proxy =
@@ -294,6 +298,64 @@ instance Inst9 IsObjectType a b c d e f g h i => PrettyObjectName (ObjectN '(a, 
 instance Inst10 IsObjectType a b c d e f g h i j => PrettyObjectName (ObjectN '(a, b, c, d, e, f, g, h, i, j)) where
   prettyObjectName proxy =
     if
+        | otherwise ->
+          "ObjectN '( "
+            ++ show (typeRep (Proxy @a))
+            ++ ", "
+            ++ show (typeRep (Proxy @b))
+            ++ ", "
+            ++ show (typeRep (Proxy @c))
+            ++ ", "
+            ++ show (typeRep (Proxy @d))
+            ++ ", "
+            ++ show (typeRep (Proxy @e))
+            ++ ", "
+            ++ show (typeRep (Proxy @f))
+            ++ ", "
+            ++ show (typeRep (Proxy @g))
+            ++ ", "
+            ++ show (typeRep (Proxy @h))
+            ++ ","
+            ++ show (typeRep (Proxy @i))
+            ++ ","
+            ++ show (typeRep (Proxy @j))
+            ++ ")"
+    where
+      _rep = typeRep proxy
+
+instance Inst11 IsObjectType a b c d e f g h i j k => PrettyObjectName (ObjectN '(a, b, c, d, e, f, g, h, i, j, k)) where
+  prettyObjectName proxy =
+    if
+        | otherwise ->
+          "ObjectN '( "
+            ++ show (typeRep (Proxy @a))
+            ++ ", "
+            ++ show (typeRep (Proxy @b))
+            ++ ", "
+            ++ show (typeRep (Proxy @c))
+            ++ ", "
+            ++ show (typeRep (Proxy @d))
+            ++ ", "
+            ++ show (typeRep (Proxy @e))
+            ++ ", "
+            ++ show (typeRep (Proxy @f))
+            ++ ", "
+            ++ show (typeRep (Proxy @g))
+            ++ ", "
+            ++ show (typeRep (Proxy @h))
+            ++ ","
+            ++ show (typeRep (Proxy @i))
+            ++ ","
+            ++ show (typeRep (Proxy @j))
+            ++ ","
+            ++ show (typeRep (Proxy @k))
+            ++ ")"
+    where
+      _rep = typeRep proxy
+
+instance Inst12 IsObjectType a b c d e f g h i j k l => PrettyObjectName (ObjectN '(a, b, c, d, e, f, g, h, i, j, k, l)) where
+  prettyObjectName proxy =
+    if
         | rep == typeRep (Proxy @OAny) -> "OAny"
         | otherwise ->
           "ObjectN '( "
@@ -316,6 +378,10 @@ instance Inst10 IsObjectType a b c d e f g h i j => PrettyObjectName (ObjectN '(
             ++ show (typeRep (Proxy @i))
             ++ ","
             ++ show (typeRep (Proxy @j))
+            ++ ","
+            ++ show (typeRep (Proxy @k))
+            ++ ","
+            ++ show (typeRep (Proxy @l))
             ++ ")"
     where
       rep = typeRep proxy

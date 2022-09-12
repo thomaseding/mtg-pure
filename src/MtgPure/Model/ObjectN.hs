@@ -19,6 +19,8 @@
 module MtgPure.Model.ObjectN
   ( ObjectN (..),
     OAbility,
+    OActivatedAbility,
+    OActivatedOrTriggeredAbility,
     OAny,
     OArtifact,
     OArtifactCreature,
@@ -37,12 +39,16 @@ module MtgPure.Model.ObjectN
     OPlayerPlaneswalker,
     OSorcery,
     OSpell,
+    OStaticAbility,
+    OTriggeredAbility,
   )
 where
 
 import Data.Inst
   ( Inst1,
     Inst10,
+    Inst11,
+    Inst12,
     Inst2,
     Inst3,
     Inst4,
@@ -58,6 +64,8 @@ import MtgPure.Model.IsObjectType (IsObjectType)
 import MtgPure.Model.Object (Object)
 import MtgPure.Model.ObjectType
   ( OTAbility,
+    OTActivatedAbility,
+    OTActivatedOrTriggeredAbility,
     OTAny,
     OTArtifact,
     OTArtifactCreature,
@@ -76,12 +84,18 @@ import MtgPure.Model.ObjectType
     OTPlayerPlaneswalker,
     OTSorcery,
     OTSpell,
+    OTStaticAbility,
+    OTTriggeredAbility,
     ObjectType,
   )
 
 type OAny = ObjectN OTAny
 
 type OAbility = ObjectN OTAbility
+
+type OActivatedAbility = ObjectN OTActivatedAbility
+
+type OActivatedOrTriggeredAbility = ObjectN OTActivatedOrTriggeredAbility
 
 type OArtifact = ObjectN OTArtifact
 
@@ -116,6 +130,10 @@ type OPlayerPlaneswalker = ObjectN OTPlayerPlaneswalker
 type OSorcery = ObjectN OTSorcery
 
 type OSpell = ObjectN OTSpell
+
+type OStaticAbility = ObjectN OTStaticAbility
+
+type OTriggeredAbility = ObjectN OTTriggeredAbility
 
 data family ObjectN (a :: k)
 
@@ -262,6 +280,58 @@ data instance ObjectN :: (ObjectType, ObjectType, ObjectType, ObjectType, Object
   ON10j :: Inst10 IsObjectType a b c d e f g h i j => ObjectN '(a, b, c, d, e, f, g, h, i) -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType)
   deriving (Typeable)
 
+data instance ObjectN :: (ObjectType, ObjectType, ObjectType, ObjectType, ObjectType, ObjectType, ObjectType, ObjectType, ObjectType, ObjectType, ObjectType) -> Type where
+  O11b :: Inst11 IsObjectType a b c d e f g h i j k => Object b -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType, k :: ObjectType)
+  O11a :: Inst11 IsObjectType a b c d e f g h i j k => Object a -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType, k :: ObjectType)
+  O11c :: Inst11 IsObjectType a b c d e f g h i j k => Object c -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType, k :: ObjectType)
+  O11d :: Inst11 IsObjectType a b c d e f g h i j k => Object d -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType, k :: ObjectType)
+  O11e :: Inst11 IsObjectType a b c d e f g h i j k => Object e -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType, k :: ObjectType)
+  O11f :: Inst11 IsObjectType a b c d e f g h i j k => Object f -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType, k :: ObjectType)
+  O11g :: Inst11 IsObjectType a b c d e f g h i j k => Object g -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType, k :: ObjectType)
+  O11h :: Inst11 IsObjectType a b c d e f g h i j k => Object h -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType, k :: ObjectType)
+  O11i :: Inst11 IsObjectType a b c d e f g h i j k => Object i -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType, k :: ObjectType)
+  O11j :: Inst11 IsObjectType a b c d e f g h i j k => Object j -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType, k :: ObjectType)
+  O11k :: Inst11 IsObjectType a b c d e f g h i j k => Object k -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType, k :: ObjectType)
+  ON11a :: Inst11 IsObjectType a b c d e f g h i j k => ObjectN '(b, c, d, e, f, g, h, i, j, k) -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType, k :: ObjectType)
+  ON11b :: Inst11 IsObjectType a b c d e f g h i j k => ObjectN '(a, c, d, e, f, g, h, i, j, k) -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType, k :: ObjectType)
+  ON11c :: Inst11 IsObjectType a b c d e f g h i j k => ObjectN '(a, b, d, e, f, g, h, i, j, k) -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType, k :: ObjectType)
+  ON11d :: Inst11 IsObjectType a b c d e f g h i j k => ObjectN '(a, b, c, e, f, g, h, i, j, k) -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType, k :: ObjectType)
+  ON11e :: Inst11 IsObjectType a b c d e f g h i j k => ObjectN '(a, b, c, d, f, g, h, i, j, k) -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType, k :: ObjectType)
+  ON11f :: Inst11 IsObjectType a b c d e f g h i j k => ObjectN '(a, b, c, d, e, g, h, i, j, k) -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType, k :: ObjectType)
+  ON11g :: Inst11 IsObjectType a b c d e f g h i j k => ObjectN '(a, b, c, d, e, f, h, i, j, k) -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType, k :: ObjectType)
+  ON11h :: Inst11 IsObjectType a b c d e f g h i j k => ObjectN '(a, b, c, d, e, f, g, i, j, k) -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType, k :: ObjectType)
+  ON11i :: Inst11 IsObjectType a b c d e f g h i j k => ObjectN '(a, b, c, d, e, f, g, h, j, k) -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType, k :: ObjectType)
+  ON11j :: Inst11 IsObjectType a b c d e f g h i j k => ObjectN '(a, b, c, d, e, f, g, h, i, k) -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType, k :: ObjectType)
+  ON11k :: Inst11 IsObjectType a b c d e f g h i j k => ObjectN '(a, b, c, d, e, f, g, h, i, j) -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType, k :: ObjectType)
+  deriving (Typeable)
+
+data instance ObjectN :: (ObjectType, ObjectType, ObjectType, ObjectType, ObjectType, ObjectType, ObjectType, ObjectType, ObjectType, ObjectType, ObjectType, ObjectType) -> Type where
+  O12b :: Inst12 IsObjectType a b c d e f g h i j k l => Object b -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType, k :: ObjectType, l :: ObjectType)
+  O12a :: Inst12 IsObjectType a b c d e f g h i j k l => Object a -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType, k :: ObjectType, l :: ObjectType)
+  O12c :: Inst12 IsObjectType a b c d e f g h i j k l => Object c -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType, k :: ObjectType, l :: ObjectType)
+  O12d :: Inst12 IsObjectType a b c d e f g h i j k l => Object d -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType, k :: ObjectType, l :: ObjectType)
+  O12e :: Inst12 IsObjectType a b c d e f g h i j k l => Object e -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType, k :: ObjectType, l :: ObjectType)
+  O12f :: Inst12 IsObjectType a b c d e f g h i j k l => Object f -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType, k :: ObjectType, l :: ObjectType)
+  O12g :: Inst12 IsObjectType a b c d e f g h i j k l => Object g -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType, k :: ObjectType, l :: ObjectType)
+  O12h :: Inst12 IsObjectType a b c d e f g h i j k l => Object h -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType, k :: ObjectType, l :: ObjectType)
+  O12i :: Inst12 IsObjectType a b c d e f g h i j k l => Object i -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType, k :: ObjectType, l :: ObjectType)
+  O12j :: Inst12 IsObjectType a b c d e f g h i j k l => Object j -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType, k :: ObjectType, l :: ObjectType)
+  O12k :: Inst12 IsObjectType a b c d e f g h i j k l => Object k -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType, k :: ObjectType, l :: ObjectType)
+  O12l :: Inst12 IsObjectType a b c d e f g h i j k l => Object l -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType, k :: ObjectType, l :: ObjectType)
+  ON12a :: Inst12 IsObjectType a b c d e f g h i j k l => ObjectN '(b, c, d, e, f, g, h, i, j, k, l) -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType, k :: ObjectType, l :: ObjectType)
+  ON12b :: Inst12 IsObjectType a b c d e f g h i j k l => ObjectN '(a, c, d, e, f, g, h, i, j, k, l) -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType, k :: ObjectType, l :: ObjectType)
+  ON12c :: Inst12 IsObjectType a b c d e f g h i j k l => ObjectN '(a, b, d, e, f, g, h, i, j, k, l) -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType, k :: ObjectType, l :: ObjectType)
+  ON12d :: Inst12 IsObjectType a b c d e f g h i j k l => ObjectN '(a, b, c, e, f, g, h, i, j, k, l) -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType, k :: ObjectType, l :: ObjectType)
+  ON12e :: Inst12 IsObjectType a b c d e f g h i j k l => ObjectN '(a, b, c, d, f, g, h, i, j, k, l) -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType, k :: ObjectType, l :: ObjectType)
+  ON12f :: Inst12 IsObjectType a b c d e f g h i j k l => ObjectN '(a, b, c, d, e, g, h, i, j, k, l) -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType, k :: ObjectType, l :: ObjectType)
+  ON12g :: Inst12 IsObjectType a b c d e f g h i j k l => ObjectN '(a, b, c, d, e, f, h, i, j, k, l) -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType, k :: ObjectType, l :: ObjectType)
+  ON12h :: Inst12 IsObjectType a b c d e f g h i j k l => ObjectN '(a, b, c, d, e, f, g, i, j, k, l) -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType, k :: ObjectType, l :: ObjectType)
+  ON12i :: Inst12 IsObjectType a b c d e f g h i j k l => ObjectN '(a, b, c, d, e, f, g, h, j, k, l) -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType, k :: ObjectType, l :: ObjectType)
+  ON12j :: Inst12 IsObjectType a b c d e f g h i j k l => ObjectN '(a, b, c, d, e, f, g, h, i, k, l) -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType, k :: ObjectType, l :: ObjectType)
+  ON12k :: Inst12 IsObjectType a b c d e f g h i j k l => ObjectN '(a, b, c, d, e, f, g, h, i, j, l) -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType, k :: ObjectType, l :: ObjectType)
+  ON12l :: Inst12 IsObjectType a b c d e f g h i j k l => ObjectN '(a, b, c, d, e, f, g, h, i, j, k) -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType, k :: ObjectType, l :: ObjectType)
+  deriving (Typeable)
+
 deriving instance Inst1 IsObjectType a => Show (ObjectN a)
 
 deriving instance Inst2 IsObjectType a b => Show (ObjectN '(a, b))
@@ -281,3 +351,7 @@ deriving instance Inst8 IsObjectType a b c d e f g h => Show (ObjectN '(a, b, c,
 deriving instance Inst9 IsObjectType a b c d e f g h i => Show (ObjectN '(a, b, c, d, e, f, g, h, i))
 
 deriving instance Inst10 IsObjectType a b c d e f g h i j => Show (ObjectN '(a, b, c, d, e, f, g, h, i, j))
+
+deriving instance Inst11 IsObjectType a b c d e f g h i j k => Show (ObjectN '(a, b, c, d, e, f, g, h, i, j, k))
+
+deriving instance Inst12 IsObjectType a b c d e f g h i j k l => Show (ObjectN '(a, b, c, d, e, f, g, h, i, j, k, l))

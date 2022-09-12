@@ -31,7 +31,8 @@ import MtgPure.Model.ManaCost (ManaCost)
 import MtgPure.Model.ManaPool (ManaPool)
 import MtgPure.Model.NonCreature (NonCreature)
 import MtgPure.Model.ObjectN
-  ( OAny,
+  ( OActivatedOrTriggeredAbility,
+    OAny,
     OCreaturePlayerPlaneswalker,
     ODamageSource,
     OPermanent,
@@ -60,6 +61,12 @@ import MtgPure.Model.TimePoint (TimePoint)
 import MtgPure.Model.Toughness (Toughness)
 import MtgPure.Model.Tribal (Tribal (..))
 import MtgPure.Model.Variable (Variable)
+
+data AbilityType :: EffectType -> Type where
+  ActivatedAbility :: AbilityType 'OneShot
+  ManaAbility :: AbilityType 'OneShot
+  StaticAbility :: AbilityType 'Continuous
+  TriggeredAbility :: AbilityType 'OneShot
 
 data Ability :: forall a. a -> Type where
   Activated :: Elect Cost a -> Elect 'OneShot a -> Ability a
@@ -111,6 +118,7 @@ data Effect :: EffectType -> Type where
   AddMana :: ManaPool -> OPlayer -> Effect 'OneShot
   AddToBattlefield :: Permanent a -> OPlayer -> Token a -> Effect 'OneShot
   ChangeTo :: Permanent a -> OPermanent -> Card a -> Effect 'Continuous
+  CounterAbility :: OActivatedOrTriggeredAbility -> Effect 'OneShot
   CounterSpell :: OSpell -> Effect 'OneShot
   DealDamage :: ODamageSource -> OCreaturePlayerPlaneswalker -> Damage -> Effect 'OneShot
   Destroy :: OPermanent -> Effect 'OneShot

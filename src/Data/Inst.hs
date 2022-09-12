@@ -24,6 +24,8 @@ module Data.Inst
     Inst8,
     Inst9,
     Inst10,
+    Inst11,
+    Inst12,
   )
 where
 
@@ -48,3 +50,7 @@ type Inst8 (x :: k -> Constraint) a b c d e f g h = (Inst7 x a b c d e f g, x h)
 type Inst9 (x :: k -> Constraint) a b c d e f g h i = (Inst8 x a b c d e f g h, x i)
 
 type Inst10 (x :: k -> Constraint) a b c d e f g h i j = (Inst9 x a b c d e f g h i, x j)
+
+type Inst11 (x :: k' -> Constraint) a b c d e f g h i j k = (Inst10 x a b c d e f g h i j, x k)
+
+type Inst12 (x :: k' -> Constraint) a b c d e f g h i j k l = (Inst11 x a b c d e f g h i j k, x l)

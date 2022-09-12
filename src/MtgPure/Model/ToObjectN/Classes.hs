@@ -27,12 +27,16 @@ module MtgPure.Model.ToObjectN.Classes
     ToObject8 (..),
     ToObject9 (..),
     ToObject10 (..),
+    ToObject11 (..),
+    ToObject12 (..),
   )
 where
 
 import Data.Inst
   ( Inst1,
     Inst10,
+    Inst11,
+    Inst12,
     Inst2,
     Inst3,
     Inst4,
@@ -74,3 +78,9 @@ class Inst9 IsObjectType a b c d e f g h i => ToObject9 o a b c d e f g h i wher
 
 class Inst10 IsObjectType a b c d e f g h i j => ToObject10 o a b c d e f g h i j where
   toObject10 :: o -> (ObjectN '(a, b, c, d, e, f, g, h, i, j))
+
+class Inst11 IsObjectType a b c d e f g h i j k => ToObject11 o a b c d e f g h i j k where
+  toObject11 :: o -> (ObjectN '(a, b, c, d, e, f, g, h, i, j, k))
+
+class Inst12 IsObjectType a b c d e f g h i j k l => ToObject12 o a b c d e f g h i j k l where
+  toObject12 :: o -> (ObjectN '(a, b, c, d, e, f, g, h, i, j, k, l))
