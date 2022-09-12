@@ -8,6 +8,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE Safe #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
@@ -202,3 +203,19 @@ data instance ObjectN :: (ObjectType, ObjectType, ObjectType, ObjectType, Object
   ON8g :: Inst8 IsObjectType a b c d e f g h => ObjectN '(a, b, c, d, e, f, h) -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType)
   ON8h :: Inst8 IsObjectType a b c d e f g h => ObjectN '(a, b, c, d, e, f, g) -> ObjectN '(a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType)
   deriving (Typeable)
+
+deriving instance Inst1 IsObjectType a => Show (ObjectN a)
+
+deriving instance Inst2 IsObjectType a b => Show (ObjectN '(a, b))
+
+deriving instance Inst3 IsObjectType a b c => Show (ObjectN '(a, b, c))
+
+deriving instance Inst4 IsObjectType a b c d => Show (ObjectN '(a, b, c, d))
+
+deriving instance Inst5 IsObjectType a b c d e => Show (ObjectN '(a, b, c, d, e))
+
+deriving instance Inst6 IsObjectType a b c d e f => Show (ObjectN '(a, b, c, d, e, f))
+
+deriving instance Inst7 IsObjectType a b c d e f g => Show (ObjectN '(a, b, c, d, e, f, g))
+
+deriving instance Inst8 IsObjectType a b c d e f g h => Show (ObjectN '(a, b, c, d, e, f, g, h))
