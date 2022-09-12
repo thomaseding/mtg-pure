@@ -97,6 +97,7 @@ import safe MtgPure.Model.Recursive
     Event,
     EventListener,
     EventListener' (..),
+    NonProxy (..),
     Requirement (..),
     SetCard (SetCard),
     SetToken (SetToken),
@@ -1217,11 +1218,11 @@ showWithLinkedObject showM memo = \case
   LProxy reqs -> yesParens $ do
     sReqs <- dollar <$> showRequirements reqs
     pure $ pure "LProxy" <> sReqs
-  L1 reqs cont -> showO1 showM memo reqs cont
-  L2 reqs cont -> showO2 showM memo reqs cont
-  L3 reqs cont -> showO3 showM memo reqs cont
-  L4 reqs cont -> showO4 showM memo reqs cont
-  L5 reqs cont -> showO5 showM memo reqs cont
+  L1 NonProxyElectEffectOneShot reqs cont -> showO1 showM memo reqs cont
+  L2 NonProxyElectEffectOneShot reqs cont -> showO2 showM memo reqs cont
+  L3 NonProxyElectEffectOneShot reqs cont -> showO3 showM memo reqs cont
+  L4 NonProxyElectEffectOneShot reqs cont -> showO4 showM memo reqs cont
+  L5 NonProxyElectEffectOneShot reqs cont -> showO5 showM memo reqs cont
 
 -- TODO: This needs to inject some config to control how `showO*` prints
 showWithMaskedObject :: (forall ot'. x ot' -> EnvM ParenItems) -> String -> WithMaskedObject x ot -> EnvM ParenItems

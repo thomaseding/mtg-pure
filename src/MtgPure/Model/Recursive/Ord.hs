@@ -87,6 +87,7 @@ import safe MtgPure.Model.Recursive
     Event,
     EventListener,
     EventListener' (..),
+    NonProxy (..),
     Requirement (..),
     SetCard (..),
     SetToken (SetToken),
@@ -1015,21 +1016,16 @@ ordWithLinked ordM x = case x of
   LProxy reqs1 -> \case
     LProxy reqs2 -> ordRequirements reqs1 reqs2
     y -> compareIndexM x y
-  L1 reqs1 cont1 -> \case
-    L1 reqs2 cont2 -> ordO1 ordM reqs1 reqs2 cont1 cont2
-    y -> compareIndexM x y
-  L2 reqs1 cont1 -> \case
-    L2 reqs2 cont2 -> ordO2 ordM reqs1 reqs2 cont1 cont2
-    y -> compareIndexM x y
-  L3 reqs1 cont1 -> \case
-    L3 reqs2 cont2 -> ordO3 ordM reqs1 reqs2 cont1 cont2
-    y -> compareIndexM x y
-  L4 reqs1 cont1 -> \case
-    L4 reqs2 cont2 -> ordO4 ordM reqs1 reqs2 cont1 cont2
-    y -> compareIndexM x y
-  L5 reqs1 cont1 -> \case
-    L5 reqs2 cont2 -> ordO5 ordM reqs1 reqs2 cont1 cont2
-    y -> compareIndexM x y
+  L1 NonProxyElectEffectOneShot reqs1 cont1 -> \case
+    L1 NonProxyElectEffectOneShot reqs2 cont2 -> ordO1 ordM reqs1 reqs2 cont1 cont2
+  L2 NonProxyElectEffectOneShot reqs1 cont1 -> \case
+    L2 NonProxyElectEffectOneShot reqs2 cont2 -> ordO2 ordM reqs1 reqs2 cont1 cont2
+  L3 NonProxyElectEffectOneShot reqs1 cont1 -> \case
+    L3 NonProxyElectEffectOneShot reqs2 cont2 -> ordO3 ordM reqs1 reqs2 cont1 cont2
+  L4 NonProxyElectEffectOneShot reqs1 cont1 -> \case
+    L4 NonProxyElectEffectOneShot reqs2 cont2 -> ordO4 ordM reqs1 reqs2 cont1 cont2
+  L5 NonProxyElectEffectOneShot reqs1 cont1 -> \case
+    L5 NonProxyElectEffectOneShot reqs2 cont2 -> ordO5 ordM reqs1 reqs2 cont1 cont2
 
 ordWithObjectElectE :: WithMaskedObject (Elect e) ot -> WithMaskedObject (Elect e) ot -> EnvM Ordering
 ordWithObjectElectE x = case x of

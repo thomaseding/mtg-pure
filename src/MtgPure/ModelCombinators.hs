@@ -73,6 +73,7 @@ where
 
 import safe Data.Inst (Inst1, Inst2, Inst3, Inst4, Inst5)
 import Data.Proxy (Proxy (..))
+import Data.Typeable (Typeable)
 import safe MtgPure.Model.CardName (CardName)
 import safe MtgPure.Model.Color (Color)
 import safe MtgPure.Model.ColorsLike (ColorsLike (..))
@@ -119,6 +120,7 @@ import safe MtgPure.Model.Recursive
     Event,
     EventListener,
     EventListener' (..),
+    NonProxy (..),
     Requirement (..),
     SetCard (..),
     SetToken (..),
@@ -252,23 +254,29 @@ instance ToSetToken (SetToken OPlaneswalker) where
 instance ToSetToken (SetToken OSorcery) where
   toSetToken (SetToken s r (Token x)) = SetToken s r $ Token $ toCard x
 
-class AsWithLinkedObject ot where
-  linked :: TypeableOT2 ot x => [Requirement ot] -> (ot -> x ot) -> WithLinkedObject x ot
+class Typeable x => CoNonProxy x where
+  coNonProxy :: NonProxy x
 
-instance Inst1 IsObjectType a => AsWithLinkedObject (ON1 a) where
-  linked = L1
+instance CoNonProxy (Elect (Effect 'OneShot)) where
+  coNonProxy = NonProxyElectEffectOneShot
 
-instance Inst2 IsObjectType a b => AsWithLinkedObject (ON2 a b) where
-  linked = L2
+class TypeableOT2 ot x => AsWithLinkedObject x ot where
+  linked :: [Requirement ot] -> (ot -> x ot) -> WithLinkedObject x ot
 
-instance Inst3 IsObjectType a b c => AsWithLinkedObject (ON3 a b c) where
-  linked = L3
+instance (CoNonProxy x, Inst1 IsObjectType a) => AsWithLinkedObject x (ON1 a) where
+  linked = L1 coNonProxy
 
-instance Inst4 IsObjectType a b c d => AsWithLinkedObject (ON4 a b c d) where
-  linked = L4
+instance (CoNonProxy x, Inst2 IsObjectType a b) => AsWithLinkedObject x (ON2 a b) where
+  linked = L2 coNonProxy
 
-instance Inst5 IsObjectType a b c d e => AsWithLinkedObject (ON5 a b c d e) where
-  linked = L5
+instance (CoNonProxy x, Inst3 IsObjectType a b c) => AsWithLinkedObject x (ON3 a b c) where
+  linked = L3 coNonProxy
+
+instance (CoNonProxy x, Inst4 IsObjectType a b c d) => AsWithLinkedObject x (ON4 a b c d) where
+  linked = L4 coNonProxy
+
+instance (CoNonProxy x, Inst5 IsObjectType a b c d e) => AsWithLinkedObject x (ON5 a b c d e) where
+  linked = L5 coNonProxy
 
 class AsWithMaskedObject ot' where
   masked :: TypeableOT2 ot x => [Requirement ot'] -> (ot' -> x ot) -> WithMaskedObject x ot

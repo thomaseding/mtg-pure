@@ -27,6 +27,7 @@ module MtgPure.Model.Recursive
     Event,
     EventListener,
     EventListener' (..),
+    NonProxy (..),
     Requirement (..),
     SetCard (..),
     SetToken (..),
@@ -321,6 +322,13 @@ instance ConsIndex (EventListener' x) where
     SpellIsCast {} -> 3
     TimePoint {} -> 4
 
+data NonProxy :: (Type -> Type) -> Type where
+  NonProxyElectEffectOneShot :: NonProxy (Elect (Effect 'OneShot))
+
+instance ConsIndex (NonProxy x) where
+  consIndex = \case
+    NonProxyElectEffectOneShot -> 1
+
 data Requirement :: Type -> Type where
   ControlledBy :: OPlayer -> Requirement ot
   HasAbility :: WithThis Ability ot -> Requirement ot -- Non-unique differing representations will not be considered the same
@@ -364,9 +372,17 @@ data SetCard :: Type -> Type where
   SetCard :: CardSet -> Rarity -> Card ot -> SetCard ot
   deriving (Typeable)
 
+instance ConsIndex (SetCard ot) where
+  consIndex = \case
+    SetCard {} -> 1
+
 data SetToken :: Type -> Type where
   SetToken :: CardSet -> Rarity -> Token ot -> SetToken ot
   deriving (Typeable)
+
+instance ConsIndex (SetToken ot) where
+  consIndex = \case
+    SetToken {} -> 1
 
 data StaticAbility :: Type -> Type where
   As :: TypeableOT ot => Elect EventListener ot -> StaticAbility ot -- 603.6d: not a triggered ability
@@ -391,19 +407,27 @@ data Token :: Type -> Type where
   Token :: Card ot -> Token ot
   deriving (Typeable)
 
+instance ConsIndex (Token ot) where
+  consIndex = \case
+    Token {} -> 1
+
 -- https://www.mtgsalvation.com/forums/magic-fundamentals/magic-rulings/magic-rulings-archives/611601-whenever-what-does-it-mean?comment=3
 -- https://www.reddit.com/r/magicTCG/comments/asmecb/noob_question_difference_between_as_and_when/
 data TriggeredAbility :: Type -> Type where
   When :: TypeableOT ot => Elect EventListener ot -> TriggeredAbility ot
   deriving (Typeable)
 
+instance ConsIndex (TriggeredAbility ot) where
+  consIndex = \case
+    When {} -> 1
+
 data WithLinkedObject :: (Type -> Type) -> Type -> Type where
   LProxy :: [Requirement ot] -> WithLinkedObject Proxy ot
-  L1 :: Inst1 IsObjectType a => [Requirement (ON1 a)] -> (ON1 a -> x (ON1 a)) -> WithLinkedObject x (ON1 a)
-  L2 :: Inst2 IsObjectType a b => [Requirement (ON2 a b)] -> (ON2 a b -> x (ON2 a b)) -> WithLinkedObject x (ON2 a b)
-  L3 :: Inst3 IsObjectType a b c => [Requirement (ON3 a b c)] -> (ON3 a b c -> x (ON3 a b c)) -> WithLinkedObject x (ON3 a b c)
-  L4 :: Inst4 IsObjectType a b c d => [Requirement (ON4 a b c d)] -> (ON4 a b c d -> x (ON4 a b c d)) -> WithLinkedObject x (ON4 a b c d)
-  L5 :: Inst5 IsObjectType a b c d e => [Requirement (ON5 a b c d e)] -> (ON5 a b c d e -> x (ON5 a b c d e)) -> WithLinkedObject x (ON5 a b c d e)
+  L1 :: Inst1 IsObjectType a => NonProxy x -> [Requirement (ON1 a)] -> (ON1 a -> x (ON1 a)) -> WithLinkedObject x (ON1 a)
+  L2 :: Inst2 IsObjectType a b => NonProxy x -> [Requirement (ON2 a b)] -> (ON2 a b -> x (ON2 a b)) -> WithLinkedObject x (ON2 a b)
+  L3 :: Inst3 IsObjectType a b c => NonProxy x -> [Requirement (ON3 a b c)] -> (ON3 a b c -> x (ON3 a b c)) -> WithLinkedObject x (ON3 a b c)
+  L4 :: Inst4 IsObjectType a b c d => NonProxy x -> [Requirement (ON4 a b c d)] -> (ON4 a b c d -> x (ON4 a b c d)) -> WithLinkedObject x (ON4 a b c d)
+  L5 :: Inst5 IsObjectType a b c d e => NonProxy x -> [Requirement (ON5 a b c d e)] -> (ON5 a b c d e -> x (ON5 a b c d e)) -> WithLinkedObject x (ON5 a b c d e)
   deriving (Typeable)
 
 instance ConsIndex (WithLinkedObject x ot) where
