@@ -436,7 +436,7 @@ swanSong = Card1 "Swan Song" $ \this ->
     controllerOf this $
       \you -> A (Target you) $
         object [] $
-          \(target :: ObjectN '(OTEnchantment, OTInstant, OTSorcery)) ->
+          \(target :: ObjectN '(OT, 'OTEnchantment, 'OTInstant, 'OTSorcery)) ->
             controllerOf target $ \controller ->
               effect
                 [ counterSpell target,

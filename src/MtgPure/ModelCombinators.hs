@@ -74,12 +74,19 @@ import safe MtgPure.Model.ObjectN.Type
     OPlayer,
     OSpell,
   )
+import safe MtgPure.Model.ObjectType
+  ( OT,
+    ObjectType (..),
+    ObjectType1,
+    ObjectType2,
+    ObjectType3,
+    ObjectType4,
+    ObjectType5,
+  )
 import safe MtgPure.Model.ObjectType.Any (WAny (..))
 import safe MtgPure.Model.ObjectType.Kind
-  ( OTActivatedAbility,
-    OTArtifact,
+  ( OTArtifact,
     OTCreature,
-    OTEmblem,
     OTEnchantment,
     OTInstant,
     OTLand,
@@ -87,8 +94,6 @@ import safe MtgPure.Model.ObjectType.Kind
     OTPlaneswalker,
     OTPlayer,
     OTSorcery,
-    OTStaticAbility,
-    OTTriggeredAbility,
   )
 import safe MtgPure.Model.ObjectType.Permanent (IsPermanentType, WPermanent (..))
 import safe MtgPure.Model.Recursive
@@ -100,6 +105,8 @@ import safe MtgPure.Model.Recursive
     EventListener (..),
     Requirement (..),
     Token,
+    TypeableOT,
+    TypeableOT2,
     WithObject (..),
   )
 import safe MtgPure.Model.ToManaCost (ToManaCost (..))
@@ -113,29 +120,29 @@ import safe MtgPure.Model.ToObjectN.Classes
   )
 import safe MtgPure.Model.Variable (Variable)
 
-class AsWithObject ot where
-  object :: [Requirement ot] -> (ObjectN ot -> x o) -> WithObject x o
+class AsWithObject a where
+  object :: TypeableOT2 k ot x => [Requirement a] -> (ObjectN a -> x ot) -> WithObject x ot
 
-instance Inst1 IsObjectType a => AsWithObject a where
+instance Inst1 IsObjectType a => AsWithObject '(OT, a) where
   object = O1
 
-instance Inst2 IsObjectType a b => AsWithObject '(a, b) where
+instance Inst2 IsObjectType a b => AsWithObject '(OT, a, b) where
   object = O2
 
-instance Inst3 IsObjectType a b c => AsWithObject '(a, b, c) where
+instance Inst3 IsObjectType a b c => AsWithObject '(OT, a, b, c) where
   object = O3
 
-instance Inst4 IsObjectType a b c d => AsWithObject '(a, b, c, d) where
+instance Inst4 IsObjectType a b c d => AsWithObject '(OT, a, b, c, d) where
   object = O4
 
-instance Inst5 IsObjectType a b c d e => AsWithObject '(a, b, c, d, e) where
+instance Inst5 IsObjectType a b c d e => AsWithObject '(OT, a, b, c, d, e) where
   object = O5
 
 type AsActivatedOrTriggeredAbility a =
   ToObject2
     a
-    OTActivatedAbility
-    OTTriggeredAbility
+    'OTActivatedAbility
+    'OTTriggeredAbility
 
 asActivatedOrTriggeredAbility :: AsActivatedOrTriggeredAbility a => a -> OActivatedOrTriggeredAbility
 asActivatedOrTriggeredAbility = toObject2
@@ -143,18 +150,18 @@ asActivatedOrTriggeredAbility = toObject2
 type AsAny a =
   ToObject12
     a
-    OTActivatedAbility
-    OTArtifact
-    OTCreature
-    OTEmblem
-    OTEnchantment
-    OTInstant
-    OTLand
-    OTPlaneswalker
-    OTPlayer
-    OTSorcery
-    OTStaticAbility
-    OTTriggeredAbility
+    'OTActivatedAbility
+    'OTArtifact
+    'OTCreature
+    'OTEmblem
+    'OTEnchantment
+    'OTInstant
+    'OTLand
+    'OTPlaneswalker
+    'OTPlayer
+    'OTSorcery
+    'OTStaticAbility
+    'OTTriggeredAbility
 
 asAny :: AsAny a => a -> OAny
 asAny = toObject12
@@ -162,14 +169,14 @@ asAny = toObject12
 type AsDamageSource a =
   ToObject8
     a
-    OTArtifact
-    OTCreature
-    OTEnchantment
-    OTInstant
-    OTLand
-    OTPlaneswalker
-    OTPlayer
-    OTSorcery
+    'OTArtifact
+    'OTCreature
+    'OTEnchantment
+    'OTInstant
+    'OTLand
+    'OTPlaneswalker
+    'OTPlayer
+    'OTSorcery
 
 asDamageSource :: AsDamageSource a => a -> ODamageSource
 asDamageSource = toObject8
@@ -177,11 +184,11 @@ asDamageSource = toObject8
 type AsPermanent a =
   ToObject5
     a
-    OTArtifact
-    OTCreature
-    OTEnchantment
-    OTLand
-    OTPlaneswalker
+    'OTArtifact
+    'OTCreature
+    'OTEnchantment
+    'OTLand
+    'OTPlaneswalker
 
 asPermanent :: AsPermanent a => a -> OPermanent
 asPermanent = toObject5
@@ -189,12 +196,12 @@ asPermanent = toObject5
 type AsSpell a =
   ToObject6
     a
-    OTArtifact
-    OTCreature
-    OTEnchantment
-    OTInstant
-    OTPlaneswalker
-    OTSorcery
+    'OTArtifact
+    'OTCreature
+    'OTEnchantment
+    'OTInstant
+    'OTPlaneswalker
+    'OTSorcery
 
 asSpell :: AsSpell a => a -> OSpell
 asSpell = toObject6
@@ -202,9 +209,9 @@ asSpell = toObject6
 type AsCreaturePlayerPlaneswalker a =
   ToObject3
     a
-    OTCreature
-    OTPlaneswalker
-    OTPlayer
+    'OTCreature
+    'OTPlaneswalker
+    'OTPlayer
 
 asCreaturePlayerPlaneswalker :: AsCreaturePlayerPlaneswalker a => a -> OCreaturePlayerPlaneswalker
 asCreaturePlayerPlaneswalker = toObject3
@@ -241,10 +248,10 @@ dealDamage source target = DealDamage (asDamageSource source) (asCreaturePlayerP
 controllerOf :: AsAny o => o -> (OPlayer -> Elect e a) -> Elect e a
 controllerOf = ControllerOf . asAny
 
-sacrifice :: CoPermanent ot => OPlayer -> [Requirement ot] -> Effect 'OneShot
+sacrifice :: CoPermanent k ot => OPlayer -> [Requirement ot] -> Effect 'OneShot
 sacrifice = Sacrifice coPermanent
 
-changeTo :: (AsPermanent o, CoPermanent ot) => o -> Card ot -> Effect 'Continuous
+changeTo :: (AsPermanent o, CoPermanent k ot) => o -> Card ot -> Effect 'Continuous
 changeTo = ChangeTo coPermanent . asPermanent
 
 tapCost :: AsPermanent o => o -> Cost ot
@@ -259,88 +266,88 @@ counterAbility = CounterAbility . asActivatedOrTriggeredAbility
 counterSpell :: AsSpell o => o -> Effect 'OneShot
 counterSpell = CounterSpell . asSpell
 
-class CoPermanent ot where
+class TypeableOT k ot => CoPermanent k (ot :: k) where
   coPermanent :: WPermanent ot
 
-instance CoPermanent OTArtifact where
+instance CoPermanent ObjectType1 OTArtifact where
   coPermanent = WPermanentArtifact
 
-instance CoPermanent OTCreature where
+instance CoPermanent ObjectType1 OTCreature where
   coPermanent = WPermanentCreature
 
-instance CoPermanent OTEnchantment where
+instance CoPermanent ObjectType1 OTEnchantment where
   coPermanent = WPermanentEnchantment
 
-instance CoPermanent OTLand where
+instance CoPermanent ObjectType1 OTLand where
   coPermanent = WPermanentLand
 
-instance CoPermanent OTPlaneswalker where
+instance CoPermanent ObjectType1 OTPlaneswalker where
   coPermanent = WPermanentPlaneswalker
 
-instance CoPermanent OTPermanent where
+instance CoPermanent ObjectType5 OTPermanent where
   coPermanent = WPermanent
 
-instance Inst2 IsPermanentType a b => CoPermanent '(a, b) where
-  coPermanent = WPermanent2 :: WPermanent '(a, b)
+instance Inst2 IsPermanentType a b => CoPermanent ObjectType2 '(OT, a, b) where
+  coPermanent = WPermanent2 :: WPermanent '(OT, a, b)
 
-instance Inst3 IsPermanentType a b c => CoPermanent '(a, b, c) where
-  coPermanent = WPermanent3 :: WPermanent '(a, b, c)
+instance Inst3 IsPermanentType a b c => CoPermanent ObjectType3 '(OT, a, b, c) where
+  coPermanent = WPermanent3 :: WPermanent '(OT, a, b, c)
 
-instance Inst4 IsPermanentType a b c d => CoPermanent '(a, b, c, d) where
-  coPermanent = WPermanent4 :: WPermanent '(a, b, c, d)
+instance Inst4 IsPermanentType a b c d => CoPermanent ObjectType4 '(OT, a, b, c, d) where
+  coPermanent = WPermanent4 :: WPermanent '(OT, a, b, c, d)
 
-class CoAny ot where
+class TypeableOT k ot => CoAny k (ot :: k) where
   coAny :: WAny ot
 
-instance CoAny OTInstant where
+instance CoAny ObjectType1 OTInstant where
   coAny = WAnyInstant
 
-instance CoAny OTSorcery where
+instance CoAny ObjectType1 OTSorcery where
   coAny = WAnySorcery
 
-instance CoAny OTPlayer where
+instance CoAny ObjectType1 OTPlayer where
   coAny = WAnyPlayer
 
-instance CoAny OTArtifact where
+instance CoAny ObjectType1 OTArtifact where
   coAny = WAnyPermanent coPermanent
 
-instance CoAny OTCreature where
+instance CoAny ObjectType1 OTCreature where
   coAny = WAnyPermanent coPermanent
 
-instance CoAny OTEnchantment where
+instance CoAny ObjectType1 OTEnchantment where
   coAny = WAnyPermanent coPermanent
 
-instance CoAny OTLand where
+instance CoAny ObjectType1 OTLand where
   coAny = WAnyPermanent coPermanent
 
-instance CoAny OTPlaneswalker where
+instance CoAny ObjectType1 OTPlaneswalker where
   coAny = WAnyPermanent coPermanent
 
-instance CoAny OTPermanent where
+instance CoAny ObjectType5 OTPermanent where
   coAny = WAnyPermanent coPermanent
 
-instance Inst2 IsPermanentType a b => CoAny '(a, b) where
+instance Inst2 IsPermanentType a b => CoAny ObjectType2 '(OT, a, b) where
   coAny = WAnyPermanent coPermanent
 
-instance Inst3 IsPermanentType a b c => CoAny '(a, b, c) where
+instance Inst3 IsPermanentType a b c => CoAny ObjectType3 '(OT, a, b, c) where
   coAny = WAnyPermanent coPermanent
 
-instance Inst4 IsPermanentType a b c d => CoAny '(a, b, c, d) where
+instance Inst4 IsPermanentType a b c d => CoAny ObjectType4 '(OT, a, b, c, d) where
   coAny = WAnyPermanent coPermanent
 
-is :: CoAny ot => ObjectN ot -> Requirement ot
+is :: CoAny k ot => ObjectN ot -> Requirement ot
 is = Is coAny
 
-satisfies :: CoAny ot => ObjectN ot -> [Requirement ot] -> Condition
+satisfies :: CoAny k ot => ObjectN ot -> [Requirement ot] -> Condition
 satisfies = Satisfies coAny
 
-sacrificeCost :: CoPermanent ot => [Requirement ot] -> Cost ot
+sacrificeCost :: CoPermanent k ot => [Requirement ot] -> Cost ot
 sacrificeCost = SacrificeCost coPermanent
 
-tapped :: CoPermanent ot => Requirement ot
+tapped :: CoPermanent k ot => Requirement ot
 tapped = Tapped coPermanent
 
-addToBattlefield :: CoPermanent a => OPlayer -> Token a -> Effect 'OneShot
+addToBattlefield :: CoPermanent k ot => OPlayer -> Token ot -> Effect 'OneShot
 addToBattlefield = AddToBattlefield coPermanent
 
 ofColors :: ColorsLike c => c -> Requirement ot
@@ -394,5 +401,5 @@ nonBasic = RAnd $ map (Not . HasBasicLandType) [minBound ..]
 colored :: Requirement ot
 colored = ROr $ map ofColors [minBound :: Color ..]
 
-colorless :: Requirement ot
+colorless :: TypeableOT k ot => Requirement ot
 colorless = Not colored

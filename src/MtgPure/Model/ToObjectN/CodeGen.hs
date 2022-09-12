@@ -77,6 +77,7 @@ header =
   \import safe MtgPure.Model.IsObjectType (IsObjectType)\n\
   \import safe MtgPure.Model.Object (Object)\n\
   \import safe MtgPure.Model.ObjectN (ObjectN (..))\n\
+  \import safe MtgPure.Model.ObjectType (OT)\n\
   \import safe MtgPure.Model.ToObjectN.Classes\n\
   \  ( ToObject1(..),\n\
   \    ToObject2(..),\n\
@@ -93,6 +94,7 @@ header =
   \  )\n\
   \\n\
   \type ON = ObjectN\n\
+  \type Y = OT\n\
   \to2 = toObject2\n\
   \to3 = toObject3\n\
   \to4 = toObject4\n\
@@ -253,9 +255,7 @@ generateObjectMToObjectN desc symsM symsN =
           ++ map (interpretSym desc) symsN
           ++ [ "=>",
                "ToObject" ++ show n,
-               if m == 1
-                 then "(ObjectN " ++ seqSymsM ++ ")"
-                 else "(ObjectN '(" ++ seqSymsM ++ "))"
+               "(ObjectN '(OT, " ++ seqSymsM ++ "))"
              ]
           ++ map (interpretSym desc) symsN
           ++ ["where"]
@@ -270,7 +270,7 @@ telescopeToObjectN desc acc symsM symsN = case m < n of
     toObjectSucc = "to" ++ show (m + 1)
     newSym = head $ symsN \\ symsM
     symsSucc = sort $ newSym : symsM
-    typeSucc = "(ON '(" ++ commas (map (interpretSym desc) symsSucc) ++ "))"
+    typeSucc = "(ON '(Y, " ++ commas (map (interpretSym desc) symsSucc) ++ "))"
     acc' = "(" ++ toObjectSucc ++ " " ++ acc ++ " :: " ++ typeSucc ++ ")"
 
 commas :: [String] -> String

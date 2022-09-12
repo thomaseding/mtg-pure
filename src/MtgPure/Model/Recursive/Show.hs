@@ -67,8 +67,8 @@ import safe MtgPure.Model.ObjectN.Type
     OPlayerPlaneswalker,
     OSpell,
   )
+import MtgPure.Model.ObjectType (OT, ObjectType (..))
 import safe MtgPure.Model.ObjectType.Any (WAny (..))
-import safe MtgPure.Model.ObjectType.Kind (OTPlayer)
 import safe MtgPure.Model.ObjectType.NonCreatureCard
   ( IsNonCreatureCardType,
     WNonCreatureCard (..),
@@ -254,7 +254,7 @@ showObjectNImpl objNRef prefix obj = do
       False -> yesParens $ pure $ pure prefix <> pure " " <> sObj
       True -> noParens $ pure sObj
 
-showObject1 :: IsObjectType a => ObjectN a -> EnvM ParenItems
+showObject1 :: IsObjectType a => ObjectN '(OT, a) -> EnvM ParenItems
 showObject1 objN = visitObjectN' visit objN
   where
     rep = typeOf objN
@@ -264,7 +264,7 @@ showObject1 objN = visitObjectN' visit objN
         if
             | otherwise -> "O"
 
-showObject2 :: Inst2 IsObjectType a b => ObjectN '(a, b) -> EnvM ParenItems
+showObject2 :: Inst2 IsObjectType a b => ObjectN '(OT, a, b) -> EnvM ParenItems
 showObject2 objN = visitObjectN' visit objN
   where
     rep = typeOf objN
@@ -277,7 +277,7 @@ showObject2 objN = visitObjectN' visit objN
             | rep == typeRep (Proxy @OPlayerPlaneswalker) -> "asPlayerPlaneswalker"
             | otherwise -> "toObject2"
 
-showObject3 :: Inst3 IsObjectType a b c => ObjectN '(a, b, c) -> EnvM ParenItems
+showObject3 :: Inst3 IsObjectType a b c => ObjectN '(OT, a, b, c) -> EnvM ParenItems
 showObject3 objN = visitObjectN' visit objN
   where
     rep = typeOf objN
@@ -288,7 +288,7 @@ showObject3 objN = visitObjectN' visit objN
             | rep == typeRep (Proxy @OCreaturePlayerPlaneswalker) -> "asCreaturePlayerPlaneswalker"
             | otherwise -> "toObject3"
 
-showObject4 :: Inst4 IsObjectType a b c d => ObjectN '(a, b, c, d) -> EnvM ParenItems
+showObject4 :: Inst4 IsObjectType a b c d => ObjectN '(OT, a, b, c, d) -> EnvM ParenItems
 showObject4 objN = visitObjectN' visit objN
   where
     rep = typeOf objN
@@ -298,7 +298,7 @@ showObject4 objN = visitObjectN' visit objN
         if
             | otherwise -> "toObject4"
 
-showObject5 :: Inst5 IsObjectType a b c d e => ObjectN '(a, b, c, d, e) -> EnvM ParenItems
+showObject5 :: Inst5 IsObjectType a b c d e => ObjectN '(OT, a, b, c, d, e) -> EnvM ParenItems
 showObject5 objN = visitObjectN' visit objN
   where
     rep = typeOf objN
@@ -309,7 +309,7 @@ showObject5 objN = visitObjectN' visit objN
             | rep == typeRep (Proxy @OPermanent) -> "asPermanent"
             | otherwise -> "toObject5"
 
-showObject6 :: Inst6 IsObjectType a b c d e f => ObjectN '(a, b, c, d, e, f) -> EnvM ParenItems
+showObject6 :: Inst6 IsObjectType a b c d e f => ObjectN '(OT, a, b, c, d, e, f) -> EnvM ParenItems
 showObject6 objN = visitObjectN' visit objN
   where
     rep = typeOf objN
@@ -320,7 +320,7 @@ showObject6 objN = visitObjectN' visit objN
             | rep == typeRep (Proxy @OSpell) -> "asSpell"
             | otherwise -> "toObject6"
 
-showObject8 :: Inst8 IsObjectType a b c d e f g h => ObjectN '(a, b, c, d, e, f, g, h) -> EnvM ParenItems
+showObject8 :: Inst8 IsObjectType a b c d e f g h => ObjectN '(OT, a, b, c, d, e, f, g, h) -> EnvM ParenItems
 showObject8 objN = visitObjectN' visit objN
   where
     rep = typeOf objN
@@ -331,7 +331,7 @@ showObject8 objN = visitObjectN' visit objN
             | rep == typeRep (Proxy @ODamageSource) -> "asDamageSource"
             | otherwise -> "toObject8"
 
-showObject12 :: Inst12 IsObjectType a b c d e f g h i j k l => ObjectN '(a, b, c, d, e, f, g, h, i, j, k, l) -> EnvM ParenItems
+showObject12 :: Inst12 IsObjectType a b c d e f g h i j k l => ObjectN '(OT, a, b, c, d, e, f, g, h, i, j, k, l) -> EnvM ParenItems
 showObject12 objN = visitObjectN' visit objN
   where
     rep = typeOf objN
@@ -359,11 +359,11 @@ newObject name = do
   pure (obj, ObjectIdState i)
 
 newObjectN ::
-  forall a b.
-  (Typeable (ObjectN b), IsObjectType a) =>
-  (Object a -> ObjectN b) ->
+  forall a ot.
+  (Typeable (ObjectN ot), IsObjectType a) =>
+  (Object a -> ObjectN ot) ->
   String ->
-  EnvM (ObjectN b, ObjectIdState)
+  EnvM (ObjectN ot, ObjectIdState)
 newObjectN make name = do
   (obj, snap) <- newObject @a name
   let i = objectToId obj
@@ -467,23 +467,27 @@ showToken (Token card) = yesParens $ do
   sCard <- dollar <$> showCard card
   pure $ pure "Token" <> sCard
 
-showCard :: forall x. Card x -> EnvM ParenItems
+showCard :: Card x -> EnvM ParenItems
 showCard = \case
-  Card1 (CardName name) cont -> yesParens $ do
-    depth <- State.gets cardDepth
-    State.modify' $ \st -> st {cardDepth = subtract 1 <$> depth}
-    let sName = pure (fromString $ show name)
-    case depth of
-      Just 0 -> pure $ pure "Card " <> sName <> pure " ..."
-      _ -> do
-        (this, snap) <- newObjectN @x O "this"
-        sThis <- parens <$> showObject1 this
-        let def = cont this
-        sDef <- dropParens <$> showCardTypeDef def
-        restoreObject snap
-        pure $ pure "Card " <> sName <> pure " $ \\" <> sThis <> pure " -> " <> sDef
+  card@Card1 {} ->
+    let go :: forall a. Card '(OT, a) -> EnvM ParenItems
+        go = \case
+          Card1 (CardName name) cont -> yesParens $ do
+            depth <- State.gets cardDepth
+            State.modify' $ \st -> st {cardDepth = subtract 1 <$> depth}
+            let sName = pure (fromString $ show name)
+            case depth of
+              Just 0 -> pure $ pure "Card " <> sName <> pure " ..."
+              _ -> do
+                (this, snap) <- newObjectN @a O "this"
+                sThis <- parens <$> showObject1 this
+                let def = cont this
+                sDef <- dropParens <$> showCardTypeDef def
+                restoreObject snap
+                pure $ pure "Card " <> sName <> pure " $ \\" <> sThis <> pure " -> " <> sDef
+     in go card
   card@Card2 {} ->
-    let go :: forall a b. Card '(a, b) -> EnvM ParenItems
+    let go :: forall a b. Card '(OT, a, b) -> EnvM ParenItems
         go = \case
           Card2 (CardName name) cont -> yesParens $ do
             depth <- State.gets cardDepth
@@ -610,9 +614,9 @@ showCardTypeDef = \case
       IsObjectType a =>
       Item ->
       Colors ->
-      Elect Cost a ->
-      [Ability a] ->
-      Elect 'OneShot a ->
+      Elect Cost '(OT, a) ->
+      [Ability '(OT, a)] ->
+      Elect 'OneShot '(OT, a) ->
       EnvM ParenItems
     showOneShot def colors cost abilities oneShot = yesParens $ do
       sColors <- parens <$> showColors colors
@@ -965,16 +969,16 @@ showPermanent permanent = case permanent of
   WPermanentPlaneswalker -> noParens sPermanent
   WPermanent -> noParens sPermanent
   WPermanent2 -> yesParens $ do
-    let go :: forall a b. Inst2 IsPermanentType a b => WPermanent '(a, b) -> Item
-        go _ = fromString $ prettyObjectName (Proxy :: Proxy '(a, b))
+    let go :: forall a b. Inst2 IsPermanentType a b => WPermanent '(OT, a, b) -> Item
+        go _ = fromString $ prettyObjectName (Proxy :: Proxy '(OT, a, b))
     pure $ pure "WPermanent2 :: @" <> pure (go permanent)
   WPermanent3 -> yesParens $ do
-    let go :: forall a b c. Inst3 IsPermanentType a b c => WPermanent '(a, b, c) -> Item
-        go _ = fromString $ prettyObjectName (Proxy :: Proxy '(a, b, c))
+    let go :: forall a b c. Inst3 IsPermanentType a b c => WPermanent '(OT, a, b, c) -> Item
+        go _ = fromString $ prettyObjectName (Proxy :: Proxy '(OT, a, b, c))
     pure $ pure "WPermanent3 :: @" <> pure (go permanent)
   WPermanent4 -> yesParens $ do
-    let go :: forall a b c d. Inst4 IsPermanentType a b c d => WPermanent '(a, b, c, d) -> Item
-        go _ = fromString $ prettyObjectName (Proxy :: Proxy '(a, b, c, d))
+    let go :: forall a b c d. Inst4 IsPermanentType a b c d => WPermanent '(OT, a, b, c, d) -> Item
+        go _ = fromString $ prettyObjectName (Proxy :: Proxy '(OT, a, b, c, d))
     pure $ pure "WPermanent4 :: @" <> pure (go permanent)
   where
     sPermanent :: EnvM Items
@@ -990,12 +994,12 @@ showNonCreatureCard nonCreature = case nonCreature of
   WNonCreatureSorcery -> noParens sNonCreature
   WNonCreatureCard -> noParens sNonCreature
   WNonCreatureCard2 -> yesParens $ do
-    let go :: forall a b. Inst2 IsNonCreatureCardType a b => WNonCreatureCard '(a, b) -> Item
-        go _ = fromString $ prettyObjectName (Proxy :: Proxy '(a, b))
+    let go :: forall a b. Inst2 IsNonCreatureCardType a b => WNonCreatureCard '(OT, a, b) -> Item
+        go _ = fromString $ prettyObjectName (Proxy :: Proxy '(OT, a, b))
     pure $ pure "WNonCreatureCard2 :: @" <> pure (go nonCreature)
   WNonCreatureCard3 -> yesParens $ do
-    let go :: forall a b c. Inst3 IsNonCreatureCardType a b c => WNonCreatureCard '(a, b, c) -> Item
-        go _ = fromString $ prettyObjectName (Proxy :: Proxy '(a, b, c))
+    let go :: forall a b c. Inst3 IsNonCreatureCardType a b c => WNonCreatureCard '(OT, a, b, c) -> Item
+        go _ = fromString $ prettyObjectName (Proxy :: Proxy '(OT, a, b, c))
     pure $ pure "WNonCreatureCard3 :: @" <> pure (go nonCreature)
   where
     sNonCreature :: EnvM Items
@@ -1091,7 +1095,7 @@ showElect = \case
     sWithObject <- dollar <$> showWithObject showElect (selectionMemo sel) withObject
     pure $ pure "A " <> sSel <> sWithObject
   ActivePlayer contElect -> yesParens $ do
-    (active, snap) <- newObjectN @OTPlayer O "active"
+    (active, snap) <- newObjectN @'OTPlayer O "active"
     sActive <- parens <$> showObject1 active
     let elect = contElect active
     sElect <- dropParens <$> showElect elect
@@ -1105,7 +1109,7 @@ showElect = \case
     pure $ pure "Condition" <> sCond
   ControllerOf obj contElect -> yesParens $ do
     objPrefix <- getObjectNamePrefix $ visitObjectN' objectToId obj
-    (controller, snap) <- newObjectN @OTPlayer O $ case objPrefix == "this" of
+    (controller, snap) <- newObjectN @'OTPlayer O $ case objPrefix == "this" of
       True -> "you"
       False -> "controller"
     sController <- parens <$> showObject1 controller
@@ -1142,8 +1146,8 @@ showO1 ::
   IsObjectType b =>
   (x a -> EnvM ParenItems) ->
   String ->
-  [Requirement b] ->
-  (ObjectN b -> x a) ->
+  [Requirement '(OT, b)] ->
+  (ObjectN '(OT, b) -> x a) ->
   EnvM ParenItems
 showO1 showM memo reqs cont = yesParens $ do
   sReqs <- parens <$> showRequirements reqs
@@ -1165,8 +1169,8 @@ showO2 ::
   Inst2 IsObjectType b c =>
   (a -> EnvM ParenItems) ->
   String ->
-  [Requirement '(b, c)] ->
-  (ObjectN '(b, c) -> a) ->
+  [Requirement '(OT, b, c)] ->
+  (ObjectN '(OT, b, c) -> a) ->
   EnvM ParenItems
 showO2 showM memo reqs cont = yesParens $ do
   sReqs <- parens <$> showRequirements reqs
@@ -1188,8 +1192,8 @@ showO3 ::
   Inst3 IsObjectType b c d =>
   (a -> EnvM ParenItems) ->
   String ->
-  [Requirement '(b, c, d)] ->
-  (ObjectN '(b, c, d) -> a) ->
+  [Requirement '(OT, b, c, d)] ->
+  (ObjectN '(OT, b, c, d) -> a) ->
   EnvM ParenItems
 showO3 showM memo reqs cont = yesParens $ do
   sReqs <- parens <$> showRequirements reqs
@@ -1211,8 +1215,8 @@ showO4 ::
   Inst4 IsObjectType b c d e =>
   (a -> EnvM ParenItems) ->
   String ->
-  [Requirement '(b, c, d, e)] ->
-  (ObjectN '(b, c, d, e) -> a) ->
+  [Requirement '(OT, b, c, d, e)] ->
+  (ObjectN '(OT, b, c, d, e) -> a) ->
   EnvM ParenItems
 showO4 showM memo reqs cont = yesParens $ do
   sReqs <- parens <$> showRequirements reqs
@@ -1234,8 +1238,8 @@ showO5 ::
   Inst5 IsObjectType b c d e f =>
   (a -> EnvM ParenItems) ->
   String ->
-  [Requirement '(b, c, d, e, f)] ->
-  (ObjectN '(b, c, d, e, f) -> a) ->
+  [Requirement '(OT, b, c, d, e, f)] ->
+  (ObjectN '(OT, b, c, d, e, f) -> a) ->
   EnvM ParenItems
 showO5 showM memo reqs cont = yesParens $ do
   sReqs <- parens <$> showRequirements reqs

@@ -27,8 +27,8 @@ import safe MtgPure.Model.ObjectType.Kind
 import safe MtgPure.Model.ObjectType.Permanent (WPermanent)
 
 -- Witness type
-data WAny :: forall a. a -> Type where
+data WAny :: forall ot. ot -> Type where
   WAnyInstant :: WAny OTInstant
   WAnySorcery :: WAny OTSorcery
   WAnyPlayer :: WAny OTPlayer
-  WAnyPermanent :: WPermanent a -> WAny a
+  WAnyPermanent :: WPermanent ot -> WAny ot

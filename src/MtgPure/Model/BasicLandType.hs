@@ -18,6 +18,8 @@ module MtgPure.Model.BasicLandType
   )
 where
 
+import Data.Typeable (Typeable)
+
 data BasicLandType
   = Forest
   | Island
@@ -25,4 +27,4 @@ data BasicLandType
   | Plains
   | Swamp
   | Wastes
-  deriving (Bounded, Enum, Show)
+  deriving (Bounded, Enum, Show, Typeable)

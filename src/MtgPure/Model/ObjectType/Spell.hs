@@ -36,6 +36,7 @@ import safe MtgPure.Model.ObjectN.Type
     OPlaneswalker,
     OSorcery,
   )
+import MtgPure.Model.ObjectType (OT, ObjectType (..))
 import MtgPure.Model.ObjectType.Kind
   ( OTArtifact,
     OTCreature,
@@ -56,7 +57,7 @@ data SpellType
   deriving (Bounded, Enum, Eq, Ord, Show)
 
 -- Witness type
-data WSpell :: forall a. a -> Type where
+data WSpell :: forall ot. ot -> Type where
   WSpellArtifact :: WSpell OTArtifact
   WSpellCreature :: WSpell OTCreature
   WSpellEnchantment :: WSpell OTEnchantment
@@ -64,9 +65,9 @@ data WSpell :: forall a. a -> Type where
   WSpellPlaneswalker :: WSpell OTPlaneswalker
   WSpellSorcery :: WSpell OTSorcery
   WSpell :: WSpell OTSpell
-  WSpell2 :: Inst2 IsSpellType a b => WSpell '(a, b)
-  WSpell3 :: Inst3 IsSpellType a b c => WSpell '(a, b, c)
-  WSpell4 :: Inst4 IsSpellType a b c d => WSpell '(a, b, c, d)
+  WSpell2 :: Inst2 IsSpellType a b => WSpell '(OT, a, b)
+  WSpell3 :: Inst3 IsSpellType a b c => WSpell '(OT, a, b, c)
+  WSpell4 :: Inst4 IsSpellType a b c d => WSpell '(OT, a, b, c, d)
 
 deriving instance Show (WSpell a)
 
@@ -81,38 +82,38 @@ data SpellVisitor a = SpellVisitor
 
 class IsObjectType a => IsSpellType a where
   singSpellType :: Proxy a -> SpellType
-  singSpell :: Proxy a -> WSpell a
-  visitSpell :: SpellVisitor b -> WSpell a -> ObjectN a -> b
+  singSpell :: Proxy a -> WSpell '(OT, a)
+  visitSpell :: SpellVisitor b -> WSpell '(OT, a) -> ObjectN '(OT, a) -> b
 
-visitSpell' :: IsSpellType a => (forall b. IsSpellType b => ObjectN b -> x) -> WSpell a -> ObjectN a -> x
+visitSpell' :: IsSpellType a => (forall b. IsSpellType b => ObjectN '(OT, b) -> x) -> WSpell '(OT, a) -> ObjectN '(OT, a) -> x
 visitSpell' f = visitSpell $ SpellVisitor f f f f f f
 
-instance IsSpellType OTArtifact where
+instance IsSpellType 'OTArtifact where
   singSpellType _ = STArtifact
   singSpell _ = WSpellArtifact
   visitSpell v _ = visitSArtifact v
 
-instance IsSpellType OTCreature where
+instance IsSpellType 'OTCreature where
   singSpellType _ = STCreature
   singSpell _ = WSpellCreature
   visitSpell v _ = visitSCreature v
 
-instance IsSpellType OTEnchantment where
+instance IsSpellType 'OTEnchantment where
   singSpellType _ = STEnchantment
   singSpell _ = WSpellEnchantment
   visitSpell v _ = visitSEnchantment v
 
-instance IsSpellType OTInstant where
+instance IsSpellType 'OTInstant where
   singSpellType _ = STInstant
   singSpell _ = WSpellInstant
   visitSpell v _ = visitSInstant v
 
-instance IsSpellType OTPlaneswalker where
+instance IsSpellType 'OTPlaneswalker where
   singSpellType _ = STPlaneswalker
   singSpell _ = WSpellPlaneswalker
   visitSpell v _ = visitSPlaneswalker v
 
-instance IsSpellType OTSorcery where
+instance IsSpellType 'OTSorcery where
   singSpellType _ = STSorcery
   singSpell _ = WSpellSorcery
   visitSpell v _ = visitSSorcery v

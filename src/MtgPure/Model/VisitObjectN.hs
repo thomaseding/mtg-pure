@@ -38,6 +38,7 @@ import safe Data.Kind (Type)
 import safe MtgPure.Model.IsObjectType (IsObjectType)
 import safe MtgPure.Model.Object (Object)
 import safe MtgPure.Model.ObjectN (ObjectN (..))
+import safe MtgPure.Model.ObjectType (OT)
 
 class VisitObjectN (a :: k) where
   data ObjectVisitorN a :: Type -> Type
@@ -47,16 +48,16 @@ class VisitObjectN (a :: k) where
 vn :: VisitObjectN a => ObjectVisitorN a x -> ObjectN a -> x
 vn = visitObjectN
 
-instance Inst1 IsObjectType a => VisitObjectN a where
-  data ObjectVisitorN a x = ObjectVisitor1
+instance Inst1 IsObjectType a => VisitObjectN '(OT, a) where
+  data ObjectVisitorN '(OT, a) x = ObjectVisitor1
     { visitObject1 :: Object a -> x
     }
   visitObjectN' f = visitObjectN $ ObjectVisitor1 f
   visitObjectN v = \case
     O x -> visitObject1 v x
 
-instance Inst2 IsObjectType a b => VisitObjectN '(a, b) where
-  data ObjectVisitorN '(a, b) x = ObjectVisitor2
+instance Inst2 IsObjectType a b => VisitObjectN '(OT, a, b) where
+  data ObjectVisitorN '(OT, a, b) x = ObjectVisitor2
     { visitObject2a :: Object a -> x,
       visitObject2b :: Object b -> x
     }
@@ -70,8 +71,8 @@ instance Inst2 IsObjectType a b => VisitObjectN '(a, b) where
       a = visitObject2a v
       b = visitObject2b v
 
-instance Inst3 IsObjectType a b c => VisitObjectN '(a, b, c) where
-  data ObjectVisitorN '(a, b, c) x = ObjectVisitor3
+instance Inst3 IsObjectType a b c => VisitObjectN '(OT, a, b, c) where
+  data ObjectVisitorN '(OT, a, b, c) x = ObjectVisitor3
     { visitObject3a :: Object a -> x,
       visitObject3b :: Object b -> x,
       visitObject3c :: Object c -> x
@@ -89,8 +90,8 @@ instance Inst3 IsObjectType a b c => VisitObjectN '(a, b, c) where
       b = visitObject3b v
       c = visitObject3c v
 
-instance Inst4 IsObjectType a b c d => VisitObjectN '(a, b, c, d) where
-  data ObjectVisitorN '(a, b, c, d) x = ObjectVisitor4
+instance Inst4 IsObjectType a b c d => VisitObjectN '(OT, a, b, c, d) where
+  data ObjectVisitorN '(OT, a, b, c, d) x = ObjectVisitor4
     { visitObject4a :: Object a -> x,
       visitObject4b :: Object b -> x,
       visitObject4c :: Object c -> x,
@@ -112,8 +113,8 @@ instance Inst4 IsObjectType a b c d => VisitObjectN '(a, b, c, d) where
       c = visitObject4c v
       d = visitObject4d v
 
-instance Inst5 IsObjectType a b c d e => VisitObjectN '(a, b, c, d, e) where
-  data ObjectVisitorN '(a, b, c, d, e) x = ObjectVisitor5
+instance Inst5 IsObjectType a b c d e => VisitObjectN '(OT, a, b, c, d, e) where
+  data ObjectVisitorN '(OT, a, b, c, d, e) x = ObjectVisitor5
     { visitObject5a :: Object a -> x,
       visitObject5b :: Object b -> x,
       visitObject5c :: Object c -> x,
@@ -139,8 +140,8 @@ instance Inst5 IsObjectType a b c d e => VisitObjectN '(a, b, c, d, e) where
       d = visitObject5d v
       e = visitObject5e v
 
-instance Inst6 IsObjectType a b c d e f => VisitObjectN '(a, b, c, d, e, f) where
-  data ObjectVisitorN '(a, b, c, d, e, f) x = ObjectVisitor6
+instance Inst6 IsObjectType a b c d e f => VisitObjectN '(OT, a, b, c, d, e, f) where
+  data ObjectVisitorN '(OT, a, b, c, d, e, f) x = ObjectVisitor6
     { visitObject6a :: Object a -> x,
       visitObject6b :: Object b -> x,
       visitObject6c :: Object c -> x,
@@ -170,8 +171,8 @@ instance Inst6 IsObjectType a b c d e f => VisitObjectN '(a, b, c, d, e, f) wher
       e = visitObject6e v
       f = visitObject6f v
 
-instance Inst7 IsObjectType a b c d e f g => VisitObjectN '(a, b, c, d, e, f, g) where
-  data ObjectVisitorN '(a, b, c, d, e, f, g) x = ObjectVisitor7
+instance Inst7 IsObjectType a b c d e f g => VisitObjectN '(OT, a, b, c, d, e, f, g) where
+  data ObjectVisitorN '(OT, a, b, c, d, e, f, g) x = ObjectVisitor7
     { visitObject7a :: Object a -> x,
       visitObject7b :: Object b -> x,
       visitObject7c :: Object c -> x,
@@ -205,8 +206,8 @@ instance Inst7 IsObjectType a b c d e f g => VisitObjectN '(a, b, c, d, e, f, g)
       f = visitObject7f v
       g = visitObject7g v
 
-instance Inst8 IsObjectType a b c d e f g h => VisitObjectN '(a, b, c, d, e, f, g, h) where
-  data ObjectVisitorN '(a, b, c, d, e, f, g, h) x = ObjectVisitor8
+instance Inst8 IsObjectType a b c d e f g h => VisitObjectN '(OT, a, b, c, d, e, f, g, h) where
+  data ObjectVisitorN '(OT, a, b, c, d, e, f, g, h) x = ObjectVisitor8
     { visitObject8a :: Object a -> x,
       visitObject8b :: Object b -> x,
       visitObject8c :: Object c -> x,
@@ -244,8 +245,8 @@ instance Inst8 IsObjectType a b c d e f g h => VisitObjectN '(a, b, c, d, e, f, 
       g = visitObject8g v
       h = visitObject8h v
 
-instance Inst9 IsObjectType a b c d e f g h i => VisitObjectN '(a, b, c, d, e, f, g, h, i) where
-  data ObjectVisitorN '(a, b, c, d, e, f, g, h, i) x = ObjectVisitor9
+instance Inst9 IsObjectType a b c d e f g h i => VisitObjectN '(OT, a, b, c, d, e, f, g, h, i) where
+  data ObjectVisitorN '(OT, a, b, c, d, e, f, g, h, i) x = ObjectVisitor9
     { visitObject9a :: Object a -> x,
       visitObject9b :: Object b -> x,
       visitObject9c :: Object c -> x,
@@ -287,8 +288,8 @@ instance Inst9 IsObjectType a b c d e f g h i => VisitObjectN '(a, b, c, d, e, f
       h = visitObject9h v
       i = visitObject9i v
 
-instance Inst10 IsObjectType a b c d e f g h i j => VisitObjectN '(a, b, c, d, e, f, g, h, i, j) where
-  data ObjectVisitorN '(a, b, c, d, e, f, g, h, i, j) x = ObjectVisitor10
+instance Inst10 IsObjectType a b c d e f g h i j => VisitObjectN '(OT, a, b, c, d, e, f, g, h, i, j) where
+  data ObjectVisitorN '(OT, a, b, c, d, e, f, g, h, i, j) x = ObjectVisitor10
     { visitObject10a :: Object a -> x,
       visitObject10b :: Object b -> x,
       visitObject10c :: Object c -> x,
@@ -334,8 +335,8 @@ instance Inst10 IsObjectType a b c d e f g h i j => VisitObjectN '(a, b, c, d, e
       i = visitObject10i v
       j = visitObject10j v
 
-instance Inst11 IsObjectType a b c d e f g h i j k => VisitObjectN '(a, b, c, d, e, f, g, h, i, j, k) where
-  data ObjectVisitorN '(a, b, c, d, e, f, g, h, i, j, k) x = ObjectVisitor11
+instance Inst11 IsObjectType a b c d e f g h i j k => VisitObjectN '(OT, a, b, c, d, e, f, g, h, i, j, k) where
+  data ObjectVisitorN '(OT, a, b, c, d, e, f, g, h, i, j, k) x = ObjectVisitor11
     { visitObject11a :: Object a -> x,
       visitObject11b :: Object b -> x,
       visitObject11c :: Object c -> x,
@@ -385,8 +386,8 @@ instance Inst11 IsObjectType a b c d e f g h i j k => VisitObjectN '(a, b, c, d,
       j = visitObject11j v
       k = visitObject11k v
 
-instance Inst12 IsObjectType a b c d e f g h i j k l => VisitObjectN '(a, b, c, d, e, f, g, h, i, j, k, l) where
-  data ObjectVisitorN '(a, b, c, d, e, f, g, h, i, j, k, l) x = ObjectVisitor12
+instance Inst12 IsObjectType a b c d e f g h i j k l => VisitObjectN '(OT, a, b, c, d, e, f, g, h, i, j, k, l) where
+  data ObjectVisitorN '(OT, a, b, c, d, e, f, g, h, i, j, k, l) x = ObjectVisitor12
     { visitObject12a :: Object a -> x,
       visitObject12b :: Object b -> x,
       visitObject12c :: Object c -> x,

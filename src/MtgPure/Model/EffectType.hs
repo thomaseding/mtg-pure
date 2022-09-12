@@ -19,8 +19,9 @@ module MtgPure.Model.EffectType
 where
 
 import safe Data.Kind (Type)
+import safe Data.Typeable (Typeable)
 
 data EffectType :: Type where
   OneShot :: EffectType
   Continuous :: EffectType
-  deriving (Show)
+  deriving (Show, Typeable)

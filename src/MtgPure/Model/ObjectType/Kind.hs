@@ -47,162 +47,191 @@ module MtgPure.Model.ObjectType.Kind
   )
 where
 
-import safe MtgPure.Model.ObjectType (ObjectType (..))
+import safe MtgPure.Model.ObjectType (OT, ObjectType (..))
 
-type OTActivatedAbility = 'OTActivatedAbility
+-- GHC doesn't seem to do the injectivity... simplify for bug report
+--
+-- type family MkOT (x :: k1) = (y :: k2) | y -> x where
+--   MkOT a = '(OT, a :: ObjectType)
+--   MkOT '(a, b) = '(OT, a :: ObjectType, b :: ObjectType)
+--   MkOT '(a, b, c) = '(OT, a :: ObjectType, b :: ObjectType, c :: ObjectType)
+--   MkOT '(a, b, c, d) = '(OT, a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType)
+--   MkOT '(a, b, c, d, e) = '(OT, a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType)
+--   MkOT '(a, b, c, d, e, f) = '(OT, a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType)
+--   MkOT '(a, b, c, d, e, f, g) = '(OT, a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType)
 
-type OTArtifact = 'OTArtifact
+type OTActivatedAbility = '(OT, 'OTActivatedAbility)
 
-type OTCreature = 'OTCreature
+type OTArtifact = '(OT, 'OTArtifact)
 
-type OTEmblem = 'OTEmblem
+type OTCreature = '(OT, 'OTCreature)
 
-type OTEnchantment = 'OTEnchantment
+type OTEmblem = '(OT, 'OTEmblem)
 
-type OTInstant = 'OTInstant
+type OTEnchantment = '(OT, 'OTEnchantment)
 
-type OTLand = 'OTLand
+type OTInstant = '(OT, 'OTInstant)
 
-type OTPlaneswalker = 'OTPlaneswalker
+type OTLand = '(OT, 'OTLand)
 
-type OTPlayer = 'OTPlayer
+type OTPlaneswalker = '(OT, 'OTPlaneswalker)
 
-type OTSorcery = 'OTSorcery
+type OTPlayer = '(OT, 'OTPlayer)
 
-type OTStaticAbility = 'OTStaticAbility
+type OTSorcery = '(OT, 'OTSorcery)
 
-type OTTriggeredAbility = 'OTTriggeredAbility
+type OTStaticAbility = '(OT, 'OTStaticAbility)
+
+type OTTriggeredAbility = '(OT, 'OTTriggeredAbility)
 
 type OTAbility =
-  '( OTActivatedAbility,
-     OTStaticAbility,
-     OTTriggeredAbility
+  '( OT,
+     'OTActivatedAbility,
+     'OTStaticAbility,
+     'OTTriggeredAbility
    )
 
 type OTActivatedOrTriggeredAbility =
-  '( OTActivatedAbility,
-     OTTriggeredAbility
+  '( OT,
+     'OTActivatedAbility,
+     'OTTriggeredAbility
    )
 
 type OTArtifactCreature =
-  '( OTArtifact,
-     OTCreature
+  '( OT,
+     'OTArtifact,
+     'OTCreature
    )
 
 type OTCreaturePlayer =
-  '( OTCreature,
-     OTPlayer
+  '( OT,
+     'OTCreature,
+     'OTPlayer
    )
 
 type OTCreaturePlaneswalker =
-  '( OTCreature,
-     OTPlaneswalker
+  '( OT,
+     'OTCreature,
+     'OTPlaneswalker
    )
 
 type OTPlayerPlaneswalker =
-  '( OTPlaneswalker,
-     OTPlayer
+  '( OT,
+     'OTPlaneswalker,
+     'OTPlayer
    )
 
 type OTCreaturePlayerPlaneswalker =
-  '( OTCreature,
-     OTPlaneswalker,
-     OTPlayer
+  '( OT,
+     'OTCreature,
+     'OTPlaneswalker,
+     'OTPlayer
    )
 
 type OTNonArtifactPermanent =
-  '( OTCreature,
-     OTEnchantment,
-     OTLand,
-     OTPlaneswalker
+  '( OT,
+     'OTCreature,
+     'OTEnchantment,
+     'OTLand,
+     'OTPlaneswalker
    )
 
 type OTNonCreaturePermanent =
-  '( OTArtifact,
-     OTEnchantment,
-     OTLand,
-     OTPlaneswalker
+  '( OT,
+     'OTArtifact,
+     'OTEnchantment,
+     'OTLand,
+     'OTPlaneswalker
    )
 
 type OTNonEnchantmentPermanent =
-  '( OTArtifact,
-     OTCreature,
-     OTLand,
-     OTPlaneswalker
+  '( OT,
+     'OTArtifact,
+     'OTCreature,
+     'OTLand,
+     'OTPlaneswalker
    )
 
 type OTNonLandPermanent =
-  '( OTArtifact,
-     OTCreature,
-     OTEnchantment,
-     OTPlaneswalker
+  '( OT,
+     'OTArtifact,
+     'OTCreature,
+     'OTEnchantment,
+     'OTPlaneswalker
    )
 
 type OTNonPlaneswalkerPermanent =
-  '( OTArtifact,
-     OTCreature,
-     OTEnchantment,
-     OTLand
+  '( OT,
+     'OTArtifact,
+     'OTCreature,
+     'OTEnchantment,
+     'OTLand
    )
 
 type OTPermanent =
-  '( OTArtifact,
-     OTCreature,
-     OTEnchantment,
-     OTLand,
-     OTPlaneswalker
+  '( OT,
+     'OTArtifact,
+     'OTCreature,
+     'OTEnchantment,
+     'OTLand,
+     'OTPlaneswalker
    )
 
 type OTNonCreature =
-  '( OTArtifact,
-     OTEnchantment,
-     OTInstant,
-     OTLand,
-     OTPlaneswalker,
-     OTSorcery
+  '( OT,
+     'OTArtifact,
+     'OTEnchantment,
+     'OTInstant,
+     'OTLand,
+     'OTPlaneswalker,
+     'OTSorcery
    )
 
 type OTSpell =
-  '( OTArtifact,
-     OTCreature,
-     OTEnchantment,
-     OTInstant,
-     OTPlaneswalker,
-     OTSorcery
+  '( OT,
+     'OTArtifact,
+     'OTCreature,
+     'OTEnchantment,
+     'OTInstant,
+     'OTPlaneswalker,
+     'OTSorcery
    )
 
 type OTCard =
-  '( OTArtifact,
-     OTCreature,
-     OTEnchantment,
-     OTInstant,
-     OTLand,
-     OTPlaneswalker,
-     OTSorcery
+  '( OT,
+     'OTArtifact,
+     'OTCreature,
+     'OTEnchantment,
+     'OTInstant,
+     'OTLand,
+     'OTPlaneswalker,
+     'OTSorcery
    )
 
 type OTDamageSource =
-  '( OTArtifact,
-     OTCreature,
-     OTEnchantment,
-     OTInstant,
-     OTLand,
-     OTPlaneswalker,
-     OTPlayer,
-     OTSorcery
+  '( OT,
+     'OTArtifact,
+     'OTCreature,
+     'OTEnchantment,
+     'OTInstant,
+     'OTLand,
+     'OTPlaneswalker,
+     'OTPlayer,
+     'OTSorcery
    )
 
 type OTAny =
-  '( OTActivatedAbility,
-     OTArtifact,
-     OTCreature,
-     OTEmblem,
-     OTEnchantment,
-     OTInstant,
-     OTLand,
-     OTPlaneswalker,
-     OTPlayer,
-     OTSorcery,
-     OTStaticAbility,
-     OTTriggeredAbility
+  '( OT,
+     'OTActivatedAbility,
+     'OTArtifact,
+     'OTCreature,
+     'OTEmblem,
+     'OTEnchantment,
+     'OTInstant,
+     'OTLand,
+     'OTPlaneswalker,
+     'OTPlayer,
+     'OTSorcery,
+     'OTStaticAbility,
+     'OTTriggeredAbility
    )

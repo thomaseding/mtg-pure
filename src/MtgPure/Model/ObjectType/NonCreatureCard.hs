@@ -36,6 +36,7 @@ import safe MtgPure.Model.ObjectN.Type
     OPlaneswalker,
     OSorcery,
   )
+import safe MtgPure.Model.ObjectType (OT, ObjectType (..))
 import safe MtgPure.Model.ObjectType.Kind
   ( OTArtifact,
     OTEnchantment,
@@ -64,8 +65,8 @@ data WNonCreatureCard :: forall a. a -> Type where
   WNonCreaturePlaneswalker :: WNonCreatureCard OTPlaneswalker
   WNonCreatureSorcery :: WNonCreatureCard OTSorcery
   WNonCreatureCard :: WNonCreatureCard OTNonCreature
-  WNonCreatureCard2 :: Inst2 IsNonCreatureCardType a b => WNonCreatureCard '(a, b)
-  WNonCreatureCard3 :: Inst3 IsNonCreatureCardType a b c => WNonCreatureCard '(a, b, c)
+  WNonCreatureCard2 :: Inst2 IsNonCreatureCardType a b => WNonCreatureCard '(OT, a, b)
+  WNonCreatureCard3 :: Inst3 IsNonCreatureCardType a b c => WNonCreatureCard '(OT, a, b, c)
 
 deriving instance Show (WNonCreatureCard a)
 
@@ -80,38 +81,43 @@ data NonCreatureCardVisitor a = NonCreatureCardVisitor
 
 class IsObjectType a => IsNonCreatureCardType a where
   singNonCreatureCardType :: Proxy a -> NonCreatureCardType
-  singNonCreatureCard :: Proxy a -> WNonCreatureCard a
-  visitNonCreatureCard :: NonCreatureCardVisitor b -> WNonCreatureCard a -> ObjectN a -> b
+  singNonCreatureCard :: Proxy a -> WNonCreatureCard '(OT, a)
+  visitNonCreatureCard :: NonCreatureCardVisitor b -> WNonCreatureCard '(OT, a) -> ObjectN '(OT, a) -> b
 
-visitNonCreature' :: IsNonCreatureCardType a => (forall b. IsNonCreatureCardType b => ObjectN b -> x) -> WNonCreatureCard a -> ObjectN a -> x
+visitNonCreature' ::
+  IsNonCreatureCardType a =>
+  (forall b. IsNonCreatureCardType b => ObjectN '(OT, b) -> x) ->
+  WNonCreatureCard '(OT, a) ->
+  ObjectN '(OT, a) ->
+  x
 visitNonCreature' f = visitNonCreatureCard $ NonCreatureCardVisitor f f f f f f
 
-instance IsNonCreatureCardType OTArtifact where
+instance IsNonCreatureCardType 'OTArtifact where
   singNonCreatureCardType _ = NCTArtifact
   singNonCreatureCard _ = WNonCreatureArtifact
   visitNonCreatureCard v _ = visitNCArtifact v
 
-instance IsNonCreatureCardType OTEnchantment where
+instance IsNonCreatureCardType 'OTEnchantment where
   singNonCreatureCardType _ = NCTEnchantment
   singNonCreatureCard _ = WNonCreatureEnchantment
   visitNonCreatureCard v _ = visitNCEnchantment v
 
-instance IsNonCreatureCardType OTInstant where
+instance IsNonCreatureCardType 'OTInstant where
   singNonCreatureCardType _ = NCTInstant
   singNonCreatureCard _ = WNonCreatureInstant
   visitNonCreatureCard v _ = visitNCInstant v
 
-instance IsNonCreatureCardType OTLand where
+instance IsNonCreatureCardType 'OTLand where
   singNonCreatureCardType _ = NCTLand
   singNonCreatureCard _ = WNonCreatureLand
   visitNonCreatureCard v _ = visitNCLand v
 
-instance IsNonCreatureCardType OTPlaneswalker where
+instance IsNonCreatureCardType 'OTPlaneswalker where
   singNonCreatureCardType _ = NCTPlaneswalker
   singNonCreatureCard _ = WNonCreaturePlaneswalker
   visitNonCreatureCard v _ = visitNCPlaneswalker v
 
-instance IsNonCreatureCardType OTSorcery where
+instance IsNonCreatureCardType 'OTSorcery where
   singNonCreatureCardType _ = NCTInstant
   singNonCreatureCard _ = WNonCreatureSorcery
   visitNonCreatureCard v _ = visitNCSorcery v
