@@ -53,11 +53,11 @@ import safe MtgPure.Cards
     wastes,
     wrathOfGod,
   )
-import safe MtgPure.Model (OCard)
+import MtgPure.Model.ObjectType.Kind (OTCard)
 import safe MtgPure.Model.Recursive (Card, Token)
 import safe MtgPure.ModelCombinators (ToCard (..), ToToken (..))
 
-allCards :: [Card OCard]
+allCards :: [Card OTCard]
 allCards =
   [ toCard acceptableLosses,
     toCard allIsDust,
@@ -89,7 +89,7 @@ allCards =
     toCard wrathOfGod
   ]
 
-allTokens :: [Token OCard]
+allTokens :: [Token OTCard]
 allTokens =
   [ toToken birdToken,
     toToken soldierToken

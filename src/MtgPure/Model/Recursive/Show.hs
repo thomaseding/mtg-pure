@@ -66,16 +66,18 @@ import safe MtgPure.Model.ObjectN.Type
     OCreaturePlayerPlaneswalker,
     ODamageSource,
     ON1,
+    ON12,
     ON2,
     ON3,
     ON4,
     ON5,
     ON6,
+    ON8,
     OPermanent,
     OPlayerPlaneswalker,
     OSpell,
   )
-import MtgPure.Model.ObjectType (OT, ObjectType (..))
+import MtgPure.Model.ObjectType (OT1, OT2, OT3, OT4, OT5, OT6, ObjectType (..))
 import safe MtgPure.Model.ObjectType.Any (IsAnyType, WAny (..))
 import safe MtgPure.Model.ObjectType.NonCreatureCard
   ( IsNonCreatureCardType,
@@ -145,7 +147,10 @@ instance Show (Elect e ot) where
 instance Show EventListener where
   show = runEnvM defaultDepthLimit . showEventListener
 
-instance Show (Requirement ot) where
+instance Show (Requirement (Card ot)) where
+  show = runEnvM defaultDepthLimit . showRequirement
+
+instance Show (Requirement (ObjectN ot)) where
   show = runEnvM defaultDepthLimit . showRequirement
 
 instance Show (SetCard ot) where
@@ -266,7 +271,7 @@ showObjectNImpl objNRef prefix obj = do
       False -> yesParens $ pure $ pure prefix <> pure " " <> sObj
       True -> noParens $ pure sObj
 
-showObject1 :: IsObjectType a => ObjectN '(OT, a) -> EnvM ParenItems
+showObject1 :: IsObjectType a => ON1 a -> EnvM ParenItems
 showObject1 objN = visitObjectN' visit objN
   where
     rep = typeOf objN
@@ -276,7 +281,7 @@ showObject1 objN = visitObjectN' visit objN
         if
             | otherwise -> "O"
 
-showObject2 :: Inst2 IsObjectType a b => ObjectN '(OT, a, b) -> EnvM ParenItems
+showObject2 :: Inst2 IsObjectType a b => ON2 a b -> EnvM ParenItems
 showObject2 objN = visitObjectN' visit objN
   where
     rep = typeOf objN
@@ -289,7 +294,7 @@ showObject2 objN = visitObjectN' visit objN
             | rep == typeRep (Proxy @OPlayerPlaneswalker) -> "asPlayerPlaneswalker"
             | otherwise -> "toObject2"
 
-showObject3 :: Inst3 IsObjectType a b c => ObjectN '(OT, a, b, c) -> EnvM ParenItems
+showObject3 :: Inst3 IsObjectType a b c => ON3 a b c -> EnvM ParenItems
 showObject3 objN = visitObjectN' visit objN
   where
     rep = typeOf objN
@@ -300,7 +305,7 @@ showObject3 objN = visitObjectN' visit objN
             | rep == typeRep (Proxy @OCreaturePlayerPlaneswalker) -> "asCreaturePlayerPlaneswalker"
             | otherwise -> "toObject3"
 
-showObject4 :: Inst4 IsObjectType a b c d => ObjectN '(OT, a, b, c, d) -> EnvM ParenItems
+showObject4 :: Inst4 IsObjectType a b c d => ON4 a b c d -> EnvM ParenItems
 showObject4 objN = visitObjectN' visit objN
   where
     rep = typeOf objN
@@ -310,7 +315,7 @@ showObject4 objN = visitObjectN' visit objN
         if
             | otherwise -> "toObject4"
 
-showObject5 :: Inst5 IsObjectType a b c d e => ObjectN '(OT, a, b, c, d, e) -> EnvM ParenItems
+showObject5 :: Inst5 IsObjectType a b c d e => ON5 a b c d e -> EnvM ParenItems
 showObject5 objN = visitObjectN' visit objN
   where
     rep = typeOf objN
@@ -321,7 +326,7 @@ showObject5 objN = visitObjectN' visit objN
             | rep == typeRep (Proxy @OPermanent) -> "asPermanent"
             | otherwise -> "toObject5"
 
-showObject6 :: Inst6 IsObjectType a b c d e f => ObjectN '(OT, a, b, c, d, e, f) -> EnvM ParenItems
+showObject6 :: Inst6 IsObjectType a b c d e f => ON6 a b c d e f -> EnvM ParenItems
 showObject6 objN = visitObjectN' visit objN
   where
     rep = typeOf objN
@@ -332,7 +337,7 @@ showObject6 objN = visitObjectN' visit objN
             | rep == typeRep (Proxy @OSpell) -> "asSpell"
             | otherwise -> "toObject6"
 
-showObject8 :: Inst8 IsObjectType a b c d e f g h => ObjectN '(OT, a, b, c, d, e, f, g, h) -> EnvM ParenItems
+showObject8 :: Inst8 IsObjectType a b c d e f g h => ON8 a b c d e f g h -> EnvM ParenItems
 showObject8 objN = visitObjectN' visit objN
   where
     rep = typeOf objN
@@ -343,7 +348,7 @@ showObject8 objN = visitObjectN' visit objN
             | rep == typeRep (Proxy @ODamageSource) -> "asDamageSource"
             | otherwise -> "toObject8"
 
-showObject12 :: Inst12 IsObjectType a b c d e f g h i j k l => ObjectN '(OT, a, b, c, d, e, f, g, h, i, j, k, l) -> EnvM ParenItems
+showObject12 :: Inst12 IsObjectType a b c d e f g h i j k l => ON12 a b c d e f g h i j k l -> EnvM ParenItems
 showObject12 objN = visitObjectN' visit objN
   where
     rep = typeOf objN
@@ -607,9 +612,9 @@ showCardTypeDef = \case
       IsObjectType a =>
       Item ->
       Colors ->
-      Elect (Cost (ON1 a)) (ON1 a) ->
-      [Ability (ON1 a)] ->
-      Elect (Effect 'OneShot) (ON1 a) ->
+      Elect (Cost (OT1 a)) (OT1 a) ->
+      [Ability (OT1 a)] ->
+      Elect (Effect 'OneShot) (OT1 a) ->
       EnvM ParenItems
     showOneShot def colors cost abilities oneShot = yesParens $ do
       sColors <- parens <$> showColors colors
@@ -673,7 +678,7 @@ showListM f xs = noParens $ do
 showRequirements :: [Requirement a] -> EnvM ParenItems
 showRequirements = showListM showRequirement
 
-showRequirement :: forall a. Requirement a -> EnvM ParenItems
+showRequirement :: Requirement a -> EnvM ParenItems
 showRequirement = \case
   ControlledBy obj -> yesParens $ do
     sObj <- dollar <$> showObject1 obj
@@ -977,16 +982,16 @@ showWSpell spell = case spell of
   WSpellSorcery -> noParens sSpell
   WSpell -> noParens sSpell
   WSpell2 -> yesParens $ do
-    let go :: forall a b. Inst2 IsSpellType a b => WSpell (ON2 a b) -> Item
-        go _ = fromString $ prettyObjectName (Proxy :: Proxy (ON2 a b))
+    let go :: forall a b. Inst2 IsSpellType a b => WSpell (OT2 a b) -> Item
+        go _ = fromString $ prettyObjectName (Proxy :: Proxy (OT2 a b))
     pure $ pure "WSpell2 :: @" <> pure (go spell)
   WSpell3 -> yesParens $ do
-    let go :: forall a b c. Inst3 IsSpellType a b c => WSpell (ON3 a b c) -> Item
-        go _ = fromString $ prettyObjectName (Proxy :: Proxy (ON3 a b c))
+    let go :: forall a b c. Inst3 IsSpellType a b c => WSpell (OT3 a b c) -> Item
+        go _ = fromString $ prettyObjectName (Proxy :: Proxy (OT3 a b c))
     pure $ pure "WSpell3 :: @" <> pure (go spell)
   WSpell4 -> yesParens $ do
-    let go :: forall a b c d. Inst4 IsSpellType a b c d => WSpell (ON4 a b c d) -> Item
-        go _ = fromString $ prettyObjectName (Proxy :: Proxy (ON4 a b c d))
+    let go :: forall a b c d. Inst4 IsSpellType a b c d => WSpell (OT4 a b c d) -> Item
+        go _ = fromString $ prettyObjectName (Proxy :: Proxy (OT4 a b c d))
     pure $ pure "WSpell4 :: @" <> pure (go spell)
   where
     sSpell :: EnvM Items
@@ -1001,16 +1006,16 @@ showWPermanent permanent = case permanent of
   WPermanentPlaneswalker -> noParens sPermanent
   WPermanent -> noParens sPermanent
   WPermanent2 -> yesParens $ do
-    let go :: forall a b. Inst2 IsPermanentType a b => WPermanent (ON2 a b) -> Item
-        go _ = fromString $ prettyObjectName (Proxy :: Proxy (ON2 a b))
+    let go :: forall a b. Inst2 IsPermanentType a b => WPermanent (OT2 a b) -> Item
+        go _ = fromString $ prettyObjectName (Proxy :: Proxy (OT2 a b))
     pure $ pure "WPermanent2 :: @" <> pure (go permanent)
   WPermanent3 -> yesParens $ do
-    let go :: forall a b c. Inst3 IsPermanentType a b c => WPermanent (ON3 a b c) -> Item
-        go _ = fromString $ prettyObjectName (Proxy :: Proxy (ON3 a b c))
+    let go :: forall a b c. Inst3 IsPermanentType a b c => WPermanent (OT3 a b c) -> Item
+        go _ = fromString $ prettyObjectName (Proxy :: Proxy (OT3 a b c))
     pure $ pure "WPermanent3 :: @" <> pure (go permanent)
   WPermanent4 -> yesParens $ do
-    let go :: forall a b c d. Inst4 IsPermanentType a b c d => WPermanent (ON4 a b c d) -> Item
-        go _ = fromString $ prettyObjectName (Proxy :: Proxy (ON4 a b c d))
+    let go :: forall a b c d. Inst4 IsPermanentType a b c d => WPermanent (OT4 a b c d) -> Item
+        go _ = fromString $ prettyObjectName (Proxy :: Proxy (OT4 a b c d))
     pure $ pure "WPermanent4 :: @" <> pure (go permanent)
   where
     sPermanent :: EnvM Items
@@ -1026,12 +1031,12 @@ showNonCreatureCard nonCreature = case nonCreature of
   WNonCreatureSorcery -> noParens sNonCreature
   WNonCreatureCard -> noParens sNonCreature
   WNonCreatureCard2 -> yesParens $ do
-    let go :: forall a b. Inst2 IsNonCreatureCardType a b => WNonCreatureCard (ON2 a b) -> Item
-        go _ = fromString $ prettyObjectName (Proxy :: Proxy (ON2 a b))
+    let go :: forall a b. Inst2 IsNonCreatureCardType a b => WNonCreatureCard (OT2 a b) -> Item
+        go _ = fromString $ prettyObjectName (Proxy :: Proxy (OT2 a b))
     pure $ pure "WNonCreatureCard2 :: @" <> pure (go nonCreature)
   WNonCreatureCard3 -> yesParens $ do
-    let go :: forall a b c. Inst3 IsNonCreatureCardType a b c => WNonCreatureCard (ON3 a b c) -> Item
-        go _ = fromString $ prettyObjectName (Proxy :: Proxy (ON3 a b c))
+    let go :: forall a b c. Inst3 IsNonCreatureCardType a b c => WNonCreatureCard (OT3 a b c) -> Item
+        go _ = fromString $ prettyObjectName (Proxy :: Proxy (OT3 a b c))
     pure $ pure "WNonCreatureCard3 :: @" <> pure (go nonCreature)
   where
     sNonCreature :: EnvM Items
@@ -1074,30 +1079,30 @@ showWAny any' = case any' of
   WAnySorcery -> noParens sAny
   WAny -> noParens sAny
   WAny2 -> yesParens $ do
-    let go :: forall a b. Inst2 IsAnyType a b => WAny (ON2 a b) -> Item
-        go _ = fromString $ prettyObjectName (Proxy :: Proxy (ON2 a b))
+    let go :: forall a b. Inst2 IsAnyType a b => WAny (OT2 a b) -> Item
+        go _ = fromString $ prettyObjectName (Proxy :: Proxy (OT2 a b))
     pure $ pure "WAny2 :: @" <> pure (go any')
   WAny3 -> yesParens $ do
-    let go :: forall a b c. Inst3 IsAnyType a b c => WAny (ON3 a b c) -> Item
-        go _ = fromString $ prettyObjectName (Proxy :: Proxy (ON3 a b c))
+    let go :: forall a b c. Inst3 IsAnyType a b c => WAny (OT3 a b c) -> Item
+        go _ = fromString $ prettyObjectName (Proxy :: Proxy (OT3 a b c))
     pure $ pure "WAny3 :: @" <> pure (go any')
   WAny4 -> yesParens $ do
-    let go :: forall a b c d. Inst4 IsAnyType a b c d => WAny (ON4 a b c d) -> Item
-        go _ = fromString $ prettyObjectName (Proxy :: Proxy (ON4 a b c d))
+    let go :: forall a b c d. Inst4 IsAnyType a b c d => WAny (OT4 a b c d) -> Item
+        go _ = fromString $ prettyObjectName (Proxy :: Proxy (OT4 a b c d))
     pure $ pure "WAny4 :: @" <> pure (go any')
   WAny5 -> yesParens $ do
-    let go :: forall a b c d e. Inst5 IsAnyType a b c d e => WAny (ON5 a b c d e) -> Item
-        go _ = fromString $ prettyObjectName (Proxy :: Proxy (ON5 a b c d e))
+    let go :: forall a b c d e. Inst5 IsAnyType a b c d e => WAny (OT5 a b c d e) -> Item
+        go _ = fromString $ prettyObjectName (Proxy :: Proxy (OT5 a b c d e))
     pure $ pure "WAny5 :: @" <> pure (go any')
   WAny6 -> yesParens $ do
-    let go :: forall a b c d e f. Inst6 IsAnyType a b c d e f => WAny (ON6 a b c d e f) -> Item
-        go _ = fromString $ prettyObjectName (Proxy :: Proxy (ON6 a b c d e f))
+    let go :: forall a b c d e f. Inst6 IsAnyType a b c d e f => WAny (OT6 a b c d e f) -> Item
+        go _ = fromString $ prettyObjectName (Proxy :: Proxy (OT6 a b c d e f))
     pure $ pure "WAny6 :: @" <> pure (go any')
   where
     sAny :: EnvM Items
     sAny = pure $ pure $ fromString $ show any'
 
-showAnyN :: WAny ot -> ot -> EnvM ParenItems
+showAnyN :: WAny ot -> ObjectN ot -> EnvM ParenItems
 showAnyN wAny obj = case wAny of
   WAnyArtifact -> do
     showObject1 obj

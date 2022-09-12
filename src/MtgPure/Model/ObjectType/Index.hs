@@ -31,7 +31,7 @@ import Data.Inst
   )
 import safe Data.Typeable (Proxy (..))
 import safe MtgPure.Model.IsObjectType (IsObjectType (..), objectTypeIndex)
-import safe MtgPure.Model.ObjectN.Type (ON1, ON2, ON3, ON4, ON5, ON6)
+import safe MtgPure.Model.ObjectType (OT1, OT2, OT3, OT4, OT5, OT6)
 
 oti :: forall ot. IsObjectType ot => Int
 oti = objectTypeIndex (Proxy @ot)
@@ -41,36 +41,36 @@ class IndexOT ot where
 
 instance
   (Inst1 IsObjectType a) =>
-  IndexOT (ON1 a)
+  IndexOT (OT1 a)
   where
   indexOT _ = [oti @a]
 
 instance
   (Inst2 IsObjectType a b) =>
-  IndexOT (ON2 a b)
+  IndexOT (OT2 a b)
   where
   indexOT _ = [oti @a, oti @b]
 
 instance
   (Inst3 IsObjectType a b c) =>
-  IndexOT (ON3 a b c)
+  IndexOT (OT3 a b c)
   where
   indexOT _ = [oti @a, oti @b, oti @c]
 
 instance
   (Inst4 IsObjectType a b c d) =>
-  IndexOT (ON4 a b c d)
+  IndexOT (OT4 a b c d)
   where
   indexOT _ = [oti @a, oti @b, oti @c, oti @d]
 
 instance
   (Inst5 IsObjectType a b c d e) =>
-  IndexOT (ON5 a b c d e)
+  IndexOT (OT5 a b c d e)
   where
   indexOT _ = [oti @a, oti @b, oti @c, oti @d, oti @e]
 
 instance
   (Inst6 IsObjectType a b c d e f) =>
-  IndexOT (ON6 a b c d e f)
+  IndexOT (OT6 a b c d e f)
   where
   indexOT _ = [oti @a, oti @b, oti @c, oti @d, oti @e, oti @f]

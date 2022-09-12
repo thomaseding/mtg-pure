@@ -48,40 +48,53 @@ import safe Data.Inst
   )
 import safe MtgPure.Model.IsObjectType (IsObjectType)
 import safe MtgPure.Model.ObjectN (ObjectN (..))
-import safe MtgPure.Model.ObjectType (OT)
+import safe MtgPure.Model.ObjectType
+  ( OT1,
+    OT10,
+    OT11,
+    OT12,
+    OT2,
+    OT3,
+    OT4,
+    OT5,
+    OT6,
+    OT7,
+    OT8,
+    OT9,
+  )
 
 class Inst1 IsObjectType a => ToObject1 o a where
-  toObject1 :: o -> (ObjectN '(OT, a))
+  toObject1 :: o -> (ObjectN (OT1 a))
 
 class Inst2 IsObjectType a b => ToObject2 o a b where
-  toObject2 :: o -> (ObjectN '(OT, a, b))
+  toObject2 :: o -> (ObjectN (OT2 a b))
 
 class Inst3 IsObjectType a b c => ToObject3 o a b c where
-  toObject3 :: o -> (ObjectN '(OT, a, b, c))
+  toObject3 :: o -> (ObjectN (OT3 a b c))
 
 class Inst4 IsObjectType a b c d => ToObject4 o a b c d where
-  toObject4 :: o -> (ObjectN '(OT, a, b, c, d))
+  toObject4 :: o -> (ObjectN (OT4 a b c d))
 
 class Inst5 IsObjectType a b c d e => ToObject5 o a b c d e where
-  toObject5 :: o -> (ObjectN '(OT, a, b, c, d, e))
+  toObject5 :: o -> (ObjectN (OT5 a b c d e))
 
 class Inst6 IsObjectType a b c d e f => ToObject6 o a b c d e f where
-  toObject6 :: o -> (ObjectN '(OT, a, b, c, d, e, f))
+  toObject6 :: o -> (ObjectN (OT6 a b c d e f))
 
 class Inst7 IsObjectType a b c d e f g => ToObject7 o a b c d e f g where
-  toObject7 :: o -> (ObjectN '(OT, a, b, c, d, e, f, g))
+  toObject7 :: o -> (ObjectN (OT7 a b c d e f g))
 
 class Inst8 IsObjectType a b c d e f g h => ToObject8 o a b c d e f g h where
-  toObject8 :: o -> (ObjectN '(OT, a, b, c, d, e, f, g, h))
+  toObject8 :: o -> (ObjectN (OT8 a b c d e f g h))
 
 class Inst9 IsObjectType a b c d e f g h i => ToObject9 o a b c d e f g h i where
-  toObject9 :: o -> (ObjectN '(OT, a, b, c, d, e, f, g, h, i))
+  toObject9 :: o -> (ObjectN (OT9 a b c d e f g h i))
 
 class Inst10 IsObjectType a b c d e f g h i j => ToObject10 o a b c d e f g h i j where
-  toObject10 :: o -> (ObjectN '(OT, a, b, c, d, e, f, g, h, i, j))
+  toObject10 :: o -> (ObjectN (OT10 a b c d e f g h i j))
 
 class Inst11 IsObjectType a b c d e f g h i j k => ToObject11 o a b c d e f g h i j k where
-  toObject11 :: o -> (ObjectN '(OT, a, b, c, d, e, f, g, h, i, j, k))
+  toObject11 :: o -> (ObjectN (OT11 a b c d e f g h i j k))
 
 class Inst12 IsObjectType a b c d e f g h i j k l => ToObject12 o a b c d e f g h i j k l where
-  toObject12 :: o -> (ObjectN '(OT, a, b, c, d, e, f, g, h, i, j, k, l))
+  toObject12 :: o -> (ObjectN (OT12 a b c d e f g h i j k l))

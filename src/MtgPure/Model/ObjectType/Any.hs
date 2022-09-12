@@ -23,39 +23,35 @@ where
 import safe Data.Inst (Inst2, Inst3, Inst4, Inst5, Inst6)
 import safe Data.Kind (Type)
 import safe MtgPure.Model.IsObjectType (IsObjectType)
-import safe MtgPure.Model.ObjectN.Type
-  ( OAny,
-    OArtifact,
-    OCreature,
-    OEnchantment,
-    OInstant,
-    OLand,
-    ON2,
-    ON3,
-    ON4,
-    ON5,
-    ON6,
-    OPlaneswalker,
-    OPlayer,
-    OSorcery,
+import MtgPure.Model.ObjectType (OT2, OT3, OT4, OT5, OT6)
+import safe MtgPure.Model.ObjectType.Kind
+  ( OTAny,
+    OTArtifact,
+    OTCreature,
+    OTEnchantment,
+    OTInstant,
+    OTLand,
+    OTPlaneswalker,
+    OTPlayer,
+    OTSorcery,
   )
 
 -- Witness type
 data WAny :: Type -> Type where
-  WAnyArtifact :: WAny OArtifact
-  WAnyCreature :: WAny OCreature
-  WAnyEnchantment :: WAny OEnchantment
-  WAnyInstant :: WAny OInstant
-  WAnyLand :: WAny OLand
-  WAnyPlaneswalker :: WAny OPlaneswalker
-  WAnyPlayer :: WAny OPlayer
-  WAnySorcery :: WAny OSorcery
-  WAny :: WAny OAny
-  WAny2 :: Inst2 IsAnyType a b => WAny (ON2 a b)
-  WAny3 :: Inst3 IsAnyType a b c => WAny (ON3 a b c)
-  WAny4 :: Inst4 IsAnyType a b c d => WAny (ON4 a b c d)
-  WAny5 :: Inst5 IsAnyType a b c d e => WAny (ON5 a b c d e)
-  WAny6 :: Inst6 IsAnyType a b c d e f => WAny (ON6 a b c d e f)
+  WAnyArtifact :: WAny OTArtifact
+  WAnyCreature :: WAny OTCreature
+  WAnyEnchantment :: WAny OTEnchantment
+  WAnyInstant :: WAny OTInstant
+  WAnyLand :: WAny OTLand
+  WAnyPlaneswalker :: WAny OTPlaneswalker
+  WAnyPlayer :: WAny OTPlayer
+  WAnySorcery :: WAny OTSorcery
+  WAny :: WAny OTAny
+  WAny2 :: Inst2 IsAnyType a b => WAny (OT2 a b)
+  WAny3 :: Inst3 IsAnyType a b c => WAny (OT3 a b c)
+  WAny4 :: Inst4 IsAnyType a b c d => WAny (OT4 a b c d)
+  WAny5 :: Inst5 IsAnyType a b c d e => WAny (OT5 a b c d e)
+  WAny6 :: Inst6 IsAnyType a b c d e f => WAny (OT6 a b c d e f)
 
 deriving instance Show (WAny ot)
 

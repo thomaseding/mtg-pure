@@ -57,21 +57,27 @@ import safe MtgPure.Model.ColorsLike (ColorsLike (toColors))
 import safe MtgPure.Model.CreatureType (CreatureType (..))
 import safe MtgPure.Model.Damage (Damage (..))
 import safe MtgPure.Model.GenericMana (GenericMana (..))
-import MtgPure.Model.LandType (LandType (..))
+import safe MtgPure.Model.LandType (LandType (..))
 import safe MtgPure.Model.ManaSymbol (ManaSymbol (..))
 import safe MtgPure.Model.ObjectN.Type
   ( OActivatedOrTriggeredAbility,
     OCreature,
     OCreaturePlayerPlaneswalker,
-    OEnchantment,
-    OInstant,
     OLand,
     ON3,
     OPermanent,
     OPlayerPlaneswalker,
-    OSorcery,
   )
-import safe MtgPure.Model.ObjectType (ObjectType (..))
+import safe MtgPure.Model.ObjectType
+  ( ObjectType (..),
+  )
+import safe MtgPure.Model.ObjectType.Kind
+  ( OTCreature,
+    OTEnchantment,
+    OTInstant,
+    OTLand,
+    OTSorcery,
+  )
 import safe MtgPure.Model.ObjectType.NonCreatureCard
   ( WNonCreatureCard (..),
   )
@@ -138,7 +144,7 @@ import safe MtgPure.ModelCombinators
 
 ----------------------------------------
 
-mkBasicLand :: BasicLandType -> Card OLand
+mkBasicLand :: BasicLandType -> Card OTLand
 mkBasicLand landType = mkCard name $ \_this ->
   LandDef
     [BasicLand landType]
@@ -146,27 +152,27 @@ mkBasicLand landType = mkCard name $ \_this ->
   where
     name = CardName $ show landType
 
-plains :: Card OLand
+plains :: Card OTLand
 plains = mkBasicLand Plains
 
-island :: Card OLand
+island :: Card OTLand
 island = mkBasicLand Island
 
-swamp :: Card OLand
+swamp :: Card OTLand
 swamp = mkBasicLand Swamp
 
-mountain :: Card OLand
+mountain :: Card OTLand
 mountain = mkBasicLand Mountain
 
-forest :: Card OLand
+forest :: Card OTLand
 forest = mkBasicLand Forest
 
-wastes :: Card OLand
+wastes :: Card OTLand
 wastes = mkBasicLand Wastes
 
 ----------------------------------------
 
-acceptableLosses :: Card OSorcery
+acceptableLosses :: Card OTSorcery
 acceptableLosses = mkCard "Acceptable Losses" $ \this ->
   let cost =
         Cost $
@@ -180,7 +186,7 @@ acceptableLosses = mkCard "Acceptable Losses" $ \this ->
             masked [] $
               \(target :: OCreature) -> effect $ dealDamage this target 5
 
-allIsDust :: Card OSorcery
+allIsDust :: Card OTSorcery
 allIsDust = mkCard "All Is Dust" $ \_this ->
   TribalDef [Eldrazi] WNonCreatureSorcery $
     SorceryDef (toColors ()) cost [] $
@@ -192,7 +198,7 @@ allIsDust = mkCard "All Is Dust" $ \_this ->
   where
     cost = spellCost 7
 
-ancestralVision :: Card OSorcery
+ancestralVision :: Card OTSorcery
 ancestralVision = mkCard "Ancestral Vision" $ \this ->
   SorceryDef (toColors U) cost [Static $ Suspend 4 $ spellCost U] $
     controllerOf this $
@@ -202,7 +208,7 @@ ancestralVision = mkCard "Ancestral Vision" $ \this ->
   where
     cost = noCost
 
-backlash :: Card OInstant
+backlash :: Card OTInstant
 backlash = mkCard "Backlash" $ \this ->
   InstantDef (toColors (B, R)) cost [] $
     controllerOf this $
@@ -214,7 +220,7 @@ backlash = mkCard "Backlash" $ \this ->
   where
     cost = spellCost (1, B, R)
 
-birdToken :: Token OCreature
+birdToken :: Token OTCreature
 birdToken = mkToken "Bird Token" $ \_this ->
   CreatureDef
     (toColors U)
@@ -226,7 +232,7 @@ birdToken = mkToken "Bird Token" $ \_this ->
   where
     cost = noCost
 
-blaze :: Card OSorcery
+blaze :: Card OTSorcery
 blaze = mkCard "Blaze" $ \this ->
   VariableDef $ \x ->
     let cost = spellCost (VariableGenericMana x, R)
@@ -236,7 +242,7 @@ blaze = mkCard "Blaze" $ \this ->
               masked [] $
                 \(target :: OCreaturePlayerPlaneswalker) -> effect $ dealDamage this target x
 
-bloodMoon :: Card OEnchantment
+bloodMoon :: Card OTEnchantment
 bloodMoon = mkCard "Blood Moon" $ \_this ->
   EnchantmentDef
     (toColors R)
@@ -250,7 +256,7 @@ bloodMoon = mkCard "Blood Moon" $ \_this ->
   where
     cost = spellCost (2, R)
 
-cleanse :: Card OSorcery
+cleanse :: Card OTSorcery
 cleanse = mkCard "Cleanse" $ \_this ->
   SorceryDef (toColors W) cost [] $
     All $
@@ -259,7 +265,7 @@ cleanse = mkCard "Cleanse" $ \_this ->
   where
     cost = spellCost (2, W, W)
 
-cityOfBrass :: Card OLand
+cityOfBrass :: Card OTLand
 cityOfBrass = mkCard "City of Brass" $ \this ->
   LandDef
     []
@@ -277,7 +283,7 @@ cityOfBrass = mkCard "City of Brass" $ \this ->
           \you -> effect $ addManaAnyColor you 1
     ]
 
-conversion :: Card OEnchantment
+conversion :: Card OTEnchantment
 conversion = mkCard "Conversion" $ \this ->
   EnchantmentDef
     (toColors W)
@@ -304,7 +310,7 @@ conversion = mkCard "Conversion" $ \this ->
   where
     cost = spellCost (2, W, W)
 
-damnation :: Card OSorcery
+damnation :: Card OTSorcery
 damnation = mkCard "Damnation" $ \_this ->
   SorceryDef (toColors B) cost [] $
     All $
@@ -313,7 +319,7 @@ damnation = mkCard "Damnation" $ \_this ->
   where
     cost = spellCost (2, B, B)
 
-lavaAxe :: Card OSorcery
+lavaAxe :: Card OTSorcery
 lavaAxe = mkCard "Lava Axe" $ \this ->
   SorceryDef (toColors R) cost [] $
     controllerOf this $
@@ -323,7 +329,7 @@ lavaAxe = mkCard "Lava Axe" $ \this ->
   where
     cost = spellCost (4, R)
 
-plummet :: Card OInstant
+plummet :: Card OTInstant
 plummet = mkCard "Plummet" $ \this ->
   InstantDef (toColors G) cost [] $
     controllerOf this $
@@ -333,7 +339,7 @@ plummet = mkCard "Plummet" $ \this ->
   where
     cost = spellCost (1, G)
 
-pradeshGypsies :: Card OCreature
+pradeshGypsies :: Card OTCreature
 pradeshGypsies = mkCard "Pradesh Gypsies" $ \this ->
   CreatureDef
     (toColors G)
@@ -358,7 +364,7 @@ pradeshGypsies = mkCard "Pradesh Gypsies" $ \this ->
   where
     cost = spellCost (2, G)
 
-ragingGoblin :: Card OCreature
+ragingGoblin :: Card OTCreature
 ragingGoblin = mkCard "Raging Goblin" $ \_this ->
   CreatureDef
     (toColors R)
@@ -370,7 +376,7 @@ ragingGoblin = mkCard "Raging Goblin" $ \_this ->
   where
     cost = spellCost R
 
-shock :: Card OInstant
+shock :: Card OTInstant
 shock = mkCard "Shock" $ \this ->
   InstantDef (toColors R) cost [] $
     controllerOf this $
@@ -380,7 +386,7 @@ shock = mkCard "Shock" $ \this ->
   where
     cost = spellCost R
 
-sinkhole :: Card OSorcery
+sinkhole :: Card OTSorcery
 sinkhole = mkCard "Sinkhole" $ \this ->
   SorceryDef (toColors B) cost [] $
     controllerOf this $
@@ -390,7 +396,7 @@ sinkhole = mkCard "Sinkhole" $ \this ->
   where
     cost = spellCost (B, B)
 
-soldierToken :: Token OCreature
+soldierToken :: Token OTCreature
 soldierToken = mkToken "Soldier Token" $ \_this ->
   CreatureDef
     (toColors W)
@@ -402,7 +408,7 @@ soldierToken = mkToken "Soldier Token" $ \_this ->
   where
     cost = noCost
 
-stifle :: Card OInstant
+stifle :: Card OTInstant
 stifle = mkCard "Stifle" $ \this ->
   InstantDef (toColors U) cost [] $
     controllerOf this $
@@ -413,7 +419,7 @@ stifle = mkCard "Stifle" $ \this ->
   where
     cost = spellCost U
 
-stoneRain :: Card OSorcery
+stoneRain :: Card OTSorcery
 stoneRain = mkCard "Stone Rain" $ \this ->
   SorceryDef (toColors R) cost [] $
     controllerOf this $
@@ -423,7 +429,7 @@ stoneRain = mkCard "Stone Rain" $ \this ->
   where
     cost = spellCost (2, R)
 
-stoneThrowingDevils :: Card OCreature
+stoneThrowingDevils :: Card OTCreature
 stoneThrowingDevils = mkCard "Stone-Throwing Devils" $ \_this ->
   CreatureDef
     (toColors B)
@@ -435,7 +441,7 @@ stoneThrowingDevils = mkCard "Stone-Throwing Devils" $ \_this ->
   where
     cost = spellCost B
 
-swanSong :: Card OInstant
+swanSong :: Card OTInstant
 swanSong = mkCard "Swan Song" $ \this ->
   InstantDef (toColors U) cost [] $
     controllerOf this $
@@ -450,7 +456,7 @@ swanSong = mkCard "Swan Song" $ \this ->
   where
     cost = spellCost U
 
-vindicate :: Card OSorcery
+vindicate :: Card OTSorcery
 vindicate = mkCard "Vindicate" $ \this ->
   SorceryDef (toColors (W, B)) cost [] $
     controllerOf this $
@@ -460,7 +466,7 @@ vindicate = mkCard "Vindicate" $ \this ->
   where
     cost = spellCost (1, W, B)
 
-wrathOfGod :: Card OSorcery
+wrathOfGod :: Card OTSorcery
 wrathOfGod = mkCard "Wrath of God" $ \_this ->
   SorceryDef (toColors W) cost [] $
     All $

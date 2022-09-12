@@ -85,32 +85,38 @@ import safe MtgPure.Model.IsObjectType (IsObjectType)
 import safe MtgPure.Model.LandType (LandType (BasicLand))
 import safe MtgPure.Model.ManaCost (ManaCost)
 import safe MtgPure.Model.ManaSymbol (ManaSymbol (..))
+import MtgPure.Model.ObjectN (ObjectN)
 import safe MtgPure.Model.ObjectN.Type
   ( OActivatedOrTriggeredAbility,
     OAny,
-    OArtifact,
-    OCard,
-    OCreature,
     OCreaturePlayerPlaneswalker,
     ODamageSource,
-    OEnchantment,
-    OInstant,
     OLand,
-    ON1,
-    ON2,
-    ON3,
-    ON4,
-    ON5,
     OPermanent,
-    OPlaneswalker,
     OPlayer,
-    OSorcery,
     OSpell,
   )
 import safe MtgPure.Model.ObjectType
-  ( ObjectType (..),
+  ( OT1,
+    OT2,
+    OT3,
+    OT4,
+    OT5,
+    ObjectType (..),
   )
 import safe MtgPure.Model.ObjectType.Any (WAny (..))
+import MtgPure.Model.ObjectType.Kind
+  ( OTArtifact,
+    OTCard,
+    OTCreature,
+    OTEnchantment,
+    OTInstant,
+    OTLand,
+    OTPermanent,
+    OTPlaneswalker,
+    OTPlayer,
+    OTSorcery,
+  )
 import safe MtgPure.Model.ObjectType.Permanent (IsPermanentType, WPermanent (..))
 import safe MtgPure.Model.Recursive
   ( Ability,
@@ -150,111 +156,111 @@ import safe MtgPure.Model.Tribal (Tribal (..))
 import safe MtgPure.Model.Variable (Variable)
 
 class ToCard card where
-  toCard :: card -> Card OCard
+  toCard :: card -> Card OTCard
 
-instance ToCard (Card OCard) where
+instance ToCard (Card OTCard) where
   toCard = id
 
-instance ToCard (Card OArtifact) where
+instance ToCard (Card OTArtifact) where
   toCard = ArtifactCard
 
-instance ToCard (Card OCreature) where
+instance ToCard (Card OTCreature) where
   toCard = CreatureCard
 
-instance ToCard (Card OEnchantment) where
+instance ToCard (Card OTEnchantment) where
   toCard = EnchantmentCard
 
-instance ToCard (Card OInstant) where
+instance ToCard (Card OTInstant) where
   toCard = InstantCard
 
-instance ToCard (Card OLand) where
+instance ToCard (Card OTLand) where
   toCard = LandCard
 
-instance ToCard (Card OPlaneswalker) where
+instance ToCard (Card OTPlaneswalker) where
   toCard = PlaneswalkerCard
 
-instance ToCard (Card OSorcery) where
+instance ToCard (Card OTSorcery) where
   toCard = SorceryCard
 
 class ToSetCard card where
-  toSetCard :: card -> SetCard OCard
+  toSetCard :: card -> SetCard OTCard
 
-instance ToSetCard (SetCard OCard) where
+instance ToSetCard (SetCard OTCard) where
   toSetCard = id
 
-instance ToSetCard (SetCard OArtifact) where
+instance ToSetCard (SetCard OTArtifact) where
   toSetCard (SetCard s r c) = SetCard s r $ ArtifactCard c
 
-instance ToSetCard (SetCard OCreature) where
+instance ToSetCard (SetCard OTCreature) where
   toSetCard (SetCard s r c) = SetCard s r $ CreatureCard c
 
-instance ToSetCard (SetCard OEnchantment) where
+instance ToSetCard (SetCard OTEnchantment) where
   toSetCard (SetCard s r c) = SetCard s r $ EnchantmentCard c
 
-instance ToSetCard (SetCard OInstant) where
+instance ToSetCard (SetCard OTInstant) where
   toSetCard (SetCard s r c) = SetCard s r $ InstantCard c
 
-instance ToSetCard (SetCard OLand) where
+instance ToSetCard (SetCard OTLand) where
   toSetCard (SetCard s r c) = SetCard s r $ LandCard c
 
-instance ToSetCard (SetCard OPlaneswalker) where
+instance ToSetCard (SetCard OTPlaneswalker) where
   toSetCard (SetCard s r c) = SetCard s r $ PlaneswalkerCard c
 
-instance ToSetCard (SetCard OSorcery) where
+instance ToSetCard (SetCard OTSorcery) where
   toSetCard (SetCard s r c) = SetCard s r $ SorceryCard c
 
 class ToToken token where
-  toToken :: token -> Token OCard
+  toToken :: token -> Token OTCard
 
-instance ToToken (Token OCard) where
+instance ToToken (Token OTCard) where
   toToken = id
 
-instance ToToken (Token OArtifact) where
+instance ToToken (Token OTArtifact) where
   toToken (Token x) = Token $ toCard x
 
-instance ToToken (Token OCreature) where
+instance ToToken (Token OTCreature) where
   toToken (Token x) = Token $ toCard x
 
-instance ToToken (Token OEnchantment) where
+instance ToToken (Token OTEnchantment) where
   toToken (Token x) = Token $ toCard x
 
-instance ToToken (Token OInstant) where
+instance ToToken (Token OTInstant) where
   toToken (Token x) = Token $ toCard x
 
-instance ToToken (Token OLand) where
+instance ToToken (Token OTLand) where
   toToken (Token x) = Token $ toCard x
 
-instance ToToken (Token OPlaneswalker) where
+instance ToToken (Token OTPlaneswalker) where
   toToken (Token x) = Token $ toCard x
 
-instance ToToken (Token OSorcery) where
+instance ToToken (Token OTSorcery) where
   toToken (Token x) = Token $ toCard x
 
 class ToSetToken token where
-  toSetToken :: token -> SetToken OCard
+  toSetToken :: token -> SetToken OTCard
 
-instance ToSetToken (SetToken OCard) where
+instance ToSetToken (SetToken OTCard) where
   toSetToken = id
 
-instance ToSetToken (SetToken OArtifact) where
+instance ToSetToken (SetToken OTArtifact) where
   toSetToken (SetToken s r (Token x)) = SetToken s r $ Token $ toCard x
 
-instance ToSetToken (SetToken OCreature) where
+instance ToSetToken (SetToken OTCreature) where
   toSetToken (SetToken s r (Token x)) = SetToken s r $ Token $ toCard x
 
-instance ToSetToken (SetToken OEnchantment) where
+instance ToSetToken (SetToken OTEnchantment) where
   toSetToken (SetToken s r (Token x)) = SetToken s r $ Token $ toCard x
 
-instance ToSetToken (SetToken OInstant) where
+instance ToSetToken (SetToken OTInstant) where
   toSetToken (SetToken s r (Token x)) = SetToken s r $ Token $ toCard x
 
-instance ToSetToken (SetToken OLand) where
+instance ToSetToken (SetToken OTLand) where
   toSetToken (SetToken s r (Token x)) = SetToken s r $ Token $ toCard x
 
-instance ToSetToken (SetToken OPlaneswalker) where
+instance ToSetToken (SetToken OTPlaneswalker) where
   toSetToken (SetToken s r (Token x)) = SetToken s r $ Token $ toCard x
 
-instance ToSetToken (SetToken OSorcery) where
+instance ToSetToken (SetToken OTSorcery) where
   toSetToken (SetToken s r (Token x)) = SetToken s r $ Token $ toCard x
 
 class Typeable x => CoNonProxy x where
@@ -264,57 +270,57 @@ instance CoNonProxy (Elect (Effect 'OneShot)) where
   coNonProxy = NonProxyElectEffectOneShot
 
 class TypeableOT2 ot x => AsWithLinkedObject x ot where
-  linked :: [Requirement ot] -> (ot -> x ot) -> WithLinkedObject x ot
+  linked :: [Requirement (ObjectN ot)] -> (ObjectN ot -> x ot) -> WithLinkedObject x ot
 
-instance (CoNonProxy x, Inst1 IsObjectType a) => AsWithLinkedObject x (ON1 a) where
+instance (CoNonProxy x, Inst1 IsObjectType a) => AsWithLinkedObject x (OT1 a) where
   linked = L1 coNonProxy
 
-instance (CoNonProxy x, Inst2 IsObjectType a b) => AsWithLinkedObject x (ON2 a b) where
+instance (CoNonProxy x, Inst2 IsObjectType a b) => AsWithLinkedObject x (OT2 a b) where
   linked = L2 coNonProxy
 
-instance (CoNonProxy x, Inst3 IsObjectType a b c) => AsWithLinkedObject x (ON3 a b c) where
+instance (CoNonProxy x, Inst3 IsObjectType a b c) => AsWithLinkedObject x (OT3 a b c) where
   linked = L3 coNonProxy
 
-instance (CoNonProxy x, Inst4 IsObjectType a b c d) => AsWithLinkedObject x (ON4 a b c d) where
+instance (CoNonProxy x, Inst4 IsObjectType a b c d) => AsWithLinkedObject x (OT4 a b c d) where
   linked = L4 coNonProxy
 
-instance (CoNonProxy x, Inst5 IsObjectType a b c d e) => AsWithLinkedObject x (ON5 a b c d e) where
+instance (CoNonProxy x, Inst5 IsObjectType a b c d e) => AsWithLinkedObject x (OT5 a b c d e) where
   linked = L5 coNonProxy
 
 class AsWithMaskedObject ot' where
-  masked :: TypeableOT2 ot x => [Requirement ot'] -> (ot' -> x ot) -> WithMaskedObject x ot
+  masked :: TypeableOT2 ot x => [Requirement (ObjectN ot')] -> (ObjectN ot' -> x ot) -> WithMaskedObject x ot
 
-instance Inst1 IsObjectType a => AsWithMaskedObject (ON1 a) where
+instance Inst1 IsObjectType a => AsWithMaskedObject (OT1 a) where
   masked = M1
 
-instance Inst2 IsObjectType a b => AsWithMaskedObject (ON2 a b) where
+instance Inst2 IsObjectType a b => AsWithMaskedObject (OT2 a b) where
   masked = M2
 
-instance Inst3 IsObjectType a b c => AsWithMaskedObject (ON3 a b c) where
+instance Inst3 IsObjectType a b c => AsWithMaskedObject (OT3 a b c) where
   masked = M3
 
-instance Inst4 IsObjectType a b c d => AsWithMaskedObject (ON4 a b c d) where
+instance Inst4 IsObjectType a b c d => AsWithMaskedObject (OT4 a b c d) where
   masked = M4
 
-instance Inst5 IsObjectType a b c d e => AsWithMaskedObject (ON5 a b c d e) where
+instance Inst5 IsObjectType a b c d e => AsWithMaskedObject (OT5 a b c d e) where
   masked = M5
 
 class AsWithThis ot where
-  thisObject :: (ot -> x ot) -> WithThis x ot
+  thisObject :: (ObjectN ot -> x ot) -> WithThis x ot
 
-instance Inst1 IsObjectType a => AsWithThis (ON1 a) where
+instance Inst1 IsObjectType a => AsWithThis (OT1 a) where
   thisObject = T1
 
-instance Inst2 IsObjectType a b => AsWithThis (ON2 a b) where
+instance Inst2 IsObjectType a b => AsWithThis (OT2 a b) where
   thisObject = T2
 
-instance Inst3 IsObjectType a b c => AsWithThis (ON3 a b c) where
+instance Inst3 IsObjectType a b c => AsWithThis (OT3 a b c) where
   thisObject = T3
 
-instance Inst4 IsObjectType a b c d => AsWithThis (ON4 a b c d) where
+instance Inst4 IsObjectType a b c d => AsWithThis (OT4 a b c d) where
   thisObject = T4
 
-instance Inst5 IsObjectType a b c d e => AsWithThis (ON5 a b c d e) where
+instance Inst5 IsObjectType a b c d e => AsWithThis (OT5 a b c d e) where
   thisObject = T5
 
 type AsActivatedOrTriggeredAbility a =
@@ -427,7 +433,7 @@ dealDamage source target = DealDamage (asDamageSource source) (asCreaturePlayerP
 controllerOf :: AsAny o => o -> (OPlayer -> Elect e ot) -> Elect e ot
 controllerOf = ControllerOf . asAny
 
-sacrifice :: CoPermanent ot => OPlayer -> [Requirement ot] -> Effect 'OneShot
+sacrifice :: CoPermanent ot => OPlayer -> [Requirement (ObjectN ot)] -> Effect 'OneShot
 sacrifice = Sacrifice coPermanent
 
 changeTo :: (AsPermanent o, CoPermanent ot) => o -> Card ot -> Effect 'Continuous
@@ -448,88 +454,88 @@ counterSpell = CounterSpell . asSpell
 class TypeableOT ot => CoPermanent ot where
   coPermanent :: WPermanent ot
 
-instance CoPermanent OArtifact where
+instance CoPermanent OTArtifact where
   coPermanent = WPermanentArtifact
 
-instance CoPermanent OCreature where
+instance CoPermanent OTCreature where
   coPermanent = WPermanentCreature
 
-instance CoPermanent OEnchantment where
+instance CoPermanent OTEnchantment where
   coPermanent = WPermanentEnchantment
 
-instance CoPermanent OLand where
+instance CoPermanent OTLand where
   coPermanent = WPermanentLand
 
-instance CoPermanent OPlaneswalker where
+instance CoPermanent OTPlaneswalker where
   coPermanent = WPermanentPlaneswalker
 
-instance CoPermanent OPermanent where
+instance CoPermanent OTPermanent where
   coPermanent = WPermanent
 
-instance Inst2 IsPermanentType a b => CoPermanent (ON2 a b) where
-  coPermanent = WPermanent2 :: WPermanent (ON2 a b)
+instance Inst2 IsPermanentType a b => CoPermanent (OT2 a b) where
+  coPermanent = WPermanent2 :: WPermanent (OT2 a b)
 
-instance Inst3 IsPermanentType a b c => CoPermanent (ON3 a b c) where
-  coPermanent = WPermanent3 :: WPermanent (ON3 a b c)
+instance Inst3 IsPermanentType a b c => CoPermanent (OT3 a b c) where
+  coPermanent = WPermanent3 :: WPermanent (OT3 a b c)
 
-instance Inst4 IsPermanentType a b c d => CoPermanent (ON4 a b c d) where
-  coPermanent = WPermanent4 :: WPermanent (ON4 a b c d)
+instance Inst4 IsPermanentType a b c d => CoPermanent (OT4 a b c d) where
+  coPermanent = WPermanent4 :: WPermanent (OT4 a b c d)
 
 class TypeableOT ot => CoAny ot where
   coAny :: WAny ot
 
-instance CoAny OInstant where
+instance CoAny OTInstant where
   coAny = WAnyInstant
 
-instance CoAny OSorcery where
+instance CoAny OTSorcery where
   coAny = WAnySorcery
 
-instance CoAny OPlayer where
+instance CoAny OTPlayer where
   coAny = WAnyPlayer
 
-instance CoAny OArtifact where
+instance CoAny OTArtifact where
   coAny = WAnyArtifact
 
-instance CoAny OCreature where
+instance CoAny OTCreature where
   coAny = WAnyCreature
 
-instance CoAny OEnchantment where
+instance CoAny OTEnchantment where
   coAny = WAnyEnchantment
 
-instance CoAny OLand where
+instance CoAny OTLand where
   coAny = WAnyLand
 
-instance CoAny OPlaneswalker where
+instance CoAny OTPlaneswalker where
   coAny = WAnyPlaneswalker
 
-instance Inst2 IsPermanentType a b => CoAny (ON2 a b) where
+instance Inst2 IsPermanentType a b => CoAny (OT2 a b) where
   coAny = WAny2
 
-instance Inst3 IsPermanentType a b c => CoAny (ON3 a b c) where
+instance Inst3 IsPermanentType a b c => CoAny (OT3 a b c) where
   coAny = WAny3
 
-instance Inst4 IsPermanentType a b c d => CoAny (ON4 a b c d) where
+instance Inst4 IsPermanentType a b c d => CoAny (OT4 a b c d) where
   coAny = WAny4
 
-instance Inst5 IsPermanentType a b c d e => CoAny (ON5 a b c d e) where
+instance Inst5 IsPermanentType a b c d e => CoAny (OT5 a b c d e) where
   coAny = WAny5
 
-is :: CoAny ot => ot -> Requirement ot
+is :: CoAny ot => ObjectN ot -> Requirement (ObjectN ot)
 is = Is coAny
 
-satisfies :: CoAny ot => ot -> [Requirement ot] -> Condition
+satisfies :: CoAny ot => ObjectN ot -> [Requirement (ObjectN ot)] -> Condition
 satisfies = Satisfies coAny
 
-sacrificeCost :: CoPermanent ot => [Requirement ot] -> Cost ot
+sacrificeCost :: CoPermanent ot => [Requirement (ObjectN ot)] -> Cost ot
 sacrificeCost = SacrificeCost coPermanent
 
-tapped :: CoPermanent ot => Requirement ot
+tapped :: CoPermanent ot => Requirement (ObjectN ot)
 tapped = Tapped coPermanent
 
 addToBattlefield :: CoPermanent ot => OPlayer -> Token ot -> Effect 'OneShot
 addToBattlefield = AddToBattlefield coPermanent
 
-ofColors :: ColorsLike c => c -> Requirement ot
+ofColors :: ColorsLike c => c -> Requirement (ObjectN ot)
 ofColors = OfColors . toColors
 
 class AsCost c ot where
@@ -586,10 +592,10 @@ ifElse cond = If cond branchEmpty
 nonBasic :: Requirement OLand
 nonBasic = RAnd $ map (Not . HasLandType . BasicLand) [minBound ..]
 
-colored :: Requirement ot
+colored :: Requirement (ObjectN ot)
 colored = ROr $ map ofColors [minBound :: Color ..]
 
-colorless :: TypeableOT ot => Requirement ot
+colorless :: TypeableOT ot => Requirement (ObjectN ot)
 colorless = Not colored
 
 addManaAnyColor :: OPlayer -> Int -> Effect 'OneShot
@@ -603,7 +609,7 @@ addManaAnyColor player amount =
     ]
 
 class (AsWithThis ot, TypeableOT ot) => MkCard t ot where
-  mkCard :: CardName -> (ot -> CardTypeDef t ot) -> Card ot
+  mkCard :: CardName -> (ObjectN ot -> CardTypeDef t ot) -> Card ot
 
 instance (AsWithThis ot, TypeableOT ot) => MkCard 'NonTribal ot where
   mkCard name = Card name . thisObject
@@ -611,10 +617,10 @@ instance (AsWithThis ot, TypeableOT ot) => MkCard 'NonTribal ot where
 instance (AsWithThis ot, TypeableOT ot) => MkCard 'Tribal ot where
   mkCard name = TribalCard name . thisObject
 
-mkToken :: MkCard tribal ot => CardName -> (ot -> CardTypeDef tribal ot) -> Token ot
+mkToken :: MkCard tribal ot => CardName -> (ObjectN ot -> CardTypeDef tribal ot) -> Token ot
 mkToken name = Token . mkCard name
 
-hasAbility :: AsWithThis ot => (ot -> Ability ot) -> Requirement ot
+hasAbility :: AsWithThis ot => (ObjectN ot -> Ability ot) -> Requirement (ObjectN ot)
 hasAbility = HasAbility . thisObject
 
 becomesTapped :: CoPermanent ot => WithLinkedObject (Elect (Effect 'OneShot)) ot -> EventListener
@@ -623,10 +629,10 @@ becomesTapped = BecomesTapped coPermanent
 untilEndOfTurn :: Effect 'Continuous -> Effect 'OneShot
 untilEndOfTurn = EffectContinuous . Until (event $ TimePoint (StepBegin CleanupStep) Proxy)
 
-gain :: CoAny ot => ot -> Ability ot -> Effect 'Continuous
+gain :: CoAny ot => ObjectN ot -> Ability ot -> Effect 'Continuous
 gain = Gain coAny
 
-lose :: CoAny ot => ot -> Ability ot -> Effect 'Continuous
+lose :: CoAny ot => ObjectN ot -> Ability ot -> Effect 'Continuous
 lose = Lose coAny
 
 class HasLandType a where
