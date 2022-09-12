@@ -55,6 +55,7 @@ import safe MtgPure.Model.ObjectType.Kind
     OTCreaturePlayerPlaneswalker,
     OTPermanent,
     OTPlayerPlaneswalker,
+    OTSpell,
   )
 
 class PrettyObjectName a where
@@ -204,6 +205,27 @@ instance Inst5 IsObjectType a b c d e => PrettyObjectName (ObjectN '(OT, a, b, c
             ++ show (typeRep (Proxy @d))
             ++ ", "
             ++ show (typeRep (Proxy @e))
+            ++ ")"
+    where
+      rep = typeRep proxy
+
+instance Inst6 IsObjectType a b c d e f => PrettyObjectName '(OT, a, b, c, d, e, f) where
+  prettyObjectName proxy =
+    if
+        | rep == typeRep (Proxy @OTSpell) -> "OTSpell"
+        | otherwise ->
+          "'(OT "
+            ++ show (typeRep (Proxy @a))
+            ++ ", "
+            ++ show (typeRep (Proxy @b))
+            ++ ", "
+            ++ show (typeRep (Proxy @c))
+            ++ ", "
+            ++ show (typeRep (Proxy @d))
+            ++ ", "
+            ++ show (typeRep (Proxy @e))
+            ++ ", "
+            ++ show (typeRep (Proxy @f))
             ++ ")"
     where
       rep = typeRep proxy

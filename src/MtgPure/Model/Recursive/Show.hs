@@ -68,7 +68,7 @@ import safe MtgPure.Model.ObjectN.Type
     OSpell,
   )
 import MtgPure.Model.ObjectType (OT, ObjectType (..))
-import safe MtgPure.Model.ObjectType.Any (WAny (..))
+import safe MtgPure.Model.ObjectType.Any (IsAnyType, WAny (..))
 import safe MtgPure.Model.ObjectType.NonCreatureCard
   ( IsNonCreatureCardType,
     WNonCreatureCard (..),
@@ -95,6 +95,7 @@ import safe MtgPure.Model.Recursive
     Token (..),
     TriggeredAbility (..),
     WithObject (..),
+    WithThis (..),
   )
 import safe MtgPure.Model.Selection (Selection (..))
 import safe MtgPure.Model.TimePoint (TimePoint (..))
@@ -110,7 +111,7 @@ defaultDepthLimit = Nothing
 instance Show (Ability ot) where
   show = runEnvM defaultDepthLimit . showAbility
 
-instance Show (Card a) where
+instance Show (Card ot) where
   show = runEnvM defaultDepthLimit . showCard
 
 instance Show (CardTypeDef t ot) where
@@ -125,7 +126,7 @@ instance Show (Cost ot) where
 instance Show (Effect e) where
   show = runEnvM defaultDepthLimit . showEffect
 
-instance Show (Elect e a) where
+instance Show (Elect e ot) where
   show = runEnvM defaultDepthLimit . showElect
 
 instance Show (EventListener ot) where
@@ -134,22 +135,22 @@ instance Show (EventListener ot) where
 instance Show (Requirement ot) where
   show = runEnvM defaultDepthLimit . showRequirement
 
-instance Show (SetCard a) where
+instance Show (SetCard ot) where
   show = runEnvM defaultDepthLimit . showSetCard
 
-instance Show (SetToken a) where
+instance Show (SetToken ot) where
   show = runEnvM defaultDepthLimit . showSetToken
 
-instance Show (StaticAbility a) where
+instance Show (StaticAbility ot) where
   show = runEnvM defaultDepthLimit . showStaticAbility
 
-instance Show (Token a) where
+instance Show (Token ot) where
   show = runEnvM defaultDepthLimit . showToken
 
 instance Show (TriggeredAbility ot) where
   show = runEnvM defaultDepthLimit . showTriggeredAbility
 
-instance Show (WithObject (Elect e) o) where
+instance Show (WithObject (Elect e) ot) where
   show = runEnvM defaultDepthLimit . showWithObject showElect "obj"
 
 instance Show (WithObject EventListener o) where
@@ -219,6 +220,7 @@ mkEnv depth =
 
 type EnvM = State.State Env
 
+-- TODO: Make this better now that variables can be procured through various abstract means.
 varNames :: [String]
 varNames = "x" : "y" : "z" : map f [0 ..]
   where
@@ -469,40 +471,10 @@ showToken (Token card) = yesParens $ do
 
 showCard :: Card x -> EnvM ParenItems
 showCard = \case
-  card@Card1 {} ->
-    let go :: forall a. Card '(OT, a) -> EnvM ParenItems
-        go = \case
-          Card1 (CardName name) cont -> yesParens $ do
-            depth <- State.gets cardDepth
-            State.modify' $ \st -> st {cardDepth = subtract 1 <$> depth}
-            let sName = pure (fromString $ show name)
-            case depth of
-              Just 0 -> pure $ pure "Card " <> sName <> pure " ..."
-              _ -> do
-                (this, snap) <- newObjectN @a O "this"
-                sThis <- parens <$> showObject1 this
-                let def = cont this
-                sDef <- dropParens <$> showCardTypeDef def
-                restoreObject snap
-                pure $ pure "Card " <> sName <> pure " $ \\" <> sThis <> pure " -> " <> sDef
-     in go card
-  card@Card2 {} ->
-    let go :: forall a b. Card '(OT, a, b) -> EnvM ParenItems
-        go = \case
-          Card2 (CardName name) cont -> yesParens $ do
-            depth <- State.gets cardDepth
-            State.modify' $ \st -> st {cardDepth = subtract 1 <$> depth}
-            let sName = pure (fromString $ show name)
-            case depth of
-              Just 0 -> pure $ pure "Card2 " <> sName <> pure " ..."
-              _ -> do
-                (this, snap) <- newObjectN @a O2a "this"
-                sThis <- parens <$> showObject2 this
-                let def = cont this
-                sDef <- dropParens <$> showCardTypeDef def
-                restoreObject snap
-                pure $ pure "Card2 " <> sName <> pure " $ \\" <> sThis <> pure " -> " <> sDef
-     in go card
+  Card name def ->
+    showCard' "Card" name def
+  TribalCard name def ->
+    showCard' "TribalCard" name def
   ArtifactCard card -> yesParens $ do
     sCard <- dollar <$> showCard card
     pure $ pure "Artifact" <> sCard
@@ -524,6 +496,16 @@ showCard = \case
   SorceryCard card -> yesParens $ do
     sCard <- dollar <$> showCard card
     pure $ pure "Sorcery" <> sCard
+  where
+    showCard' consName (CardName name) withCardTypeDef = yesParens $ do
+      depth <- State.gets cardDepth
+      State.modify' $ \st -> st {cardDepth = subtract 1 <$> depth}
+      let sName = pure (fromString $ show name)
+      case depth of
+        Just 0 -> pure $ pure consName <> pure " " <> sName <> pure " ..."
+        _ -> do
+          sWithCardTypeDef <- dollar <$> showWithThis showCardTypeDef withCardTypeDef
+          pure $ pure consName <> pure " " <> sName <> sWithCardTypeDef
 
 showCardTypeDef :: CardTypeDef t a -> EnvM ParenItems
 showCardTypeDef = \case
@@ -671,7 +653,7 @@ showRequirement = \case
     sObj <- dollar <$> showObject1 obj
     pure $ pure "ControlledBy " <> sObj
   HasAbility ability -> yesParens $ do
-    sAbility <- dollar <$> showAbility ability
+    sAbility <- dollar <$> showWithThis showAbility ability
     pure $ pure "HasAbility" <> sAbility
   HasBasicLandType basic -> yesParens $ do
     pure $ pure $ fromString $ "HasBasicLandType " ++ show basic
@@ -952,10 +934,8 @@ showGenericMana =
 showDamage :: Damage -> EnvM ParenItems
 showDamage =
   yesParens . \case
-    Damage n -> pure $ pure $ fromString $ "Damage " ++ show n
-    DamageFromPower obj -> do
-      sObj <- dollar <$> showObject1 obj
-      pure $ pure "DamageFromPower " <> sObj
+    Damage n -> do
+      pure $ pure $ fromString $ "Damage " ++ show n
     VariableDamage var -> do
       let varName = getVarName var
       pure $ DList.fromList [fromString "VariableDamage ", varName]
@@ -1031,27 +1011,70 @@ showCondition = \case
     pure $ pure "Satisfies " <> sWAny <> pure " " <> sObjN <> sReqs
 
 showWAny :: WAny a -> EnvM ParenItems
-showWAny = \case
-  WAnyInstant -> noParens $ pure $ pure "WAnyInstant"
-  WAnySorcery -> noParens $ pure $ pure "WAnySorcery"
-  WAnyPlayer -> noParens $ pure $ pure "WAnyPlayer"
-  WAnyPermanent perm -> yesParens $ do
-    sPerm <- dollar <$> showPermanent perm
-    pure $ pure "WAnyPermanent" <> sPerm
+showWAny any' = case any' of
+  WAnyArtifact -> noParens sAny
+  WAnyCreature -> noParens sAny
+  WAnyEnchantment -> noParens sAny
+  WAnyInstant -> noParens sAny
+  WAnyLand -> noParens sAny
+  WAnyPlaneswalker -> noParens sAny
+  WAnyPlayer -> noParens sAny
+  WAnySorcery -> noParens sAny
+  WAny -> noParens sAny
+  WAny2 -> yesParens $ do
+    let go :: forall a b. Inst2 IsAnyType a b => WAny '(OT, a, b) -> Item
+        go _ = fromString $ prettyObjectName (Proxy :: Proxy '(OT, a, b))
+    pure $ pure "WAny2 :: @" <> pure (go any')
+  WAny3 -> yesParens $ do
+    let go :: forall a b c. Inst3 IsAnyType a b c => WAny '(OT, a, b, c) -> Item
+        go _ = fromString $ prettyObjectName (Proxy :: Proxy '(OT, a, b, c))
+    pure $ pure "WAny3 :: @" <> pure (go any')
+  WAny4 -> yesParens $ do
+    let go :: forall a b c d. Inst4 IsAnyType a b c d => WAny '(OT, a, b, c, d) -> Item
+        go _ = fromString $ prettyObjectName (Proxy :: Proxy '(OT, a, b, c, d))
+    pure $ pure "WAny4 :: @" <> pure (go any')
+  WAny5 -> yesParens $ do
+    let go :: forall a b c d e. Inst5 IsAnyType a b c d e => WAny '(OT, a, b, c, d, e) -> Item
+        go _ = fromString $ prettyObjectName (Proxy :: Proxy '(OT, a, b, c, d, e))
+    pure $ pure "WAny5 :: @" <> pure (go any')
+  WAny6 -> yesParens $ do
+    let go :: forall a b c d e f. Inst6 IsAnyType a b c d e f => WAny '(OT, a, b, c, d, e, f) -> Item
+        go _ = fromString $ prettyObjectName (Proxy :: Proxy '(OT, a, b, c, d, e, f))
+    pure $ pure "WAny6 :: @" <> pure (go any')
+  where
+    sAny :: EnvM Items
+    sAny = pure $ pure $ fromString $ show any'
 
-showAnyN :: WAny a -> ObjectN a -> EnvM ParenItems
-showAnyN wAny objN = case wAny of
-  WAnyInstant -> yesParens $ do
-    let O obj = objN
-    showObject obj
-  WAnySorcery -> yesParens $ do
-    let O obj = objN
-    showObject obj
-  WAnyPlayer -> yesParens $ do
-    let O obj = objN
-    showObject obj
-  WAnyPermanent perm -> do
-    showPermanentN perm objN
+showAnyN :: WAny ot -> ObjectN ot -> EnvM ParenItems
+showAnyN wAny obj = case wAny of
+  WAnyArtifact -> do
+    showObject1 obj
+  WAnyCreature -> do
+    showObject1 obj
+  WAnyEnchantment -> do
+    showObject1 obj
+  WAnyInstant -> do
+    showObject1 obj
+  WAnyLand -> do
+    showObject1 obj
+  WAnyPlaneswalker -> do
+    showObject1 obj
+  WAnyPlayer -> do
+    showObject1 obj
+  WAnySorcery -> do
+    showObject1 obj
+  WAny -> do
+    showOAny obj
+  WAny2 -> do
+    showObject2 obj
+  WAny3 -> do
+    showObject3 obj
+  WAny4 -> do
+    showObject4 obj
+  WAny5 -> do
+    showObject5 obj
+  WAny6 -> do
+    showObject6 obj
 
 showEventListener :: EventListener a -> EnvM ParenItems
 showEventListener = \case
@@ -1132,14 +1155,34 @@ showElect = \case
     sThen <- parens <$> showElect then_
     sElse <- dollar <$> showElect else_
     pure $ pure "If " <> sCond <> pure " " <> sThen <> sElse
+  VariableFromPower creature varToElect -> yesParens $ do
+    sCreature <- parens <$> showObject1 creature
+    i <- State.gets nextVariableId
+    State.modify' $ \st -> st {nextVariableId = i + 1}
+    let var = ReifiedVariable i
+        varName = getVarName var
+        elect = varToElect var
+    sElect <- dropParens <$> showElect elect
+    pure $ pure "VariableFromPower " <> sCreature <> pure " $ \\" <> pure varName <> pure " -> " <> sElect
 
-showWithObject :: (forall a. x a -> EnvM ParenItems) -> String -> WithObject x b -> EnvM ParenItems
+showWithObject :: (forall ot'. x ot' -> EnvM ParenItems) -> String -> WithObject x ot -> EnvM ParenItems
 showWithObject showM memo = \case
   O1 reqs cont -> showO1 showM memo reqs cont
   O2 reqs cont -> showO2 showM memo reqs cont
   O3 reqs cont -> showO3 showM memo reqs cont
   O4 reqs cont -> showO4 showM memo reqs cont
   O5 reqs cont -> showO5 showM memo reqs cont
+
+showWithThis :: (forall ot'. x ot' -> EnvM ParenItems) -> WithThis x ot -> EnvM ParenItems
+showWithThis showM = \case
+  T1 cont -> showO1 showM memo reqs cont
+  T2 cont -> showO2 showM memo reqs cont
+  T3 cont -> showO3 showM memo reqs cont
+  T4 cont -> showO4 showM memo reqs cont
+  T5 cont -> showO5 showM memo reqs cont
+  where
+    memo = "this" :: String
+    reqs = []
 
 showO1 ::
   forall a b x.
@@ -1256,35 +1299,26 @@ showO5 showM memo reqs cont = yesParens $ do
       <> pure " -> "
       <> sElect
 
-showPermanentN :: WPermanent a -> ObjectN a -> EnvM ParenItems
-showPermanentN perm obj = case perm of
-  WPermanentArtifact -> yesParens $ do
-    sObj <- visitObjectN' showObject obj
-    pure $ pure "WPermanentArtifact " <> sObj
-  WPermanentCreature -> yesParens $ do
-    sObj <- visitObjectN' showObject obj
-    pure $ pure "WPermanentCreature " <> sObj
-  WPermanentEnchantment -> yesParens $ do
-    sObj <- visitObjectN' showObject obj
-    pure $ pure "WPermanentEnchantment " <> sObj
-  WPermanentLand -> yesParens $ do
-    sObj <- visitObjectN' showObject obj
-    pure $ pure "WPermanentLand " <> sObj
-  WPermanentPlaneswalker -> yesParens $ do
-    sObj <- visitObjectN' showObject obj
-    pure $ pure "WPermanentPlaneswalker " <> sObj
-  WPermanent -> yesParens $ do
-    sObj <- dollar <$> showOPermanent obj
-    pure $ pure "WPermanent" <> sObj
-  WPermanent2 -> yesParens $ do
-    sObj <- dollar <$> showObject2 obj
-    pure $ pure "WPermanent2" <> sObj
-  WPermanent3 -> yesParens $ do
-    sObj <- dollar <$> showObject3 obj
-    pure $ pure "WPermanent3" <> sObj
-  WPermanent4 -> yesParens $ do
-    sObj <- dollar <$> showObject4 obj
-    pure $ pure "WPermanent4" <> sObj
+-- showPermanentN :: WPermanent a -> ObjectN a -> EnvM ParenItems
+-- showPermanentN perm obj = case perm of
+--   WPermanentArtifact -> noParens $ do
+--     visitObjectN' showObject obj
+--   WPermanentCreature -> noParens $ do
+--     visitObjectN' showObject obj
+--   WPermanentEnchantment -> noParens $ do
+--     visitObjectN' showObject obj
+--   WPermanentLand -> noParens $ do
+--     visitObjectN' showObject obj
+--   WPermanentPlaneswalker -> noParens $ do
+--     visitObjectN' showObject obj
+--   WPermanent -> do
+--     showOPermanent obj
+--   WPermanent2 -> do
+--     showObject2 obj
+--   WPermanent3 -> do
+--     showObject3 obj
+--   WPermanent4 -> do
+--     showObject4 obj
 
 showEffect :: Effect e -> EnvM ParenItems
 showEffect = \case

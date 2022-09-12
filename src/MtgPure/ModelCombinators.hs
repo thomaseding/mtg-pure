@@ -31,6 +31,9 @@ module MtgPure.ModelCombinators
     CoAny (..),
     CoPermanent (..),
     AsWithObject (..),
+    AsWithThis (..),
+    mkCard,
+    mkToken,
     event,
     ifThen,
     ifElse,
@@ -58,6 +61,7 @@ module MtgPure.ModelCombinators
 where
 
 import safe Data.Inst (Inst1, Inst2, Inst3, Inst4, Inst5)
+import safe MtgPure.Model.CardName (CardName)
 import safe MtgPure.Model.Color (Color)
 import safe MtgPure.Model.ColorsLike (ColorsLike (..))
 import safe MtgPure.Model.Damage (Damage (..))
@@ -97,17 +101,19 @@ import safe MtgPure.Model.ObjectType.Kind
   )
 import safe MtgPure.Model.ObjectType.Permanent (IsPermanentType, WPermanent (..))
 import safe MtgPure.Model.Recursive
-  ( Card,
+  ( Card (..),
+    CardTypeDef,
     Condition (..),
     Cost (..),
     Effect (..),
     Elect (..),
     EventListener (..),
     Requirement (..),
-    Token,
+    Token (Token),
     TypeableOT,
     TypeableOT2,
     WithObject (..),
+    WithThis (..),
   )
 import safe MtgPure.Model.ToManaCost (ToManaCost (..))
 import safe MtgPure.Model.ToObjectN.Classes
@@ -118,10 +124,11 @@ import safe MtgPure.Model.ToObjectN.Classes
     ToObject6 (..),
     ToObject8 (..),
   )
+import safe MtgPure.Model.Tribal (Tribal (..))
 import safe MtgPure.Model.Variable (Variable)
 
-class AsWithObject a where
-  object :: TypeableOT2 k ot x => [Requirement a] -> (ObjectN a -> x ot) -> WithObject x ot
+class AsWithObject ot' where
+  object :: TypeableOT2 k ot x => [Requirement ot'] -> (ObjectN ot' -> x ot) -> WithObject x ot
 
 instance Inst1 IsObjectType a => AsWithObject '(OT, a) where
   object = O1
@@ -137,6 +144,24 @@ instance Inst4 IsObjectType a b c d => AsWithObject '(OT, a, b, c, d) where
 
 instance Inst5 IsObjectType a b c d e => AsWithObject '(OT, a, b, c, d, e) where
   object = O5
+
+class AsWithThis ot where
+  thisObject :: (ObjectN ot -> x ot) -> WithThis x ot
+
+instance Inst1 IsObjectType a => AsWithThis '(OT, a) where
+  thisObject = T1
+
+instance Inst2 IsObjectType a b => AsWithThis '(OT, a, b) where
+  thisObject = T2
+
+instance Inst3 IsObjectType a b c => AsWithThis '(OT, a, b, c) where
+  thisObject = T3
+
+instance Inst4 IsObjectType a b c d => AsWithThis '(OT, a, b, c, d) where
+  thisObject = T4
+
+instance Inst5 IsObjectType a b c d e => AsWithThis '(OT, a, b, c, d, e) where
+  thisObject = T5
 
 type AsActivatedOrTriggeredAbility a =
   ToObject2
@@ -309,31 +334,31 @@ instance CoAny ObjectType1 OTPlayer where
   coAny = WAnyPlayer
 
 instance CoAny ObjectType1 OTArtifact where
-  coAny = WAnyPermanent coPermanent
+  coAny = WAnyArtifact
 
 instance CoAny ObjectType1 OTCreature where
-  coAny = WAnyPermanent coPermanent
+  coAny = WAnyCreature
 
 instance CoAny ObjectType1 OTEnchantment where
-  coAny = WAnyPermanent coPermanent
+  coAny = WAnyEnchantment
 
 instance CoAny ObjectType1 OTLand where
-  coAny = WAnyPermanent coPermanent
+  coAny = WAnyLand
 
 instance CoAny ObjectType1 OTPlaneswalker where
-  coAny = WAnyPermanent coPermanent
-
-instance CoAny ObjectType5 OTPermanent where
-  coAny = WAnyPermanent coPermanent
+  coAny = WAnyPlaneswalker
 
 instance Inst2 IsPermanentType a b => CoAny ObjectType2 '(OT, a, b) where
-  coAny = WAnyPermanent coPermanent
+  coAny = WAny2
 
 instance Inst3 IsPermanentType a b c => CoAny ObjectType3 '(OT, a, b, c) where
-  coAny = WAnyPermanent coPermanent
+  coAny = WAny3
 
 instance Inst4 IsPermanentType a b c d => CoAny ObjectType4 '(OT, a, b, c, d) where
-  coAny = WAnyPermanent coPermanent
+  coAny = WAny4
+
+instance Inst5 IsPermanentType a b c d e => CoAny ObjectType5 '(OT, a, b, c, d, e) where
+  coAny = WAny5
 
 is :: CoAny k ot => ObjectN ot -> Requirement ot
 is = Is coAny
@@ -403,3 +428,15 @@ colored = ROr $ map ofColors [minBound :: Color ..]
 
 colorless :: TypeableOT k ot => Requirement ot
 colorless = Not colored
+
+class (AsWithThis ot, TypeableOT k ot) => MkCard t k ot where
+  mkCard :: CardName -> (ObjectN ot -> CardTypeDef t ot) -> Card ot
+
+instance (AsWithThis ot, TypeableOT k ot) => MkCard 'NonTribal k ot where
+  mkCard name = Card name . thisObject
+
+instance (AsWithThis ot, TypeableOT k ot) => MkCard 'Tribal k ot where
+  mkCard name = TribalCard name . thisObject
+
+mkToken :: MkCard tribal k ot => CardName -> (ObjectN ot -> CardTypeDef tribal ot) -> Token ot
+mkToken name = Token . mkCard name

@@ -30,7 +30,7 @@ data ManaPool = ManaPool
     poolGreen :: Mana 'MTGreen,
     poolColorless :: Mana 'MTColorless
   }
-  deriving (Show)
+  deriving (Eq, Show)
 
 instance Semigroup ManaPool where
   mp1 <> mp2 =

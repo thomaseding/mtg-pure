@@ -35,6 +35,8 @@ data Mana :: ManaType -> Type where
   ColorlessMana :: ColorlessMana -> Mana 'MTColorless
   GenericMana :: GenericMana -> Mana 'MTGeneric
 
+deriving instance Eq (Mana a)
+
 deriving instance Show (Mana a)
 
 instance Semigroup (Mana 'MTWhite) where

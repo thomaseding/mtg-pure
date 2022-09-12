@@ -29,4 +29,6 @@ data Step :: Phase -> Type where
   EndStep :: Step 'EndingPhase
   CleanupStep :: Step 'EndingPhase
 
+deriving instance Eq (Step p)
+
 deriving instance Show (Step p)

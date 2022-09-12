@@ -18,6 +18,9 @@ module MtgPure.Model.Tribal
   )
 where
 
+import Data.Typeable (Typeable)
+
 data Tribal
   = Tribal
   | NonTribal
+  deriving (Typeable)

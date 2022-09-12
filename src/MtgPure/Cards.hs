@@ -174,7 +174,7 @@ allTokens =
 ----------------------------------------
 
 mkBasicLand :: CardName -> ManaSymbol a -> Card OTLand
-mkBasicLand name sym = Card1 name $ \this ->
+mkBasicLand name sym = mkCard name $ \this ->
   LandDef
     [ Activated
         (Cost $ tapCost this)
@@ -204,7 +204,7 @@ wastes = mkBasicLand "Wastes" C
 ----------------------------------------
 
 acceptableLosses :: Card OTSorcery
-acceptableLosses = Card1 "Acceptable Losses" $ \this ->
+acceptableLosses = mkCard "Acceptable Losses" $ \this ->
   let cost =
         Cost $
           AndCosts
@@ -218,7 +218,7 @@ acceptableLosses = Card1 "Acceptable Losses" $ \this ->
               \(target :: OCreature) -> effect $ dealDamage this target 5
 
 allIsDust :: Card OTSorcery
-allIsDust = Card1 "All Is Dust" $ \_this ->
+allIsDust = mkCard "All Is Dust" $ \_this ->
   TribalDef [Eldrazi] WNonCreatureSorcery $
     SorceryDef (toColors ()) cost [] $
       All $
@@ -230,7 +230,7 @@ allIsDust = Card1 "All Is Dust" $ \_this ->
     cost = spellCost 7
 
 ancestralVision :: Card OTSorcery
-ancestralVision = Card1 "Ancestral Vision" $ \this ->
+ancestralVision = mkCard "Ancestral Vision" $ \this ->
   SorceryDef (toColors U) cost [Static $ Suspend 4 $ spellCost U] $
     controllerOf this $
       \you -> A (Target you) $
@@ -240,31 +240,31 @@ ancestralVision = Card1 "Ancestral Vision" $ \this ->
     cost = noCost
 
 backlash :: Card OTInstant
-backlash = Card1 "Backlash" $ \this ->
+backlash = mkCard "Backlash" $ \this ->
   InstantDef (toColors (B, R)) cost [] $
     controllerOf this $
       \you -> A (Target you) $
         object [Not tapped] $
-          \target -> controllerOf target $
-            \targetController -> effect $ dealDamage target targetController $ DamageFromPower target
+          \target -> VariableFromPower target $
+            \power -> controllerOf target $
+              \targetController -> effect $ dealDamage target targetController $ VariableDamage power
   where
     cost = spellCost (1, B, R)
 
 birdToken :: Token OTCreature
-birdToken = Token $
-  Card1 "Bird Token" $ \_this ->
-    CreatureDef
-      (toColors U)
-      cost
-      [Bird]
-      (Power 2)
-      (Toughness 2)
-      [Static Flying]
+birdToken = mkToken "Bird Token" $ \_this ->
+  CreatureDef
+    (toColors U)
+    cost
+    [Bird]
+    (Power 2)
+    (Toughness 2)
+    [Static Flying]
   where
     cost = noCost
 
 blaze :: Card OTSorcery
-blaze = Card1 "Blaze" $ \this ->
+blaze = mkCard "Blaze" $ \this ->
   VariableDef $ \x ->
     let cost = spellCost (VariableGenericMana x, R)
      in SorceryDef (toColors R) cost [] $
@@ -274,7 +274,7 @@ blaze = Card1 "Blaze" $ \this ->
                 \(target :: OCreaturePlayerPlaneswalker) -> effect $ dealDamage this target x
 
 bloodMoon :: Card OTEnchantment
-bloodMoon = Card1 "Blood Moon" $ \_this ->
+bloodMoon = mkCard "Blood Moon" $ \_this ->
   EnchantmentDef
     (toColors R)
     cost
@@ -288,7 +288,7 @@ bloodMoon = Card1 "Blood Moon" $ \_this ->
     cost = spellCost (2, R)
 
 cleanse :: Card OTSorcery
-cleanse = Card1 "Cleanse" $ \_this ->
+cleanse = mkCard "Cleanse" $ \_this ->
   SorceryDef (toColors W) cost [] $
     All $
       object [ofColors B] $
@@ -297,7 +297,7 @@ cleanse = Card1 "Cleanse" $ \_this ->
     cost = spellCost (2, W, W)
 
 conversion :: Card OTEnchantment
-conversion = Card1 "Conversion" $ \this ->
+conversion = mkCard "Conversion" $ \this ->
   EnchantmentDef
     (toColors W)
     cost
@@ -324,7 +324,7 @@ conversion = Card1 "Conversion" $ \this ->
     cost = spellCost (2, W, W)
 
 damnation :: Card OTSorcery
-damnation = Card1 "Damnation" $ \_this ->
+damnation = mkCard "Damnation" $ \_this ->
   SorceryDef (toColors B) cost [] $
     All $
       object [] $
@@ -333,7 +333,7 @@ damnation = Card1 "Damnation" $ \_this ->
     cost = spellCost (2, B, B)
 
 lavaAxe :: Card OTSorcery
-lavaAxe = Card1 "Lava Axe" $ \this ->
+lavaAxe = mkCard "Lava Axe" $ \this ->
   SorceryDef (toColors R) cost [] $
     controllerOf this $
       \you -> A (Target you) $
@@ -343,17 +343,17 @@ lavaAxe = Card1 "Lava Axe" $ \this ->
     cost = spellCost (4, R)
 
 plummet :: Card OTInstant
-plummet = Card1 "Plummet" $ \this ->
+plummet = mkCard "Plummet" $ \this ->
   InstantDef (toColors G) cost [] $
     controllerOf this $
       \you -> A (Target you) $
-        object [HasAbility $ Static Flying] $
+        object [HasAbility $ thisObject $ \_this -> Static Flying] $
           \target -> effect $ destroy target
   where
     cost = spellCost (1, G)
 
 ragingGoblin :: Card OTCreature
-ragingGoblin = Card1 "Raging Goblin" $ \_this ->
+ragingGoblin = mkCard "Raging Goblin" $ \_this ->
   CreatureDef
     (toColors R)
     cost
@@ -365,7 +365,7 @@ ragingGoblin = Card1 "Raging Goblin" $ \_this ->
     cost = spellCost R
 
 shock :: Card OTInstant
-shock = Card1 "Shock" $ \this ->
+shock = mkCard "Shock" $ \this ->
   InstantDef (toColors R) cost [] $
     controllerOf this $
       \you -> A (Target you) $
@@ -375,7 +375,7 @@ shock = Card1 "Shock" $ \this ->
     cost = spellCost R
 
 sinkhole :: Card OTSorcery
-sinkhole = Card1 "Sinkhole" $ \this ->
+sinkhole = mkCard "Sinkhole" $ \this ->
   SorceryDef (toColors B) cost [] $
     controllerOf this $
       \you -> A (Target you) $
@@ -385,20 +385,19 @@ sinkhole = Card1 "Sinkhole" $ \this ->
     cost = spellCost (B, B)
 
 soldierToken :: Token OTCreature
-soldierToken = Token $
-  Card1 "Soldier Token" $ \_this ->
-    CreatureDef
-      (toColors W)
-      cost
-      [Soldier]
-      (Power 1)
-      (Toughness 1)
-      []
+soldierToken = mkToken "Soldier Token" $ \_this ->
+  CreatureDef
+    (toColors W)
+    cost
+    [Soldier]
+    (Power 1)
+    (Toughness 1)
+    []
   where
     cost = noCost
 
 stifle :: Card OTInstant
-stifle = Card1 "Stifle" $ \this ->
+stifle = mkCard "Stifle" $ \this ->
   InstantDef (toColors U) cost [] $
     controllerOf this $
       \you -> A (Target you) $
@@ -409,7 +408,7 @@ stifle = Card1 "Stifle" $ \this ->
     cost = spellCost U
 
 stoneRain :: Card OTSorcery
-stoneRain = Card1 "Stone Rain" $ \this ->
+stoneRain = mkCard "Stone Rain" $ \this ->
   SorceryDef (toColors R) cost [] $
     controllerOf this $
       \you -> A (Target you) $
@@ -419,7 +418,7 @@ stoneRain = Card1 "Stone Rain" $ \this ->
     cost = spellCost (2, R)
 
 stoneThrowingDevils :: Card OTCreature
-stoneThrowingDevils = Card1 "Stone-Throwing Devils" $ \_this ->
+stoneThrowingDevils = mkCard "Stone-Throwing Devils" $ \_this ->
   CreatureDef
     (toColors B)
     cost
@@ -431,7 +430,7 @@ stoneThrowingDevils = Card1 "Stone-Throwing Devils" $ \_this ->
     cost = spellCost B
 
 swanSong :: Card OTInstant
-swanSong = Card1 "Swan Song" $ \this ->
+swanSong = mkCard "Swan Song" $ \this ->
   InstantDef (toColors U) cost [] $
     controllerOf this $
       \you -> A (Target you) $
@@ -446,7 +445,7 @@ swanSong = Card1 "Swan Song" $ \this ->
     cost = spellCost U
 
 vindicate :: Card OTSorcery
-vindicate = Card1 "Vindicate" $ \this ->
+vindicate = mkCard "Vindicate" $ \this ->
   SorceryDef (toColors (W, B)) cost [] $
     controllerOf this $
       \you -> A (Target you) $
@@ -456,7 +455,7 @@ vindicate = Card1 "Vindicate" $ \this ->
     cost = spellCost (1, W, B)
 
 wrathOfGod :: Card OTSorcery
-wrathOfGod = Card1 "Wrath of God" $ \_this ->
+wrathOfGod = mkCard "Wrath of God" $ \_this ->
   SorceryDef (toColors W) cost [] $
     All $
       object [] $

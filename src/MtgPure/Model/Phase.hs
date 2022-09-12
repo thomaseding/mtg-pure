@@ -29,7 +29,7 @@ data Phase :: Type where
   CombatPhase :: Phase
   PostCombatMainPhase :: Phase
   EndingPhase :: Phase
-  deriving (Show, Typeable)
+  deriving (Eq, Show, Typeable)
 
 data SPhase :: Phase -> Type where
   SBeginningPhase :: SPhase 'BeginningPhase
@@ -38,5 +38,7 @@ data SPhase :: Phase -> Type where
   SPostCombatMainPhase :: SPhase 'PostCombatMainPhase
   SEndingPhase :: SPhase 'EndingPhase
   deriving (Typeable)
+
+deriving instance Eq (SPhase a)
 
 deriving instance Show (SPhase a)

@@ -31,4 +31,4 @@ data CreatureType
   | Rebel
   | Soldier
   | Zombie
-  deriving (Show)
+  deriving (Eq, Show)

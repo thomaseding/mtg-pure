@@ -33,6 +33,7 @@ import safe MtgPure.Model.ObjectN (ObjectN)
 import safe MtgPure.Model.ObjectN.Type
   ( OActivatedOrTriggeredAbility,
     OAny,
+    OCreature,
     OCreaturePlayerPlaneswalker,
     ODamageSource,
     OPermanent,
@@ -75,9 +76,10 @@ data Ability :: forall ot. ot -> Type where
   deriving (Typeable)
 
 data Card :: forall ot. ot -> Type where
+  Card :: CardName -> WithThis (CardTypeDef 'NonTribal) ot -> Card ot
+  TribalCard :: CardName -> WithThis (CardTypeDef 'Tribal) ot -> Card ot
+  --
   ArtifactCard :: Card OTArtifact -> Card OTCard
-  Card1 :: IsObjectType a => CardName -> (ObjectN '(OT, a {-this-}) -> CardTypeDef t '(OT, a)) -> Card '(OT, a)
-  Card2 :: Inst2 IsObjectType a b => CardName -> (ObjectN '(OT, a, b {-this-}) -> CardTypeDef t '(OT, a, b)) -> Card '(OT, a, b)
   CreatureCard :: Card OTCreature -> Card OTCard
   EnchantmentCard :: Card OTEnchantment -> Card OTCard
   InstantCard :: Card OTInstant -> Card OTCard
@@ -94,12 +96,12 @@ data CardTypeDef :: forall ot. Tribal -> ot -> Type where
     Power ->
     Toughness ->
     [Ability OTArtifactCreature] ->
-    CardTypeDef t OTArtifactCreature
+    CardTypeDef 'NonTribal OTArtifactCreature
   ArtifactDef ::
     Colors ->
     Elect (Cost OTArtifact) OTArtifact ->
     [Ability OTArtifact] ->
-    CardTypeDef t OTArtifact
+    CardTypeDef 'NonTribal OTArtifact
   CreatureDef ::
     Colors ->
     Elect (Cost OTCreature) OTCreature ->
@@ -107,41 +109,41 @@ data CardTypeDef :: forall ot. Tribal -> ot -> Type where
     Power ->
     Toughness ->
     [Ability OTCreature] ->
-    CardTypeDef t OTCreature
+    CardTypeDef 'NonTribal OTCreature
   EnchantmentDef ::
     Colors ->
     Elect (Cost OTEnchantment) OTEnchantment ->
     [Ability OTEnchantment] ->
-    CardTypeDef t OTEnchantment
+    CardTypeDef 'NonTribal OTEnchantment
   InstantDef ::
     Colors ->
     Elect (Cost OTInstant) OTInstant ->
     [Ability OTInstant] ->
     Elect (Effect 'OneShot) OTInstant ->
-    CardTypeDef t OTInstant
+    CardTypeDef 'NonTribal OTInstant
   LandDef ::
     [Ability OTLand] ->
-    CardTypeDef t OTLand
+    CardTypeDef 'NonTribal OTLand
   PlaneswalkerDef ::
     Colors ->
     Elect (Cost OTPlaneswalker) OTPlaneswalker ->
     Loyalty ->
     [Ability OTPlaneswalker] ->
-    CardTypeDef t OTPlaneswalker
+    CardTypeDef 'NonTribal OTPlaneswalker
   SorceryDef ::
     Colors ->
     Elect (Cost OTSorcery) OTSorcery ->
     [Ability OTSorcery] ->
     Elect (Effect 'OneShot) OTSorcery ->
-    CardTypeDef t OTSorcery
+    CardTypeDef 'NonTribal OTSorcery
   TribalDef ::
     [CreatureType] ->
     WNonCreatureCard ot ->
     CardTypeDef 'NonTribal ot ->
     CardTypeDef 'Tribal ot
   VariableDef ::
-    (Variable -> CardTypeDef t ot) ->
-    CardTypeDef t ot
+    (Variable -> CardTypeDef tribal ot) ->
+    CardTypeDef tribal ot
   deriving (Typeable)
 
 data Condition :: Type where
@@ -183,6 +185,7 @@ data Elect :: forall ot. Type -> ot -> Type where
   Effect :: [Effect e] -> Elect (Effect e) ot
   Event :: EventListener ot -> Elect (EventListener ot) ot
   If :: Condition -> Elect e ot -> Elect e ot -> Elect e ot
+  VariableFromPower :: OCreature -> (Variable -> Elect e ot) -> Elect e ot
   deriving (Typeable)
 
 data EventListener :: forall ot. ot -> Type where
@@ -193,7 +196,7 @@ data EventListener :: forall ot. ot -> Type where
 
 data Requirement :: forall ot. ot -> Type where
   ControlledBy :: OPlayer -> Requirement ot
-  HasAbility :: Ability ot -> Requirement ot -- Non-unique differing representations will not be considered the same
+  HasAbility :: WithThis Ability ot -> Requirement ot -- Non-unique differing representations will not be considered the same
   HasBasicLandType :: BasicLandType -> Requirement OTLand
   Impossible :: Requirement ot
   Is :: TypeableOT k ot => WAny ot -> ObjectN ot -> Requirement ot
@@ -225,9 +228,10 @@ data StaticAbility :: forall ot. ot -> Type where
   FirstStrike :: StaticAbility OTCreature
   Flying :: StaticAbility OTCreature
   Haste :: StaticAbility OTCreature
-  Suspend :: Int -> Elect (Cost ot) ot -> StaticAbility ot
+  Suspend :: Int -> Elect (Cost ot) ot -> StaticAbility ot -- PositiveInt
   deriving (Typeable)
 
+-- TODO: This needs a witness for a token object (`WToken`)
 data Token :: forall ot. ot -> Type where
   Token :: Card ot -> Token ot
   deriving (Typeable)
@@ -244,4 +248,12 @@ data WithObject :: forall ot x. x -> ot -> Type where
   O3 :: (TypeableOT2 k ot x, Inst3 IsObjectType a b c) => [Requirement '(OT, a, b, c)] -> (ObjectN '(OT, a, b, c) -> x ot) -> WithObject x ot
   O4 :: (TypeableOT2 k ot x, Inst4 IsObjectType a b c d) => [Requirement '(OT, a, b, c, d)] -> (ObjectN '(OT, a, b, c, d) -> x ot) -> WithObject x ot
   O5 :: (TypeableOT2 k ot x, Inst5 IsObjectType a b c d e) => [Requirement '(OT, a, b, c, d, e)] -> (ObjectN '(OT, a, b, c, d, e) -> x ot) -> WithObject x ot
+  deriving (Typeable)
+
+data WithThis :: forall ot x. x -> ot -> Type where
+  T1 :: Inst1 IsObjectType a => (ObjectN '(OT, a) -> x '(OT, a)) -> WithThis x '(OT, a)
+  T2 :: Inst2 IsObjectType a b => (ObjectN '(OT, a, b) -> x '(OT, a, b)) -> WithThis x '(OT, a, b)
+  T3 :: Inst3 IsObjectType a b c => (ObjectN '(OT, a, b, c) -> x '(OT, a, b, c)) -> WithThis x '(OT, a, b, c)
+  T4 :: Inst4 IsObjectType a b c d => (ObjectN '(OT, a, b, c, d) -> x '(OT, a, b, c, d)) -> WithThis x '(OT, a, b, c, d)
+  T5 :: Inst5 IsObjectType a b c d e => (ObjectN '(OT, a, b, c, d, e) -> x '(OT, a, b, c, d, e)) -> WithThis x '(OT, a, b, c, d, e)
   deriving (Typeable)
