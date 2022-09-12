@@ -102,7 +102,7 @@ data Condition :: Type where
   CAnd :: [Condition] -> Condition
   COr :: [Condition] -> Condition
   Satisfies :: AnyObject a -> ObjectN a -> [Requirement a] -> Condition
-  Unless :: Condition -> Condition
+  Unless :: Condition -> Condition -- XXX: Remove this and add an `If` to `Elect`
 
 data Cost :: Type where
   AndCosts :: [Cost] -> Cost
@@ -141,6 +141,7 @@ data EventListener :: forall a. a -> Type where
 
 data Requirement :: forall a. a -> Type where
   ControlledBy :: OPlayer -> Requirement a
+  HasAbility :: Ability a -> Requirement a
   HasBasicLandType :: Color -> Requirement OTLand
   Impossible :: Requirement a
   Is :: AnyObject a -> ObjectN a -> Requirement a -- XXX does this need the AnyObject witness?
@@ -152,6 +153,7 @@ data Requirement :: forall a. a -> Type where
   RAnd :: [Requirement a] -> Requirement a
   ROr :: [Requirement a] -> Requirement a
   Tapped :: Permanent a -> Requirement a
+  -- TODO: Try to add some combinators that go from: forall a b. [forall x. Requirement x] -> Requirement '(a, b)
   R2 :: Inst2 IsObjectType a b => [Requirement a] -> [Requirement b] -> Requirement '(a, b)
   R3 :: Inst3 IsObjectType a b c => [Requirement a] -> [Requirement b] -> [Requirement c] -> Requirement '(a, b, c)
   R4 :: Inst4 IsObjectType a b c d => [Requirement a] -> [Requirement b] -> [Requirement c] -> [Requirement d] -> Requirement '(a, b, c, d)

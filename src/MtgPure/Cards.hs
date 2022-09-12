@@ -147,6 +147,7 @@ allCards =
     toCard mountain,
     toCard ragingGoblin,
     toCard plains,
+    toCard plummet,
     toCard shock,
     toCard stifle,
     toCard stoneRain,
@@ -335,6 +336,16 @@ lavaAxe = Card1 "Lava Axe" $ \this ->
           \(target :: OPlayerPlaneswalker) -> effect $ dealDamage this target 5
   where
     cost = spellCost (4, R)
+
+plummet :: Card OTInstant
+plummet = Card1 "Plummet" $ \this ->
+  InstantDef (toColors G) cost [] $
+    controllerOf this $
+      \you -> A (Target you) $
+        object [HasAbility $ Static Flying] $
+          \target -> effect $ destroy target
+  where
+    cost = spellCost (1, G)
 
 ragingGoblin :: Card OTCreature
 ragingGoblin = Card1 "Raging Goblin" $ \_this ->

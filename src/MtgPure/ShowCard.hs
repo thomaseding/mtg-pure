@@ -633,16 +633,24 @@ showRequirement = \case
   ControlledBy obj -> yesParens $ do
     sObj <- dollar <$> showObject1 obj
     pure $ pure "ControlledBy " <> sObj
+  HasAbility ability -> yesParens $ do
+    sAbility <- dollar <$> showAbility ability
+    pure $ pure "HasAbility" <> sAbility
   HasBasicLandType color -> yesParens $ do
     pure $ pure $ fromString $ "HasBasicLandType " ++ show color
-  Impossible -> noParens $ pure $ pure "Impossible"
+  Impossible -> noParens $ do
+    pure $ pure "Impossible"
   Is anyObj objN -> yesParens $ do
     sAnyObj <- parens <$> showAnyObject anyObj
     sObjN <- dollar <$> showAnyObjectN anyObj objN
     pure $ pure "Is " <> sAnyObj <> sObjN
-  NonBasic -> noParens $ pure $ pure "NonBasic"
-  Not req -> yesParens $ (pure "Not" <>) . dollar <$> showRequirement req
-  OfColors colors -> yesParens $ pure $ pure $ fromString $ "OfColors $ " ++ show colors
+  NonBasic -> noParens $ do
+    pure $ pure "NonBasic"
+  Not req -> yesParens $ do
+    sReq <- dollar <$> showRequirement req
+    pure $ pure "Not" <> sReq
+  OfColors colors -> yesParens $ do
+    pure $ pure $ fromString $ "OfColors $ " ++ show colors
   OwnedBy obj -> yesParens $ do
     sObj <- dollar <$> showObject1 obj
     pure $ pure "OwnedBy " <> sObj
@@ -720,7 +728,9 @@ showCost = \case
     sPlayer <- parens <$> showObject1 player
     sReqs <- dollar <$> showRequirements reqs
     pure $ pure "SacrificeCost " <> sPerm <> sPlayer <> sReqs
-  TapCost obj -> yesParens $ (pure "TapCost" <>) . dollar <$> showOPermanent obj
+  TapCost obj -> yesParens $ do
+    sObj <- dollar <$> showOPermanent obj
+    pure $ pure "TapCost" <> sObj
 
 class LiteralMana a where
   literalMana :: a -> Maybe Int
