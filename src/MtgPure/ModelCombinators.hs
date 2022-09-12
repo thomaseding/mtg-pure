@@ -15,7 +15,11 @@
 {-# HLINT ignore "Use const" #-}
 
 module MtgPure.ModelCombinators
-  ( AsAny,
+  ( ToCard (..),
+    ToToken (..),
+    ToSetCard (..),
+    ToSetToken (..),
+    AsAny,
     asAny,
     AsActivatedOrTriggeredAbility,
     asActivatedOrTriggeredAbility,
@@ -81,6 +85,7 @@ import safe MtgPure.Model.ObjectN.Type
   ( OActivatedOrTriggeredAbility,
     OAny,
     OArtifact,
+    OCard,
     OCreature,
     OCreaturePlayerPlaneswalker,
     ODamageSource,
@@ -115,6 +120,8 @@ import safe MtgPure.Model.Recursive
     EventListener,
     EventListener' (..),
     Requirement (..),
+    SetCard (..),
+    SetToken (..),
     Token (Token),
     TypeableOT,
     TypeableOT2,
@@ -136,6 +143,114 @@ import safe MtgPure.Model.ToObjectN.Classes
   )
 import safe MtgPure.Model.Tribal (Tribal (..))
 import safe MtgPure.Model.Variable (Variable)
+
+class ToCard card where
+  toCard :: card -> Card OCard
+
+instance ToCard (Card OCard) where
+  toCard = id
+
+instance ToCard (Card OArtifact) where
+  toCard = ArtifactCard
+
+instance ToCard (Card OCreature) where
+  toCard = CreatureCard
+
+instance ToCard (Card OEnchantment) where
+  toCard = EnchantmentCard
+
+instance ToCard (Card OInstant) where
+  toCard = InstantCard
+
+instance ToCard (Card OLand) where
+  toCard = LandCard
+
+instance ToCard (Card OPlaneswalker) where
+  toCard = PlaneswalkerCard
+
+instance ToCard (Card OSorcery) where
+  toCard = SorceryCard
+
+class ToSetCard card where
+  toSetCard :: card -> SetCard OCard
+
+instance ToSetCard (SetCard OCard) where
+  toSetCard = id
+
+instance ToSetCard (SetCard OArtifact) where
+  toSetCard (SetCard s r c) = SetCard s r $ ArtifactCard c
+
+instance ToSetCard (SetCard OCreature) where
+  toSetCard (SetCard s r c) = SetCard s r $ CreatureCard c
+
+instance ToSetCard (SetCard OEnchantment) where
+  toSetCard (SetCard s r c) = SetCard s r $ EnchantmentCard c
+
+instance ToSetCard (SetCard OInstant) where
+  toSetCard (SetCard s r c) = SetCard s r $ InstantCard c
+
+instance ToSetCard (SetCard OLand) where
+  toSetCard (SetCard s r c) = SetCard s r $ LandCard c
+
+instance ToSetCard (SetCard OPlaneswalker) where
+  toSetCard (SetCard s r c) = SetCard s r $ PlaneswalkerCard c
+
+instance ToSetCard (SetCard OSorcery) where
+  toSetCard (SetCard s r c) = SetCard s r $ SorceryCard c
+
+class ToToken token where
+  toToken :: token -> Token OCard
+
+instance ToToken (Token OCard) where
+  toToken = id
+
+instance ToToken (Token OArtifact) where
+  toToken (Token x) = Token $ toCard x
+
+instance ToToken (Token OCreature) where
+  toToken (Token x) = Token $ toCard x
+
+instance ToToken (Token OEnchantment) where
+  toToken (Token x) = Token $ toCard x
+
+instance ToToken (Token OInstant) where
+  toToken (Token x) = Token $ toCard x
+
+instance ToToken (Token OLand) where
+  toToken (Token x) = Token $ toCard x
+
+instance ToToken (Token OPlaneswalker) where
+  toToken (Token x) = Token $ toCard x
+
+instance ToToken (Token OSorcery) where
+  toToken (Token x) = Token $ toCard x
+
+class ToSetToken token where
+  toSetToken :: token -> SetToken OCard
+
+instance ToSetToken (SetToken OCard) where
+  toSetToken = id
+
+instance ToSetToken (SetToken OArtifact) where
+  toSetToken (SetToken s r (Token x)) = SetToken s r $ Token $ toCard x
+
+instance ToSetToken (SetToken OCreature) where
+  toSetToken (SetToken s r (Token x)) = SetToken s r $ Token $ toCard x
+
+instance ToSetToken (SetToken OEnchantment) where
+  toSetToken (SetToken s r (Token x)) = SetToken s r $ Token $ toCard x
+
+instance ToSetToken (SetToken OInstant) where
+  toSetToken (SetToken s r (Token x)) = SetToken s r $ Token $ toCard x
+
+instance ToSetToken (SetToken OLand) where
+  toSetToken (SetToken s r (Token x)) = SetToken s r $ Token $ toCard x
+
+instance ToSetToken (SetToken OPlaneswalker) where
+  toSetToken (SetToken s r (Token x)) = SetToken s r $ Token $ toCard x
+
+instance ToSetToken (SetToken OSorcery) where
+  toSetToken (SetToken s r (Token x)) = SetToken s r $ Token $ toCard x
 
 class AsWithLinkedObject ot where
   linked :: TypeableOT2 ot x => [Requirement ot] -> (ot -> x ot) -> WithLinkedObject x ot

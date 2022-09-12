@@ -16,161 +16,124 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Cards where
+module MtgPure.Cards
+  ( acceptableLosses,
+    allIsDust,
+    ancestralVision,
+    backlash,
+    blaze,
+    bloodMoon,
+    cleanse,
+    cityOfBrass,
+    conversion,
+    damnation,
+    forest,
+    island,
+    lavaAxe,
+    mountain,
+    ragingGoblin,
+    plains,
+    plummet,
+    pradeshGypsies,
+    shock,
+    sinkhole,
+    stifle,
+    stoneRain,
+    stoneThrowingDevils,
+    swamp,
+    swanSong,
+    vindicate,
+    wastes,
+    wrathOfGod,
+    --
+    birdToken,
+    soldierToken,
+  )
+where
 
-import safe MtgPure.Model
+import safe MtgPure.Model.BasicLandType (BasicLandType (..))
+import safe MtgPure.Model.CardName (CardName)
+import safe MtgPure.Model.ColorsLike (ColorsLike (toColors))
+import safe MtgPure.Model.CreatureType (CreatureType (..))
+import safe MtgPure.Model.Damage (Damage (..))
+import safe MtgPure.Model.GenericMana (GenericMana (..))
+import safe MtgPure.Model.ManaSymbol (ManaSymbol (..))
+import safe MtgPure.Model.ObjectN.Type
+  ( OActivatedOrTriggeredAbility,
+    OCreature,
+    OCreaturePlayerPlaneswalker,
+    OEnchantment,
+    OInstant,
+    OLand,
+    ON3,
+    OPermanent,
+    OPlayerPlaneswalker,
+    OSorcery,
+  )
+import safe MtgPure.Model.ObjectType (ObjectType (..))
+import safe MtgPure.Model.ObjectType.NonCreatureCard
+  ( WNonCreatureCard (..),
+  )
+import safe MtgPure.Model.Power (Power (..))
+import safe MtgPure.Model.Recursive
+  ( Ability (Activated, Static, Triggered),
+    Card,
+    CardTypeDef (..),
+    Condition (COr),
+    Cost (AndCosts, DiscardRandomCost, ManaCost),
+    Effect (AddMana, DrawCards, StatDelta),
+    Elect (A, ActivePlayer, All, Cost, VariableFromPower),
+    EventListener' (TimePoint),
+    Requirement (HasBasicLandType, Not),
+    StaticAbility
+      ( FirstStrike,
+        Flying,
+        Haste,
+        StaticContinuous,
+        Suspend
+      ),
+    Token,
+    TriggeredAbility (When),
+  )
+import safe MtgPure.Model.Selection (Selection (..))
+import safe MtgPure.Model.Step (Step (..))
+import safe MtgPure.Model.TimePoint (TimePoint (..))
+import safe MtgPure.Model.ToManaCost (ToManaCost (toManaCost))
+import safe MtgPure.Model.ToManaPool (ToManaPool (toManaPool))
+import safe MtgPure.Model.ToObjectN.Instances ()
+import safe MtgPure.Model.Toughness (Toughness (..))
 import safe MtgPure.ModelCombinators
-
-----------------------------------------
-
-fromSetCard :: SetCard a -> Card a
-fromSetCard (SetCard _ _ card) = card
-
-fromSetToken :: SetToken a -> Token a
-fromSetToken (SetToken _ _ token) = token
-
-class ToCard card where
-  toCard :: card -> Card OCard
-
-instance ToCard (Card OCard) where
-  toCard = id
-
-instance ToCard (Card OArtifact) where
-  toCard = ArtifactCard
-
-instance ToCard (Card OCreature) where
-  toCard = CreatureCard
-
-instance ToCard (Card OEnchantment) where
-  toCard = EnchantmentCard
-
-instance ToCard (Card OInstant) where
-  toCard = InstantCard
-
-instance ToCard (Card OLand) where
-  toCard = LandCard
-
-instance ToCard (Card OPlaneswalker) where
-  toCard = PlaneswalkerCard
-
-instance ToCard (Card OSorcery) where
-  toCard = SorceryCard
-
-class ToSetCard card where
-  toSetCard :: card -> SetCard OCard
-
-instance ToSetCard (SetCard OCard) where
-  toSetCard = id
-
-instance ToSetCard (SetCard OArtifact) where
-  toSetCard (SetCard s r c) = SetCard s r $ ArtifactCard c
-
-instance ToSetCard (SetCard OCreature) where
-  toSetCard (SetCard s r c) = SetCard s r $ CreatureCard c
-
-instance ToSetCard (SetCard OEnchantment) where
-  toSetCard (SetCard s r c) = SetCard s r $ EnchantmentCard c
-
-instance ToSetCard (SetCard OInstant) where
-  toSetCard (SetCard s r c) = SetCard s r $ InstantCard c
-
-instance ToSetCard (SetCard OLand) where
-  toSetCard (SetCard s r c) = SetCard s r $ LandCard c
-
-instance ToSetCard (SetCard OPlaneswalker) where
-  toSetCard (SetCard s r c) = SetCard s r $ PlaneswalkerCard c
-
-instance ToSetCard (SetCard OSorcery) where
-  toSetCard (SetCard s r c) = SetCard s r $ SorceryCard c
-
-class ToToken token where
-  toToken :: token -> Token OCard
-
-instance ToToken (Token OCard) where
-  toToken = id
-
-instance ToToken (Token OArtifact) where
-  toToken (Token x) = Token $ toCard x
-
-instance ToToken (Token OCreature) where
-  toToken (Token x) = Token $ toCard x
-
-instance ToToken (Token OEnchantment) where
-  toToken (Token x) = Token $ toCard x
-
-instance ToToken (Token OInstant) where
-  toToken (Token x) = Token $ toCard x
-
-instance ToToken (Token OLand) where
-  toToken (Token x) = Token $ toCard x
-
-instance ToToken (Token OPlaneswalker) where
-  toToken (Token x) = Token $ toCard x
-
-instance ToToken (Token OSorcery) where
-  toToken (Token x) = Token $ toCard x
-
-class ToSetToken token where
-  toSetToken :: token -> SetToken OCard
-
-instance ToSetToken (SetToken OCard) where
-  toSetToken = id
-
-instance ToSetToken (SetToken OArtifact) where
-  toSetToken (SetToken s r (Token x)) = SetToken s r $ Token $ toCard x
-
-instance ToSetToken (SetToken OCreature) where
-  toSetToken (SetToken s r (Token x)) = SetToken s r $ Token $ toCard x
-
-instance ToSetToken (SetToken OEnchantment) where
-  toSetToken (SetToken s r (Token x)) = SetToken s r $ Token $ toCard x
-
-instance ToSetToken (SetToken OInstant) where
-  toSetToken (SetToken s r (Token x)) = SetToken s r $ Token $ toCard x
-
-instance ToSetToken (SetToken OLand) where
-  toSetToken (SetToken s r (Token x)) = SetToken s r $ Token $ toCard x
-
-instance ToSetToken (SetToken OPlaneswalker) where
-  toSetToken (SetToken s r (Token x)) = SetToken s r $ Token $ toCard x
-
-instance ToSetToken (SetToken OSorcery) where
-  toSetToken (SetToken s r (Token x)) = SetToken s r $ Token $ toCard x
-
-allCards :: [Card OCard]
-allCards =
-  [ toCard acceptableLosses,
-    toCard allIsDust,
-    toCard ancestralVision,
-    toCard backlash,
-    toCard blaze,
-    toCard cleanse,
-    toCard cityOfBrass,
-    toCard conversion,
-    toCard damnation,
-    toCard forest,
-    toCard island,
-    toCard lavaAxe,
-    toCard mountain,
-    toCard ragingGoblin,
-    toCard plains,
-    toCard plummet,
-    toCard shock,
-    toCard stifle,
-    toCard stoneRain,
-    toCard stoneThrowingDevils,
-    toCard swamp,
-    toCard swanSong,
-    toCard vindicate,
-    toCard wastes,
-    toCard wrathOfGod
-  ]
-
-allTokens :: [Token OCard]
-allTokens =
-  [ toToken birdToken,
-    toToken soldierToken
-  ]
+  ( AsWithLinkedObject (linked),
+    AsWithMaskedObject (masked),
+    ElectEffect (effect),
+    addManaAnyColor,
+    addToBattlefield,
+    becomesTapped,
+    changeTo,
+    colored,
+    controllerOf,
+    counterAbility,
+    counterSpell,
+    dealDamage,
+    destroy,
+    event,
+    gain,
+    hasAbility,
+    ifElse,
+    is,
+    mkCard,
+    mkToken,
+    noCost,
+    nonBasic,
+    ofColors,
+    playerPays,
+    sacrifice,
+    satisfies,
+    spellCost,
+    tapCost,
+    tapped,
+    untilEndOfTurn,
+  )
 
 ----------------------------------------
 

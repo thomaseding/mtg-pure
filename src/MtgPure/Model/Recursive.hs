@@ -14,7 +14,30 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.Recursive where
+module MtgPure.Model.Recursive
+  ( TypeableOT,
+    TypeableOT2,
+    Ability (..),
+    Card (..),
+    CardTypeDef (..),
+    Condition (..),
+    Cost (..),
+    Effect (..),
+    Elect (..),
+    Event,
+    EventListener,
+    EventListener' (..),
+    Requirement (..),
+    SetCard (..),
+    SetToken (..),
+    StaticAbility (..),
+    Token (..),
+    TriggeredAbility (..),
+    WithLinkedObject (..),
+    WithMaskedObject (..),
+    WithThis (..),
+  )
+where
 
 import safe Data.ConsIndex (ConsIndex (..))
 import safe Data.Inst (Inst1, Inst2, Inst3, Inst4, Inst5)
