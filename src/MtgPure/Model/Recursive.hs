@@ -59,6 +59,7 @@ import safe MtgPure.Model.ObjectType.Kind
   )
 import safe MtgPure.Model.ObjectType.NonCreatureCard (WNonCreatureCard)
 import safe MtgPure.Model.ObjectType.Permanent (WPermanent)
+import safe MtgPure.Model.ObjectType.Spell (WSpell (..))
 import safe MtgPure.Model.Power (Power)
 import safe MtgPure.Model.Rarity (Rarity)
 import safe MtgPure.Model.Selection (Selection)
@@ -215,7 +216,7 @@ instance ConsIndex (Cost ot) where
     TapCost {} -> 8
 
 data Effect :: EffectType -> Type where
-  AddMana :: ManaPool -> OPlayer -> Effect 'OneShot
+  AddMana :: OPlayer -> ManaPool -> Effect 'OneShot
   AddToBattlefield :: TypeableOT k ot => WPermanent ot -> OPlayer -> Token ot -> Effect 'OneShot
   ChangeTo :: TypeableOT k ot => WPermanent ot -> OPermanent -> Card ot -> Effect 'Continuous
   CounterAbility :: OActivatedOrTriggeredAbility -> Effect 'OneShot
@@ -223,6 +224,7 @@ data Effect :: EffectType -> Type where
   DealDamage :: ODamageSource -> OCreaturePlayerPlaneswalker -> Damage -> Effect 'OneShot
   Destroy :: OPermanent -> Effect 'OneShot
   DrawCards :: OPlayer -> Int -> Effect 'OneShot
+  EOr :: [Effect e] -> Effect e
   Sacrifice :: TypeableOT k ot => WPermanent ot -> OPlayer -> [Requirement ot] -> Effect 'OneShot
   deriving (Typeable)
 
@@ -235,8 +237,9 @@ instance ConsIndex (Effect e) where
     CounterSpell {} -> 5
     DealDamage {} -> 6
     Destroy {} -> 7
-    DrawCards {} -> 8
-    Sacrifice {} -> 9
+    EOr {} -> 8
+    DrawCards {} -> 9
+    Sacrifice {} -> 10
 
 data Elect :: forall ot. Type -> ot -> Type where
   A :: TypeableOT2 k ot (Elect e) => Selection -> WithObject (Elect e) ot -> Elect e ot
@@ -265,16 +268,18 @@ instance ConsIndex (Elect e ot) where
     VariableFromPower {} -> 10
 
 data EventListener :: forall ot. ot -> Type where
+  BecomesTapped :: WPermanent ot -> WithObject (Elect (Effect 'OneShot)) ot -> EventListener ot
   Events :: [EventListener ot] -> EventListener ot
-  SpellIsCast :: WithObject (Elect (Effect 'OneShot)) ot -> EventListener ot
+  SpellIsCast :: WSpell ot -> WithObject (Elect (Effect 'OneShot)) ot -> EventListener ot
   TimePoint :: Typeable p => TimePoint p -> Elect (Effect 'OneShot) ot -> EventListener ot
   deriving (Typeable)
 
 instance ConsIndex (EventListener ot) where
   consIndex = \case
-    Events {} -> 1
-    SpellIsCast {} -> 2
-    TimePoint {} -> 3
+    BecomesTapped {} -> 1
+    Events {} -> 2
+    SpellIsCast {} -> 3
+    TimePoint {} -> 4
 
 data Requirement :: forall ot. ot -> Type where
   ControlledBy :: OPlayer -> Requirement ot

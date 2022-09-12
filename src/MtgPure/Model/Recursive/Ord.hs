@@ -57,6 +57,7 @@ import safe MtgPure.Model.ObjectType.Any (WAny (..))
 import MtgPure.Model.ObjectType.Index (IndexOT (indexOT))
 import safe MtgPure.Model.ObjectType.NonCreatureCard (WNonCreatureCard (..))
 import safe MtgPure.Model.ObjectType.Permanent (WPermanent (..))
+import MtgPure.Model.ObjectType.Spell (WSpell (..))
 import safe MtgPure.Model.Recursive
   ( Ability (..),
     Card (..),
@@ -511,9 +512,9 @@ ordDamage x y = pure $ compare x y
 
 ordEffect :: Effect e -> Effect e -> EnvM Ordering
 ordEffect x = case x of
-  AddMana mana1 player1 -> \case
-    AddMana mana2 player2 ->
-      seqM [ordManaPool mana1 mana2, ordOPlayer player1 player2]
+  AddMana player1 mana1 -> \case
+    AddMana player2 mana2 ->
+      seqM [ordOPlayer player1 player2, ordManaPool mana1 mana2]
     y -> compareIndexM x y
   AddToBattlefield perm1 player1 token1 -> \case
     AddToBattlefield perm2 player2 token2 ->
@@ -530,6 +531,7 @@ ordEffect x = case x of
             Nothing -> compareOT @k @ot perm2
             Just (perm2, card2) -> seqM [ordWPermanent perm1 perm2, ordOPermanent obj1 obj2, ordCard card1 card2]
        in go perm1 card1
+    y -> compareIndexM x y
   CounterAbility ability1 -> \case
     CounterAbility ability2 -> ordOActivatedOrTriggeredAbility ability1 ability2
     y -> compareIndexM x y
@@ -549,6 +551,9 @@ ordEffect x = case x of
     y -> compareIndexM x y
   DrawCards player1 amount1 -> \case
     DrawCards player2 amount2 -> seqM [pure $ compare amount1 amount2, ordOPlayer player1 player2]
+    y -> compareIndexM x y
+  EOr effects1 -> \case
+    EOr effects2 -> listM ordEffect effects1 effects2
     y -> compareIndexM x y
   Sacrifice perm1 player1 reqs1 -> \case
     Sacrifice perm2 player2 reqs2 ->
@@ -607,11 +612,14 @@ ordElectE x = case x of
 
 ordEventListener :: EventListener ot -> EventListener ot -> EnvM Ordering
 ordEventListener x = case x of
+  BecomesTapped perm1 with1 -> \case
+    BecomesTapped perm2 with2 -> seqM [ordWPermanent perm1 perm2, ordWithObjectElectE with1 with2]
+    y -> compareIndexM x y
   Events listeners1 -> \case
     Events listeners2 -> ordEventListeners listeners1 listeners2
     y -> compareIndexM x y
-  SpellIsCast with1 -> \case
-    SpellIsCast with2 -> ordWithObjectElectE with1 with2
+  SpellIsCast spell1 with1 -> \case
+    SpellIsCast spell2 with2 -> seqM [ordWSpell spell1 spell2, ordWithObjectElectE with1 with2]
     y -> compareIndexM x y
   TimePoint time1 elect1 -> \case
     TimePoint time2 elect2 ->
@@ -1097,3 +1105,26 @@ ordWPermanent = \case
     y@WPermanent3 -> ordW3 x y
   x@WPermanent4 -> \case
     y@WPermanent4 -> ordW4 x y
+
+ordWSpell :: WSpell ot -> WSpell ot -> EnvM Ordering
+ordWSpell = \case
+  WSpellArtifact -> \case
+    WSpellArtifact -> pure EQ
+  WSpellCreature -> \case
+    WSpellCreature -> pure EQ
+  WSpellEnchantment -> \case
+    WSpellEnchantment -> pure EQ
+  WSpellInstant -> \case
+    WSpellInstant -> pure EQ
+  WSpellPlaneswalker -> \case
+    WSpellPlaneswalker -> pure EQ
+  WSpellSorcery -> \case
+    WSpellSorcery -> pure EQ
+  WSpell -> \case
+    WSpell -> pure EQ
+  x@WSpell2 -> \case
+    y@WSpell2 -> ordW2 x y
+  x@WSpell3 -> \case
+    y@WSpell3 -> ordW3 x y
+  x@WSpell4 -> \case
+    y@WSpell4 -> ordW4 x y

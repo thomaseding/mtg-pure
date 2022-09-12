@@ -14,7 +14,7 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.Spell
+module MtgPure.Model.ObjectType.Spell
   ( WSpell (..),
     SpellType (..),
     IsSpellType (..),

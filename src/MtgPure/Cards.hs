@@ -145,6 +145,7 @@ allCards =
     toCard backlash,
     toCard blaze,
     toCard cleanse,
+    toCard cityOfBrass,
     toCard conversion,
     toCard damnation,
     toCard forest,
@@ -178,7 +179,7 @@ mkBasicLand name sym = mkCard name $ \this ->
   LandDef
     [ Activated
         (Cost $ tapCost this)
-        $ controllerOf this $ \you -> effect $ AddMana mana you
+        $ controllerOf this $ \you -> effect $ AddMana you mana
     ]
   where
     mana = toManaPool sym
@@ -295,6 +296,21 @@ cleanse = mkCard "Cleanse" $ \_this ->
         \(creature :: OCreature) -> effect $ destroy creature
   where
     cost = spellCost (2, W, W)
+
+cityOfBrass :: Card OTLand
+cityOfBrass = mkCard "City of Brass" $ \this ->
+  LandDef
+    [ Triggered $
+        When $
+          event $
+            becomesTapped $
+              object [is this] $
+                \_ -> controllerOf this $
+                  \you -> effect $ dealDamage this you 1,
+      Activated
+        (Cost $ tapCost this)
+        $ controllerOf this $ \you -> effect $ addManaAnyColor you 1
+    ]
 
 conversion :: Card OTEnchantment
 conversion = mkCard "Conversion" $ \this ->

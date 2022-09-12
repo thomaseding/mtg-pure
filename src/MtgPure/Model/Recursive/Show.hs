@@ -77,6 +77,7 @@ import safe MtgPure.Model.ObjectType.Permanent
   ( IsPermanentType,
     WPermanent (..),
   )
+import safe MtgPure.Model.ObjectType.Spell (IsSpellType, WSpell (..))
 import safe MtgPure.Model.Power (Power)
 import safe MtgPure.Model.PrettyObjectName (PrettyObjectName (..))
 import safe MtgPure.Model.Recursive
@@ -738,7 +739,7 @@ showCost = \case
     let sAmount = pure $ fromString $ show amount
     pure $ pure "PayLife " <> sAmount
   SacrificeCost perm reqs -> yesParens $ do
-    sPerm <- parens <$> showPermanent perm
+    sPerm <- parens <$> showWPermanent perm
     sReqs <- dollar <$> showRequirements reqs
     pure $ pure "SacrificeCost " <> sPerm <> sReqs
   TapCost obj -> yesParens $ do
@@ -940,8 +941,33 @@ showDamage =
       let varName = getVarName var
       pure $ DList.fromList [fromString "VariableDamage ", varName]
 
-showPermanent :: WPermanent x -> EnvM ParenItems
-showPermanent permanent = case permanent of
+showWSpell :: WSpell x -> EnvM ParenItems
+showWSpell spell = case spell of
+  WSpellArtifact -> noParens sSpell
+  WSpellCreature -> noParens sSpell
+  WSpellEnchantment -> noParens sSpell
+  WSpellInstant -> noParens sSpell
+  WSpellPlaneswalker -> noParens sSpell
+  WSpellSorcery -> noParens sSpell
+  WSpell -> noParens sSpell
+  WSpell2 -> yesParens $ do
+    let go :: forall a b. Inst2 IsSpellType a b => WSpell '(OT, a, b) -> Item
+        go _ = fromString $ prettyObjectName (Proxy :: Proxy '(OT, a, b))
+    pure $ pure "WSpell2 :: @" <> pure (go spell)
+  WSpell3 -> yesParens $ do
+    let go :: forall a b c. Inst3 IsSpellType a b c => WSpell '(OT, a, b, c) -> Item
+        go _ = fromString $ prettyObjectName (Proxy :: Proxy '(OT, a, b, c))
+    pure $ pure "WSpell3 :: @" <> pure (go spell)
+  WSpell4 -> yesParens $ do
+    let go :: forall a b c d. Inst4 IsSpellType a b c d => WSpell '(OT, a, b, c, d) -> Item
+        go _ = fromString $ prettyObjectName (Proxy :: Proxy '(OT, a, b, c, d))
+    pure $ pure "WSpell4 :: @" <> pure (go spell)
+  where
+    sSpell :: EnvM Items
+    sSpell = pure $ pure $ fromString $ show spell
+
+showWPermanent :: WPermanent x -> EnvM ParenItems
+showWPermanent permanent = case permanent of
   WPermanentArtifact -> noParens sPermanent
   WPermanentCreature -> noParens sPermanent
   WPermanentEnchantment -> noParens sPermanent
@@ -1078,12 +1104,17 @@ showAnyN wAny obj = case wAny of
 
 showEventListener :: EventListener a -> EnvM ParenItems
 showEventListener = \case
+  BecomesTapped perm withObject -> yesParens $ do
+    sPerm <- parens <$> showWPermanent perm
+    sWithObject <- dollar <$> showWithObject showElect "perm" withObject
+    pure $ pure "BecomesTapped " <> sPerm <> sWithObject
   Events listeners -> yesParens $ do
     sListeners <- dollar <$> showListM showEventListener listeners
     pure $ pure "Evenets" <> sListeners
-  SpellIsCast withObject -> yesParens $ do
+  SpellIsCast spell withObject -> yesParens $ do
+    sSpell <- parens <$> showWSpell spell
     sWithObject <- dollar <$> showWithObject showElect "spell" withObject
-    pure $ pure "SpellIsCast" <> sWithObject
+    pure $ pure "SpellIsCast " <> sSpell <> sWithObject
   TimePoint timePoint oneShot -> yesParens $ do
     sTimePoint <- parens <$> showTimePoint timePoint
     sOneShot <- dollar <$> showElect oneShot
@@ -1322,17 +1353,17 @@ showO5 showM memo reqs cont = yesParens $ do
 
 showEffect :: Effect e -> EnvM ParenItems
 showEffect = \case
-  AddMana mana player -> yesParens $ do
-    sMana <- parens <$> showManaPool mana
-    sPlayer <- dollar <$> showObject1 player
-    pure $ pure "AddMana " <> sMana <> sPlayer
+  AddMana player mana -> yesParens $ do
+    sPlayer <- parens <$> showObject1 player
+    sMana <- dollar <$> showManaPool mana
+    pure $ pure "AddMana " <> sPlayer <> sMana
   AddToBattlefield perm player token -> yesParens $ do
-    sPerm <- parens <$> showPermanent perm
+    sPerm <- parens <$> showWPermanent perm
     sPlayer <- parens <$> showObject1 player
     sCard <- dollar <$> showToken token
     pure $ pure "AddToBattlefield " <> sPlayer <> pure " " <> sPerm <> sCard
   ChangeTo perm before after -> yesParens $ do
-    sPerm <- parens <$> showPermanent perm
+    sPerm <- parens <$> showWPermanent perm
     sBefore <- parens <$> showOPermanent before
     sAfter <- dollar <$> showCard after
     pure $ pure "ChangeTo " <> sPerm <> pure " " <> sBefore <> sAfter
@@ -1354,8 +1385,11 @@ showEffect = \case
     sPlayer <- parens <$> showObject1 player
     let amount = fromString $ show n
     pure $ pure "DrawCards " <> sPlayer <> pure " " <> pure amount
+  EOr effects -> yesParens $ do
+    sEffects <- dollar <$> showEffects effects
+    pure $ pure "EOr" <> sEffects
   Sacrifice perm player reqs -> yesParens $ do
-    sPerm <- parens <$> showPermanent perm
+    sPerm <- parens <$> showWPermanent perm
     sPlayer <- parens <$> showObject1 player
     sReqs <- dollar <$> showRequirements reqs
     pure $ pure "Sacrifice " <> sPerm <> pure " " <> sPlayer <> sReqs

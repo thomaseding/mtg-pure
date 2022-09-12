@@ -34,6 +34,7 @@ module MtgPure.ModelCombinators
     AsWithThis (..),
     mkCard,
     mkToken,
+    becomesTapped,
     event,
     ifThen,
     ifElse,
@@ -41,6 +42,7 @@ module MtgPure.ModelCombinators
     tapCost,
     ofColors,
     playerPays,
+    addManaAnyColor,
     is,
     satisfies,
     hasAbility,
@@ -69,6 +71,7 @@ import safe MtgPure.Model.Damage (Damage (..))
 import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.IsObjectType (IsObjectType)
 import safe MtgPure.Model.ManaCost (ManaCost)
+import safe MtgPure.Model.ManaSymbol (ManaSymbol (..))
 import safe MtgPure.Model.ObjectN (ObjectN)
 import safe MtgPure.Model.ObjectN.Type
   ( OActivatedOrTriggeredAbility,
@@ -118,6 +121,7 @@ import safe MtgPure.Model.Recursive
     WithThis (..),
   )
 import safe MtgPure.Model.ToManaCost (ToManaCost (..))
+import safe MtgPure.Model.ToManaPool (ToManaPool (..))
 import safe MtgPure.Model.ToObjectN.Classes
   ( ToObject12 (..),
     ToObject2 (..),
@@ -431,6 +435,16 @@ colored = ROr $ map ofColors [minBound :: Color ..]
 colorless :: TypeableOT k ot => Requirement ot
 colorless = Not colored
 
+addManaAnyColor :: OPlayer -> Int -> Effect 'OneShot
+addManaAnyColor player amount =
+  EOr
+    [ AddMana player $ toManaPool (W, amount),
+      AddMana player $ toManaPool (U, amount),
+      AddMana player $ toManaPool (B, amount),
+      AddMana player $ toManaPool (R, amount),
+      AddMana player $ toManaPool (G, amount)
+    ]
+
 class (AsWithThis ot, TypeableOT k ot) => MkCard t k ot where
   mkCard :: CardName -> (ObjectN ot -> CardTypeDef t ot) -> Card ot
 
@@ -445,3 +459,6 @@ mkToken name = Token . mkCard name
 
 hasAbility :: AsWithThis ot => (ObjectN ot -> Ability ot) -> Requirement ot
 hasAbility = HasAbility . thisObject
+
+becomesTapped :: CoPermanent k ot => WithObject (Elect (Effect 'OneShot)) ot -> EventListener ot
+becomesTapped = BecomesTapped coPermanent
