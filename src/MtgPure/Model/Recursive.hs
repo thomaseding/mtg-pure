@@ -15,8 +15,9 @@
 
 module MtgPure.Model.Recursive where
 
-import Data.Inst (Inst2, Inst3, Inst4, Inst5)
+import Data.Inst (Inst1, Inst2, Inst3, Inst4, Inst5)
 import Data.Kind (Type)
+import MtgPure.Model.AnyObject (AnyObject)
 import MtgPure.Model.CardName (CardName)
 import MtgPure.Model.CardSet (CardSet)
 import MtgPure.Model.Color (Color)
@@ -51,9 +52,9 @@ import MtgPure.Model.Step (Step)
 import MtgPure.Model.Toughness (Toughness)
 import MtgPure.Model.Variable (Variable)
 
-type ActivationCost a = Object a -> OPlayer -> Cost
+type ActivationCost a = Object a {-this-} -> OPlayer {-you-} -> Cost
 
-type SpellCost = OPlayer -> Cost
+type SpellCost = OPlayer {-you-} -> Cost
 
 data Cost :: Type where
   ManaCostCost :: ManaCost -> Cost
@@ -65,12 +66,6 @@ data Cost :: Type where
   PayLife :: OPlayer -> Int -> Cost
   SacrificeCost :: Permanent a -> OPlayer -> [Requirement a] -> Cost
 
-data AnyObject :: forall a. a -> Type where
-  AnyInstant :: AnyObject OTInstant
-  AnySorcery :: AnyObject OTSorcery
-  AnyPlayer :: AnyObject OTPlayer
-  AnyPermanent :: Permanent a -> AnyObject a
-
 data Requirement :: forall a. a -> Type where
   Impossible :: Requirement a
   OfColors :: Colors -> Requirement a
@@ -81,7 +76,6 @@ data Requirement :: forall a. a -> Type where
   Tapped :: Permanent a -> Requirement a
   NonBasic :: Requirement OTLand
   PlayerPays :: Cost -> Requirement OTPlayer
-  HasTurnControl :: Requirement OTPlayer
   HasBasicLandType :: Color -> Requirement OTLand
 
 data Condition :: Type where
@@ -107,7 +101,7 @@ data Elect :: forall e a. e -> a -> Type where
   Effect :: Effect e -> Elect e a
 
 data WithObject :: forall a x. x -> a -> Type where
-  O1 :: IsObjectType b => [Requirement b] -> (Object b -> x a) -> WithObject x a
+  O1 :: Inst1 IsObjectType b => [Requirement b] -> (Object b -> x a) -> WithObject x a
   O2 :: Inst2 IsObjectType b c => [Requirement b] -> [Requirement c] -> (ObjectN '(b, c) -> x a) -> WithObject x a
   O3 :: Inst3 IsObjectType b c d => [Requirement b] -> [Requirement c] -> [Requirement d] -> (ObjectN '(b, c, d) -> x a) -> WithObject x a
   O4 :: Inst4 IsObjectType b c d e => [Requirement b] -> [Requirement c] -> [Requirement d] -> [Requirement e] -> (ObjectN '(b, c, d, e) -> x a) -> WithObject x a
@@ -117,7 +111,7 @@ data EventListener :: forall a. a -> Type where
   SpellIsCast :: WithObject (Elect 'Continuous) a -> EventListener a
 
 data StaticAbility :: forall a. a -> Type where
-  ContinuousEffect :: (Object a -> Elect 'Continuous a) -> StaticAbility a
+  ContinuousEffect :: (Object a {-this-} -> Elect 'Continuous a) -> StaticAbility a
   Haste :: StaticAbility OTCreature
   FirstStrike :: StaticAbility OTCreature
   Suspend :: Int -> SpellCost -> StaticAbility a
@@ -127,13 +121,13 @@ data StaticAbility :: forall a. a -> Type where
 -- https://www.reddit.com/r/magicTCG/comments/asmecb/noob_question_difference_between_as_and_when/
 data TriggeredAbility :: forall a. a -> Type where
   -- TODO: Needs StartOf EndOf enum argument
-  At :: Either Phase (Step p) -> [Object a -> Elect Condition a] -> (Object a -> Elect 'OneShot a) -> TriggeredAbility a
+  At :: Either Phase (Step p) -> [Object a {-this-} -> OPlayer {-active-} -> Elect Condition a] -> (Object a {-this-} -> Elect 'OneShot a) -> TriggeredAbility a
   -- XXX: Are `When` and `Whenever` actually just the same mechanically? If so, consolidate?
-  When :: (Object a -> EventListener a) -> TriggeredAbility a
-  Whenever :: (Object a -> EventListener a) -> TriggeredAbility a
+  When :: (Object a {-this-} -> EventListener a) -> TriggeredAbility a
+  Whenever :: (Object a {-this-} -> EventListener a) -> TriggeredAbility a
 
 data Ability :: forall a. a -> Type where
-  Activated :: ActivationCost a -> (Object a -> Elect 'OneShot a) -> Ability a
+  Activated :: ActivationCost a -> (Object a {-this-} -> Elect 'OneShot a) -> Ability a
   Static :: StaticAbility a -> Ability a
   Triggered :: TriggeredAbility a -> Ability a
 

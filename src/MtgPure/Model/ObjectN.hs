@@ -27,7 +27,8 @@ module MtgPure.Model.ObjectN
 where
 
 import Data.Inst
-  ( Inst2,
+  ( Inst1,
+    Inst2,
     Inst3,
     Inst4,
     Inst5,
@@ -68,7 +69,7 @@ data family ObjectN (a :: k)
 -- Supply factory constructors for authoring
 
 data instance ObjectN :: ObjectType -> Type where
-  O :: IsObjectType a => Object a -> ObjectN (a :: ObjectType)
+  O :: Inst1 IsObjectType a => Object a -> ObjectN (a :: ObjectType)
   deriving (Typeable)
 
 data instance ObjectN :: (ObjectType, ObjectType) -> Type where

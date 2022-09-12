@@ -7,11 +7,12 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE Safe #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# HLINT ignore "Avoid lambda" #-}
-{-# HLINT ignore "Use const" #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{-# HLINT ignore "Avoid lambda" #-}
+{-# HLINT ignore "Use const" #-}
 
 module MtgPure.Model.Permanent
   ( Permanent (..),
@@ -44,6 +45,7 @@ data PermanentType
   | PTPlaneswalker
   deriving (Bounded, Enum, Eq, Ord, Show)
 
+-- Witness type
 data Permanent :: forall a. a -> Type where
   Artifact :: Permanent OTArtifact
   Creature :: Permanent OTCreature

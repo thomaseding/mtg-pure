@@ -66,6 +66,7 @@ import MtgPure.Model
     OCreaturePlayer,
     OCreaturePlayerPlaneswalker,
     OPermanent,
+    OPlayer,
     OPlayerPlaneswalker,
     OTPlayer,
     Object,
@@ -533,7 +534,6 @@ showRequirement = \case
   PlayerPays cost -> yesParens $ do
     sCost <- dollar <$> showCost cost
     pure $ pure "PlayerPays" <> sCost
-  HasTurnControl -> noParens $ pure $ pure "HasTurnControl"
   HasBasicLandType color -> yesParens $ do
     pure $ pure $ fromString $ "HasBasicLandType " ++ show color
 
@@ -848,17 +848,19 @@ showPhase = yesParens . pure . pure . fromString . show
 showStep :: Step p -> EnvM ParenItems
 showStep = yesParens . pure . pure . fromString . show
 
-showInstructions :: IsObjectType a => [Object a -> Elect Condition a] -> EnvM ParenItems
+showInstructions :: IsObjectType a => [Object a -> OPlayer -> Elect Condition a] -> EnvM ParenItems
 showInstructions = showListM showInstruction
 
-showInstruction :: forall a. IsObjectType a => (Object a -> Elect Condition a) -> EnvM ParenItems
+showInstruction :: forall a. IsObjectType a => (Object a -> OPlayer -> Elect Condition a) -> EnvM ParenItems
 showInstruction cont = yesParens $ do
   (this, snap) <- newObject @a "this"
-  name <- showObject this
-  let elect = cont this
+  (active, _) <- newObject @OTPlayer "active"
+  sThis <- showObject this
+  sActive <- showObject active
+  let elect = cont this active
   sConds <- dropParens <$> showElect elect
   restoreObject snap
-  pure $ pure "ContinuousEffect $ \\" <> name <> pure " -> " <> sConds
+  pure $ pure "ContinuousEffect $ \\" <> sThis <> pure " " <> sActive <> pure " -> " <> sConds
 
 showConditions :: [Condition] -> EnvM ParenItems
 showConditions = showListM showCondition

@@ -1,7 +1,8 @@
 {-# LANGUAGE Safe #-}
 
 module MtgPure.Model
-  ( module MtgPure.Model.CardName,
+  ( module MtgPure.Model.AnyObject,
+    module MtgPure.Model.CardName,
     module MtgPure.Model.CardSet,
     module MtgPure.Model.CardType,
     module MtgPure.Model.Color,
@@ -49,6 +50,7 @@ where
 -- Instead have Model as the master repr and export the corresponding
 -- stuff to Model.Authoring and Model.Runtime
 
+import MtgPure.Model.AnyObject
 import MtgPure.Model.CardName
 import MtgPure.Model.CardSet
 import MtgPure.Model.CardType

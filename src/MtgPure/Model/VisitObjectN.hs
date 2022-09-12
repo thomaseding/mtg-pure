@@ -20,7 +20,7 @@ module MtgPure.Model.VisitObjectN
   )
 where
 
-import Data.Inst (Inst2, Inst3, Inst4, Inst5, Inst6, Inst7, Inst8)
+import Data.Inst (Inst1, Inst2, Inst3, Inst4, Inst5, Inst6, Inst7, Inst8)
 import Data.Kind (Type)
 import MtgPure.Model.Internal.IsObjectType (IsObjectType)
 import MtgPure.Model.Object (Object)
@@ -34,7 +34,7 @@ class VisitObjectN (a :: k) where
 vn :: VisitObjectN a => ObjectVisitorN a x -> ObjectN a -> x
 vn = visitObjectN
 
-instance IsObjectType a => VisitObjectN a where
+instance Inst1 IsObjectType a => VisitObjectN a where
   data ObjectVisitorN a x = ObjectVisitor1
     { visitObject1 :: Object a -> x
     }

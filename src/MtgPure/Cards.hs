@@ -215,10 +215,10 @@ conversion =
       [ Triggered $
           At
             (Right UpkeepStep) -- TODO: Beginning of
-            [ \this -> controllerOf this $ \you ->
+            [ \this active -> controllerOf this $ \you ->
                 Condition $
                   And
-                    [ Satisfies AnyPlayer (O you) [HasTurnControl],
+                    [ Satisfies AnyPlayer (O you) [Is AnyPlayer $ O active],
                       Unless $ Satisfies AnyPlayer (O you) [PlayerPays $ ManaCostCost $ toManaCost (W, W)]
                     ]
             ]
