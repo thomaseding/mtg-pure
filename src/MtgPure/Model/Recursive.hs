@@ -44,7 +44,6 @@ import safe Data.ConsIndex (ConsIndex (..))
 import safe Data.Inst (Inst1, Inst2, Inst3, Inst4, Inst5)
 import safe Data.Kind (Type)
 import safe Data.Typeable (Proxy, Typeable)
-import safe MtgPure.Model.BasicLandType (BasicLandType)
 import safe MtgPure.Model.CardName (CardName)
 import safe MtgPure.Model.CardSet (CardSet)
 import safe MtgPure.Model.Colors (Colors)
@@ -52,6 +51,7 @@ import safe MtgPure.Model.CreatureType (CreatureType)
 import safe MtgPure.Model.Damage (Damage)
 import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.IsObjectType (IsObjectType)
+import safe MtgPure.Model.LandType (LandType)
 import safe MtgPure.Model.Loyalty (Loyalty)
 import safe MtgPure.Model.ManaCost (ManaCost)
 import safe MtgPure.Model.ManaPool (ManaPool)
@@ -167,6 +167,7 @@ data CardTypeDef :: Tribal -> Type -> Type where
     Elect (Effect 'OneShot) OInstant ->
     CardTypeDef 'NonTribal OInstant
   LandDef ::
+    [LandType] ->
     [Ability OLand] ->
     CardTypeDef 'NonTribal OLand
   PlaneswalkerDef ::
@@ -332,7 +333,7 @@ instance ConsIndex (NonProxy x) where
 data Requirement :: Type -> Type where
   ControlledBy :: OPlayer -> Requirement ot
   HasAbility :: WithThis Ability ot -> Requirement ot -- Non-unique differing representations will not be considered the same
-  HasBasicLandType :: BasicLandType -> Requirement OLand
+  HasLandType :: LandType -> Requirement OLand
   Impossible :: Requirement ot
   Is :: TypeableOT ot => WAny ot -> ot -> Requirement ot
   Not :: TypeableOT ot => Requirement ot -> Requirement ot
@@ -353,7 +354,7 @@ instance ConsIndex (Requirement ot) where
   consIndex = \case
     ControlledBy {} -> 1
     HasAbility {} -> 2
-    HasBasicLandType {} -> 3
+    HasLandType {} -> 3
     Impossible {} -> 4
     Is {} -> 5
     Not {} -> 6

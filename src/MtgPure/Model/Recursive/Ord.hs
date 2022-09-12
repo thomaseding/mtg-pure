@@ -493,8 +493,8 @@ ordCardTypeDef x = case x of
           ordElectE effect1 effect2
         ]
     y -> compareIndexM x y
-  LandDef abilities1 -> \case
-    LandDef abilities2 -> ordAbilities abilities1 abilities2
+  LandDef types1 abilities1 -> \case
+    LandDef types2 abilities2 -> seqM [pure $ compare types1 types2, ordAbilities abilities1 abilities2]
     y -> compareIndexM x y
   PlaneswalkerDef colors1 cost1 loyalty1 abilities1 -> \case
     PlaneswalkerDef colors2 cost2 loyalty2 abilities2 ->
@@ -878,8 +878,8 @@ ordRequirement x = case x of
   HasAbility ability1 -> \case
     HasAbility ability2 -> ordWithThisAbility ability1 ability2
     y -> compareIndexM x y
-  HasBasicLandType type1 -> \case
-    HasBasicLandType type2 -> pure $ compare type1 type2
+  HasLandType type1 -> \case
+    HasLandType type2 -> pure $ compare type1 type2
     y -> compareIndexM x y
   Impossible -> \case
     Impossible -> pure EQ

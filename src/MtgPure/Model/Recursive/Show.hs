@@ -39,6 +39,7 @@ import safe qualified Data.Map.Strict as Map
 import safe Data.Proxy (Proxy (Proxy))
 import safe Data.String (IsString (..))
 import safe Data.Typeable (TypeRep, Typeable, typeOf, typeRep)
+import MtgPure.Model.BasicLandType (BasicLandType)
 import safe MtgPure.Model.CardName (CardName (CardName))
 import safe MtgPure.Model.ColoredMana (ColoredMana (..))
 import safe MtgPure.Model.ColorlessMana (ColorlessMana (..))
@@ -48,6 +49,7 @@ import safe MtgPure.Model.Damage (Damage (..))
 import safe MtgPure.Model.EffectType (EffectType (OneShot))
 import safe MtgPure.Model.GenericMana (GenericMana (..))
 import safe MtgPure.Model.IsObjectType (IsObjectType (..))
+import MtgPure.Model.LandType (LandType (..))
 import safe MtgPure.Model.Loyalty (Loyalty)
 import safe MtgPure.Model.Mana (Mana (..))
 import safe MtgPure.Model.ManaCost (ManaCost (..))
@@ -563,13 +565,14 @@ showCardTypeDef = \case
   EnchantmentDef colors cost abilities -> yesParens $ do
     sColors <- parens <$> showColors colors
     sCost <- parens <$> showElect cost
-    sAbilities <- parens <$> showAbilities abilities
-    pure $ pure "EnchantmentDef " <> sColors <> pure " " <> sCost <> pure " " <> sAbilities
+    sAbilities <- dollar <$> showAbilities abilities
+    pure $ pure "EnchantmentDef " <> sColors <> pure " " <> sCost <> sAbilities
   InstantDef colors cost abilities electOneShot -> do
     showOneShot "InstantDef " colors cost abilities electOneShot
-  LandDef abilities -> yesParens $ do
-    sAbilities <- parens <$> showAbilities abilities
-    pure $ pure "LandDef " <> sAbilities
+  LandDef landTypes abilities -> yesParens $ do
+    sLandTypes <- parens <$> showListM showLandType landTypes
+    sAbilities <- dollar <$> showAbilities abilities
+    pure $ pure "LandDef " <> sLandTypes <> sAbilities
   PlaneswalkerDef colors cost loyalty abilities -> yesParens $ do
     sColors <- parens <$> showColors colors
     sCost <- parens <$> showElect cost
@@ -631,6 +634,25 @@ showToughness = yesParens . pure . pure . fromString . show
 showColors :: Colors -> EnvM ParenItems
 showColors = yesParens . pure . pure . fromString . show
 
+showBasicLandType :: BasicLandType -> EnvM ParenItems
+showBasicLandType = noParens . pure . pure . fromString . show
+
+showLandType :: LandType -> EnvM ParenItems
+showLandType landType = case landType of
+  BasicLand basic -> yesParens $ do
+    sBasic <- dollar <$> showBasicLandType basic
+    pure $ pure "BasicLand" <> sBasic
+  Desert -> sLandType
+  Gate -> sLandType
+  Lair -> sLandType
+  Locus -> sLandType
+  Mine -> sLandType
+  PowerPlant -> sLandType
+  Tower -> sLandType
+  Urzas -> sLandType
+  where
+    sLandType = noParens $ pure $ pure $ fromString $ show landType
+
 selectionMemo :: Selection -> String
 selectionMemo = \case
   Choose {} -> "choice"
@@ -659,8 +681,9 @@ showRequirement = \case
   HasAbility ability -> yesParens $ do
     sAbility <- dollar <$> showWithThis showAbility "this" ability
     pure $ pure "HasAbility" <> sAbility
-  HasBasicLandType basic -> yesParens $ do
-    pure $ pure $ fromString $ "HasBasicLandType " ++ show basic
+  HasLandType landType -> yesParens $ do
+    sLandType <- dollar <$> showLandType landType
+    pure $ pure "HasLandType" <> sLandType
   Impossible -> noParens $ do
     pure $ pure "Impossible"
   Is wAny objN -> yesParens $ do

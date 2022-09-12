@@ -37,6 +37,7 @@ module MtgPure.ModelCombinators
     AsWithMaskedObject (..),
     AsWithLinkedObject (..),
     AsWithThis (..),
+    HasLandType (..),
     mkCard,
     mkToken,
     becomesTapped,
@@ -72,14 +73,16 @@ module MtgPure.ModelCombinators
 where
 
 import safe Data.Inst (Inst1, Inst2, Inst3, Inst4, Inst5)
-import Data.Proxy (Proxy (..))
-import Data.Typeable (Typeable)
+import safe Data.Proxy (Proxy (..))
+import safe Data.Typeable (Typeable)
+import safe MtgPure.Model.BasicLandType (BasicLandType)
 import safe MtgPure.Model.CardName (CardName)
 import safe MtgPure.Model.Color (Color)
 import safe MtgPure.Model.ColorsLike (ColorsLike (..))
 import safe MtgPure.Model.Damage (Damage (..))
 import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.IsObjectType (IsObjectType)
+import safe MtgPure.Model.LandType (LandType (BasicLand))
 import safe MtgPure.Model.ManaCost (ManaCost)
 import safe MtgPure.Model.ManaSymbol (ManaSymbol (..))
 import safe MtgPure.Model.ObjectN.Type
@@ -581,7 +584,7 @@ ifElse :: Branchable e ot => Condition -> Elect e ot -> Elect e ot
 ifElse cond = If cond branchEmpty
 
 nonBasic :: Requirement OLand
-nonBasic = RAnd $ map (Not . HasBasicLandType) [minBound ..]
+nonBasic = RAnd $ map (Not . HasLandType . BasicLand) [minBound ..]
 
 colored :: Requirement ot
 colored = ROr $ map ofColors [minBound :: Color ..]
@@ -625,3 +628,12 @@ gain = Gain coAny
 
 lose :: CoAny ot => ot -> Ability ot -> Effect 'Continuous
 lose = Lose coAny
+
+class HasLandType a where
+  hasLandType :: a -> Requirement OLand
+
+instance HasLandType BasicLandType where
+  hasLandType = HasLandType . BasicLand
+
+instance HasLandType LandType where
+  hasLandType = HasLandType

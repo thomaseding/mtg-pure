@@ -52,11 +52,12 @@ module MtgPure.Cards
 where
 
 import safe MtgPure.Model.BasicLandType (BasicLandType (..))
-import safe MtgPure.Model.CardName (CardName)
+import safe MtgPure.Model.CardName (CardName (CardName))
 import safe MtgPure.Model.ColorsLike (ColorsLike (toColors))
 import safe MtgPure.Model.CreatureType (CreatureType (..))
 import safe MtgPure.Model.Damage (Damage (..))
 import safe MtgPure.Model.GenericMana (GenericMana (..))
+import MtgPure.Model.LandType (LandType (..))
 import safe MtgPure.Model.ManaSymbol (ManaSymbol (..))
 import safe MtgPure.Model.ObjectN.Type
   ( OActivatedOrTriggeredAbility,
@@ -81,10 +82,10 @@ import safe MtgPure.Model.Recursive
     CardTypeDef (..),
     Condition (COr),
     Cost (AndCosts, DiscardRandomCost, ManaCost),
-    Effect (AddMana, DrawCards, StatDelta),
+    Effect (DrawCards, StatDelta),
     Elect (A, ActivePlayer, All, Cost, VariableFromPower),
     EventListener' (TimePoint),
-    Requirement (HasBasicLandType, Not),
+    Requirement (Not),
     StaticAbility
       ( FirstStrike,
         Flying,
@@ -99,13 +100,13 @@ import safe MtgPure.Model.Selection (Selection (..))
 import safe MtgPure.Model.Step (Step (..))
 import safe MtgPure.Model.TimePoint (TimePoint (..))
 import safe MtgPure.Model.ToManaCost (ToManaCost (toManaCost))
-import safe MtgPure.Model.ToManaPool (ToManaPool (toManaPool))
 import safe MtgPure.Model.ToObjectN.Instances ()
 import safe MtgPure.Model.Toughness (Toughness (..))
 import safe MtgPure.ModelCombinators
   ( AsWithLinkedObject (linked),
     AsWithMaskedObject (masked),
     ElectEffect (effect),
+    HasLandType (hasLandType),
     addManaAnyColor,
     addToBattlefield,
     becomesTapped,
@@ -137,33 +138,31 @@ import safe MtgPure.ModelCombinators
 
 ----------------------------------------
 
-mkBasicLand :: CardName -> ManaSymbol a -> Card OLand
-mkBasicLand name sym = mkCard name $ \this ->
+mkBasicLand :: BasicLandType -> Card OLand
+mkBasicLand landType = mkCard name $ \_this ->
   LandDef
-    [ Activated
-        (Cost $ tapCost this)
-        $ controllerOf this $ \you -> effect $ AddMana you mana
-    ]
+    [BasicLand landType]
+    []
   where
-    mana = toManaPool sym
+    name = CardName $ show landType
 
 plains :: Card OLand
-plains = mkBasicLand "Plains" W
+plains = mkBasicLand Plains
 
 island :: Card OLand
-island = mkBasicLand "Island" U
+island = mkBasicLand Island
 
 swamp :: Card OLand
-swamp = mkBasicLand "Swamp" B
+swamp = mkBasicLand Swamp
 
 mountain :: Card OLand
-mountain = mkBasicLand "Mountain" R
+mountain = mkBasicLand Mountain
 
 forest :: Card OLand
-forest = mkBasicLand "Forest" G
+forest = mkBasicLand Forest
 
 wastes :: Card OLand
-wastes = mkBasicLand "Wastes" C
+wastes = mkBasicLand Wastes
 
 ----------------------------------------
 
@@ -263,6 +262,7 @@ cleanse = mkCard "Cleanse" $ \_this ->
 cityOfBrass :: Card OLand
 cityOfBrass = mkCard "City of Brass" $ \this ->
   LandDef
+    []
     [ Triggered $
         When $
           event $
@@ -298,7 +298,7 @@ conversion = mkCard "Conversion" $ \this ->
       Static $
         StaticContinuous $
           All $
-            masked [HasBasicLandType Mountain] $
+            masked [hasLandType Mountain] $
               \land -> effect $ changeTo land plains
     ]
   where
