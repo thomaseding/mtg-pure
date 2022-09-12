@@ -13,24 +13,17 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.CardSet
-  ( CardSet (..),
+module MtgPure.Model.Phase
+  ( Phase (..),
   )
 where
 
-data CardSet -- Sorted by release date
-  = NoCardSet -- Tokens
-  | Alpha
-  | ArabianNights
-  | Legends
-  | TheDark
-  | Portal
-  | Odyssey
-  | Invasion
-  | Apocalypse
-  | TimeSpiral
-  | PlanarChaos
-  | TenthEdition
-  | OathOfTheGatewatch
-  | Kaldheim
-  deriving (Eq, Ord, Show)
+import Data.Kind (Type)
+
+data Phase :: Type where
+  BeginningPhase :: Phase
+  PreCombatMainPhase :: Phase
+  CombatPhase :: Phase
+  PostCombatMainPhase :: Phase
+  EndingPhase :: Phase
+  deriving (Show)

@@ -28,6 +28,11 @@ module MtgPure.Model.ObjectType
     OTCreaturePlaneswalker,
     OTPlayerPlaneswalker,
     OTCreaturePlayerPlaneswalker,
+    OTNonArtifactPermanent,
+    OTNonCreaturePermanent,
+    OTNonEnchantmentPermanent,
+    OTNonLandPermanent,
+    OTNonPlaneswalkerPermanent,
     OTPermanent,
     OTCard,
     OTAny,
@@ -46,7 +51,7 @@ data ObjectType
   | OTPlaneswalker
   | OTPlayer
   | OTSorcery
-  deriving (Show)
+  deriving (Bounded, Enum, Eq, Ord, Show)
 
 -- XXX: Data.Sing
 data SObjectType :: ObjectType -> Type where
@@ -89,14 +94,49 @@ type OTCreaturePlaneswalker =
    )
 
 type OTPlayerPlaneswalker =
-  '( OTPlayer,
-     OTPlaneswalker
+  '( OTPlaneswalker,
+     OTPlayer
    )
 
 type OTCreaturePlayerPlaneswalker =
   '( OTCreature,
-     OTPlayer,
+     OTPlaneswalker,
+     OTPlayer
+   )
+
+type OTNonArtifactPermanent =
+  '( OTCreature,
+     OTEnchantment,
+     OTLand,
      OTPlaneswalker
+   )
+
+type OTNonCreaturePermanent =
+  '( OTArtifact,
+     OTEnchantment,
+     OTLand,
+     OTPlaneswalker
+   )
+
+type OTNonEnchantmentPermanent =
+  '( OTArtifact,
+     OTCreature,
+     OTLand,
+     OTPlaneswalker
+   )
+
+type OTNonLandPermanent =
+  '( OTArtifact,
+     OTCreature,
+     OTEnchantment,
+     OTPlaneswalker
+   )
+
+type OTNonPlaneswalkerPermanent =
+  '( OTArtifact,
+     OTCreature,
+     OTEnchantment,
+     OTLand
    )
 
 type OTPermanent =

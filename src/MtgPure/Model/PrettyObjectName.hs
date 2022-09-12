@@ -25,6 +25,8 @@ where
 import Data.Inst
   ( Inst2,
     Inst3,
+    Inst4,
+    Inst5,
   )
 import Data.Proxy (Proxy (Proxy))
 import Data.Typeable (typeRep)
@@ -34,6 +36,7 @@ import MtgPure.Model.ObjectN
   ( OCreaturePlaneswalker,
     OCreaturePlayer,
     OCreaturePlayerPlaneswalker,
+    OPermanent,
     OPlayerPlaneswalker,
     ObjectN (..),
   )
@@ -70,8 +73,43 @@ instance Inst3 IsObjectType a b c => PrettyObjectName (ObjectN '(a, b, c)) where
             ++ show (typeRep (Proxy @a))
             ++ ", "
             ++ show (typeRep (Proxy @b))
-            ++ ")"
+            ++ ", "
             ++ show (typeRep (Proxy @c))
+            ++ ")"
+    where
+      rep = typeRep proxy
+
+instance Inst4 IsObjectType a b c d => PrettyObjectName (ObjectN '(a, b, c, d)) where
+  prettyObjectName proxy =
+    if
+        | otherwise ->
+          "ObjectN '( "
+            ++ show (typeRep (Proxy @a))
+            ++ ", "
+            ++ show (typeRep (Proxy @b))
+            ++ ", "
+            ++ show (typeRep (Proxy @c))
+            ++ ", "
+            ++ show (typeRep (Proxy @d))
+            ++ ")"
+    where
+      _rep = typeRep proxy
+
+instance Inst5 IsObjectType a b c d e => PrettyObjectName (ObjectN '(a, b, c, d, e)) where
+  prettyObjectName proxy =
+    if
+        | rep == typeRep (Proxy @OPermanent) -> "OPermanent"
+        | otherwise ->
+          "ObjectN '( "
+            ++ show (typeRep (Proxy @a))
+            ++ ", "
+            ++ show (typeRep (Proxy @b))
+            ++ ", "
+            ++ show (typeRep (Proxy @c))
+            ++ ", "
+            ++ show (typeRep (Proxy @d))
+            ++ ", "
+            ++ show (typeRep (Proxy @e))
             ++ ")"
     where
       rep = typeRep proxy

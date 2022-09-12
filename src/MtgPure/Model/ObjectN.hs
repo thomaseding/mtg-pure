@@ -67,9 +67,15 @@ data family ObjectN (a :: k)
 -- The constructors should be private to disallow pattern matching during authoring
 -- Supply factory constructors for authoring
 
+data instance ObjectN :: ObjectType -> Type where
+  O :: IsObjectType a => Object a -> ObjectN (a :: ObjectType)
+  deriving (Typeable)
+
 data instance ObjectN :: (ObjectType, ObjectType) -> Type where
   O2a :: Inst2 IsObjectType a b => Object a -> ObjectN '(a :: ObjectType, b :: ObjectType)
   O2b :: Inst2 IsObjectType a b => Object b -> ObjectN '(a :: ObjectType, b :: ObjectType)
+  ON2a :: Inst2 IsObjectType a b => ObjectN b -> ObjectN '(a :: ObjectType, b :: ObjectType)
+  ON2b :: Inst2 IsObjectType a b => ObjectN a -> ObjectN '(a :: ObjectType, b :: ObjectType)
   deriving (Typeable)
 
 data instance ObjectN :: (ObjectType, ObjectType, ObjectType) -> Type where

@@ -1,10 +1,10 @@
 module MtgPure
   ( module MtgPure.Cards,
-    module MtgPure.Model.Internal.GenerateToObjectN,
     module MtgPure.ShowCard,
+    internalGenerateToObjectN,
   )
 where
 
 import MtgPure.Cards
-import MtgPure.Model.Internal.GenerateToObjectN
+import MtgPure.Model.Internal.GenerateToObjectN (internalGenerateToObjectN)
 import MtgPure.ShowCard

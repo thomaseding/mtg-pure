@@ -47,14 +47,14 @@ import MtgPure.Model.ObjectType
   )
 
 data ObjectVisitor a = ObjectVisitor
-  { visitArtifact :: OArtifact -> a,
-    visitCreature :: OCreature -> a,
-    visitEnchantment :: OEnchantment -> a,
-    visitInstant :: OInstant -> a,
-    visitLand :: OLand -> a,
-    visitPlaneswalker :: OPlaneswalker -> a,
-    visitPlayer :: OPlayer -> a,
-    visitSorcery :: OSorcery -> a
+  { visitOArtifact :: OArtifact -> a,
+    visitOCreature :: OCreature -> a,
+    visitOEnchantment :: OEnchantment -> a,
+    visitOInstant :: OInstant -> a,
+    visitOLand :: OLand -> a,
+    visitOPlaneswalker :: OPlaneswalker -> a,
+    visitOPlayer :: OPlayer -> a,
+    visitOSorcery :: OSorcery -> a
   }
 
 class Typeable a => IsObjectType (a :: ObjectType) where
@@ -70,46 +70,46 @@ instance IsObjectType OTArtifact where
   idToObject = Object SArtifact
   objectToId (Object SArtifact i) = i
   singObjectType _ = OTArtifact
-  visitObject = visitArtifact
+  visitObject = visitOArtifact
 
 instance IsObjectType OTCreature where
   idToObject = Object SCreature
   objectToId (Object SCreature i) = i
   singObjectType _ = OTCreature
-  visitObject = visitCreature
+  visitObject = visitOCreature
 
 instance IsObjectType OTEnchantment where
   idToObject = Object SEnchantment
   objectToId (Object SEnchantment i) = i
   singObjectType _ = OTEnchantment
-  visitObject = visitEnchantment
+  visitObject = visitOEnchantment
 
 instance IsObjectType OTInstant where
   idToObject = Object SInstant
   objectToId (Object SInstant i) = i
   singObjectType _ = OTInstant
-  visitObject = visitInstant
+  visitObject = visitOInstant
 
 instance IsObjectType OTLand where
   idToObject = Object SLand
   objectToId (Object SLand i) = i
   singObjectType _ = OTLand
-  visitObject = visitLand
+  visitObject = visitOLand
 
 instance IsObjectType OTPlaneswalker where
   idToObject = Object SPlaneswalker
   objectToId (Object SPlaneswalker i) = i
   singObjectType _ = OTPlaneswalker
-  visitObject = visitPlaneswalker
+  visitObject = visitOPlaneswalker
 
 instance IsObjectType OTPlayer where
   idToObject = Object SPlayer
   objectToId (Object SPlayer i) = i
   singObjectType _ = OTPlayer
-  visitObject = visitPlayer
+  visitObject = visitOPlayer
 
 instance IsObjectType OTSorcery where
   idToObject = Object SSorcery
   objectToId (Object SSorcery i) = i
   singObjectType _ = OTSorcery
-  visitObject = visitSorcery
+  visitObject = visitOSorcery

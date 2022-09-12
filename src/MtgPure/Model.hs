@@ -10,7 +10,6 @@ module MtgPure.Model
     module MtgPure.Model.ColorlessMana,
     module MtgPure.Model.Colors,
     module MtgPure.Model.ColorsLike,
-    module MtgPure.Model.Cost,
     module MtgPure.Model.CreatureType,
     module MtgPure.Model.Damage,
     module MtgPure.Model.EffectType,
@@ -28,12 +27,13 @@ module MtgPure.Model
     module MtgPure.Model.ObjectN,
     module MtgPure.Model.ObjectType,
     module MtgPure.Model.Permanent,
+    module MtgPure.Model.Phase,
     module MtgPure.Model.Power,
     module MtgPure.Model.PrettyObjectName,
     module MtgPure.Model.Rarity,
     module MtgPure.Model.Recursive,
-    module MtgPure.Model.Requirement,
     module MtgPure.Model.Selection,
+    module MtgPure.Model.Step,
     module MtgPure.Model.ToMana,
     module MtgPure.Model.ToManaCost,
     module MtgPure.Model.ToManaPool,
@@ -58,7 +58,6 @@ import MtgPure.Model.ColoredMana
 import MtgPure.Model.ColorlessMana
 import MtgPure.Model.Colors
 import MtgPure.Model.ColorsLike
-import MtgPure.Model.Cost
 import MtgPure.Model.CreatureType
 import MtgPure.Model.Damage
 import MtgPure.Model.EffectType
@@ -76,12 +75,13 @@ import MtgPure.Model.Object
 import MtgPure.Model.ObjectN
 import MtgPure.Model.ObjectType
 import MtgPure.Model.Permanent
+import MtgPure.Model.Phase
 import MtgPure.Model.Power
 import MtgPure.Model.PrettyObjectName
 import MtgPure.Model.Rarity
 import MtgPure.Model.Recursive
-import MtgPure.Model.Requirement
 import MtgPure.Model.Selection
+import MtgPure.Model.Step
 import MtgPure.Model.ToMana
 import MtgPure.Model.ToManaCost
 import MtgPure.Model.ToManaPool

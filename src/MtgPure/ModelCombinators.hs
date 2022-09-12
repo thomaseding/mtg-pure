@@ -59,46 +59,46 @@ instance AsAny OSorcery where
   asAny = O8h
 
 class AsPermanent a where
-  permanent :: a -> OPermanent
+  asPermanent :: a -> OPermanent
 
 instance AsPermanent OArtifact where
-  permanent = O5a
+  asPermanent = O5a
 
 instance AsPermanent OCreature where
-  permanent = O5b
+  asPermanent = O5b
 
 instance AsPermanent OEnchantment where
-  permanent = O5c
+  asPermanent = O5c
 
 instance AsPermanent OLand where
-  permanent = O5d
+  asPermanent = O5d
 
 instance AsPermanent OPlaneswalker where
-  permanent = O5e
+  asPermanent = O5e
 
 class AsCreaturePlayerPlaneswalker a where
-  creaturePlayerPlaneswalker :: a -> OCreaturePlayerPlaneswalker
+  asCreaturePlayerPlaneswalker :: a -> OCreaturePlayerPlaneswalker
 
 instance AsCreaturePlayerPlaneswalker OCreaturePlayerPlaneswalker where
-  creaturePlayerPlaneswalker = id
+  asCreaturePlayerPlaneswalker = id
 
 instance AsCreaturePlayerPlaneswalker OCreature where
-  creaturePlayerPlaneswalker = O3a
-
-instance AsCreaturePlayerPlaneswalker OPlayer where
-  creaturePlayerPlaneswalker = O3b
+  asCreaturePlayerPlaneswalker = O3a
 
 instance AsCreaturePlayerPlaneswalker OPlaneswalker where
-  creaturePlayerPlaneswalker = O3c
+  asCreaturePlayerPlaneswalker = O3b
+
+instance AsCreaturePlayerPlaneswalker OPlayer where
+  asCreaturePlayerPlaneswalker = O3c
 
 instance AsCreaturePlayerPlaneswalker OCreaturePlayer where
-  creaturePlayerPlaneswalker = toObject3
+  asCreaturePlayerPlaneswalker = toObject3
 
 instance AsCreaturePlayerPlaneswalker OCreaturePlaneswalker where
-  creaturePlayerPlaneswalker = toObject3
+  asCreaturePlayerPlaneswalker = toObject3
 
 instance AsCreaturePlayerPlaneswalker OPlayerPlaneswalker where
-  creaturePlayerPlaneswalker = toObject3
+  asCreaturePlayerPlaneswalker = toObject3
 
 class AsDamage a where
   asDamage :: a -> Damage
@@ -127,7 +127,7 @@ dealDamage ::
   target ->
   damage ->
   Effect 'OneShot
-dealDamage source target = DealDamage (asAny source) (creaturePlayerPlaneswalker target) . asDamage
+dealDamage source target = DealDamage (asAny source) (asCreaturePlayerPlaneswalker target) . asDamage
 
 controllerOf :: AsAny o => o -> (OPlayer -> Elect e a) -> Elect e a
 controllerOf = ControllerOf . asAny

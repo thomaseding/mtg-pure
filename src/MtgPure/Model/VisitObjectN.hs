@@ -34,6 +34,14 @@ class VisitObjectN (a :: k) where
 vn :: VisitObjectN a => ObjectVisitorN a x -> ObjectN a -> x
 vn = visitObjectN
 
+instance IsObjectType a => VisitObjectN a where
+  data ObjectVisitorN a x = ObjectVisitor1
+    { visitObject1 :: Object a -> x
+    }
+  visitObjectN' f = visitObjectN $ ObjectVisitor1 f
+  visitObjectN v = \case
+    O x -> visitObject1 v x
+
 instance Inst2 IsObjectType a b => VisitObjectN '(a, b) where
   data ObjectVisitorN '(a, b) x = ObjectVisitor2
     { visitObject2a :: Object a -> x,
@@ -41,8 +49,13 @@ instance Inst2 IsObjectType a b => VisitObjectN '(a, b) where
     }
   visitObjectN' f = visitObjectN $ ObjectVisitor2 f f
   visitObjectN v = \case
-    O2a x -> visitObject2a v x
-    O2b x -> visitObject2b v x
+    O2a x -> a x
+    O2b x -> b x
+    ON2a x -> vn (ObjectVisitor1 b) x
+    ON2b x -> vn (ObjectVisitor1 a) x
+    where
+      a = visitObject2a v
+      b = visitObject2b v
 
 instance Inst3 IsObjectType a b c => VisitObjectN '(a, b, c) where
   data ObjectVisitorN '(a, b, c) x = ObjectVisitor3
