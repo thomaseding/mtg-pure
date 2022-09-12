@@ -27,25 +27,19 @@ import safe Data.Inst (Inst2, Inst3)
 import safe Data.Kind (Type)
 import safe Data.Proxy (Proxy)
 import safe MtgPure.Model.IsObjectType (IsObjectType)
-import safe MtgPure.Model.ObjectN (ObjectN)
 import safe MtgPure.Model.ObjectN.Type
   ( OArtifact,
     OEnchantment,
     OInstant,
     OLand,
+    ON1,
+    ON2,
+    ON3,
+    ONonCreature,
     OPlaneswalker,
     OSorcery,
   )
-import safe MtgPure.Model.ObjectType (OT, ObjectType (..))
-import safe MtgPure.Model.ObjectType.Kind
-  ( OTArtifact,
-    OTEnchantment,
-    OTInstant,
-    OTLand,
-    OTNonCreature,
-    OTPlaneswalker,
-    OTSorcery,
-  )
+import safe MtgPure.Model.ObjectType (ObjectType (..))
 
 data NonCreatureCardType
   = NCTArtifact
@@ -57,16 +51,16 @@ data NonCreatureCardType
   deriving (Bounded, Enum, Eq, Ord, Show)
 
 -- Witness type
-data WNonCreatureCard :: forall a. a -> Type where
-  WNonCreatureArtifact :: WNonCreatureCard OTArtifact
-  WNonCreatureEnchantment :: WNonCreatureCard OTEnchantment
-  WNonCreatureInstant :: WNonCreatureCard OTInstant
-  WNonCreatureLand :: WNonCreatureCard OTLand
-  WNonCreaturePlaneswalker :: WNonCreatureCard OTPlaneswalker
-  WNonCreatureSorcery :: WNonCreatureCard OTSorcery
-  WNonCreatureCard :: WNonCreatureCard OTNonCreature
-  WNonCreatureCard2 :: Inst2 IsNonCreatureCardType a b => WNonCreatureCard '(OT, a, b)
-  WNonCreatureCard3 :: Inst3 IsNonCreatureCardType a b c => WNonCreatureCard '(OT, a, b, c)
+data WNonCreatureCard :: Type -> Type where
+  WNonCreatureArtifact :: WNonCreatureCard OArtifact
+  WNonCreatureEnchantment :: WNonCreatureCard OEnchantment
+  WNonCreatureInstant :: WNonCreatureCard OInstant
+  WNonCreatureLand :: WNonCreatureCard OLand
+  WNonCreaturePlaneswalker :: WNonCreatureCard OPlaneswalker
+  WNonCreatureSorcery :: WNonCreatureCard OSorcery
+  WNonCreatureCard :: WNonCreatureCard ONonCreature
+  WNonCreatureCard2 :: Inst2 IsNonCreatureCardType a b => WNonCreatureCard (ON2 a b)
+  WNonCreatureCard3 :: Inst3 IsNonCreatureCardType a b c => WNonCreatureCard (ON3 a b c)
 
 deriving instance Show (WNonCreatureCard a)
 
@@ -81,14 +75,14 @@ data NonCreatureCardVisitor a = NonCreatureCardVisitor
 
 class IsObjectType a => IsNonCreatureCardType a where
   singNonCreatureCardType :: Proxy a -> NonCreatureCardType
-  singNonCreatureCard :: Proxy a -> WNonCreatureCard '(OT, a)
-  visitNonCreatureCard :: NonCreatureCardVisitor b -> WNonCreatureCard '(OT, a) -> ObjectN '(OT, a) -> b
+  singNonCreatureCard :: Proxy a -> WNonCreatureCard (ON1 a)
+  visitNonCreatureCard :: NonCreatureCardVisitor b -> WNonCreatureCard (ON1 a) -> ON1 a -> b
 
 visitNonCreature' ::
   IsNonCreatureCardType a =>
-  (forall b. IsNonCreatureCardType b => ObjectN '(OT, b) -> x) ->
-  WNonCreatureCard '(OT, a) ->
-  ObjectN '(OT, a) ->
+  (forall b. IsNonCreatureCardType b => ON1 b -> x) ->
+  WNonCreatureCard (ON1 a) ->
+  ON1 a ->
   x
 visitNonCreature' f = visitNonCreatureCard $ NonCreatureCardVisitor f f f f f f
 

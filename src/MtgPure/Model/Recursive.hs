@@ -31,32 +31,31 @@ import safe MtgPure.Model.IsObjectType (IsObjectType)
 import safe MtgPure.Model.Loyalty (Loyalty)
 import safe MtgPure.Model.ManaCost (ManaCost)
 import safe MtgPure.Model.ManaPool (ManaPool)
-import safe MtgPure.Model.ObjectN (ObjectN)
 import safe MtgPure.Model.ObjectN.Type
   ( OActivatedOrTriggeredAbility,
     OAny,
+    OArtifact,
+    OArtifactCreature,
+    OCard,
     OCreature,
     OCreaturePlayerPlaneswalker,
     ODamageSource,
+    OEnchantment,
+    OInstant,
+    OLand,
+    ON1,
+    ON2,
+    ON3,
+    ON4,
+    ON5,
     OPermanent,
+    OPlaneswalker,
     OPlayer,
+    OSorcery,
     OSpell,
   )
-import safe MtgPure.Model.ObjectType (OT)
 import safe MtgPure.Model.ObjectType.Any (WAny)
 import safe MtgPure.Model.ObjectType.Index (IndexOT)
-import safe MtgPure.Model.ObjectType.Kind
-  ( OTArtifact,
-    OTArtifactCreature,
-    OTCard,
-    OTCreature,
-    OTEnchantment,
-    OTInstant,
-    OTLand,
-    OTPlaneswalker,
-    OTPlayer,
-    OTSorcery,
-  )
 import safe MtgPure.Model.ObjectType.NonCreatureCard (WNonCreatureCard)
 import safe MtgPure.Model.ObjectType.Permanent (WPermanent)
 import safe MtgPure.Model.ObjectType.Spell (WSpell (..))
@@ -69,11 +68,11 @@ import safe MtgPure.Model.Tribal (Tribal (..))
 import safe MtgPure.Model.Variable (Variable)
 import safe MtgPure.Model.VisitObjectN (VisitObjectN)
 
-type TypeableOT k ot = (Typeable k, Typeable (ot :: k), VisitObjectN ot, IndexOT ot)
+type TypeableOT ot = (Typeable ot, VisitObjectN ot, IndexOT ot)
 
-type TypeableOT2 k ot x = (TypeableOT k ot, Typeable (x :: k -> Type))
+type TypeableOT2 ot x = (TypeableOT ot, Typeable (x :: Type -> Type))
 
-data Ability :: forall ot. ot -> Type where
+data Ability :: Type -> Type where
   Activated :: Elect (Cost ot) ot -> Elect (Effect 'OneShot) ot -> Ability ot
   Static :: StaticAbility ot -> Ability ot
   Triggered :: TriggeredAbility ot -> Ability ot
@@ -85,17 +84,17 @@ instance ConsIndex (Ability ot) where
     Static {} -> 2
     Triggered {} -> 3
 
-data Card :: forall ot. ot -> Type where
+data Card :: Type -> Type where
   Card :: CardName -> WithThis (CardTypeDef 'NonTribal) ot -> Card ot
   TribalCard :: CardName -> WithThis (CardTypeDef 'Tribal) ot -> Card ot
   --
-  ArtifactCard :: Card OTArtifact -> Card OTCard
-  CreatureCard :: Card OTCreature -> Card OTCard
-  EnchantmentCard :: Card OTEnchantment -> Card OTCard
-  InstantCard :: Card OTInstant -> Card OTCard
-  LandCard :: Card OTLand -> Card OTCard
-  PlaneswalkerCard :: Card OTPlaneswalker -> Card OTCard
-  SorceryCard :: Card OTSorcery -> Card OTCard
+  ArtifactCard :: Card OArtifact -> Card OCard
+  CreatureCard :: Card OCreature -> Card OCard
+  EnchantmentCard :: Card OEnchantment -> Card OCard
+  InstantCard :: Card OInstant -> Card OCard
+  LandCard :: Card OLand -> Card OCard
+  PlaneswalkerCard :: Card OPlaneswalker -> Card OCard
+  SorceryCard :: Card OSorcery -> Card OCard
   deriving (Typeable)
 
 instance ConsIndex (Card ot) where
@@ -110,54 +109,54 @@ instance ConsIndex (Card ot) where
     PlaneswalkerCard {} -> 8
     SorceryCard {} -> 9
 
-data CardTypeDef :: forall ot. Tribal -> ot -> Type where
+data CardTypeDef :: Tribal -> Type -> Type where
   ArtifactCreatureDef ::
     Colors ->
-    Elect (Cost OTArtifactCreature) OTArtifactCreature ->
+    Elect (Cost OArtifactCreature) OArtifactCreature ->
     [CreatureType] ->
     Power ->
     Toughness ->
-    [Ability OTArtifactCreature] ->
-    CardTypeDef 'NonTribal OTArtifactCreature
+    [Ability OArtifactCreature] ->
+    CardTypeDef 'NonTribal OArtifactCreature
   ArtifactDef ::
     Colors ->
-    Elect (Cost OTArtifact) OTArtifact ->
-    [Ability OTArtifact] ->
-    CardTypeDef 'NonTribal OTArtifact
+    Elect (Cost OArtifact) OArtifact ->
+    [Ability OArtifact] ->
+    CardTypeDef 'NonTribal OArtifact
   CreatureDef ::
     Colors ->
-    Elect (Cost OTCreature) OTCreature ->
+    Elect (Cost OCreature) OCreature ->
     [CreatureType] ->
     Power ->
     Toughness ->
-    [Ability OTCreature] ->
-    CardTypeDef 'NonTribal OTCreature
+    [Ability OCreature] ->
+    CardTypeDef 'NonTribal OCreature
   EnchantmentDef ::
     Colors ->
-    Elect (Cost OTEnchantment) OTEnchantment ->
-    [Ability OTEnchantment] ->
-    CardTypeDef 'NonTribal OTEnchantment
+    Elect (Cost OEnchantment) OEnchantment ->
+    [Ability OEnchantment] ->
+    CardTypeDef 'NonTribal OEnchantment
   InstantDef ::
     Colors ->
-    Elect (Cost OTInstant) OTInstant ->
-    [Ability OTInstant] ->
-    Elect (Effect 'OneShot) OTInstant ->
-    CardTypeDef 'NonTribal OTInstant
+    Elect (Cost OInstant) OInstant ->
+    [Ability OInstant] ->
+    Elect (Effect 'OneShot) OInstant ->
+    CardTypeDef 'NonTribal OInstant
   LandDef ::
-    [Ability OTLand] ->
-    CardTypeDef 'NonTribal OTLand
+    [Ability OLand] ->
+    CardTypeDef 'NonTribal OLand
   PlaneswalkerDef ::
     Colors ->
-    Elect (Cost OTPlaneswalker) OTPlaneswalker ->
+    Elect (Cost OPlaneswalker) OPlaneswalker ->
     Loyalty ->
-    [Ability OTPlaneswalker] ->
-    CardTypeDef 'NonTribal OTPlaneswalker
+    [Ability OPlaneswalker] ->
+    CardTypeDef 'NonTribal OPlaneswalker
   SorceryDef ::
     Colors ->
-    Elect (Cost OTSorcery) OTSorcery ->
-    [Ability OTSorcery] ->
-    Elect (Effect 'OneShot) OTSorcery ->
-    CardTypeDef 'NonTribal OTSorcery
+    Elect (Cost OSorcery) OSorcery ->
+    [Ability OSorcery] ->
+    Elect (Effect 'OneShot) OSorcery ->
+    CardTypeDef 'NonTribal OSorcery
   TribalDef ::
     [CreatureType] ->
     WNonCreatureCard ot ->
@@ -184,7 +183,7 @@ instance ConsIndex (CardTypeDef tribe ot) where
 data Condition :: Type where
   CAnd :: [Condition] -> Condition
   COr :: [Condition] -> Condition
-  Satisfies :: TypeableOT k ot => WAny ot -> ObjectN ot -> [Requirement ot] -> Condition
+  Satisfies :: TypeableOT ot => WAny ot -> ot -> [Requirement ot] -> Condition
   deriving (Typeable)
 
 instance ConsIndex Condition where
@@ -193,14 +192,14 @@ instance ConsIndex Condition where
     COr {} -> 2
     Satisfies {} -> 3
 
-data Cost :: forall ot. ot -> Type where
+data Cost :: Type -> Type where
   AndCosts :: [Cost ot] -> Cost ot
   DiscardRandomCost :: Int -> Cost ot -- TODO: PositiveInt
-  LoyaltyCost :: Loyalty -> Cost OTPlaneswalker
+  LoyaltyCost :: Loyalty -> Cost OPlaneswalker
   ManaCost :: ManaCost -> Cost ot
   OrCosts :: [Cost ot] -> Cost ot
   PayLife :: Int -> Cost ot -- TODO: PositiveInt
-  SacrificeCost :: TypeableOT k ot => WPermanent ot -> [Requirement ot] -> Cost ot
+  SacrificeCost :: TypeableOT ot => WPermanent ot -> [Requirement ot] -> Cost ot
   TapCost :: OPermanent -> Cost ot
   deriving (Typeable)
 
@@ -217,8 +216,8 @@ instance ConsIndex (Cost ot) where
 
 data Effect :: EffectType -> Type where
   AddMana :: OPlayer -> ManaPool -> Effect 'OneShot
-  AddToBattlefield :: TypeableOT k ot => WPermanent ot -> OPlayer -> Token ot -> Effect 'OneShot
-  ChangeTo :: TypeableOT k ot => WPermanent ot -> OPermanent -> Card ot -> Effect 'Continuous
+  AddToBattlefield :: TypeableOT ot => WPermanent ot -> OPlayer -> Token ot -> Effect 'OneShot
+  ChangeTo :: TypeableOT ot => WPermanent ot -> OPermanent -> Card ot -> Effect 'Continuous
   CounterAbility :: OActivatedOrTriggeredAbility -> Effect 'OneShot
   CounterSpell :: OSpell -> Effect 'OneShot
   DealDamage :: ODamageSource -> OCreaturePlayerPlaneswalker -> Damage -> Effect 'OneShot
@@ -226,11 +225,11 @@ data Effect :: EffectType -> Type where
   DrawCards :: OPlayer -> Int -> Effect 'OneShot
   EffectContinuous :: Effect 'Continuous -> Effect 'OneShot -- 611.2
   EOr :: [Effect e] -> Effect e
-  Gain :: TypeableOT k ot => WAny ot -> ObjectN ot -> Ability ot -> Effect 'Continuous
-  Lose :: TypeableOT k ot => WAny ot -> ObjectN ot -> Ability ot -> Effect 'Continuous
-  Sacrifice :: TypeableOT k ot => WPermanent ot -> OPlayer -> [Requirement ot] -> Effect 'OneShot
+  Gain :: TypeableOT ot => WAny ot -> ot -> Ability ot -> Effect 'Continuous
+  Lose :: TypeableOT ot => WAny ot -> ot -> Ability ot -> Effect 'Continuous
+  Sacrifice :: TypeableOT ot => WPermanent ot -> OPlayer -> [Requirement ot] -> Effect 'OneShot
   StatDelta :: OCreature -> Power -> Toughness -> Effect 'Continuous
-  Until :: Elect (EventListener OTPlayer) OTPlayer -> Effect 'Continuous
+  Until :: Elect EventListener OPlayer -> Effect 'Continuous
   deriving (Typeable)
 
 instance ConsIndex (Effect e) where
@@ -251,17 +250,17 @@ instance ConsIndex (Effect e) where
     StatDelta {} -> 14
     Until {} -> 15
 
-data Elect :: forall ot. Type -> ot -> Type where
-  A :: (e ~ Effect 'OneShot, TypeableOT2 k ot (Elect e)) => Selection -> OPlayer -> WithObject (Elect e) ot -> Elect e ot
+data Elect :: Type -> Type -> Type where
+  A :: (e ~ Effect 'OneShot, TypeableOT2 ot (Elect e)) => Selection -> OPlayer -> WithMaskedObject (Elect e) ot -> Elect e ot
   ActivePlayer :: (OPlayer -> Elect e ot) -> Elect e ot
-  All :: WithObject (Elect e) ot -> Elect e ot
+  All :: WithMaskedObject (Elect e) ot -> Elect e ot
   Condition :: Condition -> Elect Condition ot
   ControllerOf :: OAny -> (OPlayer -> Elect e ot) -> Elect e ot
   Cost :: Cost ot -> Elect (Cost ot) ot
   Effect :: [Effect e] -> Elect (Effect e) ot
-  Event :: EventListener ot -> Elect (EventListener ot) ot
+  Event :: EventListener -> Elect EventListener ot
   If :: Condition -> Elect e ot -> Elect e ot -> Elect e ot
-  Random :: TypeableOT2 k ot (Elect e) => WithObject (Elect e) ot -> Elect e ot
+  Random :: TypeableOT2 ot (Elect e) => WithMaskedObject (Elect e) ot -> Elect e ot
   VariableFromPower :: OCreature -> (Variable -> Elect e ot) -> Elect e ot
   deriving (Typeable)
 
@@ -279,38 +278,38 @@ instance ConsIndex (Elect e ot) where
     Random {} -> 10
     VariableFromPower {} -> 11
 
-data EventListener :: forall ot. ot -> Type where
-  BecomesTapped :: WPermanent ot -> WithObject (Elect (Effect 'OneShot)) ot -> EventListener ot
-  Events :: [EventListener ot] -> EventListener ot
-  SpellIsCast :: WSpell ot -> WithObject (Elect (Effect 'OneShot)) ot -> EventListener ot
-  TimePoint :: Typeable p => TimePoint p -> Elect (Effect 'OneShot) ot -> EventListener ot
+data EventListener :: Type where
+  BecomesTapped :: TypeableOT2 ot (Elect (Effect 'OneShot)) => WPermanent ot -> WithLinkedObject (Elect (Effect 'OneShot)) ot -> EventListener
+  Events :: [EventListener] -> EventListener
+  SpellIsCast :: TypeableOT ot => WSpell ot -> WithLinkedObject (Elect (Effect 'OneShot)) ot -> EventListener
+  TimePoint :: Typeable p => TimePoint p -> Elect (Effect 'OneShot) OPlayer -> EventListener
   deriving (Typeable)
 
-instance ConsIndex (EventListener ot) where
+instance ConsIndex EventListener where
   consIndex = \case
     BecomesTapped {} -> 1
     Events {} -> 2
     SpellIsCast {} -> 3
     TimePoint {} -> 4
 
-data Requirement :: forall ot. ot -> Type where
+data Requirement :: Type -> Type where
   ControlledBy :: OPlayer -> Requirement ot
   HasAbility :: WithThis Ability ot -> Requirement ot -- Non-unique differing representations will not be considered the same
-  HasBasicLandType :: BasicLandType -> Requirement OTLand
+  HasBasicLandType :: BasicLandType -> Requirement OLand
   Impossible :: Requirement ot
-  Is :: TypeableOT k ot => WAny ot -> ObjectN ot -> Requirement ot
-  Not :: TypeableOT k ot => Requirement ot -> Requirement ot
+  Is :: TypeableOT ot => WAny ot -> ot -> Requirement ot
+  Not :: TypeableOT ot => Requirement ot -> Requirement ot
   OfColors :: Colors -> Requirement ot -- needs `WCard a` witness
   OwnedBy :: OPlayer -> Requirement ot
-  PlayerPays :: Cost OTPlayer -> Requirement OTPlayer
+  PlayerPays :: Cost OPlayer -> Requirement OPlayer
   RAnd :: [Requirement ot] -> Requirement ot
   ROr :: [Requirement ot] -> Requirement ot
-  Tapped :: TypeableOT k ot => WPermanent ot -> Requirement ot
-  -- TODO: Try to add some combinators that go from: forall a b. [forall x. Requirement x] -> Requirement '(OT, a, b)
-  R2 :: Inst2 IsObjectType a b => [Requirement '(OT, a)] -> [Requirement '(OT, b)] -> Requirement '(OT, a, b)
-  R3 :: Inst3 IsObjectType a b c => [Requirement '(OT, a)] -> [Requirement '(OT, b)] -> [Requirement '(OT, c)] -> Requirement '(OT, a, b, c)
-  R4 :: Inst4 IsObjectType a b c d => [Requirement '(OT, a)] -> [Requirement '(OT, b)] -> [Requirement '(OT, c)] -> [Requirement '(OT, d)] -> Requirement '(OT, a, b, c, d)
-  R5 :: Inst5 IsObjectType a b c d e => [Requirement '(OT, a)] -> [Requirement '(OT, b)] -> [Requirement '(OT, c)] -> [Requirement '(OT, d)] -> [Requirement '(OT, e)] -> Requirement '(OT, a, b, c, d, e)
+  Tapped :: TypeableOT ot => WPermanent ot -> Requirement ot
+  -- TODO: Try to add some combinators that go from: forall a b. [forall x. Requirement x] -> Requirement (ON2 a, b)
+  R2 :: Inst2 IsObjectType a b => [Requirement (ON1 a)] -> [Requirement (ON1 b)] -> Requirement (ON2 a b)
+  R3 :: Inst3 IsObjectType a b c => [Requirement (ON1 a)] -> [Requirement (ON1 b)] -> [Requirement (ON1 c)] -> Requirement (ON3 a b c)
+  R4 :: Inst4 IsObjectType a b c d => [Requirement (ON1 a)] -> [Requirement (ON1 b)] -> [Requirement (ON1 c)] -> [Requirement (ON1 d)] -> Requirement (ON4 a b c d)
+  R5 :: Inst5 IsObjectType a b c d e => [Requirement (ON1 a)] -> [Requirement (ON1 b)] -> [Requirement (ON1 c)] -> [Requirement (ON1 d)] -> [Requirement (ON1 e)] -> Requirement (ON5 a b c d e)
   deriving (Typeable)
 
 instance ConsIndex (Requirement ot) where
@@ -332,20 +331,20 @@ instance ConsIndex (Requirement ot) where
     R4 {} -> 15
     R5 {} -> 16
 
-data SetCard :: forall ot. ot -> Type where
+data SetCard :: Type -> Type where
   SetCard :: CardSet -> Rarity -> Card ot -> SetCard ot
   deriving (Typeable)
 
-data SetToken :: forall ot. ot -> Type where
+data SetToken :: Type -> Type where
   SetToken :: CardSet -> Rarity -> Token ot -> SetToken ot
   deriving (Typeable)
 
-data StaticAbility :: forall ot. ot -> Type where
-  As :: TypeableOT2 k ot EventListener => WithObject EventListener ot -> StaticAbility ot -- 603.6d: not a triggered ability
+data StaticAbility :: Type -> Type where
+  As :: TypeableOT ot => Elect EventListener ot -> StaticAbility ot -- 603.6d: not a triggered ability
   StaticContinuous :: Elect (Effect 'Continuous) ot -> StaticAbility ot -- 611.3
-  FirstStrike :: StaticAbility OTCreature
-  Flying :: StaticAbility OTCreature
-  Haste :: StaticAbility OTCreature
+  FirstStrike :: StaticAbility OCreature
+  Flying :: StaticAbility OCreature
+  Haste :: StaticAbility OCreature
   Suspend :: Int -> Elect (Cost ot) ot -> StaticAbility ot -- PositiveInt
   deriving (Typeable)
 
@@ -359,38 +358,54 @@ instance ConsIndex (StaticAbility ot) where
     Suspend {} -> 6
 
 -- TODO: This needs a witness for a token object (`WToken`)
-data Token :: forall ot. ot -> Type where
+data Token :: Type -> Type where
   Token :: Card ot -> Token ot
   deriving (Typeable)
 
 -- https://www.mtgsalvation.com/forums/magic-fundamentals/magic-rulings/magic-rulings-archives/611601-whenever-what-does-it-mean?comment=3
 -- https://www.reddit.com/r/magicTCG/comments/asmecb/noob_question_difference_between_as_and_when/
-data TriggeredAbility :: forall ot. ot -> Type where
-  When :: TypeableOT k ot => Elect (EventListener ot) ot -> TriggeredAbility ot
+data TriggeredAbility :: Type -> Type where
+  When :: TypeableOT ot => Elect EventListener ot -> TriggeredAbility ot
   deriving (Typeable)
 
-data WithObject :: forall ot x. x -> ot -> Type where
-  O1 :: (TypeableOT2 k ot x, Inst1 IsObjectType a) => [Requirement '(OT, a)] -> (ObjectN '(OT, a) -> x ot) -> WithObject x ot
-  O2 :: (TypeableOT2 k ot x, Inst2 IsObjectType a b) => [Requirement '(OT, a, b)] -> (ObjectN '(OT, a, b) -> x ot) -> WithObject x ot
-  O3 :: (TypeableOT2 k ot x, Inst3 IsObjectType a b c) => [Requirement '(OT, a, b, c)] -> (ObjectN '(OT, a, b, c) -> x ot) -> WithObject x ot
-  O4 :: (TypeableOT2 k ot x, Inst4 IsObjectType a b c d) => [Requirement '(OT, a, b, c, d)] -> (ObjectN '(OT, a, b, c, d) -> x ot) -> WithObject x ot
-  O5 :: (TypeableOT2 k ot x, Inst5 IsObjectType a b c d e) => [Requirement '(OT, a, b, c, d, e)] -> (ObjectN '(OT, a, b, c, d, e) -> x ot) -> WithObject x ot
+data WithLinkedObject :: (Type -> Type) -> Type -> Type where
+  L1 :: Inst1 IsObjectType a => [Requirement (ON1 a)] -> (ON1 a -> x (ON1 a)) -> WithLinkedObject x (ON1 a)
+  L2 :: Inst2 IsObjectType a b => [Requirement (ON2 a b)] -> (ON2 a b -> x (ON2 a b)) -> WithLinkedObject x (ON2 a b)
+  L3 :: Inst3 IsObjectType a b c => [Requirement (ON3 a b c)] -> (ON3 a b c -> x (ON3 a b c)) -> WithLinkedObject x (ON3 a b c)
+  L4 :: Inst4 IsObjectType a b c d => [Requirement (ON4 a b c d)] -> (ON4 a b c d -> x (ON4 a b c d)) -> WithLinkedObject x (ON4 a b c d)
+  L5 :: Inst5 IsObjectType a b c d e => [Requirement (ON5 a b c d e)] -> (ON5 a b c d e -> x (ON5 a b c d e)) -> WithLinkedObject x (ON5 a b c d e)
   deriving (Typeable)
 
-instance ConsIndex (WithObject x ot) where
+instance ConsIndex (WithLinkedObject x ot) where
   consIndex = \case
-    O1 {} -> 1
-    O2 {} -> 2
-    O3 {} -> 3
-    O4 {} -> 4
-    O5 {} -> 5
+    L1 {} -> 1
+    L2 {} -> 2
+    L3 {} -> 3
+    L4 {} -> 4
+    L5 {} -> 5
 
-data WithThis :: forall ot x. x -> ot -> Type where
-  T1 :: Inst1 IsObjectType a => (ObjectN '(OT, a) -> x '(OT, a)) -> WithThis x '(OT, a)
-  T2 :: Inst2 IsObjectType a b => (ObjectN '(OT, a, b) -> x '(OT, a, b)) -> WithThis x '(OT, a, b)
-  T3 :: Inst3 IsObjectType a b c => (ObjectN '(OT, a, b, c) -> x '(OT, a, b, c)) -> WithThis x '(OT, a, b, c)
-  T4 :: Inst4 IsObjectType a b c d => (ObjectN '(OT, a, b, c, d) -> x '(OT, a, b, c, d)) -> WithThis x '(OT, a, b, c, d)
-  T5 :: Inst5 IsObjectType a b c d e => (ObjectN '(OT, a, b, c, d, e) -> x '(OT, a, b, c, d, e)) -> WithThis x '(OT, a, b, c, d, e)
+data WithMaskedObject :: (Type -> Type) -> Type -> Type where
+  M1 :: (TypeableOT2 ot x, Inst1 IsObjectType a) => [Requirement (ON1 a)] -> (ON1 a -> x ot) -> WithMaskedObject x ot
+  M2 :: (TypeableOT2 ot x, Inst2 IsObjectType a b) => [Requirement (ON2 a b)] -> (ON2 a b -> x ot) -> WithMaskedObject x ot
+  M3 :: (TypeableOT2 ot x, Inst3 IsObjectType a b c) => [Requirement (ON3 a b c)] -> (ON3 a b c -> x ot) -> WithMaskedObject x ot
+  M4 :: (TypeableOT2 ot x, Inst4 IsObjectType a b c d) => [Requirement (ON4 a b c d)] -> (ON4 a b c d -> x ot) -> WithMaskedObject x ot
+  M5 :: (TypeableOT2 ot x, Inst5 IsObjectType a b c d e) => [Requirement (ON5 a b c d e)] -> (ON5 a b c d e -> x ot) -> WithMaskedObject x ot
+  deriving (Typeable)
+
+instance ConsIndex (WithMaskedObject x ot) where
+  consIndex = \case
+    M1 {} -> 1
+    M2 {} -> 2
+    M3 {} -> 3
+    M4 {} -> 4
+    M5 {} -> 5
+
+data WithThis :: (Type -> Type) -> Type -> Type where
+  T1 :: Inst1 IsObjectType a => (ON1 a -> x (ON1 a)) -> WithThis x (ON1 a)
+  T2 :: Inst2 IsObjectType a b => (ON2 a b -> x (ON2 a b)) -> WithThis x (ON2 a b)
+  T3 :: Inst3 IsObjectType a b c => (ON3 a b c -> x (ON3 a b c)) -> WithThis x (ON3 a b c)
+  T4 :: Inst4 IsObjectType a b c d => (ON4 a b c d -> x (ON4 a b c d)) -> WithThis x (ON4 a b c d)
+  T5 :: Inst5 IsObjectType a b c d e => (ON5 a b c d e -> x (ON5 a b c d e)) -> WithThis x (ON5 a b c d e)
   deriving (Typeable)
 
 instance ConsIndex (WithThis x ot) where

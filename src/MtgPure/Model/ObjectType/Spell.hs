@@ -27,25 +27,20 @@ import safe Data.Inst (Inst2, Inst3, Inst4)
 import safe Data.Kind (Type)
 import safe Data.Proxy (Proxy)
 import safe MtgPure.Model.IsObjectType (IsObjectType)
-import safe MtgPure.Model.ObjectN (ObjectN)
 import safe MtgPure.Model.ObjectN.Type
   ( OArtifact,
     OCreature,
     OEnchantment,
     OInstant,
+    ON1,
+    ON2,
+    ON3,
+    ON4,
     OPlaneswalker,
     OSorcery,
+    OSpell,
   )
-import MtgPure.Model.ObjectType (OT, ObjectType (..))
-import MtgPure.Model.ObjectType.Kind
-  ( OTArtifact,
-    OTCreature,
-    OTEnchantment,
-    OTInstant,
-    OTPlaneswalker,
-    OTSorcery,
-    OTSpell,
-  )
+import MtgPure.Model.ObjectType (ObjectType (..))
 
 data SpellType
   = STArtifact
@@ -57,17 +52,17 @@ data SpellType
   deriving (Bounded, Enum, Eq, Ord, Show)
 
 -- Witness type
-data WSpell :: forall ot. ot -> Type where
-  WSpellArtifact :: WSpell OTArtifact
-  WSpellCreature :: WSpell OTCreature
-  WSpellEnchantment :: WSpell OTEnchantment
-  WSpellInstant :: WSpell OTInstant
-  WSpellPlaneswalker :: WSpell OTPlaneswalker
-  WSpellSorcery :: WSpell OTSorcery
-  WSpell :: WSpell OTSpell
-  WSpell2 :: Inst2 IsSpellType a b => WSpell '(OT, a, b)
-  WSpell3 :: Inst3 IsSpellType a b c => WSpell '(OT, a, b, c)
-  WSpell4 :: Inst4 IsSpellType a b c d => WSpell '(OT, a, b, c, d)
+data WSpell :: Type -> Type where
+  WSpellArtifact :: WSpell OArtifact
+  WSpellCreature :: WSpell OCreature
+  WSpellEnchantment :: WSpell OEnchantment
+  WSpellInstant :: WSpell OInstant
+  WSpellPlaneswalker :: WSpell OPlaneswalker
+  WSpellSorcery :: WSpell OSorcery
+  WSpell :: WSpell OSpell
+  WSpell2 :: Inst2 IsSpellType a b => WSpell (ON2 a b)
+  WSpell3 :: Inst3 IsSpellType a b c => WSpell (ON3 a b c)
+  WSpell4 :: Inst4 IsSpellType a b c d => WSpell (ON4 a b c d)
 
 deriving instance Show (WSpell a)
 
@@ -82,10 +77,10 @@ data SpellVisitor a = SpellVisitor
 
 class IsObjectType a => IsSpellType a where
   singSpellType :: Proxy a -> SpellType
-  singSpell :: Proxy a -> WSpell '(OT, a)
-  visitSpell :: SpellVisitor b -> WSpell '(OT, a) -> ObjectN '(OT, a) -> b
+  singSpell :: Proxy a -> WSpell (ON1 a)
+  visitSpell :: SpellVisitor b -> WSpell (ON1 a) -> ON1 a -> b
 
-visitSpell' :: IsSpellType a => (forall b. IsSpellType b => ObjectN '(OT, b) -> x) -> WSpell '(OT, a) -> ObjectN '(OT, a) -> x
+visitSpell' :: IsSpellType a => (forall b. IsSpellType b => ON1 b -> x) -> WSpell (ON1 a) -> ON1 a -> x
 visitSpell' f = visitSpell $ SpellVisitor f f f f f f
 
 instance IsSpellType 'OTArtifact where

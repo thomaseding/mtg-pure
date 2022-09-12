@@ -28,23 +28,19 @@ import safe Data.Kind (Type)
 import safe Data.Proxy (Proxy)
 import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.IsObjectType (IsObjectType)
-import safe MtgPure.Model.ObjectN (ObjectN)
 import safe MtgPure.Model.ObjectN.Type
   ( OArtifact,
     OCreature,
     OEnchantment,
     OLand,
+    ON1,
+    ON2,
+    ON3,
+    ON4,
+    OPermanent,
     OPlaneswalker,
   )
-import MtgPure.Model.ObjectType (OT, ObjectType (..))
-import safe MtgPure.Model.ObjectType.Kind
-  ( OTArtifact,
-    OTCreature,
-    OTEnchantment,
-    OTLand,
-    OTPermanent,
-    OTPlaneswalker,
-  )
+import MtgPure.Model.ObjectType (ObjectType (..))
 
 data PermanentType
   = PTArtifact
@@ -55,16 +51,16 @@ data PermanentType
   deriving (Bounded, Enum, Eq, Ord, Show)
 
 -- Witness type
-data WPermanent :: forall ot. ot -> Type where
-  WPermanentArtifact :: WPermanent OTArtifact
-  WPermanentCreature :: WPermanent OTCreature
-  WPermanentEnchantment :: WPermanent OTEnchantment
-  WPermanentLand :: WPermanent OTLand
-  WPermanentPlaneswalker :: WPermanent OTPlaneswalker
-  WPermanent :: WPermanent OTPermanent
-  WPermanent2 :: Inst2 IsPermanentType a b => WPermanent '(OT, a, b)
-  WPermanent3 :: Inst3 IsPermanentType a b c => WPermanent '(OT, a, b, c)
-  WPermanent4 :: Inst4 IsPermanentType a b c d => WPermanent '(OT, a, b, c, d)
+data WPermanent :: Type -> Type where
+  WPermanentArtifact :: WPermanent OArtifact
+  WPermanentCreature :: WPermanent OCreature
+  WPermanentEnchantment :: WPermanent OEnchantment
+  WPermanentLand :: WPermanent OLand
+  WPermanentPlaneswalker :: WPermanent OPlaneswalker
+  WPermanent :: WPermanent OPermanent
+  WPermanent2 :: Inst2 IsPermanentType a b => WPermanent (ON2 a b)
+  WPermanent3 :: Inst3 IsPermanentType a b c => WPermanent (ON3 a b c)
+  WPermanent4 :: Inst4 IsPermanentType a b c d => WPermanent (ON4 a b c d)
   deriving (Typeable)
 
 deriving instance Show (WPermanent a)
@@ -79,10 +75,10 @@ data PermanentVisitor a = PermanentVisitor
 
 class IsObjectType a => IsPermanentType a where
   singPermanentType :: Proxy a -> PermanentType
-  singPermanent :: Proxy a -> WPermanent '(OT, a)
-  visitPermanent :: PermanentVisitor b -> WPermanent '(OT, a) -> ObjectN '(OT, a) -> b
+  singPermanent :: Proxy a -> WPermanent (ON1 a)
+  visitPermanent :: PermanentVisitor b -> WPermanent (ON1 a) -> ON1 a -> b
 
-visitPermanent' :: IsPermanentType a => (forall b. IsPermanentType b => ObjectN '(OT, b) -> x) -> WPermanent '(OT, a) -> ObjectN '(OT, a) -> x
+visitPermanent' :: IsPermanentType a => (forall b. IsPermanentType b => ON1 b -> x) -> WPermanent (ON1 a) -> ON1 a -> x
 visitPermanent' f = visitPermanent $ PermanentVisitor f f f f f
 
 instance IsPermanentType 'OTArtifact where

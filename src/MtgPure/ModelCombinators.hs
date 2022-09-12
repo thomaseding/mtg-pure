@@ -30,7 +30,8 @@ module MtgPure.ModelCombinators
     ElectEffect (..),
     CoAny (..),
     CoPermanent (..),
-    AsWithObject (..),
+    AsWithMaskedObject (..),
+    AsWithLinkedObject (..),
     AsWithThis (..),
     mkCard,
     mkToken,
@@ -75,37 +76,31 @@ import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.IsObjectType (IsObjectType)
 import safe MtgPure.Model.ManaCost (ManaCost)
 import safe MtgPure.Model.ManaSymbol (ManaSymbol (..))
-import safe MtgPure.Model.ObjectN (ObjectN)
 import safe MtgPure.Model.ObjectN.Type
   ( OActivatedOrTriggeredAbility,
     OAny,
+    OArtifact,
+    OCreature,
     OCreaturePlayerPlaneswalker,
     ODamageSource,
+    OEnchantment,
+    OInstant,
+    OLand,
+    ON1,
+    ON2,
+    ON3,
+    ON4,
+    ON5,
     OPermanent,
+    OPlaneswalker,
     OPlayer,
+    OSorcery,
     OSpell,
   )
 import safe MtgPure.Model.ObjectType
-  ( OT,
-    ObjectType (..),
-    ObjectType1,
-    ObjectType2,
-    ObjectType3,
-    ObjectType4,
-    ObjectType5,
+  ( ObjectType (..),
   )
 import safe MtgPure.Model.ObjectType.Any (WAny (..))
-import safe MtgPure.Model.ObjectType.Kind
-  ( OTArtifact,
-    OTCreature,
-    OTEnchantment,
-    OTInstant,
-    OTLand,
-    OTPermanent,
-    OTPlaneswalker,
-    OTPlayer,
-    OTSorcery,
-  )
 import safe MtgPure.Model.ObjectType.Permanent (IsPermanentType, WPermanent (..))
 import safe MtgPure.Model.Recursive
   ( Ability,
@@ -120,7 +115,8 @@ import safe MtgPure.Model.Recursive
     Token (Token),
     TypeableOT,
     TypeableOT2,
-    WithObject (..),
+    WithLinkedObject (..),
+    WithMaskedObject (..),
     WithThis (..),
   )
 import safe MtgPure.Model.Step (Step (..))
@@ -138,40 +134,58 @@ import safe MtgPure.Model.ToObjectN.Classes
 import safe MtgPure.Model.Tribal (Tribal (..))
 import safe MtgPure.Model.Variable (Variable)
 
-class AsWithObject ot' where
-  object :: TypeableOT2 k ot x => [Requirement ot'] -> (ObjectN ot' -> x ot) -> WithObject x ot
+class AsWithLinkedObject ot where
+  linked :: TypeableOT2 ot x => [Requirement ot] -> (ot -> x ot) -> WithLinkedObject x ot
 
-instance Inst1 IsObjectType a => AsWithObject '(OT, a) where
-  object = O1
+instance Inst1 IsObjectType a => AsWithLinkedObject (ON1 a) where
+  linked = L1
 
-instance Inst2 IsObjectType a b => AsWithObject '(OT, a, b) where
-  object = O2
+instance Inst2 IsObjectType a b => AsWithLinkedObject (ON2 a b) where
+  linked = L2
 
-instance Inst3 IsObjectType a b c => AsWithObject '(OT, a, b, c) where
-  object = O3
+instance Inst3 IsObjectType a b c => AsWithLinkedObject (ON3 a b c) where
+  linked = L3
 
-instance Inst4 IsObjectType a b c d => AsWithObject '(OT, a, b, c, d) where
-  object = O4
+instance Inst4 IsObjectType a b c d => AsWithLinkedObject (ON4 a b c d) where
+  linked = L4
 
-instance Inst5 IsObjectType a b c d e => AsWithObject '(OT, a, b, c, d, e) where
-  object = O5
+instance Inst5 IsObjectType a b c d e => AsWithLinkedObject (ON5 a b c d e) where
+  linked = L5
+
+class AsWithMaskedObject ot' where
+  masked :: TypeableOT2 ot x => [Requirement ot'] -> (ot' -> x ot) -> WithMaskedObject x ot
+
+instance Inst1 IsObjectType a => AsWithMaskedObject (ON1 a) where
+  masked = M1
+
+instance Inst2 IsObjectType a b => AsWithMaskedObject (ON2 a b) where
+  masked = M2
+
+instance Inst3 IsObjectType a b c => AsWithMaskedObject (ON3 a b c) where
+  masked = M3
+
+instance Inst4 IsObjectType a b c d => AsWithMaskedObject (ON4 a b c d) where
+  masked = M4
+
+instance Inst5 IsObjectType a b c d e => AsWithMaskedObject (ON5 a b c d e) where
+  masked = M5
 
 class AsWithThis ot where
-  thisObject :: (ObjectN ot -> x ot) -> WithThis x ot
+  thisObject :: (ot -> x ot) -> WithThis x ot
 
-instance Inst1 IsObjectType a => AsWithThis '(OT, a) where
+instance Inst1 IsObjectType a => AsWithThis (ON1 a) where
   thisObject = T1
 
-instance Inst2 IsObjectType a b => AsWithThis '(OT, a, b) where
+instance Inst2 IsObjectType a b => AsWithThis (ON2 a b) where
   thisObject = T2
 
-instance Inst3 IsObjectType a b c => AsWithThis '(OT, a, b, c) where
+instance Inst3 IsObjectType a b c => AsWithThis (ON3 a b c) where
   thisObject = T3
 
-instance Inst4 IsObjectType a b c d => AsWithThis '(OT, a, b, c, d) where
+instance Inst4 IsObjectType a b c d => AsWithThis (ON4 a b c d) where
   thisObject = T4
 
-instance Inst5 IsObjectType a b c d e => AsWithThis '(OT, a, b, c, d, e) where
+instance Inst5 IsObjectType a b c d e => AsWithThis (ON5 a b c d e) where
   thisObject = T5
 
 type AsActivatedOrTriggeredAbility a =
@@ -284,10 +298,10 @@ dealDamage source target = DealDamage (asDamageSource source) (asCreaturePlayerP
 controllerOf :: AsAny o => o -> (OPlayer -> Elect e ot) -> Elect e ot
 controllerOf = ControllerOf . asAny
 
-sacrifice :: CoPermanent k ot => OPlayer -> [Requirement ot] -> Effect 'OneShot
+sacrifice :: CoPermanent ot => OPlayer -> [Requirement ot] -> Effect 'OneShot
 sacrifice = Sacrifice coPermanent
 
-changeTo :: (AsPermanent o, CoPermanent k ot) => o -> Card ot -> Effect 'Continuous
+changeTo :: (AsPermanent o, CoPermanent ot) => o -> Card ot -> Effect 'Continuous
 changeTo = ChangeTo coPermanent . asPermanent
 
 tapCost :: AsPermanent o => o -> Cost ot
@@ -302,88 +316,88 @@ counterAbility = CounterAbility . asActivatedOrTriggeredAbility
 counterSpell :: AsSpell o => o -> Effect 'OneShot
 counterSpell = CounterSpell . asSpell
 
-class TypeableOT k ot => CoPermanent k (ot :: k) where
+class TypeableOT ot => CoPermanent ot where
   coPermanent :: WPermanent ot
 
-instance CoPermanent ObjectType1 OTArtifact where
+instance CoPermanent OArtifact where
   coPermanent = WPermanentArtifact
 
-instance CoPermanent ObjectType1 OTCreature where
+instance CoPermanent OCreature where
   coPermanent = WPermanentCreature
 
-instance CoPermanent ObjectType1 OTEnchantment where
+instance CoPermanent OEnchantment where
   coPermanent = WPermanentEnchantment
 
-instance CoPermanent ObjectType1 OTLand where
+instance CoPermanent OLand where
   coPermanent = WPermanentLand
 
-instance CoPermanent ObjectType1 OTPlaneswalker where
+instance CoPermanent OPlaneswalker where
   coPermanent = WPermanentPlaneswalker
 
-instance CoPermanent ObjectType5 OTPermanent where
+instance CoPermanent OPermanent where
   coPermanent = WPermanent
 
-instance Inst2 IsPermanentType a b => CoPermanent ObjectType2 '(OT, a, b) where
-  coPermanent = WPermanent2 :: WPermanent '(OT, a, b)
+instance Inst2 IsPermanentType a b => CoPermanent (ON2 a b) where
+  coPermanent = WPermanent2 :: WPermanent (ON2 a b)
 
-instance Inst3 IsPermanentType a b c => CoPermanent ObjectType3 '(OT, a, b, c) where
-  coPermanent = WPermanent3 :: WPermanent '(OT, a, b, c)
+instance Inst3 IsPermanentType a b c => CoPermanent (ON3 a b c) where
+  coPermanent = WPermanent3 :: WPermanent (ON3 a b c)
 
-instance Inst4 IsPermanentType a b c d => CoPermanent ObjectType4 '(OT, a, b, c, d) where
-  coPermanent = WPermanent4 :: WPermanent '(OT, a, b, c, d)
+instance Inst4 IsPermanentType a b c d => CoPermanent (ON4 a b c d) where
+  coPermanent = WPermanent4 :: WPermanent (ON4 a b c d)
 
-class TypeableOT k ot => CoAny k (ot :: k) where
+class TypeableOT ot => CoAny ot where
   coAny :: WAny ot
 
-instance CoAny ObjectType1 OTInstant where
+instance CoAny OInstant where
   coAny = WAnyInstant
 
-instance CoAny ObjectType1 OTSorcery where
+instance CoAny OSorcery where
   coAny = WAnySorcery
 
-instance CoAny ObjectType1 OTPlayer where
+instance CoAny OPlayer where
   coAny = WAnyPlayer
 
-instance CoAny ObjectType1 OTArtifact where
+instance CoAny OArtifact where
   coAny = WAnyArtifact
 
-instance CoAny ObjectType1 OTCreature where
+instance CoAny OCreature where
   coAny = WAnyCreature
 
-instance CoAny ObjectType1 OTEnchantment where
+instance CoAny OEnchantment where
   coAny = WAnyEnchantment
 
-instance CoAny ObjectType1 OTLand where
+instance CoAny OLand where
   coAny = WAnyLand
 
-instance CoAny ObjectType1 OTPlaneswalker where
+instance CoAny OPlaneswalker where
   coAny = WAnyPlaneswalker
 
-instance Inst2 IsPermanentType a b => CoAny ObjectType2 '(OT, a, b) where
+instance Inst2 IsPermanentType a b => CoAny (ON2 a b) where
   coAny = WAny2
 
-instance Inst3 IsPermanentType a b c => CoAny ObjectType3 '(OT, a, b, c) where
+instance Inst3 IsPermanentType a b c => CoAny (ON3 a b c) where
   coAny = WAny3
 
-instance Inst4 IsPermanentType a b c d => CoAny ObjectType4 '(OT, a, b, c, d) where
+instance Inst4 IsPermanentType a b c d => CoAny (ON4 a b c d) where
   coAny = WAny4
 
-instance Inst5 IsPermanentType a b c d e => CoAny ObjectType5 '(OT, a, b, c, d, e) where
+instance Inst5 IsPermanentType a b c d e => CoAny (ON5 a b c d e) where
   coAny = WAny5
 
-is :: CoAny k ot => ObjectN ot -> Requirement ot
+is :: CoAny ot => ot -> Requirement ot
 is = Is coAny
 
-satisfies :: CoAny k ot => ObjectN ot -> [Requirement ot] -> Condition
+satisfies :: CoAny ot => ot -> [Requirement ot] -> Condition
 satisfies = Satisfies coAny
 
-sacrificeCost :: CoPermanent k ot => [Requirement ot] -> Cost ot
+sacrificeCost :: CoPermanent ot => [Requirement ot] -> Cost ot
 sacrificeCost = SacrificeCost coPermanent
 
-tapped :: CoPermanent k ot => Requirement ot
+tapped :: CoPermanent ot => Requirement ot
 tapped = Tapped coPermanent
 
-addToBattlefield :: CoPermanent k ot => OPlayer -> Token ot -> Effect 'OneShot
+addToBattlefield :: CoPermanent ot => OPlayer -> Token ot -> Effect 'OneShot
 addToBattlefield = AddToBattlefield coPermanent
 
 ofColors :: ColorsLike c => c -> Requirement ot
@@ -398,7 +412,7 @@ instance AsCost (Cost ot) ot where
 instance AsCost ManaCost ot where
   asCost = ManaCost
 
-playerPays :: AsCost c OTPlayer => c -> Requirement OTPlayer
+playerPays :: AsCost c OPlayer => c -> Requirement OPlayer
 playerPays = PlayerPays . asCost
 
 class ElectEffect effect elect where
@@ -413,7 +427,7 @@ instance ElectEffect [Effect e] (Elect (Effect e)) where
 instance ElectEffect (Effect 'Continuous) (Elect (Effect 'OneShot)) where
   effect = Effect . pure . EffectContinuous
 
-event :: EventListener ot -> Elect (EventListener ot) ot
+event :: EventListener -> Elect EventListener ot
 event = Event
 
 class Branchable e ot where
@@ -422,7 +436,7 @@ class Branchable e ot where
 instance Branchable (Cost ot) ot where
   branchEmpty = Cost $ AndCosts []
 
-instance Branchable (EventListener ot) ot where
+instance Branchable EventListener ot where
   branchEmpty = Event $ Events []
 
 instance Branchable (Effect e) ot where
@@ -434,13 +448,13 @@ ifThen cond elect = If cond elect branchEmpty
 ifElse :: Branchable e ot => Condition -> Elect e ot -> Elect e ot
 ifElse cond = If cond branchEmpty
 
-nonBasic :: Requirement OTLand
+nonBasic :: Requirement OLand
 nonBasic = RAnd $ map (Not . HasBasicLandType) [minBound ..]
 
 colored :: Requirement ot
 colored = ROr $ map ofColors [minBound :: Color ..]
 
-colorless :: TypeableOT k ot => Requirement ot
+colorless :: TypeableOT ot => Requirement ot
 colorless = Not colored
 
 addManaAnyColor :: OPlayer -> Int -> Effect 'OneShot
@@ -453,29 +467,29 @@ addManaAnyColor player amount =
       AddMana player $ toManaPool (G, amount)
     ]
 
-class (AsWithThis ot, TypeableOT k ot) => MkCard t k ot where
-  mkCard :: CardName -> (ObjectN ot -> CardTypeDef t ot) -> Card ot
+class (AsWithThis ot, TypeableOT ot) => MkCard t ot where
+  mkCard :: CardName -> (ot -> CardTypeDef t ot) -> Card ot
 
-instance (AsWithThis ot, TypeableOT k ot) => MkCard 'NonTribal k ot where
+instance (AsWithThis ot, TypeableOT ot) => MkCard 'NonTribal ot where
   mkCard name = Card name . thisObject
 
-instance (AsWithThis ot, TypeableOT k ot) => MkCard 'Tribal k ot where
+instance (AsWithThis ot, TypeableOT ot) => MkCard 'Tribal ot where
   mkCard name = TribalCard name . thisObject
 
-mkToken :: MkCard tribal k ot => CardName -> (ObjectN ot -> CardTypeDef tribal ot) -> Token ot
+mkToken :: MkCard tribal ot => CardName -> (ot -> CardTypeDef tribal ot) -> Token ot
 mkToken name = Token . mkCard name
 
-hasAbility :: AsWithThis ot => (ObjectN ot -> Ability ot) -> Requirement ot
+hasAbility :: AsWithThis ot => (ot -> Ability ot) -> Requirement ot
 hasAbility = HasAbility . thisObject
 
-becomesTapped :: CoPermanent k ot => WithObject (Elect (Effect 'OneShot)) ot -> EventListener ot
+becomesTapped :: CoPermanent ot => WithLinkedObject (Elect (Effect 'OneShot)) ot -> EventListener
 becomesTapped = BecomesTapped coPermanent
 
-untilEndOfTurn :: Elect (Effect 'OneShot) OTPlayer -> Effect 'OneShot
+untilEndOfTurn :: Elect (Effect 'OneShot) OPlayer -> Effect 'OneShot
 untilEndOfTurn = EffectContinuous . Until . event . TimePoint (StepBegin CleanupStep)
 
-gain :: CoAny k ot => ObjectN ot -> Ability ot -> Effect 'Continuous
+gain :: CoAny ot => ot -> Ability ot -> Effect 'Continuous
 gain = Gain coAny
 
-lose :: CoAny k ot => ObjectN ot -> Ability ot -> Effect 'Continuous
+lose :: CoAny ot => ot -> Ability ot -> Effect 'Continuous
 lose = Lose coAny

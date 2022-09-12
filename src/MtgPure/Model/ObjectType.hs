@@ -17,6 +17,18 @@
 module MtgPure.Model.ObjectType
   ( ObjectType (..),
     OT,
+    OT1,
+    OT2,
+    OT3,
+    OT4,
+    OT5,
+    OT6,
+    OT7,
+    OT8,
+    OT9,
+    OT10,
+    OT11,
+    OT12,
     ObjectType1,
     ObjectType2,
     ObjectType3,
@@ -58,6 +70,30 @@ data ObjectType
   deriving (Bounded, Enum, Eq, Ord, Show, Typeable)
 
 type OT = '()
+
+type OT1 a = '(OT, a)
+
+type OT2 a b = '(OT, a, b)
+
+type OT3 a b c = '(OT, a, b, c)
+
+type OT4 a b c d = '(OT, a, b, c, d)
+
+type OT5 a b c d e = '(OT, a, b, c, d, e)
+
+type OT6 a b c d e f = '(OT, a, b, c, d, e, f)
+
+type OT7 a b c d e f g = '(OT, a, b, c, d, e, f, g)
+
+type OT8 a b c d e f g h = '(OT, a, b, c, d, e, f, g, h)
+
+type OT9 a b c d e f g h i = '(OT, a, b, c, d, e, f, g, h, i)
+
+type OT10 a b c d e f g h i j = '(OT, a, b, c, d, e, f, g, h, i, j)
+
+type OT11 a b c d e f g h i j k = '(OT, a, b, c, d, e, f, g, h, i, j, k)
+
+type OT12 a b c d e f g h i j k l = '(OT, a, b, c, d, e, f, g, h, i, j, k, l)
 
 type ObjectType1 = ((), ObjectType)
 
