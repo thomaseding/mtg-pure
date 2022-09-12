@@ -30,8 +30,7 @@ import Data.Inst
   )
 import Data.Proxy (Proxy (Proxy))
 import Data.Typeable (typeRep)
-import MtgPure.Model.IsObjectType (IsObjectType)
-import MtgPure.Model.Object (Object)
+import MtgPure.Model.IsObjectType (IsObjectType (singObjectType))
 import MtgPure.Model.ObjectN
   ( OCreaturePlaneswalker,
     OCreaturePlayer,
@@ -40,14 +39,21 @@ import MtgPure.Model.ObjectN
     OPlayerPlaneswalker,
     ObjectN (..),
   )
+import MtgPure.Model.ObjectType (ObjectType (..))
 
 class PrettyObjectName a where
   prettyObjectName :: Proxy a -> String
 
-instance IsObjectType a => PrettyObjectName (Object a) where
-  prettyObjectName = ('O' :) . drop prefix . show . typeRep
-    where
-      prefix = length "Object 'OT"
+instance IsObjectType a => PrettyObjectName (ObjectN a) where
+  prettyObjectName _ = case singObjectType (Proxy @a) of
+    OTArtifact -> "OArtifact"
+    OTCreature -> "OCreature"
+    OTEnchantment -> "OEnchantment"
+    OTInstant -> "OInstant"
+    OTLand -> "OLand"
+    OTPlaneswalker -> "OPlaneswalker"
+    OTPlayer -> "OPlayer"
+    OTSorcery -> "OSorcery"
 
 instance Inst2 IsObjectType a b => PrettyObjectName (ObjectN '(a, b)) where
   prettyObjectName proxy =

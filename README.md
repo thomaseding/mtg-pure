@@ -4,14 +4,15 @@ Purely functional Haskell MTG engine and encoding library
 Haskell language options:
 - Safe
 - NoIncoherentInstances
+- NoOverlappingInstances (todo)
 - NoTemplateHaskell
 - NoUndecidableInstances 
 
 Model goals:
 - Pure data modelling of cards as a type-safe DSL.
 - Card model is a deep embedding.
-- Card model is algebraic.
-- Cards that type-check are valid cards. (Barring a few exceptions such as bottom(⊥) appearing in card definitions.)
+- Card model is algebraic and recursive.
+- Cards type-check if and only if they are valid cards. (Barring a few exceptions such as bottom(⊥) appearing in card definitions.)
 - Card model is expressive enough to replicate its souce code through introspection.
 
 Engine goals:

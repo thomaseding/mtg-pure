@@ -29,10 +29,17 @@ import MtgPure.Model.IsObjectType (IsObjectType)
 import MtgPure.Model.Loyalty (Loyalty)
 import MtgPure.Model.ManaCost (ManaCost)
 import MtgPure.Model.ManaPool (ManaPool)
-import MtgPure.Model.Object (OInstant, OPlaneswalker, OPlayer, OSorcery, Object)
-import MtgPure.Model.ObjectN (OAny, OCreaturePlayerPlaneswalker, OPermanent, ObjectN)
+import MtgPure.Model.ObjectN
+  ( OAny,
+    OCreaturePlayerPlaneswalker,
+    OPermanent,
+    OPlaneswalker,
+    OPlayer,
+    ObjectN,
+  )
 import MtgPure.Model.ObjectType
   ( OTArtifact,
+    OTArtifactCreature,
     OTCard,
     OTCreature,
     OTEnchantment,
@@ -41,109 +48,24 @@ import MtgPure.Model.ObjectType
     OTPlaneswalker,
     OTPlayer,
     OTSorcery,
-    ObjectType,
   )
 import MtgPure.Model.Permanent (Permanent)
-import MtgPure.Model.Phase (Phase)
 import MtgPure.Model.Power (Power)
 import MtgPure.Model.Rarity (Rarity)
 import MtgPure.Model.Selection (Selection)
-import MtgPure.Model.Step (Step)
+import MtgPure.Model.TimePoint (TimePoint)
 import MtgPure.Model.Toughness (Toughness)
 import MtgPure.Model.Variable (Variable)
 
-type ActivationCost a = Object a {-this-} -> OPlayer {-you-} -> Cost
-
-type SpellCost = OPlayer {-you-} -> Cost
-
-data Cost :: Type where
-  ManaCostCost :: ManaCost -> Cost
-  AndCosts :: [Cost] -> Cost
-  OrCosts :: [Cost] -> Cost
-  TapCost :: OPermanent -> Cost
-  LoyaltyCost :: OPlaneswalker -> Loyalty -> Cost
-  DiscardRandomCost :: OPlayer -> Int -> Cost
-  PayLife :: OPlayer -> Int -> Cost
-  SacrificeCost :: Permanent a -> OPlayer -> [Requirement a] -> Cost
-
-data Requirement :: forall a. a -> Type where
-  Impossible :: Requirement a
-  OfColors :: Colors -> Requirement a
-  Not :: Requirement a -> Requirement a
-  Is :: AnyObject a -> ObjectN a -> Requirement a
-  ControlledBy :: OPlayer -> Requirement a
-  OwnedBy :: OPlayer -> Requirement a
-  Tapped :: Permanent a -> Requirement a
-  NonBasic :: Requirement OTLand
-  PlayerPays :: Cost -> Requirement OTPlayer
-  HasBasicLandType :: Color -> Requirement OTLand
-
-data Condition :: Type where
-  Or :: [Condition] -> Condition
-  And :: [Condition] -> Condition
-  Satisfies :: AnyObject a -> ObjectN a -> [Requirement a] -> Condition
-  Unless :: Condition -> Condition
-
-data Effect :: EffectType -> Type where
-  DoNothing :: Effect e
-  AddMana :: ManaPool -> OPlayer -> Effect 'OneShot
-  DealDamage :: OAny -> OCreaturePlayerPlaneswalker -> Damage -> Effect 'OneShot
-  Sacrifice :: Permanent a -> OPlayer -> [Requirement a] -> Effect 'OneShot
-  Destroy :: Permanent a -> ObjectN a -> Effect 'OneShot
-  DrawCards :: OPlayer -> Int -> Effect 'OneShot
-  ChangeTo :: Permanent a -> OPermanent -> Card a -> Effect 'Continuous
-
-data Elect :: forall e a. e -> a -> Type where
-  Condition :: Condition -> Elect Condition a
-  ControllerOf :: OAny -> (OPlayer -> Elect e a) -> Elect e a
-  A :: Selection -> WithObject (Elect e) a -> Elect e a
-  All :: WithObject (Elect e) a -> Elect e a
-  Effect :: Effect e -> Elect e a
-
-data WithObject :: forall a x. x -> a -> Type where
-  O1 :: Inst1 IsObjectType b => [Requirement b] -> (Object b -> x a) -> WithObject x a
-  O2 :: Inst2 IsObjectType b c => [Requirement b] -> [Requirement c] -> (ObjectN '(b, c) -> x a) -> WithObject x a
-  O3 :: Inst3 IsObjectType b c d => [Requirement b] -> [Requirement c] -> [Requirement d] -> (ObjectN '(b, c, d) -> x a) -> WithObject x a
-  O4 :: Inst4 IsObjectType b c d e => [Requirement b] -> [Requirement c] -> [Requirement d] -> [Requirement e] -> (ObjectN '(b, c, d, e) -> x a) -> WithObject x a
-  O5 :: Inst5 IsObjectType b c d e f => [Requirement b] -> [Requirement c] -> [Requirement d] -> [Requirement e] -> [Requirement f] -> (ObjectN '(b, c, d, e, f) -> x a) -> WithObject x a
-
-data EventListener :: forall a. a -> Type where
-  SpellIsCast :: WithObject (Elect 'Continuous) a -> EventListener a
-
-data StaticAbility :: forall a. a -> Type where
-  ContinuousEffect :: (Object a {-this-} -> Elect 'Continuous a) -> StaticAbility a
-  Haste :: StaticAbility OTCreature
-  FirstStrike :: StaticAbility OTCreature
-  Suspend :: Int -> SpellCost -> StaticAbility a
-  As :: WithObject EventListener a -> StaticAbility a -- 603.6d: not a triggered ability
-
--- https://www.mtgsalvation.com/forums/magic-fundamentals/magic-rulings/magic-rulings-archives/611601-whenever-what-does-it-mean?comment=3
--- https://www.reddit.com/r/magicTCG/comments/asmecb/noob_question_difference_between_as_and_when/
-data TriggeredAbility :: forall a. a -> Type where
-  -- TODO: Needs StartOf EndOf enum argument
-  At :: Either Phase (Step p) -> [Object a {-this-} -> OPlayer {-active-} -> Elect Condition a] -> (Object a {-this-} -> Elect 'OneShot a) -> TriggeredAbility a
-  -- XXX: Are `When` and `Whenever` actually just the same mechanically? If so, consolidate?
-  When :: (Object a {-this-} -> EventListener a) -> TriggeredAbility a
-  Whenever :: (Object a {-this-} -> EventListener a) -> TriggeredAbility a
-
 data Ability :: forall a. a -> Type where
-  Activated :: ActivationCost a -> (Object a {-this-} -> Elect 'OneShot a) -> Ability a
+  Activated :: Elect Cost a -> Elect 'OneShot a -> Ability a
   Static :: StaticAbility a -> Ability a
   Triggered :: TriggeredAbility a -> Ability a
 
-data CardTypeDef :: ObjectType -> Type where
-  Variable :: (Variable -> CardTypeDef a) -> CardTypeDef a
-  ArtifactDef :: Colors -> SpellCost -> [Ability OTArtifact] -> CardTypeDef OTArtifact
-  CreatureDef :: Colors -> SpellCost -> [CreatureType] -> Power -> Toughness -> [Ability OTCreature] -> CardTypeDef OTCreature
-  EnchantmentDef :: Colors -> SpellCost -> [Ability OTEnchantment] -> CardTypeDef OTEnchantment
-  InstantDef :: Colors -> SpellCost -> [Ability OTInstant] -> (OInstant -> Elect 'OneShot OTInstant) -> CardTypeDef OTInstant
-  LandDef :: [Ability OTLand] -> CardTypeDef OTLand
-  PlaneswalkerDef :: Colors -> SpellCost -> Loyalty -> [Ability OTPlaneswalker] -> CardTypeDef OTPlaneswalker
-  SorceryDef :: Colors -> SpellCost -> [Ability OTSorcery] -> (OSorcery -> Elect 'OneShot OTSorcery) -> CardTypeDef OTSorcery
-
 data Card :: forall a. a -> Type where
-  Card :: CardName -> CardTypeDef a -> Card a
   ArtifactCard :: Card OTArtifact -> Card OTCard
+  Card1 :: IsObjectType a => CardName -> (ObjectN a {-this-} -> CardTypeDef a) -> Card a
+  Card2 :: Inst2 IsObjectType a b => CardName -> (ObjectN '(a, b {-this-}) -> CardTypeDef '(a, b)) -> Card '(a, b)
   CreatureCard :: Card OTCreature -> Card OTCard
   EnchantmentCard :: Card OTEnchantment -> Card OTCard
   InstantCard :: Card OTInstant -> Card OTCard
@@ -151,14 +73,97 @@ data Card :: forall a. a -> Type where
   PlaneswalkerCard :: Card OTPlaneswalker -> Card OTCard
   SorceryCard :: Card OTSorcery -> Card OTCard
 
-data Token :: forall a. a -> Type where
-  Token :: Card a -> Token a
+-- TODO: Add encoding for compositing distinct permanent card types. `this` still needs to work
+-- Can composite: Artifact/Creature/Enchantment only? Lands dont have costs, and planeswalkers are special.
+data CardTypeDef :: forall a. a -> Type where
+  ArtifactCreatureDef :: Colors -> Elect Cost OTArtifactCreature -> [CreatureType] -> Power -> Toughness -> [Ability OTArtifactCreature] -> CardTypeDef OTArtifactCreature
+  ArtifactDef :: Colors -> Elect Cost OTArtifact -> [Ability OTArtifact] -> CardTypeDef OTArtifact
+  CreatureDef :: Colors -> Elect Cost OTCreature -> [CreatureType] -> Power -> Toughness -> [Ability OTCreature] -> CardTypeDef OTCreature
+  EnchantmentDef :: Colors -> Elect Cost OTEnchantment -> [Ability OTEnchantment] -> CardTypeDef OTEnchantment
+  InstantDef :: Colors -> Elect Cost OTInstant -> [Ability OTInstant] -> Elect 'OneShot OTInstant -> CardTypeDef OTInstant
+  LandDef :: [Ability OTLand] -> CardTypeDef OTLand
+  PlaneswalkerDef :: Colors -> Elect Cost OTPlaneswalker -> Loyalty -> [Ability OTPlaneswalker] -> CardTypeDef OTPlaneswalker
+  SorceryDef :: Colors -> Elect Cost OTSorcery -> [Ability OTSorcery] -> Elect 'OneShot OTSorcery -> CardTypeDef OTSorcery
+  Variable :: (Variable -> CardTypeDef a) -> CardTypeDef a
+
+data Condition :: Type where
+  And :: [Condition] -> Condition
+  Or :: [Condition] -> Condition
+  Satisfies :: AnyObject a -> ObjectN a -> [Requirement a] -> Condition
+  Unless :: Condition -> Condition
+
+data Cost :: Type where
+  AndCosts :: [Cost] -> Cost
+  DiscardRandomCost :: OPlayer -> Int -> Cost
+  LoyaltyCost :: OPlaneswalker -> Loyalty -> Cost
+  ManaCostCost :: ManaCost -> Cost
+  OrCosts :: [Cost] -> Cost
+  PayLife :: OPlayer -> Int -> Cost
+  SacrificeCost :: Permanent a -> OPlayer -> [Requirement a] -> Cost
+  TapCost :: OPermanent -> Cost
+
+data Effect :: EffectType -> Type where
+  AddMana :: ManaPool -> OPlayer -> Effect 'OneShot
+  ChangeTo :: Permanent a -> OPermanent -> Card a -> Effect 'Continuous
+  DealDamage :: OAny -> OCreaturePlayerPlaneswalker -> Damage -> Effect 'OneShot
+  Destroy :: Permanent a -> ObjectN a -> Effect 'OneShot
+  DoNothing :: Effect e
+  DrawCards :: OPlayer -> Int -> Effect 'OneShot
+  Sacrifice :: Permanent a -> OPlayer -> [Requirement a] -> Effect 'OneShot
+
+data Elect :: forall e a. e -> a -> Type where
+  A :: Selection -> WithObject (Elect e) a -> Elect e a
+  ActivePlayer :: (OPlayer -> Elect e a) -> Elect e a
+  All :: WithObject (Elect e) a -> Elect e a
+  Condition :: Condition -> Elect Condition a
+  ControllerOf :: OAny -> (OPlayer -> Elect e a) -> Elect e a
+  Cost :: Cost -> Elect Cost a
+  Effect :: Effect e -> Elect e a
+
+data EventListener :: forall a. a -> Type where
+  Conditional :: Elect Condition a -> EventListener a -> EventListener a
+  TimePoint :: TimePoint p -> Elect 'OneShot a -> EventListener a
+  SpellIsCast :: WithObject (Elect 'Continuous) a -> EventListener a
+
+data Requirement :: forall a. a -> Type where
+  ControlledBy :: OPlayer -> Requirement a
+  HasBasicLandType :: Color -> Requirement OTLand
+  Impossible :: Requirement a
+  Is :: AnyObject a -> ObjectN a -> Requirement a
+  NonBasic :: Requirement OTLand
+  Not :: Requirement a -> Requirement a
+  OfColors :: Colors -> Requirement a
+  OwnedBy :: OPlayer -> Requirement a
+  PlayerPays :: Cost -> Requirement OTPlayer
+  Tapped :: Permanent a -> Requirement a
 
 data SetCard :: forall a. a -> Type where
   SetCard :: CardSet -> Rarity -> Card a -> SetCard a
 
 data SetToken :: forall a. a -> Type where
   SetToken :: CardSet -> Rarity -> Token a -> SetToken a
+
+data StaticAbility :: forall a. a -> Type where
+  As :: WithObject EventListener a -> StaticAbility a -- 603.6d: not a triggered ability
+  ContinuousEffect :: Elect 'Continuous a -> StaticAbility a
+  FirstStrike :: StaticAbility OTCreature
+  Haste :: StaticAbility OTCreature
+  Suspend :: Int -> Elect Cost a -> StaticAbility a
+
+data Token :: forall a. a -> Type where
+  Token :: Card a -> Token a
+
+-- https://www.mtgsalvation.com/forums/magic-fundamentals/magic-rulings/magic-rulings-archives/611601-whenever-what-does-it-mean?comment=3
+-- https://www.reddit.com/r/magicTCG/comments/asmecb/noob_question_difference_between_as_and_when/
+data TriggeredAbility :: forall a. a -> Type where
+  When :: EventListener a -> TriggeredAbility a
+
+data WithObject :: forall a x. x -> a -> Type where
+  O1 :: Inst1 IsObjectType b => [Requirement b] -> (ObjectN b -> x a) -> WithObject x a
+  O2 :: Inst2 IsObjectType b c => [Requirement b] -> [Requirement c] -> (ObjectN '(b, c) -> x a) -> WithObject x a
+  O3 :: Inst3 IsObjectType b c d => [Requirement b] -> [Requirement c] -> [Requirement d] -> (ObjectN '(b, c, d) -> x a) -> WithObject x a
+  O4 :: Inst4 IsObjectType b c d e => [Requirement b] -> [Requirement c] -> [Requirement d] -> [Requirement e] -> (ObjectN '(b, c, d, e) -> x a) -> WithObject x a
+  O5 :: Inst5 IsObjectType b c d e f => [Requirement b] -> [Requirement c] -> [Requirement d] -> [Requirement e] -> [Requirement f] -> (ObjectN '(b, c, d, e, f) -> x a) -> WithObject x a
 
 fromSetCard :: SetCard a -> Card a
 fromSetCard (SetCard _ _ card) = card

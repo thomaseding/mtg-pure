@@ -164,11 +164,11 @@ allTokens =
 mkBasicLand :: CardName -> ManaSymbol a -> SetCard OTLand
 mkBasicLand name sym =
   SetCard OathOfTheGatewatch BasicLand $
-    Card name $
+    Card1 name $ \this ->
       LandDef
         [ Activated
-            (\this _you -> TapCost $ asPermanent this)
-            (\this -> controllerOf this $ \you -> Effect $ AddMana mana you)
+            (Cost $ TapCost $ asPermanent this)
+            $ controllerOf this $ \you -> Effect $ AddMana mana you
         ]
   where
     mana = toManaPool sym
@@ -195,24 +195,24 @@ wastes = mkBasicLand "Wastes" C
 
 acceptableLosses :: SetCard OTSorcery
 acceptableLosses = SetCard Odyssey Common $
-  Card "Acceptable Losses" $
-    SorceryDef (toColors R) cost [] $
-      \this -> controllerOf this $
-        \you -> A (Target you) $
-          O1 [] $
-            \(target :: OCreature) -> Effect $ dealDamage this target 5
-  where
-    cost you =
-      AndCosts
-        [ ManaCostCost $ toManaCost (3, R),
-          DiscardRandomCost you 1
-        ]
+  Card1 "Acceptable Losses" $ \this ->
+    let cost = controllerOf this $ \you ->
+          Cost $
+            AndCosts
+              [ ManaCostCost $ toManaCost (3, R),
+                DiscardRandomCost you 1
+              ]
+     in SorceryDef (toColors R) cost [] $
+          controllerOf this $
+            \you -> A (Target you) $
+              O1 [] $
+                \(target :: OCreature) -> Effect $ dealDamage this target 5
 
 ancestralVision :: SetCard OTSorcery
 ancestralVision = SetCard TimeSpiral Rare $
-  Card "Ancestral Vision" $
+  Card1 "Ancestral Vision" $ \this ->
     SorceryDef (toColors U) cost [Static $ Suspend 4 $ spellCost U] $
-      \this -> controllerOf this $
+      controllerOf this $
         \you -> A (Target you) $
           O1 [] $
             \target -> Effect $ DrawCards target 3
@@ -221,11 +221,11 @@ ancestralVision = SetCard TimeSpiral Rare $
 
 backlash :: SetCard OTInstant
 backlash = SetCard Invasion Uncommon $
-  Card "Backlash" $
+  Card1 "Backlash" $ \this ->
     InstantDef (toColors (B, R)) cost [] $
-      \this -> controllerOf this $
+      controllerOf this $
         \you -> A (Target you) $
-          O1 [Not $ Tapped Creature] $
+          O1 [Not $ Tapped PermanentCreature] $
             \target -> controllerOf target $
               \targetController -> Effect $ dealDamage target targetController $ DamageFromPower target
   where
@@ -233,11 +233,11 @@ backlash = SetCard Invasion Uncommon $
 
 blaze :: SetCard OTSorcery
 blaze = SetCard Portal Uncommon $
-  Card "Blaze" $
+  Card1 "Blaze" $ \this ->
     Variable $ \x ->
       let cost = spellCost (VariableGenericMana x, R)
        in SorceryDef (toColors R) cost [] $
-            \this -> controllerOf this $
+            controllerOf this $
               \you -> A (Target you) $
                 O3 [] [] [] $
                   \(target :: OCreaturePlayerPlaneswalker) -> Effect $ dealDamage this target x
@@ -245,69 +245,71 @@ blaze = SetCard Portal Uncommon $
 bloodMoon :: SetCard OTEnchantment
 bloodMoon =
   SetCard TheDark Rare $
-    Card "Blood Moon" $
+    Card1 "Blood Moon" $ \_this ->
       EnchantmentDef
         (toColors R)
         cost
         [ Static $
             ContinuousEffect $
-              \_this -> All $ O1 [NonBasic] $ \land -> Effect $ ChangeTo Land (asPermanent land) $ fromSetCard mountain
+              All $ O1 [NonBasic] $ \land -> Effect $ changeTo land $ fromSetCard mountain
         ]
   where
     cost = spellCost (2, R)
 
 cleanse :: SetCard OTSorcery
 cleanse = SetCard Legends Rare $
-  Card "Cleanse" $
+  Card1 "Cleanse" $ \_this ->
     SorceryDef (toColors W) cost [] $
-      \_this -> All $
+      All $
         O1 [OfColors $ toColors B] $
-          \creatures -> Effect $ Destroy Creature $ O creatures
+          \(creatures :: OCreature) -> Effect $ destroy creatures
   where
     cost = spellCost (2, W, W)
 
--- TODO
 conversion :: SetCard OTEnchantment
 conversion =
   SetCard Alpha Uncommon $
-    Card "Conversion" $
+    Card1 "Conversion" $ \this ->
       EnchantmentDef
         (toColors W)
         cost
         [ Triggered $
-            At
-              (Right UpkeepStep) -- TODO: Beginning of
-              [ \this active -> controllerOf this $ \you ->
-                  Condition $
-                    And
-                      [ Satisfies AnyPlayer (O you) [Is AnyPlayer $ O active],
-                        Unless $ Satisfies AnyPlayer (O you) [PlayerPays $ ManaCostCost $ toManaCost (W, W)]
-                      ]
-              ]
-              $ \this -> controllerOf this $
-                \you -> Effect $ Sacrifice Enchantment you [Is (AnyPermanent Enchantment) $ O this],
+            When $
+              Conditional
+                ( ActivePlayer $ \active -> controllerOf this $ \you ->
+                    Condition $
+                      And
+                        [ satisfies you [is active],
+                          Unless $ satisfies you [PlayerPays $ ManaCostCost $ toManaCost (W, W)]
+                        ]
+                )
+                $ TimePoint (StepBegin UpkeepStep) $
+                  controllerOf this $
+                    \you -> Effect $ sacrifice you [is this],
           Static $
             ContinuousEffect $
-              \_this -> All $ O1 [HasBasicLandType Red] $ \land -> Effect $ ChangeTo Land (asPermanent land) $ fromSetCard plains
+              All $
+                O1 [HasBasicLandType Red] $
+                  \land -> Effect $ changeTo land $ fromSetCard plains
         ]
   where
     cost = spellCost (2, W, W)
 
 damnation :: SetCard OTSorcery
 damnation = SetCard PlanarChaos Rare $
-  Card "Damnation" $
+  Card1 "Damnation" $ \_this ->
     SorceryDef (toColors B) cost [] $
-      \_this -> All $
+      All $
         O1 [] $
-          \creatures -> Effect $ Destroy Creature $ O creatures
+          \(creatures :: OCreature) -> Effect $ destroy creatures
   where
     cost = spellCost (2, B, B)
 
 lavaAxe :: SetCard OTSorcery
 lavaAxe = SetCard Portal Common $
-  Card "Lava Axe" $
+  Card1 "Lava Axe" $ \this ->
     SorceryDef (toColors R) cost [] $
-      \this -> controllerOf this $
+      controllerOf this $
         \you -> A (Target you) $
           O2 [] [] $
             \(target :: OPlayerPlaneswalker) -> Effect $ dealDamage this target 5
@@ -317,7 +319,7 @@ lavaAxe = SetCard Portal Common $
 ragingGoblin :: SetCard OTCreature
 ragingGoblin =
   SetCard Portal Common $
-    Card "Raging Goblin" $
+    Card1 "Raging Goblin" $ \_this ->
       CreatureDef
         (toColors R)
         cost
@@ -330,9 +332,9 @@ ragingGoblin =
 
 shock :: SetCard OTInstant
 shock = SetCard TenthEdition Common $
-  Card "Shock" $
+  Card1 "Shock" $ \this ->
     InstantDef (toColors R) cost [] $
-      \this -> controllerOf this $
+      controllerOf this $
         \you -> A (Target you) $
           O3 [] [] [] $
             \(target :: OCreaturePlayerPlaneswalker) -> Effect $ dealDamage this target 2
@@ -341,12 +343,12 @@ shock = SetCard TenthEdition Common $
 
 sinkhole :: SetCard OTSorcery
 sinkhole = SetCard Alpha Common $
-  Card "Sinkhole" $
+  Card1 "Sinkhole" $ \this ->
     SorceryDef (toColors B) cost [] $
-      \this -> controllerOf this $
+      controllerOf this $
         \you -> A (Target you) $
           O1 [] $
-            \target -> Effect $ Destroy Land $ O target
+            \(target :: OLand) -> Effect $ destroy target
   where
     cost = spellCost (B, B)
 
@@ -354,7 +356,7 @@ soldierToken :: SetToken OTCreature
 soldierToken =
   SetToken TenthEdition Common $
     Token $
-      Card "Soldier Token" $
+      Card1 "Soldier Token" $ \_this ->
         CreatureDef
           (toColors W)
           cost
@@ -368,7 +370,7 @@ soldierToken =
 stoneThrowingDevils :: SetCard OTCreature
 stoneThrowingDevils =
   SetCard ArabianNights Common $
-    Card "Stone-Throwing Devils" $
+    Card1 "Stone-Throwing Devils" $ \_this ->
       CreatureDef
         (toColors B)
         cost
@@ -382,21 +384,21 @@ stoneThrowingDevils =
 
 vindicate :: SetCard OTSorcery
 vindicate = SetCard Apocalypse Rare $
-  Card "Vindicate" $
+  Card1 "Vindicate" $ \this ->
     SorceryDef (toColors (W, B)) cost [] $
-      \this -> controllerOf this $
+      controllerOf this $
         \you -> A (Target you) $
           O5 [] [] [] [] [] $
-            \(target :: OPermanent) -> Effect $ Destroy Permanent target
+            \(target :: OPermanent) -> Effect $ destroy target
   where
     cost = spellCost (1, W, B)
 
 wrathOfGod :: SetCard OTSorcery
 wrathOfGod = SetCard Alpha Rare $
-  Card "Wrath of God" $
+  Card1 "Wrath of God" $ \_this ->
     SorceryDef (toColors W) cost [] $
-      \_this -> All $
+      All $
         O1 [] $
-          \creatures -> Effect $ Destroy Creature $ O creatures
+          \(creatures :: OCreature) -> Effect $ destroy creatures
   where
     cost = spellCost (2, W, W)

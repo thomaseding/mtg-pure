@@ -3,7 +3,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE Safe #-}
@@ -15,90 +14,64 @@
 {-# HLINT ignore "Use const" #-}
 
 module MtgPure.ModelCombinators
-  ( AsPermanent (..),
-    AsAny (..),
-    AsCreaturePlayerPlaneswalker (..),
+  ( AsAny,
+    asAny,
+    AsPermanent,
+    asPermanent,
+    AsCreaturePlayerPlaneswalker,
+    asCreaturePlayerPlaneswalker,
     AsDamage (..),
+    is,
+    satisfies,
     spellCost,
     noCost,
     dealDamage,
     controllerOf,
+    changeTo,
+    sacrifice,
+    destroy,
   )
 where
 
+import Data.Inst (Inst2, Inst3, Inst4)
 import MtgPure.Model
 
-class AsAny a where
-  asAny :: a -> OAny
+type AsAny a =
+  ToObject8
+    a
+    OTArtifact
+    OTCreature
+    OTEnchantment
+    OTInstant
+    OTLand
+    OTPlaneswalker
+    OTPlayer
+    OTSorcery
 
-instance AsAny OAny where
-  asAny = id
+asAny :: AsAny a => a -> OAny
+asAny = toObject8
 
-instance AsAny OArtifact where
-  asAny = O8a
+type AsPermanent a =
+  ToObject5
+    a
+    OTArtifact
+    OTCreature
+    OTEnchantment
+    OTLand
+    OTPlaneswalker
 
-instance AsAny OCreature where
-  asAny = O8b
+asPermanent :: AsPermanent a => a -> OPermanent
+asPermanent = toObject5
 
-instance AsAny OEnchantment where
-  asAny = O8c
+type AsCreaturePlayerPlaneswalker a =
+  ToObject3
+    a
+    OTCreature
+    OTPlaneswalker
+    OTPlayer
 
-instance AsAny OInstant where
-  asAny = O8d
-
-instance AsAny OLand where
-  asAny = O8e
-
-instance AsAny OPlaneswalker where
-  asAny = O8f
-
-instance AsAny OPlayer where
-  asAny = O8g
-
-instance AsAny OSorcery where
-  asAny = O8h
-
-class AsPermanent a where
-  asPermanent :: a -> OPermanent
-
-instance AsPermanent OArtifact where
-  asPermanent = O5a
-
-instance AsPermanent OCreature where
-  asPermanent = O5b
-
-instance AsPermanent OEnchantment where
-  asPermanent = O5c
-
-instance AsPermanent OLand where
-  asPermanent = O5d
-
-instance AsPermanent OPlaneswalker where
-  asPermanent = O5e
-
-class AsCreaturePlayerPlaneswalker a where
-  asCreaturePlayerPlaneswalker :: a -> OCreaturePlayerPlaneswalker
-
-instance AsCreaturePlayerPlaneswalker OCreaturePlayerPlaneswalker where
-  asCreaturePlayerPlaneswalker = id
-
-instance AsCreaturePlayerPlaneswalker OCreature where
-  asCreaturePlayerPlaneswalker = O3a
-
-instance AsCreaturePlayerPlaneswalker OPlaneswalker where
-  asCreaturePlayerPlaneswalker = O3b
-
-instance AsCreaturePlayerPlaneswalker OPlayer where
-  asCreaturePlayerPlaneswalker = O3c
-
-instance AsCreaturePlayerPlaneswalker OCreaturePlayer where
-  asCreaturePlayerPlaneswalker = toObject3
-
-instance AsCreaturePlayerPlaneswalker OCreaturePlaneswalker where
-  asCreaturePlayerPlaneswalker = toObject3
-
-instance AsCreaturePlayerPlaneswalker OPlayerPlaneswalker where
-  asCreaturePlayerPlaneswalker = toObject3
+asCreaturePlayerPlaneswalker :: AsCreaturePlayerPlaneswalker a => a -> OCreaturePlayerPlaneswalker
+asCreaturePlayerPlaneswalker = toObject3
 
 class AsDamage a where
   asDamage :: a -> Damage
@@ -115,11 +88,11 @@ instance AsDamage Damage where
 instance AsDamage Variable where
   asDamage = VariableDamage
 
-spellCost :: ToManaCost a => a -> (OPlayer -> Cost)
-spellCost mana _you = ManaCostCost $ toManaCost mana
+spellCost :: ToManaCost a => a -> Elect Cost x
+spellCost = Cost . ManaCostCost . toManaCost
 
-noCost :: OPlayer -> Cost
-noCost _you = OrCosts []
+noCost :: Elect Cost a
+noCost = Cost $ OrCosts []
 
 dealDamage ::
   (AsAny source, AsCreaturePlayerPlaneswalker target, AsDamage damage) =>
@@ -131,3 +104,87 @@ dealDamage source target = DealDamage (asAny source) (asCreaturePlayerPlaneswalk
 
 controllerOf :: AsAny o => o -> (OPlayer -> Elect e a) -> Elect e a
 controllerOf = ControllerOf . asAny
+
+sacrifice :: CoPermanent ot => OPlayer -> [Requirement ot] -> Effect 'OneShot
+sacrifice = Sacrifice coPermanent
+
+changeTo :: (AsPermanent o, CoPermanent ot) => o -> Card ot -> Effect 'Continuous
+changeTo = ChangeTo coPermanent . asPermanent
+
+destroy :: CoPermanent ot => ObjectN ot -> Effect 'OneShot
+destroy = Destroy coPermanent
+
+class CoPermanent ot where
+  coPermanent :: Permanent ot
+
+instance CoPermanent OTArtifact where
+  coPermanent = PermanentArtifact
+
+instance CoPermanent OTCreature where
+  coPermanent = PermanentCreature
+
+instance CoPermanent OTEnchantment where
+  coPermanent = PermanentEnchantment
+
+instance CoPermanent OTLand where
+  coPermanent = PermanentLand
+
+instance CoPermanent OTPlaneswalker where
+  coPermanent = PermanentPlaneswalker
+
+instance CoPermanent OTPermanent where
+  coPermanent = Permanent
+
+instance Inst2 IsPermanentType a b => CoPermanent '(a, b) where
+  coPermanent = Permanent2 :: Permanent '(a, b)
+
+instance Inst3 IsPermanentType a b c => CoPermanent '(a, b, c) where
+  coPermanent = Permanent3 :: Permanent '(a, b, c)
+
+instance Inst4 IsPermanentType a b c d => CoPermanent '(a, b, c, d) where
+  coPermanent = Permanent4 :: Permanent '(a, b, c, d)
+
+class CoAny ot where
+  coAny :: AnyObject ot
+
+instance CoAny OTInstant where
+  coAny = AnyInstant
+
+instance CoAny OTSorcery where
+  coAny = AnySorcery
+
+instance CoAny OTPlayer where
+  coAny = AnyPlayer
+
+instance CoAny OTArtifact where
+  coAny = AnyPermanent coPermanent
+
+instance CoAny OTCreature where
+  coAny = AnyPermanent coPermanent
+
+instance CoAny OTEnchantment where
+  coAny = AnyPermanent coPermanent
+
+instance CoAny OTLand where
+  coAny = AnyPermanent coPermanent
+
+instance CoAny OTPlaneswalker where
+  coAny = AnyPermanent coPermanent
+
+instance CoAny OTPermanent where
+  coAny = AnyPermanent coPermanent
+
+instance Inst2 IsPermanentType a b => CoAny '(a, b) where
+  coAny = AnyPermanent coPermanent
+
+instance Inst3 IsPermanentType a b c => CoAny '(a, b, c) where
+  coAny = AnyPermanent coPermanent
+
+instance Inst4 IsPermanentType a b c d => CoAny '(a, b, c, d) where
+  coAny = AnyPermanent coPermanent
+
+is :: CoAny ot => ObjectN ot -> Requirement ot
+is = Is coAny
+
+satisfies :: CoAny ot => ObjectN ot -> [Requirement ot] -> Condition
+satisfies = Satisfies coAny

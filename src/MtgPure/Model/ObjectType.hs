@@ -24,6 +24,7 @@ module MtgPure.Model.ObjectType
     OTPlaneswalker,
     OTPlayer,
     OTSorcery,
+    OTArtifactCreature,
     OTCreaturePlayer,
     OTCreaturePlaneswalker,
     OTPlayerPlaneswalker,
@@ -82,6 +83,11 @@ type OTPlaneswalker = 'OTPlaneswalker
 type OTPlayer = 'OTPlayer
 
 type OTSorcery = 'OTSorcery
+
+type OTArtifactCreature =
+  '( OTArtifact,
+     OTCreature
+   )
 
 type OTCreaturePlayer =
   '( OTCreature,

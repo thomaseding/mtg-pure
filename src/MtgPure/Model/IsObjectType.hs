@@ -22,15 +22,7 @@ where
 
 import Data.Typeable (Proxy, Typeable)
 import MtgPure.Model.Object
-  ( OArtifact,
-    OCreature,
-    OEnchantment,
-    OInstant,
-    OLand,
-    OPlaneswalker,
-    OPlayer,
-    OSorcery,
-    Object (Object),
+  ( Object (Object),
   )
 import MtgPure.Model.ObjectId (ObjectId)
 import MtgPure.Model.ObjectType
@@ -47,14 +39,14 @@ import MtgPure.Model.ObjectType
   )
 
 data ObjectVisitor a = ObjectVisitor
-  { visitOArtifact :: OArtifact -> a,
-    visitOCreature :: OCreature -> a,
-    visitOEnchantment :: OEnchantment -> a,
-    visitOInstant :: OInstant -> a,
-    visitOLand :: OLand -> a,
-    visitOPlaneswalker :: OPlaneswalker -> a,
-    visitOPlayer :: OPlayer -> a,
-    visitOSorcery :: OSorcery -> a
+  { visitOArtifact :: Object 'OTArtifact -> a,
+    visitOCreature :: Object 'OTCreature -> a,
+    visitOEnchantment :: Object 'OTEnchantment -> a,
+    visitOInstant :: Object 'OTInstant -> a,
+    visitOLand :: Object 'OTLand -> a,
+    visitOPlaneswalker :: Object 'OTPlaneswalker -> a,
+    visitOPlayer :: Object 'OTPlayer -> a,
+    visitOSorcery :: Object 'OTSorcery -> a
   }
 
 class Typeable a => IsObjectType (a :: ObjectType) where

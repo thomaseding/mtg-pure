@@ -20,7 +20,7 @@ where
 
 import GHC.TypeLits (Nat)
 
-type family At (i :: Nat) (a :: k)
+type family At (i :: Nat) (a :: k) :: k2
 
 type instance At 0 (a, b) = a
 

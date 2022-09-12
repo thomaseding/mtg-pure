@@ -36,6 +36,7 @@ module MtgPure.Model
     module MtgPure.Model.Recursive,
     module MtgPure.Model.Selection,
     module MtgPure.Model.Step,
+    module MtgPure.Model.TimePoint,
     module MtgPure.Model.ToMana,
     module MtgPure.Model.ToManaCost,
     module MtgPure.Model.ToManaPool,
@@ -86,6 +87,7 @@ import MtgPure.Model.Rarity
 import MtgPure.Model.Recursive
 import MtgPure.Model.Selection
 import MtgPure.Model.Step
+import MtgPure.Model.TimePoint
 import MtgPure.Model.ToMana
 import MtgPure.Model.ToManaCost
 import MtgPure.Model.ToManaPool

@@ -40,7 +40,6 @@ import Data.String (IsString (..))
 import Data.Typeable (TypeRep, Typeable, typeOf, typeRep)
 import MtgPure.Model
   ( Ability (..),
-    ActivationCost,
     AnyObject (..),
     Card (..),
     CardName (CardName),
@@ -68,23 +67,20 @@ import MtgPure.Model
     OCreaturePlayer,
     OCreaturePlayerPlaneswalker,
     OPermanent,
-    OPlayer,
     OPlayerPlaneswalker,
     OTPlayer,
     Object (..),
     ObjectId (ObjectId),
     ObjectN (..),
     Permanent (..),
-    Phase (..),
     Power,
     PrettyObjectName (..),
     Requirement (..),
     Selection (..),
     SetCard (SetCard),
     SetToken (SetToken),
-    SpellCost,
     StaticAbility (..),
-    Step (..),
+    TimePoint (..),
     Token (..),
     Toughness,
     TriggeredAbility (..),
@@ -207,6 +203,16 @@ showObjectNImpl objNRef prefix obj = do
       False -> yesParens $ pure $ pure prefix <> pure " " <> sObj
       True -> noParens $ pure sObj
 
+showObject1 :: IsObjectType a => ObjectN a -> EnvM ParenItems
+showObject1 objN = visitObjectN' visit objN
+  where
+    rep = typeOf objN
+    visit :: IsObjectType x => Object x -> EnvM ParenItems
+    visit =
+      showObjectNImpl rep $
+        if
+            | otherwise -> "O"
+
 showObject2 :: Inst2 IsObjectType a b => ObjectN '(a, b) -> EnvM ParenItems
 showObject2 objN = visitObjectN' visit objN
   where
@@ -305,9 +311,6 @@ showObjectDecl showName obj = yesParens $ do
   sType <- dropParens <$> showObjectType obj
   pure $ sName <> pure " :: " <> sType
 
-showObjectDecl1 :: IsObjectType a => Object a -> EnvM ParenItems
-showObjectDecl1 = showObjectDecl (noParens . showObject)
-
 showOCreaturePlayerPlaneswalker :: OCreaturePlayerPlaneswalker -> EnvM ParenItems
 showOCreaturePlayerPlaneswalker = showObject3
 
@@ -386,17 +389,38 @@ showItem used = \case
       False -> "_" ++ name
       True -> name
 
-showCardM :: Card a -> EnvM ParenItems
+showCardM :: forall x. Card x -> EnvM ParenItems
 showCardM = \case
-  Card (CardName name) def -> yesParens $ do
+  Card1 (CardName name) cont -> yesParens $ do
     depth <- State.gets cardDepth
     State.modify' $ \st -> st {cardDepth = subtract 1 <$> depth}
     let sName = pure (fromString $ show name)
     case depth of
       Just 0 -> pure $ pure "Card " <> sName <> pure " ..."
       _ -> do
-        sDef <- dollar <$> showCardTypeDef def
-        pure $ pure "Card " <> sName <> sDef
+        (this, snap) <- newObjectN @x O "this"
+        sThis <- parens <$> showObject1 this
+        let def = cont this
+        sDef <- dropParens <$> showCardTypeDef def
+        restoreObject snap
+        pure $ pure "Card " <> sName <> pure " $ \\" <> sThis <> pure " -> " <> sDef
+  card@Card2 {} ->
+    let go :: forall a b. Card '(a, b) -> EnvM ParenItems
+        go = \case
+          Card2 (CardName name) cont -> yesParens $ do
+            depth <- State.gets cardDepth
+            State.modify' $ \st -> st {cardDepth = subtract 1 <$> depth}
+            let sName = pure (fromString $ show name)
+            case depth of
+              Just 0 -> pure $ pure "Card2 " <> sName <> pure " ..."
+              _ -> do
+                (this, snap) <- newObjectN @a O2a "this"
+                sThis <- parens <$> showObject2 this
+                let def = cont this
+                sDef <- dropParens <$> showCardTypeDef def
+                restoreObject snap
+                pure $ pure "Card2 " <> sName <> pure " $ \\" <> sThis <> pure " -> " <> sDef
+     in go card
   ArtifactCard card -> yesParens $ do
     sCard <- dollar <$> showCardM card
     pure $ pure "Artifact" <> sCard
@@ -430,44 +454,43 @@ showCardTypeDef = \case
     pure $ pure "Variable $ \\" <> pure varName <> pure " -> " <> s
   ArtifactDef colors cost abilities -> yesParens $ do
     sColors <- parens <$> showColors colors
-    sCost <- parens <$> showSpellCost cost
-    sAbilities <- parens <$> showAbilities abilities
-    pure $ pure "ArtifactDef " <> sColors <> pure " " <> sCost <> pure " " <> sAbilities
-  CreatureDef colors cost subTypes power toughness abilities -> yesParens $ do
+    sCost <- parens <$> showElect cost
+    sAbilities <- dollar <$> showAbilities abilities
+    pure $ pure "ArtifactDef " <> sColors <> pure " " <> sCost <> sAbilities
+  CreatureDef colors cost creatureTypes power toughness abilities -> yesParens $ do
     sColors <- parens <$> showColors colors
-    sCost <- parens <$> showSpellCost cost
-    sSubTypes <- parens <$> showCreatureTypes subTypes
+    sCost <- parens <$> showElect cost
+    sCreatureTypes <- parens <$> showCreatureTypes creatureTypes
     sPower <- parens <$> showPower power
     sToughness <- parens <$> showToughness toughness
-    sAbilities <- parens <$> showAbilities abilities
+    sAbilities <- dollar <$> showAbilities abilities
     pure $
       pure "CreatureDef "
         <> sColors
         <> pure " "
         <> sCost
         <> pure " "
-        <> sSubTypes
+        <> sCreatureTypes
         <> pure " "
         <> sPower
         <> pure " "
         <> sToughness
-        <> pure " "
         <> sAbilities
   EnchantmentDef colors cost abilities -> yesParens $ do
     sColors <- parens <$> showColors colors
-    sCost <- parens <$> showSpellCost cost
+    sCost <- parens <$> showElect cost
     sAbilities <- parens <$> showAbilities abilities
     pure $ pure "EnchantmentDef " <> sColors <> pure " " <> sCost <> pure " " <> sAbilities
-  InstantDef colors cost abilities cont -> do
-    showOneShot "InstantDef " colors cost abilities cont
+  InstantDef colors cost abilities electOneShot -> do
+    showOneShot "InstantDef " colors cost abilities electOneShot
   LandDef abilities -> yesParens $ do
     sAbilities <- parens <$> showAbilities abilities
     pure $ pure "LandDef " <> sAbilities
   PlaneswalkerDef colors cost loyalty abilities -> yesParens $ do
     sColors <- parens <$> showColors colors
-    sCost <- parens <$> showSpellCost cost
+    sCost <- parens <$> showElect cost
     sLoyalty <- parens <$> showLoyalty loyalty
-    sAbilities <- parens <$> showAbilities abilities
+    sAbilities <- dollar <$> showAbilities abilities
     pure $
       pure "PlaneswalkerDef "
         <> sColors
@@ -475,35 +498,45 @@ showCardTypeDef = \case
         <> sCost
         <> pure " "
         <> sLoyalty
-        <> pure " "
         <> sAbilities
-  SorceryDef colors cost abilities cont -> do
-    showOneShot "SorceryDef " colors cost abilities cont
+  SorceryDef colors cost abilities electOneShot -> do
+    showOneShot "SorceryDef " colors cost abilities electOneShot
+  ArtifactCreatureDef colors cost creatureTypes power toughness abilities -> yesParens $ do
+    sColors <- parens <$> showColors colors
+    sCost <- parens <$> showElect cost
+    sCreatureTypes <- parens <$> showCreatureTypes creatureTypes
+    sPower <- parens <$> showPower power
+    sToughness <- parens <$> showToughness toughness
+    sAbilities <- dollar <$> showAbilities abilities
+    pure $
+      pure "ArtifactCreatureDef "
+        <> sColors
+        <> pure " "
+        <> sCost
+        <> pure " "
+        <> sCreatureTypes
+        <> pure " "
+        <> sPower
+        <> pure " "
+        <> sToughness
+        <> sAbilities
   where
     showOneShot ::
       forall a.
       IsObjectType a =>
       Item ->
       Colors ->
-      SpellCost ->
+      Elect Cost a ->
       [Ability a] ->
-      (Object a -> Elect 'OneShot a) ->
+      Elect 'OneShot a ->
       EnvM ParenItems
-    showOneShot def colors cost abilities cont = yesParens $ do
+    showOneShot def colors cost abilities oneShot = yesParens $ do
       sColors <- parens <$> showColors colors
-      sCost <- parens <$> showSpellCost cost
+      sCost <- parens <$> showElect cost
       sAbilities <- parens <$> showAbilities abilities
-      (this, snap) <- newObject @a "this"
-      thisName <- getObjectName this
-      let elect = cont this
-      sElect <- dropParens <$> showElect elect
-      restoreObject snap
+      sElect <- dollar <$> showElect oneShot
       pure $
-        pure def <> sColors <> pure " " <> sCost <> pure " " <> sAbilities
-          <> pure " $ \\"
-          <> pure thisName
-          <> pure " -> "
-          <> sElect
+        pure def <> sColors <> pure " " <> sCost <> pure " " <> sAbilities <> sElect
 
 showCreatureTypes :: [CreatureType] -> EnvM ParenItems
 showCreatureTypes = noParens . pure . pure . fromString . show
@@ -522,8 +555,12 @@ showColors = yesParens . pure . pure . fromString . show
 
 showSelection :: Selection -> EnvM ParenItems
 showSelection = \case
-  Choose player -> yesParens $ (pure "Choose " <>) <$> showObject player
-  Target player -> yesParens $ (pure "Target " <>) <$> showObject player
+  Choose player -> yesParens $ do
+    sPlayer <- dollar <$> showObject1 player
+    pure $ pure "Choose " <> sPlayer
+  Target player -> yesParens $ do
+    sPlayer <- dollar <$> showObject1 player
+    pure $ pure "Target " <> sPlayer
   Random -> noParens $ pure $ pure "Random"
 
 showListM :: (a -> EnvM ParenItems) -> [a] -> EnvM ParenItems
@@ -543,8 +580,12 @@ showRequirement = \case
     sAnyObj <- parens <$> showAnyObject anyObj
     sObjN <- dollar <$> showAnyObjectN anyObj objN
     pure $ pure "Is " <> sAnyObj <> pure " " <> sObjN
-  ControlledBy obj -> yesParens $ (pure "ControlledBy " <>) <$> showObject obj
-  OwnedBy obj -> yesParens $ (pure "OwnedBy " <>) <$> showObject obj
+  ControlledBy obj -> yesParens $ do
+    sObj <- dollar <$> showObject1 obj
+    pure $ pure "ControlledBy " <> sObj
+  OwnedBy obj -> yesParens $ do
+    sObj <- dollar <$> showObject1 obj
+    pure $ pure "OwnedBy " <> sObj
   Tapped perm -> yesParens $ pure $ pure $ fromString $ "Tapped " ++ show perm
   NonBasic -> noParens $ pure $ pure "NonBasic"
   PlayerPays cost -> yesParens $ do
@@ -553,42 +594,17 @@ showRequirement = \case
   HasBasicLandType color -> yesParens $ do
     pure $ pure $ fromString $ "HasBasicLandType " ++ show color
 
-showAbilities :: IsObjectType a => [Ability a] -> EnvM ParenItems
+showAbilities :: [Ability a] -> EnvM ParenItems
 showAbilities = showListM showAbility
 
-showAbility :: forall a. IsObjectType a => Ability a -> EnvM ParenItems
+showAbility :: Ability a -> EnvM ParenItems
 showAbility = \case
-  Activated cost cont ->
-    yesParens $
-      (pure "Activated " <>) <$> do
-        sCost <- parens <$> showActivationCost cost
-        (obj, snap) <- newObject @a "this"
-        name <- showObject obj
-        sElect <- dropParens <$> showElect (cont obj)
-        restoreObject snap
-        pure $ sCost <> pure " $ \\" <> name <> pure " -> " <> sElect
+  Activated cost oneShot -> yesParens $ do
+    sCost <- parens <$> showElect cost
+    sOneShot <- dollar <$> showElect oneShot
+    pure $ pure "Activated" <> sCost <> sOneShot
   Static ability -> yesParens $ (pure "Static" <>) . dollar <$> showStaticAbility ability
   Triggered ability -> yesParens $ (pure "Triggered" <>) . dollar <$> showTriggeredAbility ability
-
-showActivationCost :: forall a. IsObjectType a => ActivationCost a -> EnvM ParenItems
-showActivationCost cont = yesParens $ do
-  (obj, snap) <- newObject @a "this"
-  (controller, _) <- newObject @OTPlayer "you"
-  objName <- showObject obj
-  controllerName <- showObject controller
-  let cost = cont obj controller
-  sCost <- dropParens <$> showCost cost
-  restoreObject snap
-  pure $ pure "\\" <> objName <> pure " " <> controllerName <> pure " -> " <> sCost
-
-showSpellCost :: SpellCost -> EnvM ParenItems
-showSpellCost cont = yesParens $ do
-  (you, snap) <- newObject @OTPlayer "you"
-  youName <- showObject you
-  let cost = cont you
-  sCost <- dropParens <$> showCost cost
-  restoreObject snap
-  pure $ pure "\\" <> youName <> pure " -> " <> sCost
 
 showCost :: Cost -> EnvM ParenItems
 showCost = \case
@@ -602,21 +618,21 @@ showCost = \case
     sCosts <- parens <$> showListM showCost costs
     pure $ pure "OrCosts " <> sCosts
   TapCost obj -> yesParens $ (pure "TapCost" <>) . dollar <$> showOPermanent obj
-  LoyaltyCost walker loyalty -> yesParens $ do
-    sWalker <- showObject walker
+  LoyaltyCost planeswalker loyalty -> yesParens $ do
+    sPlaneswalker <- parens <$> showObject1 planeswalker
     sLoyalty <- dollar <$> showLoyalty loyalty
-    pure $ pure "LoyaltyCost " <> sWalker <> sLoyalty
+    pure $ pure "LoyaltyCost " <> sPlaneswalker <> sLoyalty
   DiscardRandomCost player amount -> yesParens $ do
-    sPlayer <- showObject player
+    sPlayer <- parens <$> showObject1 player
     let sAmount = pure $ fromString $ show amount
     pure $ pure "DiscardRandomCost " <> sPlayer <> pure " " <> sAmount
   PayLife player amount -> yesParens $ do
-    sPlayer <- showObject player
+    sPlayer <- parens <$> showObject1 player
     let sAmount = pure $ fromString $ show amount
     pure $ pure "PayLife " <> sPlayer <> sAmount
   SacrificeCost perm player reqs -> yesParens $ do
     sPerm <- parens <$> showPermanent perm
-    sPlayer <- showObject player
+    sPlayer <- parens <$> showObject1 player
     sReqs <- dollar <$> showRequirements reqs
     pure $ pure "SacrificeCost " <> sPerm <> sPlayer <> sReqs
 
@@ -810,9 +826,9 @@ showDamage :: Damage -> EnvM ParenItems
 showDamage =
   yesParens . \case
     Damage n -> pure $ pure $ fromString $ "Damage " ++ show n
-    DamageFromPower o -> do
-      name <- showObject o
-      pure $ pure "DamageFromPower " <> name
+    DamageFromPower obj -> do
+      sObj <- dollar <$> showObject1 obj
+      pure $ pure "DamageFromPower " <> sObj
     VariableDamage var -> do
       let varName = getVarName var
       pure $ DList.fromList [fromString "VariableDamage ", varName]
@@ -820,63 +836,13 @@ showDamage =
 showPermanent :: Permanent a -> EnvM ParenItems
 showPermanent = noParens . pure . pure . fromString . show
 
-showTriggeredAbility :: forall a. IsObjectType a => TriggeredAbility a -> EnvM ParenItems
+showTriggeredAbility :: TriggeredAbility a -> EnvM ParenItems
 showTriggeredAbility = \case
-  At phaseStep instructions cont -> yesParens $ do
-    sPhaseStep <- parens <$> showPhaseStep phaseStep
-    sInstructions <- parens <$> showInstructions instructions
-    (this, snap) <- newObject @a "this"
-    name <- showObject this
-    let elect = cont this
-    sElect <- dropParens <$> showElect elect
-    restoreObject snap
-    pure $
-      pure "At " <> sPhaseStep <> pure " "
-        <> sInstructions
-        <> pure " $ \\"
-        <> name
-        <> pure " -> "
-        <> sElect
-  When cont -> go "When" cont
-  Whenever cont -> go "Whenever" cont
+  When listener -> go "When" listener
   where
-    go consName cont = yesParens $ do
-      (this, snap) <- newObject @a "this"
-      objName <- showObject this
-      let eventListener = cont this
-      sEventListener <- dropParens <$> showEventListener eventListener
-      restoreObject snap
-      pure $ pure (fromString consName) <> pure " $ \\" <> objName <> pure " -> " <> sEventListener
-
-showPhaseStep :: Either Phase (Step p) -> EnvM ParenItems
-showPhaseStep =
-  yesParens . \case
-    Left phase -> do
-      s <- dollar <$> showPhase phase
-      pure $ pure "Left" <> s
-    Right step -> do
-      s <- dollar <$> showStep step
-      pure $ pure "Right" <> s
-
-showPhase :: Phase -> EnvM ParenItems
-showPhase = yesParens . pure . pure . fromString . show
-
-showStep :: Step p -> EnvM ParenItems
-showStep = yesParens . pure . pure . fromString . show
-
-showInstructions :: IsObjectType a => [Object a -> OPlayer -> Elect Condition a] -> EnvM ParenItems
-showInstructions = showListM showInstruction
-
-showInstruction :: forall a. IsObjectType a => (Object a -> OPlayer -> Elect Condition a) -> EnvM ParenItems
-showInstruction cont = yesParens $ do
-  (this, snap) <- newObject @a "this"
-  (active, _) <- newObject @OTPlayer "active"
-  sThis <- showObject this
-  sActive <- showObject active
-  let elect = cont this active
-  sConds <- dropParens <$> showElect elect
-  restoreObject snap
-  pure $ pure "ContinuousEffect $ \\" <> sThis <> pure " " <> sActive <> pure " -> " <> sConds
+    go consName eventListener = yesParens $ do
+      sEventListener <- dollar <$> showEventListener eventListener
+      pure $ pure (fromString consName) <> sEventListener
 
 showConditions :: [Condition] -> EnvM ParenItems
 showConditions = showListM showCondition
@@ -927,24 +893,37 @@ showAnyObjectN anyObj objN = case anyObj of
 
 showEventListener :: EventListener a -> EnvM ParenItems
 showEventListener = \case
+  Conditional cond listener -> yesParens $ do
+    sCond <- parens <$> showElect cond
+    sListener <- dollar <$> showEventListener listener
+    pure $ pure "Conditional " <> sCond <> sListener
   SpellIsCast withObject -> yesParens $ do
     sWithObject <- dollar <$> showWithObject showElect "spell" withObject
     pure $ pure "SpellIsCast" <> sWithObject
+  TimePoint timePoint oneShot -> yesParens $ do
+    sTimePoint <- parens <$> showTimePoint timePoint
+    sOneShot <- dollar <$> showElect oneShot
+    pure $ pure "TimePoint " <> sTimePoint <> sOneShot
 
-showStaticAbility :: forall a. IsObjectType a => StaticAbility a -> EnvM ParenItems
+showTimePoint :: TimePoint p -> EnvM ParenItems
+showTimePoint timePoint = case timePoint of
+  PhaseBegin -> noParens sTimePoint
+  PhaseEnd -> noParens sTimePoint
+  StepBegin {} -> yesParens sTimePoint
+  StepEnd {} -> yesParens sTimePoint
+  where
+    sTimePoint = pure $ pure $ fromString $ show timePoint
+
+showStaticAbility :: StaticAbility a -> EnvM ParenItems
 showStaticAbility = \case
-  ContinuousEffect cont -> yesParens $ do
-    (this, snap) <- newObject @a "this"
-    name <- showObject this
-    let elect = cont this
-    sEffect <- dropParens <$> showElect elect
-    restoreObject snap
-    pure $ pure "ContinuousEffect $ \\" <> name <> pure " -> " <> sEffect
+  ContinuousEffect continuous -> yesParens $ do
+    sContinuous <- dollar <$> showElect continuous
+    pure $ pure "ContinuousEffect" <> sContinuous
   Haste -> noParens $ pure $ pure "Haste"
   FirstStrike -> noParens $ pure $ pure "FirstStrike"
   Suspend time cost -> yesParens $ do
     let sTime = pure $ fromString $ show time
-    sCost <- dollar <$> showSpellCost cost
+    sCost <- dollar <$> showElect cost
     pure $ pure "Suspend " <> sTime <> sCost
   As withObject -> yesParens $ do
     sWithObject <- dollar <$> showWithObject showEventListener "this" withObject
@@ -952,20 +931,27 @@ showStaticAbility = \case
 
 showElect :: Elect e a -> EnvM ParenItems
 showElect = \case
+  ActivePlayer contElect -> yesParens $ do
+    (active, snap) <- newObjectN @OTPlayer O "active"
+    sActive <- parens <$> showObject1 active
+    let elect = contElect active
+    sElect <- dropParens <$> showElect elect
+    restoreObject snap
+    pure $ pure "ActivePlayer $ \\" <> sActive <> pure " -> " <> sElect
   Condition cond -> yesParens $ do
     sCond <- dollar <$> showCondition cond
     pure $ pure "Condition" <> sCond
-  ControllerOf obj cont -> yesParens $ do
+  ControllerOf obj contElect -> yesParens $ do
     objPrefix <- getObjectNamePrefix $ visitObjectN' objectToId obj
-    (controller, snap) <- newObject @OTPlayer $ case objPrefix == "this" of
+    (controller, snap) <- newObjectN @OTPlayer O $ case objPrefix == "this" of
       True -> "you"
       False -> "controller"
-    controllerName <- showObject controller
-    objName <- parens <$> showOAny obj
-    let elect = cont controller
+    sController <- parens <$> showObject1 controller
+    sObj <- parens <$> showOAny obj
+    let elect = contElect controller
     sElect <- dropParens <$> showElect elect
     restoreObject snap
-    pure $ pure "ControllerOf " <> objName <> pure " $ \\" <> controllerName <> pure " -> " <> sElect
+    pure $ pure "ControllerOf " <> sObj <> pure " $ \\" <> sController <> pure " -> " <> sElect
   A sel withObject -> yesParens $ do
     sSel <- parens <$> showSelection sel
     sWithObject <- dollar <$> showWithObject showElect (selectionMemo sel) withObject
@@ -974,6 +960,7 @@ showElect = \case
     sWithObject <- dollar <$> showWithObject showElect "all" withObject
     pure $ pure "All" <> sWithObject
   Effect effect -> yesParens $ (pure "Effect" <>) . dollar <$> showEffect effect
+  Cost cost -> yesParens $ (pure "Cost" <>) . dollar <$> showCost cost
 
 selectionMemo :: Selection -> String
 selectionMemo = \case
@@ -995,12 +982,12 @@ showO1 ::
   (x a -> EnvM ParenItems) ->
   String ->
   [Requirement b] ->
-  (Object b -> x a) ->
+  (ObjectN b -> x a) ->
   EnvM ParenItems
 showO1 showM memo reqs cont = yesParens $ do
   sReqs <- parens <$> showRequirements reqs
-  (obj, snap) <- newObject @b memo
-  objName <- parens <$> showObjectDecl1 obj
+  (obj, snap) <- newObjectN @b O memo
+  objName <- parens <$> showObjectDecl showObject1 obj
   let elect = cont obj
   sElect <- dropParens <$> showM elect
   restoreObject snap
@@ -1146,21 +1133,21 @@ showO5 showM memo reqsA reqsB reqsC reqsD reqsE cont = yesParens $ do
 
 showPermanentN :: Permanent a -> ObjectN a -> EnvM ParenItems
 showPermanentN perm obj = case perm of
-  Artifact -> yesParens $ do
+  PermanentArtifact -> yesParens $ do
     sObj <- visitObjectN' showObject obj
-    pure $ pure "Artifact " <> sObj
-  Creature -> yesParens $ do
+    pure $ pure "PermanentArtifact " <> sObj
+  PermanentCreature -> yesParens $ do
     sObj <- visitObjectN' showObject obj
-    pure $ pure "Creature " <> sObj
-  Enchantment -> yesParens $ do
+    pure $ pure "PermanentCreature " <> sObj
+  PermanentEnchantment -> yesParens $ do
     sObj <- visitObjectN' showObject obj
-    pure $ pure "Enchantment " <> sObj
-  Land -> yesParens $ do
+    pure $ pure "PermanentEnchantment " <> sObj
+  PermanentLand -> yesParens $ do
     sObj <- visitObjectN' showObject obj
-    pure $ pure "Land " <> sObj
-  Planeswalker -> yesParens $ do
+    pure $ pure "PermanentLand " <> sObj
+  PermanentPlaneswalker -> yesParens $ do
     sObj <- visitObjectN' showObject obj
-    pure $ pure "Planeswalker " <> sObj
+    pure $ pure "PermanentPlaneswalker " <> sObj
   Permanent -> yesParens $ do
     sObj <- dollar <$> showOPermanent obj
     pure $ pure "Permanent" <> sObj
@@ -1179,8 +1166,8 @@ showEffect = \case
   DoNothing -> noParens $ pure $ pure "DoNothing"
   AddMana mana player -> yesParens $ do
     sMana <- parens <$> showManaPool mana
-    name <- showObject player
-    pure $ pure "AddMana " <> sMana <> pure " " <> name
+    sPlayer <- dollar <$> showObject1 player
+    pure $ pure "AddMana " <> sMana <> sPlayer
   DealDamage source victim damage -> yesParens $ do
     sSource <- parens <$> showOAny source
     sVictim <- parens <$> showOCreaturePlayerPlaneswalker victim
@@ -1188,17 +1175,17 @@ showEffect = \case
     pure $ pure "DealDamage " <> sSource <> pure " " <> sVictim <> sDamage
   Sacrifice perm player reqs -> yesParens $ do
     sPerm <- parens <$> showPermanent perm
-    sPlayer <- showObject player
+    sPlayer <- parens <$> showObject1 player
     sReqs <- dollar <$> showRequirements reqs
-    pure $ pure "Sacrifice " <> sPerm <> pure " " <> sPlayer <> pure " " <> sReqs
+    pure $ pure "Sacrifice " <> sPerm <> pure " " <> sPlayer <> sReqs
   Destroy perm obj -> yesParens $ do
     sPerm <- parens <$> showPermanent perm
     sObj <- dollar <$> showPermanentN perm obj
-    pure $ pure "Destroy " <> sPerm <> pure " " <> sObj
+    pure $ pure "Destroy " <> sPerm <> sObj
   DrawCards player n -> yesParens $ do
-    name <- showObject player
+    sPlayer <- parens <$> showObject1 player
     let amount = fromString $ show n
-    pure $ pure "DrawCards " <> name <> pure " " <> pure amount
+    pure $ pure "DrawCards " <> sPlayer <> pure " " <> pure amount
   ChangeTo perm before after -> yesParens $ do
     sPerm <- parens <$> showPermanent perm
     sBefore <- parens <$> showOPermanent before

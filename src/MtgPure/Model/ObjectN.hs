@@ -18,11 +18,20 @@
 module MtgPure.Model.ObjectN
   ( ObjectN (..),
     OAny,
+    OArtifactCreature,
     OCreaturePlaneswalker,
     OCreaturePlayer,
     OCreaturePlayerPlaneswalker,
     OPermanent,
     OPlayerPlaneswalker,
+    OArtifact,
+    OCreature,
+    OEnchantment,
+    OInstant,
+    OLand,
+    OPlaneswalker,
+    OPlayer,
+    OSorcery,
   )
 where
 
@@ -42,15 +51,42 @@ import MtgPure.Model.IsObjectType (IsObjectType)
 import MtgPure.Model.Object (Object)
 import MtgPure.Model.ObjectType
   ( OTAny,
+    OTArtifact,
+    OTArtifactCreature,
+    OTCreature,
     OTCreaturePlaneswalker,
     OTCreaturePlayer,
     OTCreaturePlayerPlaneswalker,
+    OTEnchantment,
+    OTInstant,
+    OTLand,
     OTPermanent,
+    OTPlaneswalker,
+    OTPlayer,
     OTPlayerPlaneswalker,
+    OTSorcery,
     ObjectType,
   )
 
+type OArtifact = ObjectN OTArtifact
+
+type OCreature = ObjectN OTCreature
+
+type OEnchantment = ObjectN OTEnchantment
+
+type OInstant = ObjectN OTInstant
+
+type OLand = ObjectN OTLand
+
+type OPlaneswalker = ObjectN OTPlaneswalker
+
+type OPlayer = ObjectN OTPlayer
+
+type OSorcery = ObjectN OTSorcery
+
 type OAny = ObjectN OTAny
+
+type OArtifactCreature = ObjectN OTArtifactCreature
 
 type OCreaturePlayer = ObjectN OTCreaturePlayer
 

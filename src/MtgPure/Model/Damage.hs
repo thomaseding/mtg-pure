@@ -19,11 +19,10 @@ module MtgPure.Model.Damage
 where
 
 import Data.Kind (Type)
-import MtgPure.Model.Object (OCreature)
+import MtgPure.Model.ObjectN (OCreature)
 import MtgPure.Model.Variable (Variable)
 
 data Damage :: Type where
   Damage :: Int -> Damage
   DamageFromPower :: OCreature -> Damage
   VariableDamage :: Variable -> Damage
-  deriving (Show)
