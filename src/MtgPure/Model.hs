@@ -36,7 +36,7 @@ module MtgPure.Model
     module MtgPure.Model.ObjectType.Permanent,
     module MtgPure.Model.Phase,
     module MtgPure.Model.Power,
-    module MtgPure.Model.PrettyObjectName,
+    module MtgPure.Model.PrettyType,
     module MtgPure.Model.Rarity,
     module MtgPure.Model.Recursive,
     module MtgPure.Model.Selection,
@@ -93,7 +93,7 @@ import safe MtgPure.Model.ObjectType.NonCreatureCard
 import safe MtgPure.Model.ObjectType.Permanent
 import safe MtgPure.Model.Phase
 import safe MtgPure.Model.Power
-import safe MtgPure.Model.PrettyObjectName
+import safe MtgPure.Model.PrettyType
 import safe MtgPure.Model.Rarity
 import safe MtgPure.Model.Recursive
 import safe MtgPure.Model.Recursive.Ord ()

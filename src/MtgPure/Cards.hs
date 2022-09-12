@@ -34,6 +34,7 @@ module MtgPure.Cards
     ragingGoblin,
     plains,
     plummet,
+    pollutedDelta,
     pradeshGypsies,
     shock,
     sinkhole,
@@ -87,11 +88,11 @@ import safe MtgPure.Model.Recursive
     Card,
     CardTypeDef (..),
     Condition (COr),
-    Cost (AndCosts, DiscardRandomCost, ManaCost),
+    Cost (AndCosts, DiscardRandomCost, ManaCost, PayLife),
     Effect (DrawCards, StatDelta),
     Elect (A, ActivePlayer, All, Cost, VariableFromPower),
     EventListener' (TimePoint),
-    Requirement (Not),
+    Requirement (HasLandType, Not, ROr),
     StaticAbility
       ( FirstStrike,
         Flying,
@@ -109,7 +110,8 @@ import safe MtgPure.Model.ToManaCost (ToManaCost (toManaCost))
 import safe MtgPure.Model.ToObjectN.Instances ()
 import safe MtgPure.Model.Toughness (Toughness (..))
 import safe MtgPure.ModelCombinators
-  ( AsWithLinkedObject (linked),
+  ( AsWithLinkedCard (..),
+    AsWithLinkedObject (linked),
     AsWithMaskedObject (masked),
     ElectEffect (effect),
     HasLandType (hasLandType),
@@ -134,8 +136,11 @@ import safe MtgPure.ModelCombinators
     nonBasic,
     ofColors,
     playerPays,
+    putOntoBattlefield,
     sacrifice,
+    sacrificeCost,
     satisfies,
+    searchLibrary,
     spellCost,
     tapCost,
     tapped,
@@ -338,6 +343,20 @@ plummet = mkCard "Plummet" $ \this ->
           \target -> effect $ destroy target
   where
     cost = spellCost (1, G)
+
+pollutedDelta :: Card OTLand
+pollutedDelta = mkCard "Polluted Delta" $ \this ->
+  LandDef
+    []
+    [ Activated
+        (Cost $ AndCosts [tapCost this, PayLife 1, sacrificeCost [is this]])
+        $ controllerOf this $
+          \you -> effect $
+            searchLibrary you $
+              linkedCard
+                [ROr [HasLandType $ BasicLand Island, HasLandType $ BasicLand Swamp]]
+                $ \card -> effect $ putOntoBattlefield you card
+    ]
 
 pradeshGypsies :: Card OTCreature
 pradeshGypsies = mkCard "Pradesh Gypsies" $ \this ->

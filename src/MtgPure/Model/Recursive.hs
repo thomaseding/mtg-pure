@@ -9,11 +9,13 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE Safe #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
+{-# HLINT ignore "Use if" #-}
 
 module MtgPure.Model.Recursive
   ( TypeableOT,
@@ -36,16 +38,20 @@ module MtgPure.Model.Recursive
     StaticAbility (..),
     Token (..),
     TriggeredAbility (..),
+    WithLinkedCard (..),
     WithLinkedObject (..),
+    WithMaskedCard (..),
     WithMaskedObject (..),
     WithThis (..),
+    ZoneCard (..),
   )
 where
 
 import safe Data.ConsIndex (ConsIndex (..))
 import safe Data.Inst (Inst1, Inst2, Inst3, Inst4, Inst5)
 import safe Data.Kind (Type)
-import safe Data.Typeable (Proxy, Typeable)
+import safe Data.Proxy (Proxy (..))
+import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.CardName (CardName)
 import safe MtgPure.Model.CardSet (CardSet)
 import safe MtgPure.Model.Colors (Colors)
@@ -75,6 +81,7 @@ import safe MtgPure.Model.ObjectN.Type
   )
 import safe MtgPure.Model.ObjectType (OT1, OT2, OT3, OT4, OT5)
 import safe MtgPure.Model.ObjectType.Any (WAny)
+import safe MtgPure.Model.ObjectType.Card (WCard)
 import safe MtgPure.Model.ObjectType.Index (IndexOT)
 import safe MtgPure.Model.ObjectType.Kind
   ( OTArtifact,
@@ -92,6 +99,7 @@ import safe MtgPure.Model.ObjectType.NonCreatureCard (WNonCreatureCard)
 import safe MtgPure.Model.ObjectType.Permanent (WPermanent)
 import safe MtgPure.Model.ObjectType.Spell (WSpell (..))
 import safe MtgPure.Model.Power (Power)
+import safe MtgPure.Model.PrettyType (PrettyType (..))
 import safe MtgPure.Model.Rarity (Rarity)
 import safe MtgPure.Model.Selection (Selection)
 import safe MtgPure.Model.TimePoint (TimePoint)
@@ -99,8 +107,15 @@ import safe MtgPure.Model.Toughness (Toughness)
 import safe MtgPure.Model.Tribal (Tribal (..))
 import safe MtgPure.Model.Variable (Variable)
 import safe MtgPure.Model.VisitObjectN (VisitObjectN)
+import safe MtgPure.Model.Zone (Zone (..))
 
-type TypeableOT ot = (Typeable ot, VisitObjectN ot, IndexOT ot)
+type TypeableOT ot =
+  ( Typeable ot,
+    IndexOT ot,
+    VisitObjectN ot,
+    PrettyType ot,
+    PrettyType (ObjectN ot)
+  )
 
 type TypeableOT2 ot x = (TypeableOT ot, Typeable (x :: Type -> Type))
 
@@ -262,7 +277,9 @@ data Effect :: EffectType -> Type where
   EOr :: [Effect e] -> Effect e
   Gain :: TypeableOT ot => WAny ot -> ObjectN ot -> Ability ot -> Effect 'Continuous
   Lose :: TypeableOT ot => WAny ot -> ObjectN ot -> Ability ot -> Effect 'Continuous
+  PutOntoBattlefield :: TypeableOT ot => WPermanent ot -> OPlayer -> ZoneCard 'LibraryZone ot -> Effect 'OneShot
   Sacrifice :: TypeableOT ot => WPermanent ot -> OPlayer -> [Requirement (ObjectN ot)] -> Effect 'OneShot
+  SearchLibrary :: TypeableOT ot => WCard ot -> OPlayer -> WithLinkedCard 'LibraryZone (Elect (Effect 'OneShot)) ot -> Effect 'OneShot
   StatDelta :: OCreature -> Power -> Toughness -> Effect 'Continuous
   Until :: Elect Event OPlayer -> Effect 'Continuous -> Effect 'Continuous
   deriving (Typeable)
@@ -281,14 +298,16 @@ instance ConsIndex (Effect e) where
     DrawCards {} -> 10
     Gain {} -> 11
     Lose {} -> 12
-    Sacrifice {} -> 13
-    StatDelta {} -> 14
-    Until {} -> 15
+    PutOntoBattlefield {} -> 13
+    Sacrifice {} -> 14
+    SearchLibrary {} -> 15
+    StatDelta {} -> 16
+    Until {} -> 17
 
 data Elect :: Type -> Type -> Type where
-  A :: (e ~ Effect 'OneShot, TypeableOT2 ot (Elect e)) => Selection -> OPlayer -> WithMaskedObject (Elect e) ot -> Elect e ot
+  A :: (e ~ Effect 'OneShot) => Selection -> OPlayer -> WithMaskedObject (Elect e ot) -> Elect e ot
   ActivePlayer :: (OPlayer -> Elect e ot) -> Elect e ot
-  All :: WithMaskedObject (Elect e) ot -> Elect e ot
+  All :: WithMaskedObject (Elect e ot) -> Elect e ot
   Condition :: Condition -> Elect Condition ot
   ControllerOf :: OAny -> (OPlayer -> Elect e ot) -> Elect e ot
   Cost :: Cost ot -> Elect (Cost ot) ot
@@ -296,7 +315,7 @@ data Elect :: Type -> Type -> Type where
   Event :: Event -> Elect Event ot
   If :: Condition -> Elect e ot -> Else e ot -> Elect e ot
   Listen :: EventListener -> Elect EventListener ot
-  Random :: TypeableOT2 ot (Elect e) => WithMaskedObject (Elect e) ot -> Elect e ot
+  Random :: TypeableOT2 ot (Elect e) => WithMaskedObject (Elect e ot) -> Elect e ot
   VariableFromPower :: OCreature -> (Variable -> Elect e ot) -> Elect e ot
   deriving (Typeable)
 
@@ -353,7 +372,7 @@ instance ConsIndex (NonProxy x) where
     NonProxyElectEffectOneShot -> 1
 
 -- Idea is to allow both these:
--- Requirement (Card (ObjectN ot))
+-- Requirement (Library (ObjectN ot))
 -- Requirement (ObjectN ot)
 data Requirement :: Type -> Type where
   ControlledBy :: OPlayer -> Requirement (ObjectN ot)
@@ -447,13 +466,31 @@ instance ConsIndex (TriggeredAbility ot) where
   consIndex = \case
     When {} -> 1
 
+data WithLinkedCard :: Zone -> (Type -> Type) -> Type -> Type where
+  LcProxy :: [Requirement (ZoneCard zone ot)] -> WithLinkedCard zone Proxy ot
+  Lc1 :: (TypeableOT (OT1 a), Inst1 IsObjectType a) => NonProxy x -> [Requirement (ZoneCard zone (OT1 a))] -> (ZoneCard zone (OT1 a) -> x (OT1 a)) -> WithLinkedCard zone x (OT1 a)
+  Lc2 :: (TypeableOT (OT2 a b), Inst2 IsObjectType a b) => NonProxy x -> [Requirement (ZoneCard zone (OT2 a b))] -> (ZoneCard zone (OT2 a b) -> x (OT2 a b)) -> WithLinkedCard zone x (OT2 a b)
+  Lc3 :: (TypeableOT (OT3 a b c), Inst3 IsObjectType a b c) => NonProxy x -> [Requirement (ZoneCard zone (OT3 a b c))] -> (ZoneCard zone (OT3 a b c) -> x (OT3 a b c)) -> WithLinkedCard zone x (OT3 a b c)
+  Lc4 :: (TypeableOT (OT4 a b c d), Inst4 IsObjectType a b c d) => NonProxy x -> [Requirement (ZoneCard zone (OT4 a b c d))] -> (ZoneCard zone (OT4 a b c d) -> x (OT4 a b c d)) -> WithLinkedCard zone x (OT4 a b c d)
+  Lc5 :: (TypeableOT (OT5 a b c d e), Inst5 IsObjectType a b c d e) => NonProxy x -> [Requirement (ZoneCard zone (OT5 a b c d e))] -> (ZoneCard zone (OT5 a b c d e) -> x (OT5 a b c d e)) -> WithLinkedCard zone x (OT5 a b c d e)
+  deriving (Typeable)
+
+instance ConsIndex (WithLinkedCard zone x ot) where
+  consIndex = \case
+    LcProxy {} -> 1
+    Lc1 {} -> 2
+    Lc2 {} -> 3
+    Lc3 {} -> 4
+    Lc4 {} -> 5
+    Lc5 {} -> 6
+
 data WithLinkedObject :: (Type -> Type) -> Type -> Type where
   LProxy :: [Requirement (ObjectN ot)] -> WithLinkedObject Proxy ot
-  L1 :: Inst1 IsObjectType a => NonProxy x -> [Requirement (ON1 a)] -> (ON1 a -> x (OT1 a)) -> WithLinkedObject x (OT1 a)
-  L2 :: Inst2 IsObjectType a b => NonProxy x -> [Requirement (ON2 a b)] -> (ON2 a b -> x (OT2 a b)) -> WithLinkedObject x (OT2 a b)
-  L3 :: Inst3 IsObjectType a b c => NonProxy x -> [Requirement (ON3 a b c)] -> (ON3 a b c -> x (OT3 a b c)) -> WithLinkedObject x (OT3 a b c)
-  L4 :: Inst4 IsObjectType a b c d => NonProxy x -> [Requirement (ON4 a b c d)] -> (ON4 a b c d -> x (OT4 a b c d)) -> WithLinkedObject x (OT4 a b c d)
-  L5 :: Inst5 IsObjectType a b c d e => NonProxy x -> [Requirement (ON5 a b c d e)] -> (ON5 a b c d e -> x (OT5 a b c d e)) -> WithLinkedObject x (OT5 a b c d e)
+  L1 :: (TypeableOT (OT1 a), Inst1 IsObjectType a) => NonProxy x -> [Requirement (ON1 a)] -> (ON1 a -> x (OT1 a)) -> WithLinkedObject x (OT1 a)
+  L2 :: (TypeableOT (OT2 a b), Inst2 IsObjectType a b) => NonProxy x -> [Requirement (ON2 a b)] -> (ON2 a b -> x (OT2 a b)) -> WithLinkedObject x (OT2 a b)
+  L3 :: (TypeableOT (OT3 a b c), Inst3 IsObjectType a b c) => NonProxy x -> [Requirement (ON3 a b c)] -> (ON3 a b c -> x (OT3 a b c)) -> WithLinkedObject x (OT3 a b c)
+  L4 :: (TypeableOT (OT4 a b c d), Inst4 IsObjectType a b c d) => NonProxy x -> [Requirement (ON4 a b c d)] -> (ON4 a b c d -> x (OT4 a b c d)) -> WithLinkedObject x (OT4 a b c d)
+  L5 :: (TypeableOT (OT5 a b c d e), Inst5 IsObjectType a b c d e) => NonProxy x -> [Requirement (ON5 a b c d e)] -> (ON5 a b c d e -> x (OT5 a b c d e)) -> WithLinkedObject x (OT5 a b c d e)
   deriving (Typeable)
 
 instance ConsIndex (WithLinkedObject x ot) where
@@ -465,15 +502,31 @@ instance ConsIndex (WithLinkedObject x ot) where
     L4 {} -> 5
     L5 {} -> 6
 
-data WithMaskedObject :: (Type -> Type) -> Type -> Type where
-  M1 :: (TypeableOT2 ot x, Inst1 IsObjectType a) => [Requirement (ON1 a)] -> (ON1 a -> x ot) -> WithMaskedObject x ot
-  M2 :: (TypeableOT2 ot x, Inst2 IsObjectType a b) => [Requirement (ON2 a b)] -> (ON2 a b -> x ot) -> WithMaskedObject x ot
-  M3 :: (TypeableOT2 ot x, Inst3 IsObjectType a b c) => [Requirement (ON3 a b c)] -> (ON3 a b c -> x ot) -> WithMaskedObject x ot
-  M4 :: (TypeableOT2 ot x, Inst4 IsObjectType a b c d) => [Requirement (ON4 a b c d)] -> (ON4 a b c d -> x ot) -> WithMaskedObject x ot
-  M5 :: (TypeableOT2 ot x, Inst5 IsObjectType a b c d e) => [Requirement (ON5 a b c d e)] -> (ON5 a b c d e -> x ot) -> WithMaskedObject x ot
+data WithMaskedCard :: Zone -> Type -> Type where
+  Mc1 :: (Typeable x, TypeableOT (OT1 a), Inst1 IsObjectType a) => [Requirement (ZoneCard zone (OT1 a))] -> (ZoneCard zone (OT1 a) -> x) -> WithMaskedCard zone x
+  Mc2 :: (Typeable x, TypeableOT (OT2 a b), Inst2 IsObjectType a b) => [Requirement (ZoneCard zone (OT2 a b))] -> (ZoneCard zone (OT2 a b) -> x) -> WithMaskedCard zone x
+  Mc3 :: (Typeable x, TypeableOT (OT3 a b c), Inst3 IsObjectType a b c) => [Requirement (ZoneCard zone (OT3 a b c))] -> (ZoneCard zone (OT3 a b c) -> x) -> WithMaskedCard zone x
+  Mc4 :: (Typeable x, TypeableOT (OT4 a b c d), Inst4 IsObjectType a b c d) => [Requirement (ZoneCard zone (OT4 a b c d))] -> (ZoneCard zone (OT4 a b c d) -> x) -> WithMaskedCard zone x
+  Mc5 :: (Typeable x, TypeableOT (OT5 a b c d e), Inst5 IsObjectType a b c d e) => [Requirement (ZoneCard zone (OT5 a b c d e))] -> (ZoneCard zone (OT5 a b c d e) -> x) -> WithMaskedCard zone x
   deriving (Typeable)
 
-instance ConsIndex (WithMaskedObject x ot) where
+instance ConsIndex (WithMaskedCard zone x) where
+  consIndex = \case
+    Mc1 {} -> 1
+    Mc2 {} -> 2
+    Mc3 {} -> 3
+    Mc4 {} -> 4
+    Mc5 {} -> 5
+
+data WithMaskedObject :: Type -> Type where
+  M1 :: (Typeable x, TypeableOT (OT1 a), Inst1 IsObjectType a) => [Requirement (ON1 a)] -> (ON1 a -> x) -> WithMaskedObject x
+  M2 :: (Typeable x, TypeableOT (OT2 a b), Inst2 IsObjectType a b) => [Requirement (ON2 a b)] -> (ON2 a b -> x) -> WithMaskedObject x
+  M3 :: (Typeable x, TypeableOT (OT3 a b c), Inst3 IsObjectType a b c) => [Requirement (ON3 a b c)] -> (ON3 a b c -> x) -> WithMaskedObject x
+  M4 :: (Typeable x, TypeableOT (OT4 a b c d), Inst4 IsObjectType a b c d) => [Requirement (ON4 a b c d)] -> (ON4 a b c d -> x) -> WithMaskedObject x
+  M5 :: (Typeable x, TypeableOT (OT5 a b c d e), Inst5 IsObjectType a b c d e) => [Requirement (ON5 a b c d e)] -> (ON5 a b c d e -> x) -> WithMaskedObject x
+  deriving (Typeable)
+
+instance ConsIndex (WithMaskedObject x) where
   consIndex = \case
     M1 {} -> 1
     M2 {} -> 2
@@ -482,11 +535,11 @@ instance ConsIndex (WithMaskedObject x ot) where
     M5 {} -> 5
 
 data WithThis :: (Type -> Type) -> Type -> Type where
-  T1 :: Inst1 IsObjectType a => (ON1 a -> x (OT1 a)) -> WithThis x (OT1 a)
-  T2 :: Inst2 IsObjectType a b => (ON2 a b -> x (OT2 a b)) -> WithThis x (OT2 a b)
-  T3 :: Inst3 IsObjectType a b c => (ON3 a b c -> x (OT3 a b c)) -> WithThis x (OT3 a b c)
-  T4 :: Inst4 IsObjectType a b c d => (ON4 a b c d -> x (OT4 a b c d)) -> WithThis x (OT4 a b c d)
-  T5 :: Inst5 IsObjectType a b c d e => (ON5 a b c d e -> x (OT5 a b c d e)) -> WithThis x (OT5 a b c d e)
+  T1 :: (TypeableOT (OT1 a), Inst1 IsObjectType a) => (ON1 a -> x (OT1 a)) -> WithThis x (OT1 a)
+  T2 :: (TypeableOT (OT2 a b), Inst2 IsObjectType a b) => (ON2 a b -> x (OT2 a b)) -> WithThis x (OT2 a b)
+  T3 :: (TypeableOT (OT3 a b c), Inst3 IsObjectType a b c) => (ON3 a b c -> x (OT3 a b c)) -> WithThis x (OT3 a b c)
+  T4 :: (TypeableOT (OT4 a b c d), Inst4 IsObjectType a b c d) => (ON4 a b c d -> x (OT4 a b c d)) -> WithThis x (OT4 a b c d)
+  T5 :: (TypeableOT (OT5 a b c d e), Inst5 IsObjectType a b c d e) => (ON5 a b c d e -> x (OT5 a b c d e)) -> WithThis x (OT5 a b c d e)
   deriving (Typeable)
 
 instance ConsIndex (WithThis x ot) where
@@ -496,3 +549,19 @@ instance ConsIndex (WithThis x ot) where
     T3 {} -> 3
     T4 {} -> 4
     T5 {} -> 5
+
+data ZoneCard :: Zone -> Type -> Type where
+  LibraryCard :: TypeableOT ot => ObjectN ot -> ZoneCard 'LibraryZone ot
+  deriving (Typeable)
+
+instance ConsIndex (ZoneCard zone ot) where
+  consIndex = \case
+    LibraryCard {} -> 1
+
+instance PrettyType ot => PrettyType (ZoneCard 'LibraryZone ot) where
+  prettyType _ = "ZoneCard 'LibraryZone " ++ open ++ s ++ close
+    where
+      s = prettyType (Proxy @ot)
+      (open, close) = case ' ' `elem` s of
+        True -> ("(", ")")
+        False -> ("", "")

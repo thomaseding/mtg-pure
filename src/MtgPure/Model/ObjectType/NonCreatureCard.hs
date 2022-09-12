@@ -118,6 +118,6 @@ instance IsNonCreatureCardType 'OTPlaneswalker where
   visitNonCreatureCard v _ = visitNCPlaneswalker v
 
 instance IsNonCreatureCardType 'OTSorcery where
-  singNonCreatureCardType _ = NCTInstant
+  singNonCreatureCardType _ = NCTSorcery
   singNonCreatureCard _ = WNonCreatureSorcery
   visitNonCreatureCard v _ = visitNCSorcery v

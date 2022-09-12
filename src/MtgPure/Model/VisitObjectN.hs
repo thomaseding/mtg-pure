@@ -17,6 +17,7 @@
 module MtgPure.Model.VisitObjectN
   ( VisitObjectN (..),
     ObjectVisitorN (..),
+    KnownObjectN (..),
   )
 where
 
@@ -35,9 +36,24 @@ import safe Data.Inst
     Inst9,
   )
 import safe Data.Kind (Type)
+import safe Data.Proxy (Proxy)
 import safe MtgPure.Model.IsObjectType (IsObjectType)
 import safe MtgPure.Model.Object (Object)
 import safe MtgPure.Model.ObjectN (ObjectN (..))
+import safe MtgPure.Model.ObjectN.Type
+  ( ON1,
+    ON10,
+    ON11,
+    ON12,
+    ON2,
+    ON3,
+    ON4,
+    ON5,
+    ON6,
+    ON7,
+    ON8,
+    ON9,
+  )
 import safe MtgPure.Model.ObjectType
   ( OT1,
     OT10,
@@ -53,10 +69,41 @@ import safe MtgPure.Model.ObjectType
     OT9,
   )
 
+data KnownObjectTypeN :: Type -> Type where
+  KOT1 :: Inst1 IsObjectType a => KnownObjectTypeN (OT1 a)
+  KOT2 :: Inst2 IsObjectType a b => KnownObjectTypeN (OT2 a b)
+  KOT3 :: Inst3 IsObjectType a b c => KnownObjectTypeN (OT3 a b c)
+  KOT4 :: Inst4 IsObjectType a b c d => KnownObjectTypeN (OT4 a b c d)
+  KOT5 :: Inst5 IsObjectType a b c d e => KnownObjectTypeN (OT5 a b c d e)
+  KOT6 :: Inst6 IsObjectType a b c d e f => KnownObjectTypeN (OT6 a b c d e f)
+  KOT7 :: Inst7 IsObjectType a b c d e f g => KnownObjectTypeN (OT7 a b c d e f g)
+  KOT8 :: Inst8 IsObjectType a b c d e f g h => KnownObjectTypeN (OT8 a b c d e f g h)
+  KOT9 :: Inst9 IsObjectType a b c d e f g h i => KnownObjectTypeN (OT9 a b c d e f g h i)
+  KOT10 :: Inst10 IsObjectType a b c d e f g h i j => KnownObjectTypeN (OT10 a b c d e f g h i j)
+  KOT11 :: Inst11 IsObjectType a b c d e f g h i j k => KnownObjectTypeN (OT11 a b c d e f g h i j k)
+  KOT12 :: Inst12 IsObjectType a b c d e f g h i j k l => KnownObjectTypeN (OT12 a b c d e f g h i j k l)
+
+data KnownObjectN :: Type -> Type where
+  KO1 :: Inst1 IsObjectType a => ON1 a -> KnownObjectN (OT1 a)
+  KO2 :: Inst2 IsObjectType a b => ON2 a b -> KnownObjectN (OT2 a b)
+  KO3 :: Inst3 IsObjectType a b c => ON3 a b c -> KnownObjectN (OT3 a b c)
+  KO4 :: Inst4 IsObjectType a b c d => ON4 a b c d -> KnownObjectN (OT4 a b c d)
+  KO5 :: Inst5 IsObjectType a b c d e => ON5 a b c d e -> KnownObjectN (OT5 a b c d e)
+  KO6 :: Inst6 IsObjectType a b c d e f => ON6 a b c d e f -> KnownObjectN (OT6 a b c d e f)
+  KO7 :: Inst7 IsObjectType a b c d e f g => ON7 a b c d e f g -> KnownObjectN (OT7 a b c d e f g)
+  KO8 :: Inst8 IsObjectType a b c d e f g h => ON8 a b c d e f g h -> KnownObjectN (OT8 a b c d e f g h)
+  KO9 :: Inst9 IsObjectType a b c d e f g h i => ON9 a b c d e f g h i -> KnownObjectN (OT9 a b c d e f g h i)
+  KO10 :: Inst10 IsObjectType a b c d e f g h i j => ON10 a b c d e f g h i j -> KnownObjectN (OT10 a b c d e f g h i j)
+  KO11 :: Inst11 IsObjectType a b c d e f g h i j k => ON11 a b c d e f g h i j k -> KnownObjectN (OT11 a b c d e f g h i j k)
+  KO12 :: Inst12 IsObjectType a b c d e f g h i j k l => ON12 a b c d e f g h i j k l -> KnownObjectN (OT12 a b c d e f g h i j k l)
+
 class VisitObjectN ot where
   data ObjectVisitorN ot :: Type -> Type
   visitObjectN' :: (forall a. IsObjectType a => Object a -> x) -> ObjectN ot -> x
   visitObjectN :: ObjectVisitorN ot x -> ObjectN ot -> x
+  orderObjectN :: Proxy ot -> Int
+  knownObjectN :: ObjectN ot -> KnownObjectN ot
+  knownObjectTypeN :: Proxy ot -> KnownObjectTypeN ot
 
 vn :: VisitObjectN ot => ObjectVisitorN ot x -> ObjectN ot -> x
 vn = visitObjectN
@@ -65,9 +112,13 @@ instance Inst1 IsObjectType a => VisitObjectN (OT1 a) where
   data ObjectVisitorN (OT1 a) x = ObjectVisitor1
     { visitObject1 :: Object a -> x
     }
+
   visitObjectN' f = visitObjectN $ ObjectVisitor1 f
   visitObjectN v = \case
     O x -> visitObject1 v x
+  orderObjectN _ = 1
+  knownObjectN = KO1
+  knownObjectTypeN _ = KOT1
 
 instance Inst2 IsObjectType a b => VisitObjectN (OT2 a b) where
   data ObjectVisitorN (OT2 a b) x = ObjectVisitor2
@@ -83,6 +134,9 @@ instance Inst2 IsObjectType a b => VisitObjectN (OT2 a b) where
     where
       a = visitObject2a v
       b = visitObject2b v
+  orderObjectN _ = 2
+  knownObjectN = KO2
+  knownObjectTypeN _ = KOT2
 
 instance Inst3 IsObjectType a b c => VisitObjectN (OT3 a b c) where
   data ObjectVisitorN (OT3 a b c) x = ObjectVisitor3
@@ -102,6 +156,9 @@ instance Inst3 IsObjectType a b c => VisitObjectN (OT3 a b c) where
       a = visitObject3a v
       b = visitObject3b v
       c = visitObject3c v
+  orderObjectN _ = 3
+  knownObjectN = KO3
+  knownObjectTypeN _ = KOT3
 
 instance Inst4 IsObjectType a b c d => VisitObjectN (OT4 a b c d) where
   data ObjectVisitorN (OT4 a b c d) x = ObjectVisitor4
@@ -125,6 +182,9 @@ instance Inst4 IsObjectType a b c d => VisitObjectN (OT4 a b c d) where
       b = visitObject4b v
       c = visitObject4c v
       d = visitObject4d v
+  orderObjectN _ = 4
+  knownObjectN = KO4
+  knownObjectTypeN _ = KOT4
 
 instance Inst5 IsObjectType a b c d e => VisitObjectN (OT5 a b c d e) where
   data ObjectVisitorN (OT5 a b c d e) x = ObjectVisitor5
@@ -152,6 +212,9 @@ instance Inst5 IsObjectType a b c d e => VisitObjectN (OT5 a b c d e) where
       c = visitObject5c v
       d = visitObject5d v
       e = visitObject5e v
+  orderObjectN _ = 5
+  knownObjectN = KO5
+  knownObjectTypeN _ = KOT5
 
 instance Inst6 IsObjectType a b c d e f => VisitObjectN (OT6 a b c d e f) where
   data ObjectVisitorN (OT6 a b c d e f) x = ObjectVisitor6
@@ -183,6 +246,9 @@ instance Inst6 IsObjectType a b c d e f => VisitObjectN (OT6 a b c d e f) where
       d = visitObject6d v
       e = visitObject6e v
       f = visitObject6f v
+  orderObjectN _ = 6
+  knownObjectN = KO6
+  knownObjectTypeN _ = KOT6
 
 instance Inst7 IsObjectType a b c d e f g => VisitObjectN (OT7 a b c d e f g) where
   data ObjectVisitorN (OT7 a b c d e f g) x = ObjectVisitor7
@@ -218,6 +284,9 @@ instance Inst7 IsObjectType a b c d e f g => VisitObjectN (OT7 a b c d e f g) wh
       e = visitObject7e v
       f = visitObject7f v
       g = visitObject7g v
+  orderObjectN _ = 7
+  knownObjectN = KO7
+  knownObjectTypeN _ = KOT7
 
 instance Inst8 IsObjectType a b c d e f g h => VisitObjectN (OT8 a b c d e f g h) where
   data ObjectVisitorN (OT8 a b c d e f g h) x = ObjectVisitor8
@@ -257,6 +326,9 @@ instance Inst8 IsObjectType a b c d e f g h => VisitObjectN (OT8 a b c d e f g h
       f = visitObject8f v
       g = visitObject8g v
       h = visitObject8h v
+  orderObjectN _ = 8
+  knownObjectN = KO8
+  knownObjectTypeN _ = KOT8
 
 instance Inst9 IsObjectType a b c d e f g h i => VisitObjectN (OT9 a b c d e f g h i) where
   data ObjectVisitorN (OT9 a b c d e f g h i) x = ObjectVisitor9
@@ -300,6 +372,9 @@ instance Inst9 IsObjectType a b c d e f g h i => VisitObjectN (OT9 a b c d e f g
       g = visitObject9g v
       h = visitObject9h v
       i = visitObject9i v
+  orderObjectN _ = 9
+  knownObjectN = KO9
+  knownObjectTypeN _ = KOT9
 
 instance Inst10 IsObjectType a b c d e f g h i j => VisitObjectN (OT10 a b c d e f g h i j) where
   data ObjectVisitorN (OT10 a b c d e f g h i j) x = ObjectVisitor10
@@ -347,6 +422,9 @@ instance Inst10 IsObjectType a b c d e f g h i j => VisitObjectN (OT10 a b c d e
       h = visitObject10h v
       i = visitObject10i v
       j = visitObject10j v
+  orderObjectN _ = 10
+  knownObjectN = KO10
+  knownObjectTypeN _ = KOT10
 
 instance Inst11 IsObjectType a b c d e f g h i j k => VisitObjectN (OT11 a b c d e f g h i j k) where
   data ObjectVisitorN (OT11 a b c d e f g h i j k) x = ObjectVisitor11
@@ -398,6 +476,9 @@ instance Inst11 IsObjectType a b c d e f g h i j k => VisitObjectN (OT11 a b c d
       i = visitObject11i v
       j = visitObject11j v
       k = visitObject11k v
+  orderObjectN _ = 11
+  knownObjectN = KO11
+  knownObjectTypeN _ = KOT11
 
 instance Inst12 IsObjectType a b c d e f g h i j k l => VisitObjectN (OT12 a b c d e f g h i j k l) where
   data ObjectVisitorN (OT12 a b c d e f g h i j k l) x = ObjectVisitor12
@@ -453,3 +534,6 @@ instance Inst12 IsObjectType a b c d e f g h i j k l => VisitObjectN (OT12 a b c
       j = visitObject12j v
       k = visitObject12k v
       l = visitObject12l v
+  orderObjectN _ = 12
+  knownObjectN = KO12
+  knownObjectTypeN _ = KOT12

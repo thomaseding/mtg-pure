@@ -35,8 +35,9 @@ module MtgPure.ModelCombinators
     ElectEffect (..),
     CoAny (..),
     CoPermanent (..),
-    AsWithMaskedObject (..),
+    AsWithLinkedCard (..),
     AsWithLinkedObject (..),
+    AsWithMaskedObject (..),
     AsWithThis (..),
     HasLandType (..),
     AsIfThen (..),
@@ -73,6 +74,8 @@ module MtgPure.ModelCombinators
     colorless,
     tapped,
     untilEndOfTurn,
+    putOntoBattlefield,
+    searchLibrary,
   )
 where
 
@@ -89,7 +92,7 @@ import safe MtgPure.Model.IsObjectType (IsObjectType)
 import safe MtgPure.Model.LandType (LandType (BasicLand))
 import safe MtgPure.Model.ManaCost (ManaCost)
 import safe MtgPure.Model.ManaSymbol (ManaSymbol (..))
-import MtgPure.Model.ObjectN (ObjectN)
+import safe MtgPure.Model.ObjectN (ObjectN)
 import safe MtgPure.Model.ObjectN.Type
   ( OActivatedOrTriggeredAbility,
     OAny,
@@ -109,7 +112,9 @@ import safe MtgPure.Model.ObjectType
     ObjectType (..),
   )
 import safe MtgPure.Model.ObjectType.Any (WAny (..))
-import MtgPure.Model.ObjectType.Kind
+import safe MtgPure.Model.ObjectType.Card (IsCardType, WCard (..))
+import safe MtgPure.Model.ObjectType.Index (IndexOT)
+import safe MtgPure.Model.ObjectType.Kind
   ( OTArtifact,
     OTCard,
     OTCreature,
@@ -141,9 +146,11 @@ import safe MtgPure.Model.Recursive
     Token (Token),
     TypeableOT,
     TypeableOT2,
+    WithLinkedCard (..),
     WithLinkedObject (..),
     WithMaskedObject (..),
     WithThis (..),
+    ZoneCard,
   )
 import safe MtgPure.Model.Step (Step (..))
 import safe MtgPure.Model.TimePoint (TimePoint (..))
@@ -159,6 +166,8 @@ import safe MtgPure.Model.ToObjectN.Classes
   )
 import safe MtgPure.Model.Tribal (Tribal (..))
 import safe MtgPure.Model.Variable (Variable)
+import safe MtgPure.Model.VisitObjectN (VisitObjectN)
+import MtgPure.Model.Zone (Zone (..))
 
 class ToCard card where
   toCard :: card -> Card OTCard
@@ -292,8 +301,26 @@ instance (CoNonProxy x, Inst4 IsObjectType a b c d) => AsWithLinkedObject x (OT4
 instance (CoNonProxy x, Inst5 IsObjectType a b c d e) => AsWithLinkedObject x (OT5 a b c d e) where
   linked = L5 coNonProxy
 
-class AsWithMaskedObject ot' where
-  masked :: TypeableOT2 ot x => [Requirement (ObjectN ot')] -> (ObjectN ot' -> x ot) -> WithMaskedObject x ot
+class TypeableOT2 ot x => AsWithLinkedCard zone x ot where
+  linkedCard :: [Requirement (ZoneCard zone ot)] -> (ZoneCard zone ot -> x ot) -> WithLinkedCard zone x ot
+
+instance (CoNonProxy x, Inst1 IsObjectType a) => AsWithLinkedCard zone x (OT1 a) where
+  linkedCard = Lc1 coNonProxy
+
+instance (CoNonProxy x, Inst2 IsObjectType a b) => AsWithLinkedCard zone x (OT2 a b) where
+  linkedCard = Lc2 coNonProxy
+
+instance (CoNonProxy x, Inst3 IsObjectType a b c) => AsWithLinkedCard zone x (OT3 a b c) where
+  linkedCard = Lc3 coNonProxy
+
+instance (CoNonProxy x, Inst4 IsObjectType a b c d) => AsWithLinkedCard zone x (OT4 a b c d) where
+  linkedCard = Lc4 coNonProxy
+
+instance (CoNonProxy x, Inst5 IsObjectType a b c d e) => AsWithLinkedCard zone x (OT5 a b c d e) where
+  linkedCard = Lc5 coNonProxy
+
+class AsWithMaskedObject ot where
+  masked :: Typeable z => [Requirement (ObjectN ot)] -> (ObjectN ot -> z) -> WithMaskedObject z
 
 instance Inst1 IsObjectType a => AsWithMaskedObject (OT1 a) where
   masked = M1
@@ -455,6 +482,39 @@ counterAbility = CounterAbility . asActivatedOrTriggeredAbility
 
 counterSpell :: AsSpell o => o -> Effect 'OneShot
 counterSpell = CounterSpell . asSpell
+
+class TypeableOT ot => CoCard ot where
+  coCard :: WCard ot
+
+instance CoCard OTArtifact where
+  coCard = WCardArtifact
+
+instance CoCard OTCreature where
+  coCard = WCardCreature
+
+instance CoCard OTEnchantment where
+  coCard = WCardEnchantment
+
+instance CoCard OTInstant where
+  coCard = WCardInstant
+
+instance CoCard OTLand where
+  coCard = WCardLand
+
+instance CoCard OTPlaneswalker where
+  coCard = WCardPlaneswalker
+
+instance CoCard OTSorcery where
+  coCard = WCardSorcery
+
+instance CoCard OTCard where
+  coCard = WCard
+
+instance Inst2 IsCardType a b => CoCard (OT2 a b) where
+  coCard = WCard2 :: WCard (OT2 a b)
+
+instance Inst3 IsCardType a b c => CoCard (OT3 a b c) where
+  coCard = WCard3 :: WCard (OT3 a b c)
 
 class TypeableOT ot => CoPermanent ot where
   coPermanent :: WPermanent ot
@@ -629,13 +689,13 @@ addManaAnyColor player amount =
       AddMana player $ toManaPool (G, amount)
     ]
 
-class (AsWithThis ot, TypeableOT ot) => MkCard t ot where
+class (AsWithThis ot, Typeable ot, IndexOT ot, VisitObjectN ot) => MkCard t ot where
   mkCard :: CardName -> (ObjectN ot -> CardTypeDef t ot) -> Card ot
 
-instance (AsWithThis ot, TypeableOT ot) => MkCard 'NonTribal ot where
+instance (AsWithThis ot, Typeable ot, IndexOT ot, VisitObjectN ot) => MkCard 'NonTribal ot where
   mkCard name = Card name . thisObject
 
-instance (AsWithThis ot, TypeableOT ot) => MkCard 'Tribal ot where
+instance (AsWithThis ot, Typeable ot, IndexOT ot, VisitObjectN ot) => MkCard 'Tribal ot where
   mkCard name = TribalCard name . thisObject
 
 mkToken :: MkCard tribal ot => CardName -> (ObjectN ot -> CardTypeDef tribal ot) -> Token ot
@@ -664,3 +724,9 @@ instance HasLandType BasicLandType where
 
 instance HasLandType LandType where
   hasLandType = HasLandType
+
+putOntoBattlefield :: CoPermanent ot => OPlayer -> ZoneCard 'LibraryZone ot -> Effect 'OneShot
+putOntoBattlefield = PutOntoBattlefield coPermanent
+
+searchLibrary :: CoCard ot => OPlayer -> WithLinkedCard 'LibraryZone (Elect (Effect 'OneShot)) ot -> Effect 'OneShot
+searchLibrary = SearchLibrary coCard

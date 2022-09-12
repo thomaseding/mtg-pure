@@ -21,7 +21,8 @@ module MtgPure.Model.IsObjectType
   )
 where
 
-import safe Data.Typeable (Proxy, Typeable)
+import safe Data.Proxy (Proxy)
+import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.Object
   ( Object (Object),
   )
