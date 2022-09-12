@@ -94,7 +94,9 @@ import safe MtgPure.Model.Recursive
     Cost (..),
     Effect (..),
     Elect (..),
-    EventListener (..),
+    Event,
+    EventListener,
+    EventListener' (..),
     Requirement (..),
     SetCard (SetCard),
     SetToken (SetToken),
@@ -1102,23 +1104,29 @@ showAnyN wAny obj = case wAny of
   WAny6 -> do
     showObject6 obj
 
-showEventListener :: EventListener -> EnvM ParenItems
-showEventListener = \case
+showEventListener' :: (forall ot. x ot -> EnvM ParenItems) -> EventListener' x -> EnvM ParenItems
+showEventListener' showX = \case
   BecomesTapped perm withObject -> yesParens $ do
     sPerm <- parens <$> showWPermanent perm
-    sWithObject <- dollar <$> showWithLinkedObject showElect "perm" withObject
+    sWithObject <- dollar <$> showWithLinkedObject showX "perm" withObject
     pure $ pure "BecomesTapped " <> sPerm <> sWithObject
   Events listeners -> yesParens $ do
-    sListeners <- dollar <$> showListM showEventListener listeners
+    sListeners <- dollar <$> showListM (showEventListener' showX) listeners
     pure $ pure "Evenets" <> sListeners
   SpellIsCast spell withObject -> yesParens $ do
     sSpell <- parens <$> showWSpell spell
-    sWithObject <- dollar <$> showWithLinkedObject showElect "spell" withObject
+    sWithObject <- dollar <$> showWithLinkedObject showX "spell" withObject
     pure $ pure "SpellIsCast " <> sSpell <> sWithObject
   TimePoint timePoint oneShot -> yesParens $ do
     sTimePoint <- parens <$> showTimePoint timePoint
-    sOneShot <- dollar <$> showElect oneShot
+    sOneShot <- dollar <$> showX oneShot
     pure $ pure "TimePoint " <> sTimePoint <> sOneShot
+
+showEvent :: Event -> EnvM ParenItems
+showEvent = showEventListener' $ \Proxy -> noParens $ pure $ pure "Proxy"
+
+showEventListener :: EventListener -> EnvM ParenItems
+showEventListener = showEventListener' showElect
 
 showTimePoint :: TimePoint p -> EnvM ParenItems
 showTimePoint = yesParens . pure . pure . fromString . show
@@ -1179,14 +1187,17 @@ showElect = \case
   Effect effect -> yesParens $ do
     sEffect <- dollar <$> showEffects effect
     pure $ pure "Effect" <> sEffect
-  Event listener -> yesParens $ do
-    sListener <- dollar <$> showEventListener listener
-    pure $ pure "Event" <> sListener
+  Event event -> yesParens $ do
+    sEvent <- dollar <$> showEvent event
+    pure $ pure "Event" <> sEvent
   If cond then_ else_ -> yesParens $ do
     sCond <- parens <$> showCondition cond
     sThen <- parens <$> showElect then_
     sElse <- dollar <$> showElect else_
     pure $ pure "If " <> sCond <> pure " " <> sThen <> sElse
+  Listen listener -> yesParens $ do
+    sListener <- dollar <$> showEventListener listener
+    pure $ pure "Event" <> sListener
   Random withObject -> yesParens $ do
     sWithObject <- dollar <$> showWithMaskedObject showElect "rand" withObject
     pure $ pure "Random" <> sWithObject
@@ -1203,6 +1214,9 @@ showElect = \case
 -- TODO: This needs to inject some config to control how `showO*` prints
 showWithLinkedObject :: (forall ot'. x ot' -> EnvM ParenItems) -> String -> WithLinkedObject x ot -> EnvM ParenItems
 showWithLinkedObject showM memo = \case
+  LProxy reqs -> yesParens $ do
+    sReqs <- dollar <$> showRequirements reqs
+    pure $ pure "LProxy" <> sReqs
   L1 reqs cont -> showO1 showM memo reqs cont
   L2 reqs cont -> showO2 showM memo reqs cont
   L3 reqs cont -> showO3 showM memo reqs cont
@@ -1425,9 +1439,10 @@ showEffect = \case
     sPower <- parens <$> showPower power
     sToughness <- dollar <$> showToughness toughness
     pure $ pure "StatsDelta " <> sCreature <> pure " " <> sPower <> sToughness
-  Until elect -> yesParens $ do
-    sElect <- dollar <$> showElect elect
-    pure $ pure "Until" <> sElect
+  Until electEvent effect -> yesParens $ do
+    sElectEvent <- parens <$> showElect electEvent
+    sEffect <- dollar <$> showEffect effect
+    pure $ pure "Until " <> sElectEvent <> sEffect
 
 showEffects :: [Effect e] -> EnvM ParenItems
 showEffects = showListM showEffect

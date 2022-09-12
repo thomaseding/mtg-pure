@@ -68,6 +68,7 @@ module MtgPure.ModelCombinators
 where
 
 import safe Data.Inst (Inst1, Inst2, Inst3, Inst4, Inst5)
+import Data.Proxy (Proxy (..))
 import safe MtgPure.Model.CardName (CardName)
 import safe MtgPure.Model.Color (Color)
 import safe MtgPure.Model.ColorsLike (ColorsLike (..))
@@ -110,7 +111,9 @@ import safe MtgPure.Model.Recursive
     Cost (..),
     Effect (..),
     Elect (..),
-    EventListener (..),
+    Event,
+    EventListener,
+    EventListener' (..),
     Requirement (..),
     Token (Token),
     TypeableOT,
@@ -427,8 +430,14 @@ instance ElectEffect [Effect e] (Elect (Effect e)) where
 instance ElectEffect (Effect 'Continuous) (Elect (Effect 'OneShot)) where
   effect = Effect . pure . EffectContinuous
 
-event :: EventListener -> Elect EventListener ot
-event = Event
+class EventLike x where
+  event :: x -> Elect x ot
+
+instance EventLike Event where
+  event = Event
+
+instance EventLike EventListener where
+  event = Listen
 
 class Branchable e ot where
   branchEmpty :: Elect e ot
@@ -437,7 +446,7 @@ instance Branchable (Cost ot) ot where
   branchEmpty = Cost $ AndCosts []
 
 instance Branchable EventListener ot where
-  branchEmpty = Event $ Events []
+  branchEmpty = event $ Events []
 
 instance Branchable (Effect e) ot where
   branchEmpty = Effect []
@@ -485,8 +494,8 @@ hasAbility = HasAbility . thisObject
 becomesTapped :: CoPermanent ot => WithLinkedObject (Elect (Effect 'OneShot)) ot -> EventListener
 becomesTapped = BecomesTapped coPermanent
 
-untilEndOfTurn :: Elect (Effect 'OneShot) OPlayer -> Effect 'OneShot
-untilEndOfTurn = EffectContinuous . Until . event . TimePoint (StepBegin CleanupStep)
+untilEndOfTurn :: Effect 'Continuous -> Effect 'OneShot
+untilEndOfTurn = EffectContinuous . Until (event $ TimePoint (StepBegin CleanupStep) Proxy)
 
 gain :: CoAny ot => ot -> Ability ot -> Effect 'Continuous
 gain = Gain coAny

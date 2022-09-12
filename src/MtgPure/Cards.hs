@@ -384,15 +384,13 @@ pradeshGypsies = mkCard "Pradesh Gypsies" $ \this ->
           \you -> A Target you $
             masked [] $
               \creature ->
-                let statsChange =
+                effect $
+                  untilEndOfTurn $
+                    gain creature $
                       Static $
                         StaticContinuous $
                           effect $
                             StatDelta creature (Power (-2)) (Toughness 0)
-                 in effect
-                      [ EffectContinuous $ gain creature statsChange,
-                        untilEndOfTurn $ effect $ lose creature statsChange
-                      ]
     ]
   where
     cost = spellCost (2, G)

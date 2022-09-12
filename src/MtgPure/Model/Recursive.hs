@@ -19,7 +19,7 @@ module MtgPure.Model.Recursive where
 import safe Data.ConsIndex (ConsIndex (..))
 import safe Data.Inst (Inst1, Inst2, Inst3, Inst4, Inst5)
 import safe Data.Kind (Type)
-import safe Data.Typeable (Typeable)
+import safe Data.Typeable (Proxy, Typeable)
 import safe MtgPure.Model.BasicLandType (BasicLandType)
 import safe MtgPure.Model.CardName (CardName)
 import safe MtgPure.Model.CardSet (CardSet)
@@ -229,7 +229,7 @@ data Effect :: EffectType -> Type where
   Lose :: TypeableOT ot => WAny ot -> ot -> Ability ot -> Effect 'Continuous
   Sacrifice :: TypeableOT ot => WPermanent ot -> OPlayer -> [Requirement ot] -> Effect 'OneShot
   StatDelta :: OCreature -> Power -> Toughness -> Effect 'Continuous
-  Until :: Elect EventListener OPlayer -> Effect 'Continuous
+  Until :: Elect Event OPlayer -> Effect 'Continuous -> Effect 'Continuous
   deriving (Typeable)
 
 instance ConsIndex (Effect e) where
@@ -258,8 +258,9 @@ data Elect :: Type -> Type -> Type where
   ControllerOf :: OAny -> (OPlayer -> Elect e ot) -> Elect e ot
   Cost :: Cost ot -> Elect (Cost ot) ot
   Effect :: [Effect e] -> Elect (Effect e) ot
-  Event :: EventListener -> Elect EventListener ot
+  Event :: Event -> Elect Event ot
   If :: Condition -> Elect e ot -> Elect e ot -> Elect e ot
+  Listen :: EventListener -> Elect EventListener ot
   Random :: TypeableOT2 ot (Elect e) => WithMaskedObject (Elect e) ot -> Elect e ot
   VariableFromPower :: OCreature -> (Variable -> Elect e ot) -> Elect e ot
   deriving (Typeable)
@@ -275,17 +276,22 @@ instance ConsIndex (Elect e ot) where
     Effect {} -> 7
     Event {} -> 8
     If {} -> 9
-    Random {} -> 10
-    VariableFromPower {} -> 11
+    Listen {} -> 10
+    Random {} -> 11
+    VariableFromPower {} -> 12
 
-data EventListener :: Type where
-  BecomesTapped :: TypeableOT2 ot (Elect (Effect 'OneShot)) => WPermanent ot -> WithLinkedObject (Elect (Effect 'OneShot)) ot -> EventListener
-  Events :: [EventListener] -> EventListener
-  SpellIsCast :: TypeableOT ot => WSpell ot -> WithLinkedObject (Elect (Effect 'OneShot)) ot -> EventListener
-  TimePoint :: Typeable p => TimePoint p -> Elect (Effect 'OneShot) OPlayer -> EventListener
+type Event = EventListener' Proxy
+
+type EventListener = EventListener' (Elect (Effect 'OneShot))
+
+data EventListener' :: (Type -> Type) -> Type where
+  BecomesTapped :: TypeableOT2 ot x => WPermanent ot -> WithLinkedObject x ot -> EventListener' x
+  Events :: [EventListener' x] -> EventListener' x
+  SpellIsCast :: TypeableOT ot => WSpell ot -> WithLinkedObject x ot -> EventListener' x
+  TimePoint :: Typeable p => TimePoint p -> x OPlayer -> EventListener' x
   deriving (Typeable)
 
-instance ConsIndex EventListener where
+instance ConsIndex (EventListener' x) where
   consIndex = \case
     BecomesTapped {} -> 1
     Events {} -> 2
@@ -369,6 +375,7 @@ data TriggeredAbility :: Type -> Type where
   deriving (Typeable)
 
 data WithLinkedObject :: (Type -> Type) -> Type -> Type where
+  LProxy :: [Requirement ot] -> WithLinkedObject Proxy ot
   L1 :: Inst1 IsObjectType a => [Requirement (ON1 a)] -> (ON1 a -> x (ON1 a)) -> WithLinkedObject x (ON1 a)
   L2 :: Inst2 IsObjectType a b => [Requirement (ON2 a b)] -> (ON2 a b -> x (ON2 a b)) -> WithLinkedObject x (ON2 a b)
   L3 :: Inst3 IsObjectType a b c => [Requirement (ON3 a b c)] -> (ON3 a b c -> x (ON3 a b c)) -> WithLinkedObject x (ON3 a b c)
@@ -378,11 +385,12 @@ data WithLinkedObject :: (Type -> Type) -> Type -> Type where
 
 instance ConsIndex (WithLinkedObject x ot) where
   consIndex = \case
-    L1 {} -> 1
-    L2 {} -> 2
-    L3 {} -> 3
-    L4 {} -> 4
-    L5 {} -> 5
+    LProxy {} -> 1
+    L1 {} -> 2
+    L2 {} -> 3
+    L3 {} -> 4
+    L4 {} -> 5
+    L5 {} -> 6
 
 data WithMaskedObject :: (Type -> Type) -> Type -> Type where
   M1 :: (TypeableOT2 ot x, Inst1 IsObjectType a) => [Requirement (ON1 a)] -> (ON1 a -> x ot) -> WithMaskedObject x ot

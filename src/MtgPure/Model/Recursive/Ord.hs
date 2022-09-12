@@ -40,7 +40,6 @@ import safe Data.Inst
 import safe Data.Typeable (Proxy (Proxy), Typeable, cast)
 import safe MtgPure.Model.Colors (Colors)
 import safe MtgPure.Model.Damage (Damage (..))
-import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.IsObjectType (IsObjectType (..))
 import safe MtgPure.Model.ManaCost (ManaCost)
 import safe MtgPure.Model.ManaPool (ManaPool)
@@ -85,7 +84,9 @@ import safe MtgPure.Model.Recursive
     Cost (..),
     Effect (..),
     Elect (..),
-    EventListener (..),
+    Event,
+    EventListener,
+    EventListener' (..),
     Requirement (..),
     SetCard (..),
     SetToken (SetToken),
@@ -670,8 +671,8 @@ ordEffect x = case x of
           pure $ compare toughness1 toughness2
         ]
     y -> compareIndexM x y
-  Until electListener1 -> \case
-    Until electListener2 -> ordElectE electListener1 electListener2
+  Until event1 effect1 -> \case
+    Until event2 effect2 -> seqM [ordElectE event1 event2, ordEffect effect1 effect2]
     y -> compareIndexM x y
 
 ordElectE :: Elect e ot -> Elect e ot -> EnvM Ordering
@@ -706,11 +707,14 @@ ordElectE x = case x of
   Effect effects1 -> \case
     Effect effects2 -> listM ordEffect effects1 effects2
     y -> compareIndexM x y
-  Event listener1 -> \case
-    Event listener2 -> ordEventListener listener1 listener2
+  Event event1 -> \case
+    Event event2 -> ordEvent event1 event2
     y -> compareIndexM x y
   If cond1 then1 else1 -> \case
     If cond2 then2 else2 -> seqM [ordCondition cond1 cond2, ordElectE then1 then2, ordElectE else1 else2]
+    y -> compareIndexM x y
+  Listen listener1 -> \case
+    Listen listener2 -> ordEventListener listener1 listener2
     y -> compareIndexM x y
   Random with1 -> \case
     Random with2 -> ordWithObjectElectE with1 with2
@@ -723,42 +727,30 @@ ordElectE x = case x of
       seqM [ordOCreature obj1 obj2, ordElectE elect1 elect2]
     y -> compareIndexM x y
 
---data WithThis :: forall ot x. x -> ot -> Type where
---  T1 :: Inst1 IsObjectType a => (ObjectN '(OT, a) -> x '(OT, a)) -> WithThis x '(OT, a)
---  T2 :: Inst2 IsObjectType a b => (ObjectN '(OT, a, b) -> x '(OT, a, b)) -> WithThis x '(OT, a, b)
---  T3 :: Inst3 IsObjectType a b c => (ObjectN '(OT, a, b, c) -> x '(OT, a, b, c)) -> WithThis x '(OT, a, b, c)
---  T4 :: Inst4 IsObjectType a b c d => (ObjectN '(OT, a, b, c, d) -> x '(OT, a, b, c, d)) -> WithThis x '(OT, a, b, c, d)
---  T5 :: Inst5 IsObjectType a b c d e => (ObjectN '(OT, a, b, c, d, e) -> x '(OT, a, b, c, d, e)) -> WithThis x '(OT, a, b, c, d, e)
---  deriving (Typeable)
-
-ordEventListener :: EventListener -> EventListener -> EnvM Ordering
-ordEventListener x = case x of
+ordEventListener' :: forall w. Typeable w => (forall ot. w ot -> w ot -> EnvM Ordering) -> EventListener' w -> EventListener' w -> EnvM Ordering
+ordEventListener' ordM x = case x of
   BecomesTapped perm1 with1 -> \case
     BecomesTapped perm2 with2 ->
       let go ::
-            forall ot1 ot2.
-            TypeableOT2 ot1 (Elect (Effect 'OneShot)) =>
-            TypeableOT2 ot2 (Elect (Effect 'OneShot)) =>
-            WPermanent ot1 ->
-            WithLinkedObject (Elect (Effect 'OneShot)) ot1 ->
-            WithLinkedObject (Elect (Effect 'OneShot)) ot2 ->
+            forall ot.
+            TypeableOT2 ot w =>
+            WPermanent ot ->
+            WithLinkedObject w ot ->
             EnvM Ordering
-          go perm1 with1 with2 = case cast perm2 of
-            Nothing -> compareOT @ot1 perm2
-            Just perm2 -> case cast with2 of
-              Nothing -> compareOT @ot1 perm2
-              Just with2 -> seqM [ordWPermanent perm1 perm2, ordWithLinkedElectE with1 with2]
-       in go perm1 with1 with2
+          go perm1 with1 = case cast (perm2, with2) of
+            Nothing -> compareOT @ot perm2
+            Just (perm2, with2) -> seqM [ordWPermanent perm1 perm2, ordWithLinked ordM with1 with2]
+       in go perm1 with1
     y -> compareIndexM x y
   Events listeners1 -> \case
-    Events listeners2 -> ordEventListeners listeners1 listeners2
+    Events listeners2 -> listM (ordEventListener' ordM) listeners1 listeners2
     y -> compareIndexM x y
   SpellIsCast spell1 with1 -> \case
     SpellIsCast spell2 with2 ->
       let go :: forall ot. TypeableOT ot => WSpell ot -> EnvM Ordering
           go spell1 = case cast (spell2, with2) of
             Nothing -> compareOT @ot spell2
-            Just (spell2, with2) -> seqM [ordWSpell spell1 spell2, ordWithLinkedElectE with1 with2]
+            Just (spell2, with2) -> seqM [ordWSpell spell1 spell2, ordWithLinked ordM with1 with2]
        in go spell1
     y -> compareIndexM x y
   TimePoint time1 elect1 -> \case
@@ -766,12 +758,15 @@ ordEventListener x = case x of
       let go :: forall p. Typeable p => TimePoint p -> EnvM Ordering
           go time1 = case cast (time2, elect2) of
             Nothing -> pure $ compare (consIndex time1) (consIndex time2)
-            Just (time2, elect2) -> seqM [ordTimePoint time1 time2, ordElectE elect1 elect2]
+            Just (time2, elect2) -> seqM [ordTimePoint time1 time2, ordM elect1 elect2]
        in go time1
     y -> compareIndexM x y
 
-ordEventListeners :: [EventListener] -> [EventListener] -> EnvM Ordering
-ordEventListeners = listM ordEventListener
+ordEvent :: Event -> Event -> EnvM Ordering
+ordEvent = ordEventListener' $ \Proxy -> pure $ pure EQ
+
+ordEventListener :: EventListener -> EventListener -> EnvM Ordering
+ordEventListener = ordEventListener' ordElectE
 
 ordManaCost :: ManaCost -> ManaCost -> EnvM Ordering
 ordManaCost x y = pure $ compare x y
@@ -1015,20 +1010,26 @@ ordTriggeredAbility = \case
   When listener1 -> \case
     When listener2 -> ordElectE @EventListener @ot listener1 listener2
 
-ordWithLinkedElectE :: Typeable e => WithLinkedObject (Elect e) ot -> WithLinkedObject (Elect e) ot -> EnvM Ordering
-ordWithLinkedElectE = \case
+ordWithLinked :: Typeable x => (x ot -> x ot -> EnvM Ordering) -> WithLinkedObject x ot -> WithLinkedObject x ot -> EnvM Ordering
+ordWithLinked ordM x = case x of
+  LProxy reqs1 -> \case
+    LProxy reqs2 -> ordRequirements reqs1 reqs2
+    y -> compareIndexM x y
   L1 reqs1 cont1 -> \case
     L1 reqs2 cont2 -> ordO1 ordM reqs1 reqs2 cont1 cont2
+    y -> compareIndexM x y
   L2 reqs1 cont1 -> \case
     L2 reqs2 cont2 -> ordO2 ordM reqs1 reqs2 cont1 cont2
+    y -> compareIndexM x y
   L3 reqs1 cont1 -> \case
     L3 reqs2 cont2 -> ordO3 ordM reqs1 reqs2 cont1 cont2
+    y -> compareIndexM x y
   L4 reqs1 cont1 -> \case
     L4 reqs2 cont2 -> ordO4 ordM reqs1 reqs2 cont1 cont2
+    y -> compareIndexM x y
   L5 reqs1 cont1 -> \case
     L5 reqs2 cont2 -> ordO5 ordM reqs1 reqs2 cont1 cont2
-  where
-    ordM = ordElectE
+    y -> compareIndexM x y
 
 ordWithObjectElectE :: WithMaskedObject (Elect e) ot -> WithMaskedObject (Elect e) ot -> EnvM Ordering
 ordWithObjectElectE x = case x of
