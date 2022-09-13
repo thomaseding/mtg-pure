@@ -82,7 +82,7 @@ import safe MtgPure.Model.ToObjectN.Classes (ToObject1' (toObject1'))
 import safe MtgPure.Model.ToObjectN.Instances ()
 import safe MtgPure.Model.Variable (Variable (..))
 import safe MtgPure.Model.VisitObjectN (VisitObjectN (..))
-import safe MtgPure.Model.Zone (IsZone (..), SZone (..))
+import safe MtgPure.Model.Zone (IsZone (..), SZone (..), Zone (..))
 import safe MtgPure.Model.ZoneObject (
   OActivatedOrTriggeredAbility,
   OAny,
@@ -314,8 +314,8 @@ compareIndexM :: ConsIndex a => a -> a -> EnvM Ordering
 compareIndexM x y = pure $ compare (consIndex x) (consIndex y)
 
 compareOT ::
-  forall ot ot' proxy. (IsOT ot, IsOT ot') => proxy ot' -> EnvM Ordering
-compareOT _proxy = pure $ compare (indexOT (Proxy @ot)) (indexOT (Proxy @ot'))
+  forall ot1 ot2. (IsOT ot1, IsOT ot2) => EnvM Ordering
+compareOT = pure $ compare (indexOT (Proxy @ot1)) (indexOT (Proxy @ot2))
 
 toZone :: forall zone ot. IsZone zone => ObjectN ot -> ZO zone ot
 toZone = case singZone (Proxy @zone) of
@@ -507,16 +507,16 @@ ordCondition x = case x of
     y -> compareIndexM x y
   Satisfies any1 obj1 reqs1 -> \case
     Satisfies any2 obj2 reqs2 ->
-      let go :: forall ot. IsOT ot => WAny ot -> EnvM Ordering
-          go _ = case cast (any2, obj2, reqs2) of
-            Nothing -> compareOT @ot any2
+      let go :: forall ot1 ot2. (IsOT ot1, IsOT ot2) => WAny ot1 -> WAny ot2 -> EnvM Ordering
+          go _ _ = case cast (any2, obj2, reqs2) of
+            Nothing -> compareOT @ot1 @ot2
             Just (any2, obj2, reqs2) ->
               seqM
                 [ ordWAny any1 any2
                 , ordZoneObject obj1 obj2
                 , ordRequirements reqs1 reqs2
                 ]
-       in go any1
+       in go any1 any2
     y -> compareIndexM x y
 
 ordConditions :: [Condition] -> [Condition] -> EnvM Ordering
@@ -564,29 +564,37 @@ ordEffect x = case x of
     y -> compareIndexM x y
   AddToBattlefield perm1 player1 token1 -> \case
     AddToBattlefield perm2 player2 token2 ->
-      let go :: forall ot. IsOT ot => WPermanent ot -> EnvM Ordering
-          go _ = case cast (perm2, token2) of
-            Nothing -> compareOT @ot perm2
+      let go ::
+            forall ot1 ot2.
+            (IsOT ot1, IsOT ot2) =>
+            WPermanent ot1 ->
+            WPermanent ot2 ->
+            EnvM Ordering
+          go _ _ = case cast (perm2, token2) of
+            Nothing -> compareOT @ot1 @ot2
             Just (perm2, token2) ->
               seqM
                 [ ordWPermanent perm1 perm2
                 , ordOPlayer player1 player2
                 , ordToken token1 token2
                 ]
-       in go perm1
+       in go perm1 perm2
+    y -> compareIndexM x y
+  CantBeRegenerated creature1 -> \case
+    CantBeRegenerated creature2 -> ordOCreature creature1 creature2
     y -> compareIndexM x y
   ChangeTo perm1 obj1 card1 -> \case
     ChangeTo perm2 obj2 card2 ->
-      let go :: forall ot. IsOT ot => WPermanent ot -> EnvM Ordering
-          go _ = case cast (perm2, card2) of
-            Nothing -> compareOT @ot perm2
+      let go :: forall ot1 ot2. (IsOT ot1, IsOT ot2) => WPermanent ot1 -> WPermanent ot2 -> EnvM Ordering
+          go _ _ = case cast (perm2, card2) of
+            Nothing -> compareOT @ot1 @ot2
             Just (perm2, card2) ->
               seqM
                 [ ordWPermanent perm1 perm2
                 , ordOPermanent obj1 obj2
                 , ordCard card1 card2
                 ]
-       in go perm1
+       in go perm1 perm2
     y -> compareIndexM x y
   CounterAbility ability1 -> \case
     CounterAbility ability2 ->
@@ -618,68 +626,68 @@ ordEffect x = case x of
     y -> compareIndexM x y
   Gain any1 obj1 ability1 -> \case
     Gain any2 obj2 ability2 ->
-      let go :: forall ot. IsOT ot => WAny ot -> EnvM Ordering
-          go _ = case cast (any2, obj2, ability2) of
-            Nothing -> compareOT @ot any2
+      let go :: forall ot1 ot2. (IsOT ot1, IsOT ot2) => WAny ot1 -> WAny ot2 -> EnvM Ordering
+          go _ _ = case cast (any2, obj2, ability2) of
+            Nothing -> compareOT @ot1 @ot2
             Just (any2, obj2, ability2) ->
               seqM
                 [ ordWAny any1 any2
                 , ordZoneObject obj1 obj2
                 , ordAbility ability1 ability2
                 ]
-       in go any1
+       in go any1 any2
     y -> compareIndexM x y
   Lose any1 obj1 ability1 -> \case
     Lose any2 obj2 ability2 ->
-      let go :: forall ot. IsOT ot => WAny ot -> EnvM Ordering
-          go _ = case cast (any2, obj2, ability2) of
-            Nothing -> compareOT @ot any2
+      let go :: forall ot1 ot2. (IsOT ot1, IsOT ot2) => WAny ot1 -> WAny ot2 -> EnvM Ordering
+          go _ _ = case cast (any2, obj2, ability2) of
+            Nothing -> compareOT @ot1 @ot2
             Just (any2, obj2, ability2) ->
               seqM
                 [ ordWAny any1 any2
                 , ordZoneObject obj1 obj2
                 , ordAbility ability1 ability2
                 ]
-       in go any1
+       in go any1 any2
     y -> compareIndexM x y
   PutOntoBattlefield wPerm1 player1 card1 -> \case
     PutOntoBattlefield wPerm2 player2 card2 ->
-      let go :: forall ot. IsOT ot => WPermanent ot -> EnvM Ordering
-          go _ = case cast (wPerm2, card2) of
-            Nothing -> compareOT @ot wPerm2
+      let go :: forall ot1 ot2. (IsOT ot1, IsOT ot2) => WPermanent ot1 -> WPermanent ot2 -> EnvM Ordering
+          go _ _ = case cast (wPerm2, card2) of
+            Nothing -> compareOT @ot1 @ot2
             Just (wPerm2, card2) ->
               seqM
                 [ ordWPermanent wPerm1 wPerm2
                 , ordOPlayer player1 player2
                 , ordZoneObject card1 card2
                 ]
-       in go wPerm1
+       in go wPerm1 wPerm2
     y -> compareIndexM x y
   Sacrifice perm1 player1 reqs1 -> \case
     Sacrifice perm2 player2 reqs2 ->
-      let go :: forall ot. IsOT ot => WPermanent ot -> EnvM Ordering
-          go _ = case cast (perm2, reqs2) of
-            Nothing -> compareOT @ot perm2
+      let go :: forall ot1 ot2. (IsOT ot1, IsOT ot2) => WPermanent ot1 -> WPermanent ot2 -> EnvM Ordering
+          go _ _ = case cast (perm2, reqs2) of
+            Nothing -> compareOT @ot1 @ot2
             Just (perm2, reqs2) ->
               seqM
                 [ ordWPermanent perm1 perm2
                 , ordOPlayer player1 player2
                 , ordRequirements reqs1 reqs2
                 ]
-       in go perm1
+       in go perm1 perm2
     y -> compareIndexM x y
   SearchLibrary wCard1 player1 card1 -> \case
     SearchLibrary wCard2 player2 card2 ->
-      let go :: forall ot. IsOT ot => WCard ot -> EnvM Ordering
-          go _ = case cast (wCard2, card2) of
-            Nothing -> compareOT @ot wCard2
+      let go :: forall ot1 ot2. (IsOT ot1, IsOT ot2) => WCard ot1 -> WCard ot2 -> EnvM Ordering
+          go _ _ = case cast (wCard2, card2) of
+            Nothing -> compareOT @ot1 @ot2
             Just (wCard2, card2) ->
               seqM
                 [ ordWCard wCard1 wCard2
                 , ordOPlayer player1 player2
                 , ordWithLinkedObject ordElectE card1 card2
                 ]
-       in go wCard1
+       in go wCard1 wCard2
     y -> compareIndexM x y
   StatDelta creature1 power1 toughness1 -> \case
     StatDelta creature2 power2 toughness2 ->
@@ -695,8 +703,6 @@ ordEffect x = case x of
     y -> compareIndexM x y
 
 ordElectE ::
-  forall e ot.
-  (Typeable e, IsOT ot) =>
   Elect e ot ->
   Elect e ot ->
   EnvM Ordering
@@ -704,19 +710,22 @@ ordElectE x = case x of
   A sel1 player1 with1 -> \case
     A sel2 player2 with2 ->
       let go ::
-            forall zone ot'.
-            IsZO zone ot' =>
-            WithMaskedObject zone (Elect e ot') ->
+            forall e zone1 ot1 zone2 ot2.
+            Typeable e =>
+            IsZO zone1 ot1 =>
+            IsZO zone2 ot2 =>
+            WithMaskedObject zone1 (Elect e ot1) ->
+            WithMaskedObject zone2 (Elect e ot2) ->
             EnvM Ordering
-          go with2 = case cast with2 of
-            Nothing -> compareOT @ot (Proxy @ot')
+          go with1 with2 = case cast with2 of
+            Nothing -> compareOT @ot1 @ot2
             Just with2 ->
               seqM
                 [ ordSelection sel1 sel2
                 , ordOPlayer player1 player2
                 , ordWithMaskedObjectElectE with1 with2
                 ]
-       in go with2
+       in go with1 with2
     y -> compareIndexM x y
   ActivePlayer playerToElect1 -> \case
     ActivePlayer playerToElect2 -> do
@@ -768,7 +777,7 @@ ordElectE x = case x of
       seqM [ordOCreature obj1 obj2, ordElectE elect1 elect2]
     y -> compareIndexM x y
 
-ordElseE :: IsOT ot => Else e ot -> Else e ot -> EnvM Ordering
+ordElseE :: Else e ot -> Else e ot -> EnvM Ordering
 ordElseE = \case
   ElseCost elect1 -> \case
     ElseCost elect2 -> ordElectE elect1 elect2
@@ -787,14 +796,14 @@ ordEnchantmentType = \case
   Aura enchant1 -> \case
     Aura enchant2 ->
       let go ::
-            forall zone ot zone' ot'.
-            IsZO zone ot =>
-            IsZO zone' ot' =>
-            Enchant zone ot ->
-            Enchant zone' ot' ->
+            forall zone1 ot1 zone2 ot2.
+            IsZO zone1 ot1 =>
+            IsZO zone2 ot2 =>
+            Enchant zone1 ot1 ->
+            Enchant zone2 ot2 ->
             EnvM Ordering
           go enchant1 enchant2 = case cast enchant2 of
-            Nothing -> compareOT @ot (Proxy @ot')
+            Nothing -> compareOT @ot1 @ot2
             Just enchant2 -> ordEnchant enchant1 enchant2
        in go enchant1 enchant2
 
@@ -812,28 +821,29 @@ ordEventListener' ordM x = case x of
   BecomesTapped perm1 with1 -> \case
     BecomesTapped perm2 with2 ->
       let go ::
-            forall ot.
-            (IsOT ot, Typeable w) =>
-            WPermanent ot ->
+            forall ot1 ot2.
+            (IsOT ot1, IsOT ot2) =>
+            WPermanent ot1 ->
+            WPermanent ot2 ->
             EnvM Ordering
-          go _ = case cast (perm2, with2) of
-            Nothing -> compareOT @ot perm2
+          go _ _ = case cast (perm2, with2) of
+            Nothing -> compareOT @ot1 @ot2
             Just (perm2, with2) ->
               seqM
                 [ordWPermanent perm1 perm2, ordWithLinkedObject ordM with1 with2]
-       in go perm1
+       in go perm1 perm2
     y -> compareIndexM x y
   Events listeners1 -> \case
     Events listeners2 -> listM (ordEventListener' ordM) listeners1 listeners2
     y -> compareIndexM x y
   SpellIsCast spell1 with1 -> \case
     SpellIsCast spell2 with2 ->
-      let go :: forall ot. IsOT ot => WSpell ot -> EnvM Ordering
-          go _ = case cast (spell2, with2) of
-            Nothing -> compareOT @ot spell2
+      let go :: forall ot1 ot2. IsOT ot1 => IsOT ot2 => WSpell ot1 -> WSpell ot2 -> EnvM Ordering
+          go _ _ = case cast (spell2, with2) of
+            Nothing -> compareOT @ot1 @ot2
             Just (spell2, with2) ->
               seqM [ordWSpell spell1 spell2, ordWithLinkedObject ordM with1 with2]
-       in go spell1
+       in go spell1 spell2
     y -> compareIndexM x y
   TimePoint time1 elect1 -> \case
     TimePoint time2 elect2 -> case cast (time2, elect2) of
@@ -864,7 +874,7 @@ ordO1 ::
   (ZO zone ot -> x) ->
   EnvM Ordering
 ordO1 ordM reqs1 reqs2 cont1 cont2 = case cast' (reqs2, cont2) of
-  Nothing -> compareOT @(OT1 a) (Proxy :: Proxy ot)
+  Nothing -> compareOT @(OT1 a) @ot
   Just (reqs2, cont2) ->
     seqM
       [ ordRequirements reqs1 reqs2
@@ -886,7 +896,7 @@ ordO2 ::
   (ZO zone ot -> x) ->
   EnvM Ordering
 ordO2 ordM reqs1 reqs2 cont1 cont2 = case cast' (reqs2, cont2) of
-  Nothing -> compareOT @(OT2 a b) (Proxy :: Proxy ot)
+  Nothing -> compareOT @(OT2 a b) @ot
   Just (reqs2, cont2) ->
     seqM
       [ ordRequirements reqs1 reqs2
@@ -912,7 +922,7 @@ ordO3 ::
   (ZO zone ot -> x) ->
   EnvM Ordering
 ordO3 ordM reqs1 reqs2 cont1 cont2 = case cast' (reqs2, cont2) of
-  Nothing -> compareOT @(OT3 a b c) (Proxy :: Proxy ot)
+  Nothing -> compareOT @(OT3 a b c) @ot
   Just (reqs2, cont2) ->
     seqM
       [ ordRequirements reqs1 reqs2
@@ -938,7 +948,7 @@ ordO4 ::
   (ZO zone ot -> x) ->
   EnvM Ordering
 ordO4 ordM reqs1 reqs2 cont1 cont2 = case cast' (reqs2, cont2) of
-  Nothing -> compareOT @(OT4 a b c d) (Proxy :: Proxy ot)
+  Nothing -> compareOT @(OT4 a b c d) @ot
   Just (reqs2, cont2) ->
     seqM
       [ ordRequirements reqs1 reqs2
@@ -964,7 +974,7 @@ ordO5 ::
   (ZO zone ot -> x) ->
   EnvM Ordering
 ordO5 ordM reqs1 reqs2 cont1 cont2 = case cast' (reqs2, cont2) of
-  Nothing -> compareOT @(OT5 a b c d e) (Proxy :: Proxy ot)
+  Nothing -> compareOT @(OT5 a b c d e) @ot
   Just (reqs2, cont2) ->
     seqM
       [ ordRequirements reqs1 reqs2
@@ -1015,6 +1025,19 @@ ordRequirement :: Requirement zone ot -> Requirement zone ot -> EnvM Ordering
 ordRequirement x = case x of
   ControlledBy player1 -> \case
     ControlledBy player2 -> ordOPlayer player1 player2
+    y -> compareIndexM x y
+  ControlsA req1 -> \case
+    ControlsA req2 ->
+      let go ::
+            forall ot1 ot2.
+            (IsOT ot1, IsOT ot2) =>
+            Requirement 'Battlefield ot1 ->
+            Requirement 'Battlefield ot2 ->
+            EnvM Ordering
+          go req1 req2 = case cast req2 of
+            Nothing -> compareOT @ot1 @ot2
+            Just req2 -> ordRequirement req1 req2
+       in go req1 req2
     y -> compareIndexM x y
   HasAbility ability1 -> \case
     HasAbility ability2 -> ordWithThisAbility ability1 ability2
@@ -1213,7 +1236,7 @@ ordWithLinkedObject ordM x = case x of
       ordO5 ordM reqs1 reqs2 cont1 cont2
 
 ordWithMaskedObjectElectE ::
-  (Typeable e, IsZO zone ot) =>
+  IsZO zone ot =>
   WithMaskedObject zone (Elect e ot) ->
   WithMaskedObject zone (Elect e ot) ->
   EnvM Ordering
@@ -1346,7 +1369,7 @@ ordW2 ::
   witness ot2 ->
   EnvM Ordering
 ordW2 _wit1 wit2 = case (cast wit2 :: Maybe (witness ot1)) of
-  Nothing -> compareOT @ot1 wit2
+  Nothing -> compareOT @ot1 @ot2
   Just{} -> pure EQ
 
 ordW3 ::
@@ -1363,7 +1386,7 @@ ordW3 ::
   witness ot2 ->
   EnvM Ordering
 ordW3 _wit1 wit2 = case (cast wit2 :: Maybe (witness ot1)) of
-  Nothing -> compareOT @ot1 wit2
+  Nothing -> compareOT @ot1 @ot2
   Just{} -> pure EQ
 
 ordW4 ::
@@ -1380,7 +1403,7 @@ ordW4 ::
   witness ot2 ->
   EnvM Ordering
 ordW4 _wit1 wit2 = case (cast wit2 :: Maybe (witness ot1)) of
-  Nothing -> compareOT @ot1 wit2
+  Nothing -> compareOT @ot1 @ot2
   Just{} -> pure EQ
 
 ordW5 ::
@@ -1397,7 +1420,7 @@ ordW5 ::
   witness ot2 ->
   EnvM Ordering
 ordW5 _wit1 wit2 = case (cast wit2 :: Maybe (witness ot1)) of
-  Nothing -> compareOT @ot1 wit2
+  Nothing -> compareOT @ot1 @ot2
   Just{} -> pure EQ
 
 ordW6 ::
@@ -1414,7 +1437,7 @@ ordW6 ::
   witness ot2 ->
   EnvM Ordering
 ordW6 _wit1 wit2 = case (cast wit2 :: Maybe (witness ot1)) of
-  Nothing -> compareOT @ot1 wit2
+  Nothing -> compareOT @ot1 @ot2
   Just{} -> pure EQ
 
 ordWAny :: WAny ot -> WAny ot -> EnvM Ordering

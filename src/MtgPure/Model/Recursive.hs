@@ -101,6 +101,8 @@ import safe MtgPure.Model.ZoneObject (
   ZO,
  )
 
+----------------------------------------
+
 -- Semantics legend:
 --
 -- "ot is exactly (a,b,c,...)"
@@ -114,10 +116,14 @@ import safe MtgPure.Model.ZoneObject (
 --    Requirement zone ot
 --    ZO zone ot
 
+----------------------------------------
+
 type IsOT (ot :: Type) = (IndexOT ot, VisitObjectN ot, PrettyType ot)
 
 type IsZO (zone :: Zone) (ot :: Type) =
   (IsOT ot, IsZone zone, PrettyType (ZO zone ot))
+
+----------------------------------------
 
 data Ability (ot :: Type) :: Type where
   Activated :: Elect (Cost ot) ot -> Elect (Effect 'OneShot) ot -> Ability ot
@@ -131,9 +137,13 @@ instance ConsIndex (Ability ot) where
     Static{} -> 2
     Triggered{} -> 3
 
+----------------------------------------
+
 -- data ArtifactType (ot :: Type) :: Type where
 --   Vehicle :: ArtifactType ot -- TODO: Stuff crew mechanic into here
 --   deriving (Bounded, Enum, Eq, Ord, Show)
+
+----------------------------------------
 
 data Card (ot :: Type) :: Type where
   -- For now Instants and Sorceries will use 'Battlefield for it's THIS zone.
@@ -165,6 +175,9 @@ instance ConsIndex (Card ot) where
     PlaneswalkerCard{} -> 10
     SorceryCard{} -> 11
 
+----------------------------------------
+
+-- TODO: Turn each of these constructors into a record.
 data CardTypeDef (tribal :: Tribal) (ot :: Type) :: Type where
   ArtifactDef ::
     Colors ->
@@ -251,6 +264,8 @@ instance ConsIndex (CardTypeDef tribe ot) where
     TribalDef{} -> 10
     VariableDef{} -> 11
 
+----------------------------------------
+
 data Condition :: Type where
   CAnd :: [Condition] -> Condition
   CNot :: Condition -> Condition
@@ -264,6 +279,8 @@ instance ConsIndex Condition where
     CNot{} -> 2
     COr{} -> 3
     Satisfies{} -> 4
+
+----------------------------------------
 
 data Cost (ot :: Type) :: Type where
   AndCosts :: [Cost ot] -> Cost ot
@@ -287,9 +304,12 @@ instance ConsIndex (Cost ot) where
     SacrificeCost{} -> 7
     TapCost{} -> 8
 
+----------------------------------------
+
 data Effect (ef :: EffectType) :: Type where
   AddMana :: OPlayer -> ManaPool -> Effect 'OneShot
   AddToBattlefield :: IsOT ot => WPermanent ot -> OPlayer -> Token ot -> Effect 'OneShot
+  CantBeRegenerated :: OCreature -> Effect 'Continuous
   ChangeTo :: IsOT ot => WPermanent ot -> OPermanent -> Card ot -> Effect 'Continuous
   CounterAbility :: OActivatedOrTriggeredAbility -> Effect 'OneShot
   CounterSpell :: OSpell -> Effect 'OneShot
@@ -311,21 +331,24 @@ instance ConsIndex (Effect ef) where
   consIndex = \case
     AddMana{} -> 1
     AddToBattlefield{} -> 2
-    ChangeTo{} -> 3
-    CounterAbility{} -> 4
-    CounterSpell{} -> 5
-    DealDamage{} -> 6
-    Destroy{} -> 7
-    EffectContinuous{} -> 8
-    EOr{} -> 9
-    DrawCards{} -> 10
-    Gain{} -> 11
-    Lose{} -> 12
-    PutOntoBattlefield{} -> 13
-    Sacrifice{} -> 14
-    SearchLibrary{} -> 15
-    StatDelta{} -> 16
-    Until{} -> 17
+    CantBeRegenerated{} -> 3
+    ChangeTo{} -> 4
+    CounterAbility{} -> 5
+    CounterSpell{} -> 6
+    DealDamage{} -> 7
+    Destroy{} -> 8
+    EffectContinuous{} -> 9
+    EOr{} -> 10
+    DrawCards{} -> 11
+    Gain{} -> 12
+    Lose{} -> 13
+    PutOntoBattlefield{} -> 14
+    Sacrifice{} -> 15
+    SearchLibrary{} -> 16
+    StatDelta{} -> 17
+    Until{} -> 18
+
+----------------------------------------
 
 data Elect (el :: Type) (ot :: Type) :: Type where
   A :: (el ~ Effect 'OneShot, IsZO zone ot) => Selection -> OPlayer -> WithMaskedObject zone (Elect el ot) -> Elect el ot
@@ -340,7 +363,7 @@ data Elect (el :: Type) (ot :: Type) :: Type where
   If :: Condition -> Elect el ot -> Else el ot -> Elect el ot
   Listen :: EventListener -> Elect EventListener ot
   -- TODO: Add `SZone zone` witness and change `'Battlefield` to `zone`.
-  Random :: IsOT ot => WithMaskedObject 'Battlefield (Elect el ot) -> Elect el ot
+  Random :: IsOT ot => WithMaskedObject 'Battlefield (Elect el ot) -> Elect el ot -- Interpreted as "Arbitrary" in some contexts, such as Event and EventListener
   VariableFromPower :: OCreature -> (Variable -> Elect el ot) -> Elect el ot
   deriving (Typeable)
 
@@ -359,6 +382,8 @@ instance ConsIndex (Elect el ot) where
     Random{} -> 11
     VariableFromPower{} -> 12
 
+----------------------------------------
+
 data Else (el :: Type) (ot :: Type) :: Type where
   ElseCost :: (el ~ Cost ot) => Elect el ot -> Else el ot
   ElseEffect :: (el ~ Effect 'OneShot) => Elect el ot -> Else el ot
@@ -376,6 +401,8 @@ instance ConsIndex (Else el ot) where
     ElseEffect{} -> 2
     ElseEvent{} -> 3
 
+----------------------------------------
+
 data Enchant (zone :: Zone) (ot :: Type) :: Type where
   Enchant :: IsZO zone ot => WithLinkedObject zone (Elect (Effect 'Continuous)) ot -> Enchant zone ot
 
@@ -383,12 +410,16 @@ instance ConsIndex (Enchant zone ot) where
   consIndex = \case
     Enchant{} -> 1
 
+----------------------------------------
+
 data EnchantmentType (ot :: Type) :: Type where
   Aura :: (ot ~ OTEnchantment, IsZO zone ot') => Enchant zone ot' -> EnchantmentType ot
 
 instance ConsIndex (EnchantmentType ot) where
   consIndex = \case
     Aura{} -> 1
+
+----------------------------------------
 
 type Event = EventListener' Proxy
 
@@ -408,6 +439,8 @@ instance ConsIndex (EventListener' liftOT) where
     SpellIsCast{} -> 3
     TimePoint{} -> 4
 
+----------------------------------------
+
 data NonProxy (liftOT :: Type -> Type) :: Type where
   NonProxyElectEffect :: NonProxy (Elect (Effect ef))
 
@@ -415,8 +448,11 @@ instance ConsIndex (NonProxy liftOT) where
   consIndex = \case
     NonProxyElectEffect -> 1
 
+----------------------------------------
+
 data Requirement (zone :: Zone) (ot :: Type) :: Type where
   ControlledBy :: OPlayer -> Requirement 'Battlefield ot
+  ControlsA :: IsOT ot => Requirement 'Battlefield ot -> Requirement zone OTPlayer
   HasAbility :: IsZO zone ot => WithThis zone Ability ot -> Requirement zone ot -- Non-unique differing representations will not be considered the same
   HasLandType :: LandType -> Requirement zone OTLand
   Is :: IsZO zone ot => WAny ot -> ZO zone ot -> Requirement zone ot
@@ -458,21 +494,24 @@ data Requirement (zone :: Zone) (ot :: Type) :: Type where
 
 instance ConsIndex (Requirement zone ot) where
   consIndex = \case
-    ControlledBy{} -> 1
-    HasAbility{} -> 2
-    HasLandType{} -> 3
-    Is{} -> 4
-    Not{} -> 5
-    OfColors{} -> 6
-    OwnedBy{} -> 7
-    PlayerPays{} -> 8
-    RAnd{} -> 9
-    ROr{} -> 10
-    Tapped{} -> 11
-    R2{} -> 12
-    R3{} -> 13
-    R4{} -> 14
-    R5{} -> 15
+    ControlsA{} -> 1
+    ControlledBy{} -> 2
+    HasAbility{} -> 3
+    HasLandType{} -> 4
+    Is{} -> 5
+    Not{} -> 6
+    OfColors{} -> 7
+    OwnedBy{} -> 8
+    PlayerPays{} -> 9
+    RAnd{} -> 10
+    ROr{} -> 11
+    Tapped{} -> 12
+    R2{} -> 13
+    R3{} -> 14
+    R4{} -> 15
+    R5{} -> 16
+
+----------------------------------------
 
 data SetCard (ot :: Type) :: Type where
   SetCard :: CardSet -> Rarity -> Card ot -> SetCard ot
@@ -482,6 +521,8 @@ instance ConsIndex (SetCard ot) where
   consIndex = \case
     SetCard{} -> 1
 
+----------------------------------------
+
 data SetToken (ot :: Type) :: Type where
   SetToken :: CardSet -> Rarity -> Token ot -> SetToken ot
   deriving (Typeable)
@@ -489,6 +530,8 @@ data SetToken (ot :: Type) :: Type where
 instance ConsIndex (SetToken ot) where
   consIndex = \case
     SetToken{} -> 1
+
+----------------------------------------
 
 data StaticAbility (ot :: Type) :: Type where
   As :: IsOT ot => Elect EventListener ot -> StaticAbility ot -- 603.6d: not a triggered ability
@@ -509,6 +552,8 @@ instance ConsIndex (StaticAbility ot) where
     Haste{} -> 5
     StaticContinuous{} -> 6
     Suspend{} -> 7
+
+----------------------------------------
 
 data Token (ot :: Type) :: Type where
   Token :: WPermanent ot -> Card ot -> Token ot
@@ -532,6 +577,8 @@ instance ConsIndex (Token ot) where
     LandToken{} -> 7
     PlaneswalkerToken{} -> 8
 
+----------------------------------------
+
 -- https://www.mtgsalvation.com/forums/magic-fundamentals/magic-rulings/magic-rulings-archives/611601-whenever-what-does-it-mean?comment=3
 -- https://www.reddit.com/r/magicTCG/comments/asmecb/noob_question_difference_between_as_and_when/
 data TriggeredAbility (ot :: Type) :: Type where
@@ -541,6 +588,8 @@ data TriggeredAbility (ot :: Type) :: Type where
 instance ConsIndex (TriggeredAbility ot) where
   consIndex = \case
     When{} -> 1
+
+----------------------------------------
 
 data WithLinkedObject (zone :: Zone) (liftOT :: Type -> Type) (ot :: Type) :: Type where
   LProxy :: [Requirement zone ot] -> WithLinkedObject zone Proxy ot
@@ -585,6 +634,8 @@ instance ConsIndex (WithLinkedObject zone liftOT ot) where
     L4{} -> 5
     L5{} -> 6
 
+----------------------------------------
+
 data WithMaskedObject (zone :: Zone) (liftedOT :: Type) :: Type where
   M1 ::
     (Typeable liftedOT, IsOT (OT1 a), Inst1 IsObjectType a) =>
@@ -621,6 +672,8 @@ instance ConsIndex (WithMaskedObject zone liftedOT) where
     M4{} -> 4
     M5{} -> 5
 
+----------------------------------------
+
 data WithThis (zone :: Zone) (liftOT :: Type -> Type) (ot :: Type) :: Type where
   T1 ::
     (IsOT (OT1 a), Inst1 IsObjectType a) =>
@@ -629,6 +682,8 @@ data WithThis (zone :: Zone) (liftOT :: Type -> Type) (ot :: Type) :: Type where
   T2 ::
     (IsOT (OT2 a b), Inst2 IsObjectType a b) =>
     -- TODO: Add a additional full (ZO zone (OT2 a b)) to the input tuple?
+    -- TODO: Introduce a `This ot` record type to access its constituents.
+    --       Prolly can also add ToObjectN instances (cool!).
     ((ZO zone (OT1 a), ZO zone (OT1 b)) -> liftOT (OT2 a b)) ->
     WithThis zone liftOT (OT2 a b)
   deriving (Typeable)

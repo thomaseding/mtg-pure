@@ -47,6 +47,7 @@ import safe MtgPure.Cards (
   ragingGoblin,
   shock,
   sinkhole,
+  snuffOut,
   soldierToken,
   stifle,
   stoneRain,
@@ -87,6 +88,7 @@ allCards =
   , toCard pradeshGypsies
   , toCard shock
   , toCard sinkhole
+  , toCard snuffOut
   , toCard stifle
   , toCard stoneRain
   , toCard stoneThrowingDevils

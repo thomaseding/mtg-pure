@@ -50,6 +50,7 @@ module MtgPure.ModelCombinators (
   ifThen,
   ifElse,
   ifThenElse,
+  isBasic,
   nonBasic,
   tapCost,
   ofColors,
@@ -73,6 +74,7 @@ module MtgPure.ModelCombinators (
   addToBattlefield,
   colored,
   colorless,
+  nonBlack,
   tapped,
   untilEndOfTurn,
   putOntoBattlefield,
@@ -84,7 +86,7 @@ import safe Data.Proxy (Proxy (..))
 import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.BasicLandType (BasicLandType)
 import safe MtgPure.Model.CardName (CardName)
-import safe MtgPure.Model.Color (Color)
+import safe MtgPure.Model.Color (Color (..))
 import safe MtgPure.Model.ColorsLike (ColorsLike (..))
 import safe MtgPure.Model.Damage (Damage (..))
 import safe MtgPure.Model.EffectType (EffectType (..))
@@ -668,8 +670,14 @@ ifThenElse ::
   AsIfThenElse e ot => Condition -> Elect e ot -> Elect e ot -> Elect e ot
 ifThenElse cond then_ else_ = If cond then_ $ liftElse else_
 
+isBasic :: IsZone zone => Requirement zone OTLand
+isBasic = ROr $ map (HasLandType . BasicLand) [minBound ..]
+
 nonBasic :: IsZone zone => Requirement zone OTLand
 nonBasic = RAnd $ map (Not . HasLandType . BasicLand) [minBound ..]
+
+nonBlack :: IsZO zone ot => Requirement zone ot
+nonBlack = Not $ ofColors Black
 
 colored :: Requirement zone ot
 colored = ROr $ map ofColors [minBound :: Color ..]

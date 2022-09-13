@@ -751,6 +751,9 @@ showEffect = \case
     sPlayer <- parens <$> showZoneObject player
     sCard <- dollar <$> showToken token
     pure $ pure "AddToBattlefield " <> sPerm <> pure " " <> sPlayer <> sCard
+  CantBeRegenerated creature -> yesParens $ do
+    sCreature <- dollar <$> showZoneObject creature
+    pure $ pure "CantBeRegenerated" <> sCreature
   ChangeTo perm before after -> yesParens $ do
     sPerm <- parens <$> showWPermanent perm
     sBefore <- parens <$> showOPermanent before
@@ -1376,6 +1379,9 @@ showRequirement = \case
   ControlledBy obj -> yesParens $ do
     sObj <- dollar <$> showZoneObject obj
     pure $ pure "ControlledBy" <> sObj
+  ControlsA req -> yesParens $ do
+    sObj <- dollar <$> showRequirement req
+    pure $ pure "ControlsA" <> sObj
   HasAbility ability -> yesParens $ do
     sAbility <- dollar <$> showWithThis showAbility "this" ability
     pure $ pure "HasAbility" <> sAbility

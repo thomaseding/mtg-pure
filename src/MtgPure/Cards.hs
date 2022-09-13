@@ -43,6 +43,7 @@ module MtgPure.Cards (
   pradeshGypsies,
   shock,
   sinkhole,
+  snuffOut,
   stifle,
   stoneRain,
   stoneThrowingDevils,
@@ -85,13 +86,13 @@ import safe MtgPure.Model.Recursive (
   Card,
   CardTypeDef (..),
   Condition (COr),
-  Cost (AndCosts, DiscardRandomCost, ManaCost, PayLife),
-  Effect (DrawCards, StatDelta),
+  Cost (AndCosts, DiscardRandomCost, ManaCost, OrCosts, PayLife),
+  Effect (CantBeRegenerated, DrawCards, EffectContinuous, StatDelta),
   Elect (A, ActivePlayer, All, Cost, VariableFromPower),
   Enchant (Enchant),
   EnchantmentType (Aura),
   EventListener' (TimePoint),
-  Requirement (HasLandType, Not, ROr),
+  Requirement (ControlsA, HasLandType, Not, ROr),
   StaticAbility (Bestow, FirstStrike, Flying, Haste, StaticContinuous, Suspend),
   Token,
   TriggeredAbility (When),
@@ -121,11 +122,13 @@ import safe MtgPure.ModelCombinators (
   gain,
   hasAbility,
   ifElse,
+  ifThenElse,
   is,
   mkCard,
   mkToken,
   noCost,
   nonBasic,
+  nonBlack,
   ofColors,
   playerPays,
   putOntoBattlefield,
@@ -436,6 +439,21 @@ sinkhole = mkCard "Sinkhole" $ \this ->
       A Target you $ masked @OTLand [] $ \target -> effect $ destroy target
  where
   cost = spellCost (B, B)
+
+snuffOut :: Card OTInstant
+snuffOut = mkCard "Snuff Out" $ \this ->
+  let cost' = ManaCost $ toManaCost (3, B)
+      cost = controllerOf this $
+        \you ->
+          ifThenElse
+            (satisfies you [ControlsA $ HasLandType $ BasicLand Swamp])
+            (Cost $ OrCosts [PayLife 4, cost'])
+            (Cost cost')
+   in InstantDef (toColors B) cost [] $
+        controllerOf this $ \you ->
+          A Target you $
+            masked [nonBlack] $
+              \target -> effect [destroy target, EffectContinuous $ CantBeRegenerated target]
 
 soldierToken :: Token OTCreature
 soldierToken = mkToken "Soldier Token" $ \_this ->
