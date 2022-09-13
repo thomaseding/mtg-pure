@@ -145,70 +145,100 @@ import safe MtgPure.ModelCombinators (
 ----------------------------------------
 
 mkBasicLand :: BasicLandType -> Card OTLand
-mkBasicLand ty = mkCard name $ \_this -> LandDef [BasicLand ty] []
+mkBasicLand ty = mkCard name $ \_this ->
+  LandDef
+    { land_subtypes = [BasicLand ty]
+    , land_abilities = []
+    }
  where
   name = CardName $ show ty
 
 mkDualLand :: String -> BasicLandType -> BasicLandType -> Card OTLand
 mkDualLand name ty1 ty2 =
-  mkCard (CardName name) $ \_this -> LandDef [BasicLand ty1, BasicLand ty2] []
+  mkCard (CardName name) $ \_this ->
+    LandDef
+      { land_subtypes = [BasicLand ty1, BasicLand ty2]
+      , land_abilities = []
+      }
 
 mkFetchLand :: String -> BasicLandType -> BasicLandType -> Card OTLand
 mkFetchLand name ty1 ty2 = mkCard (CardName name) $ \this ->
   LandDef
-    []
-    [ Activated
-        (Cost $ AndCosts [tapCost this, PayLife 1, sacrificeCost [is this]])
-        $ controllerOf this $
-          \you ->
-            effect $
-              searchLibrary you $
-                linked
-                  [ROr [HasLandType $ BasicLand ty1, HasLandType $ BasicLand ty2]]
-                  $ \card -> effect $ putOntoBattlefield you card
-    ]
+    { land_subtypes = []
+    , land_abilities =
+        [ Activated
+            (Cost $ AndCosts [tapCost this, PayLife 1, sacrificeCost [is this]])
+            $ controllerOf this $
+              \you ->
+                effect $
+                  searchLibrary you $
+                    linked
+                      [ROr [HasLandType $ BasicLand ty1, HasLandType $ BasicLand ty2]]
+                      $ \card -> effect $ putOntoBattlefield you card
+        ]
+    }
 
 ----------------------------------------
 
 acceptableLosses :: Card OTSorcery
 acceptableLosses = mkCard "Acceptable Losses" $ \this ->
   let cost = Cost $ AndCosts [ManaCost $ toManaCost (3, R), DiscardRandomCost 1]
-   in SorceryDef (toColors R) cost [] $
-        controllerOf this $ \you ->
-          A Target you $
-            masked @OTCreature [] $ \target ->
-              effect $ dealDamage this target 5
+   in SorceryDef
+        { sorcery_colors = toColors R
+        , sorcery_cost = cost
+        , sorcery_abilities = []
+        , sorcery_effect =
+            controllerOf this $ \you ->
+              A Target you $
+                masked @OTCreature [] $ \target ->
+                  effect $ dealDamage this target 5
+        }
 
 allIsDust :: Card OTSorcery
 allIsDust = mkCard "All Is Dust" $ \_this ->
   TribalDef [Eldrazi] WNonCreatureSorcery $
-    SorceryDef (toColors ()) cost [] $
-      All $
-        masked [] $
-          \player -> All $
-            masked @OTPermanent [colored] $
-              \perm ->
-                effect $ sacrifice player [is perm]
+    SorceryDef
+      { sorcery_colors = toColors ()
+      , sorcery_cost = cost
+      , sorcery_abilities = []
+      , sorcery_effect =
+          All $
+            masked [] $
+              \player -> All $
+                masked @OTPermanent [colored] $
+                  \perm ->
+                    effect $ sacrifice player [is perm]
+      }
  where
   cost = spellCost 7
 
 ancestralVision :: Card OTSorcery
 ancestralVision = mkCard "Ancestral Vision" $ \this ->
-  SorceryDef (toColors U) cost [Static $ Suspend 4 $ spellCost U] $
-    controllerOf this $
-      \you -> A Target you $ masked [] $ \target -> effect $ DrawCards target 3
+  SorceryDef
+    { sorcery_colors = toColors U
+    , sorcery_cost = cost
+    , sorcery_abilities = [Static $ Suspend 4 $ spellCost U]
+    , sorcery_effect =
+        controllerOf this $
+          \you -> A Target you $ masked [] $ \target -> effect $ DrawCards target 3
+    }
  where
   cost = noCost
 
 backlash :: Card OTInstant
 backlash = mkCard "Backlash" $ \this ->
-  InstantDef (toColors (B, R)) cost [] $
-    controllerOf this $ \you ->
-      A Target you $
-        masked @OTCreature [Not tapped] $ \target ->
-          VariableFromPower target $ \power ->
-            controllerOf target $ \targetController ->
-              effect $ dealDamage target targetController $ VariableDamage power
+  InstantDef
+    { instant_colors = toColors (B, R)
+    , instant_cost = cost
+    , instant_abilities = []
+    , instant_effect =
+        controllerOf this $ \you ->
+          A Target you $
+            masked @OTCreature [Not tapped] $ \target ->
+              VariableFromPower target $ \power ->
+                controllerOf target $ \targetController ->
+                  effect $ dealDamage target targetController $ VariableDamage power
+    }
  where
   cost = spellCost (1, B, R)
 
@@ -217,92 +247,121 @@ bayou = mkDualLand "Bayou" Forest Swamp
 
 birdToken :: Token OTCreature
 birdToken = mkToken "Bird Token" $ \_this ->
-  CreatureDef (toColors U) cost [Bird] (Power 2) (Toughness 2) [Static Flying]
+  CreatureDef
+    { creature_colors = toColors U
+    , creature_cost = cost
+    , creature_subtypes = [Bird]
+    , creature_power = Power 2
+    , creature_toughness = Toughness 2
+    , creature_abilities = [Static Flying]
+    }
  where
   cost = noCost
 
 blaze :: Card OTSorcery
 blaze = mkCard "Blaze" $ \this -> VariableDef $ \x ->
   let cost = spellCost (VariableGenericMana x, R)
-   in SorceryDef (toColors R) cost [] $
-        controllerOf this $ \you ->
-          A Target you $
-            masked @OTCreaturePlayerPlaneswalker [] $ \target ->
-              effect $ dealDamage this target x
+   in SorceryDef
+        { sorcery_colors = toColors R
+        , sorcery_cost = cost
+        , sorcery_abilities = []
+        , sorcery_effect =
+            controllerOf this $ \you ->
+              A Target you $
+                masked @OTCreaturePlayerPlaneswalker [] $ \target ->
+                  effect $ dealDamage this target x
+        }
 
 bloodMoon :: Card OTEnchantment
 bloodMoon = mkCard "Blood Moon" $ \_this ->
   EnchantmentDef
-    (toColors R)
-    cost
-    []
-    [ Static $
-        StaticContinuous $
-          All $
-            masked [nonBasic] $ \land ->
-              effect $ changeTo land mountain
-    ]
+    { enchantment_colors = toColors R
+    , enchantment_cost = cost
+    , enchantment_subtypes = []
+    , enchantment_abilities =
+        [ Static $
+            StaticContinuous $
+              All $
+                masked [nonBasic] $ \land ->
+                  effect $ changeTo land mountain
+        ]
+    }
  where
   cost = spellCost (2, R)
 
 cityOfBrass :: Card OTLand
 cityOfBrass = mkCard "City of Brass" $ \this ->
   LandDef
-    []
-    [ Triggered $
-        When $
-          event $
-            becomesTapped $
-              linked [is this] $ \_ ->
-                controllerOf this $ \you -> effect $ dealDamage this you 1
-    , Activated (Cost $ tapCost this) $
-        controllerOf this $ \you ->
-          effect $ addManaAnyColor you 1
-    ]
+    { land_subtypes = []
+    , land_abilities =
+        [ Triggered $
+            When $
+              event $
+                becomesTapped $
+                  linked [is this] $
+                    \_ -> controllerOf this $
+                      \you -> effect $ dealDamage this you 1
+        , Activated (Cost $ tapCost this) $
+            controllerOf this $ \you ->
+              effect $ addManaAnyColor you 1
+        ]
+    }
 
 cleanse :: Card OTSorcery
 cleanse = mkCard "Cleanse" $ \_this ->
-  SorceryDef (toColors W) cost [] $
-    All $
-      masked @OTCreature [ofColors B] $
-        \creature -> effect $ destroy creature
+  SorceryDef
+    { sorcery_colors = toColors W
+    , sorcery_cost = cost
+    , sorcery_abilities = []
+    , sorcery_effect =
+        All $
+          masked @OTCreature [ofColors B] $
+            \creature -> effect $ destroy creature
+    }
  where
   cost = spellCost (2, W, W)
 
 conversion :: Card OTEnchantment
 conversion = mkCard "Conversion" $ \this ->
   EnchantmentDef
-    (toColors W)
-    cost
-    []
-    [ Triggered $
-        When $
-          ActivePlayer $ \active -> controllerOf this $ \you ->
-            let cond =
-                  COr
-                    [ satisfies you [Not $ is active]
-                    , satisfies you [is active, playerPays $ toManaCost (W, W)]
-                    ]
-             in ifElse cond $
-                  event $
-                    TimePoint (StepBegin UpkeepStep) $
-                      effect $
-                        sacrifice you [is this]
-    , Static $
-        StaticContinuous $
-          All $
-            masked [hasLandType Mountain] $ \land ->
-              effect $ changeTo land plains
-    ]
+    { enchantment_colors = toColors W
+    , enchantment_cost = cost
+    , enchantment_subtypes = []
+    , enchantment_abilities =
+        [ Triggered $
+            When $
+              ActivePlayer $ \active -> controllerOf this $ \you ->
+                let cond =
+                      COr
+                        [ satisfies you [Not $ is active]
+                        , satisfies you [is active, playerPays $ toManaCost (W, W)]
+                        ]
+                 in ifElse cond $
+                      event $
+                        TimePoint (StepBegin UpkeepStep) $
+                          effect $
+                            sacrifice you [is this]
+        , Static $
+            StaticContinuous $
+              All $
+                masked [hasLandType Mountain] $ \land ->
+                  effect $ changeTo land plains
+        ]
+    }
  where
   cost = spellCost (2, W, W)
 
 damnation :: Card OTSorcery
 damnation = mkCard "Damnation" $ \_this ->
-  SorceryDef (toColors B) cost [] $
-    All $
-      masked @OTCreature [] $ \creature ->
-        effect $ destroy creature
+  SorceryDef
+    { sorcery_colors = toColors B
+    , sorcery_cost = cost
+    , sorcery_abilities = []
+    , sorcery_effect =
+        All $
+          masked @OTCreature [] $ \creature ->
+            effect $ destroy creature
+    }
  where
   cost = spellCost (2, B, B)
 
@@ -312,14 +371,16 @@ forest = mkBasicLand Forest
 holyStrength :: Card OTEnchantment
 holyStrength = mkCard "Holy Strength" $ \_this ->
   EnchantmentDef
-    (toColors W)
-    cost
-    [ Aura $
-        Enchant $
-          linked [] $
-            \enchanted -> effect $ StatDelta enchanted (Power 1) (Toughness 2)
-    ]
-    []
+    { enchantment_colors = toColors W
+    , enchantment_cost = cost
+    , enchantment_subtypes =
+        [ Aura $
+            Enchant $
+              linked [] $
+                \enchanted -> effect $ StatDelta enchanted (Power 1) (Toughness 2)
+        ]
+    , enchantment_abilities = []
+    }
  where
   cost = spellCost W
 
@@ -328,11 +389,16 @@ island = mkBasicLand Island
 
 lavaAxe :: Card OTSorcery
 lavaAxe = mkCard "Lava Axe" $ \this ->
-  SorceryDef (toColors R) cost [] $
-    controllerOf this $ \you ->
-      A Target you $
-        masked @OTPlayerPlaneswalker [] $ \target ->
-          effect $ dealDamage this target 5
+  SorceryDef
+    { sorcery_colors = toColors R
+    , sorcery_cost = cost
+    , sorcery_abilities = []
+    , sorcery_effect =
+        controllerOf this $ \you ->
+          A Target you $
+            masked @OTPlayerPlaneswalker [] $ \target ->
+              effect $ dealDamage this target 5
+    }
  where
   cost = spellCost (4, R)
 
@@ -342,32 +408,35 @@ mountain = mkBasicLand Mountain
 nyxbornRollicker :: Card OTEnchantmentCreature
 nyxbornRollicker = mkCard "Nyxborn Rollicker" $ \_this ->
   EnchantmentCreatureDef
-    (toColors R)
-    cost
-    [Satyr]
-    (Power 1)
-    (Toughness 1)
-    []
-    []
-    [ Static $
-        Bestow (spellCost (1, R)) $
-          Enchant $
-            linked [] $
-              \enchanted -> effect $ StatDelta enchanted (Power 1) (Toughness 1)
-    ]
+    { enchantmentCreature_colors = toColors R
+    , enchantmentCreature_cost = cost
+    , enchantmentCreature_creatureTypes = [Satyr]
+    , enchantmentCreature_power = Power 1
+    , enchantmentCreature_toughness = Toughness 1
+    , enchantmentCreature_creatureAbilities = []
+    , enchantmentCreature_enchantmentAbilities = []
+    , enchantmentCreature_enchantmentCreatureAbilities =
+        [ Static $
+            Bestow (spellCost (1, R)) $
+              Enchant $
+                linked [] $
+                  \enchanted -> effect $ StatDelta enchanted (Power 1) (Toughness 1)
+        ]
+    }
  where
   cost = spellCost R
 
 ornithopter :: Card OTArtifactCreature
 ornithopter = mkCard "Ornithopter" $ \_this ->
   ArtifactCreatureDef
-    (toColors ())
-    cost
-    []
-    (Power 0)
-    (Toughness 2)
-    []
-    [Static Flying]
+    { artifactCreature_colors = toColors ()
+    , artifactCreature_cost = cost
+    , artifactCreature_creatureTypes = []
+    , artifactCreature_power = Power 0
+    , artifactCreature_toughness = Toughness 2
+    , artifactCreature_artifactAbilities = []
+    , artifactCreature_creatureAbilities = [Static Flying]
+    }
  where
   cost = spellCost 0
 
@@ -376,11 +445,16 @@ plains = mkBasicLand Plains
 
 plummet :: Card OTInstant
 plummet = mkCard "Plummet" $ \this ->
-  InstantDef (toColors G) cost [] $
-    controllerOf this $ \you ->
-      A Target you $
-        masked [hasAbility $ \_this -> Static Flying] $ \target ->
-          effect $ destroy target
+  InstantDef
+    { instant_colors = toColors G
+    , instant_cost = cost
+    , instant_abilities = []
+    , instant_effect =
+        controllerOf this $ \you ->
+          A Target you $
+            masked [hasAbility $ \_this -> Static Flying] $ \target ->
+              effect $ destroy target
+    }
  where
   cost = spellCost (1, G)
 
@@ -390,53 +464,66 @@ pollutedDelta = mkFetchLand "PollutedDelta" Island Swamp
 pradeshGypsies :: Card OTCreature
 pradeshGypsies = mkCard "Pradesh Gypsies" $ \this ->
   CreatureDef
-    (toColors G)
-    cost
-    [Human, Nomad]
-    (Power 1)
-    (Toughness 1)
-    [ Activated (Cost $ AndCosts [tapCost this, ManaCost $ toManaCost (1, G)]) $
-        controllerOf this $
-          \you -> A Target you $
-            masked [] $ \creature ->
-              effect $
-                untilEndOfTurn $
-                  gain creature $
-                    Static $
-                      StaticContinuous $
-                        effect $
-                          StatDelta creature (Power (-2)) (Toughness 0)
-    ]
+    { creature_colors = toColors G
+    , creature_cost = cost
+    , creature_subtypes = [Human, Nomad]
+    , creature_power = Power 1
+    , creature_toughness = Toughness 1
+    , creature_abilities =
+        [ Activated (Cost $ AndCosts [tapCost this, ManaCost $ toManaCost (1, G)]) $
+            controllerOf this $
+              \you -> A Target you $
+                masked [] $ \creature ->
+                  effect $
+                    untilEndOfTurn $
+                      gain creature $
+                        Static $
+                          StaticContinuous $
+                            effect $
+                              StatDelta creature (Power (-2)) (Toughness 0)
+        ]
+    }
  where
   cost = spellCost (2, G)
 
 ragingGoblin :: Card OTCreature
 ragingGoblin = mkCard "Raging Goblin" $ \_this ->
   CreatureDef
-    (toColors R)
-    cost
-    [Goblin]
-    (Power 1)
-    (Toughness 1)
-    [Static Haste]
+    { creature_colors = toColors R
+    , creature_cost = cost
+    , creature_subtypes = [Goblin]
+    , creature_power = Power 1
+    , creature_toughness = Toughness 1
+    , creature_abilities = [Static Haste]
+    }
  where
   cost = spellCost R
 
 shock :: Card OTInstant
 shock = mkCard "Shock" $ \this ->
-  InstantDef (toColors R) cost [] $
-    controllerOf this $ \you ->
-      A Target you $
-        masked @OTCreaturePlayerPlaneswalker [] $ \target ->
-          effect $ dealDamage this target 2
+  InstantDef
+    { instant_colors = toColors R
+    , instant_cost = cost
+    , instant_abilities = []
+    , instant_effect =
+        controllerOf this $ \you ->
+          A Target you $
+            masked @OTCreaturePlayerPlaneswalker [] $ \target ->
+              effect $ dealDamage this target 2
+    }
  where
   cost = spellCost R
 
 sinkhole :: Card OTSorcery
 sinkhole = mkCard "Sinkhole" $ \this ->
-  SorceryDef (toColors B) cost [] $
-    controllerOf this $ \you ->
-      A Target you $ masked @OTLand [] $ \target -> effect $ destroy target
+  SorceryDef
+    { sorcery_colors = toColors B
+    , sorcery_cost = cost
+    , sorcery_abilities = []
+    , sorcery_effect =
+        controllerOf this $ \you ->
+          A Target you $ masked @OTLand [] $ \target -> effect $ destroy target
+    }
  where
   cost = spellCost (B, B)
 
@@ -449,45 +536,72 @@ snuffOut = mkCard "Snuff Out" $ \this ->
             (satisfies you [ControlsA $ HasLandType $ BasicLand Swamp])
             (Cost $ OrCosts [PayLife 4, cost'])
             (Cost cost')
-   in InstantDef (toColors B) cost [] $
-        controllerOf this $ \you ->
-          A Target you $
-            masked [nonBlack] $
-              \target -> effect [destroy target, EffectContinuous $ CantBeRegenerated target]
+   in InstantDef
+        { instant_colors = toColors B
+        , instant_cost = cost
+        , instant_abilities = []
+        , instant_effect =
+            controllerOf this $ \you ->
+              A Target you $
+                masked [nonBlack] $
+                  \target ->
+                    effect
+                      [ destroy target
+                      , EffectContinuous $ CantBeRegenerated target
+                      ]
+        }
 
 soldierToken :: Token OTCreature
 soldierToken = mkToken "Soldier Token" $ \_this ->
-  CreatureDef (toColors W) cost [Soldier] (Power 1) (Toughness 1) []
+  CreatureDef
+    { creature_colors = toColors W
+    , creature_cost = cost
+    , creature_subtypes = [Soldier]
+    , creature_power = Power 1
+    , creature_toughness = Toughness 1
+    , creature_abilities = []
+    }
  where
   cost = noCost
 
 stifle :: Card OTInstant
 stifle = mkCard "Stifle" $ \this ->
-  InstantDef (toColors U) cost [] $
-    controllerOf this $ \you ->
-      A Target you $
-        masked @OTActivatedOrTriggeredAbility [] $ \target ->
-          effect $ counterAbility target
+  InstantDef
+    { instant_colors = toColors U
+    , instant_cost = cost
+    , instant_abilities = []
+    , instant_effect =
+        controllerOf this $ \you ->
+          A Target you $
+            masked @OTActivatedOrTriggeredAbility [] $ \target ->
+              effect $ counterAbility target
+    }
  where
   cost = spellCost U
 
 stoneRain :: Card OTSorcery
 stoneRain = mkCard "Stone Rain" $ \this ->
-  SorceryDef (toColors R) cost [] $
-    controllerOf this $ \you ->
-      A Target you $ masked @OTLand [] $ \target -> effect $ destroy target
+  SorceryDef
+    { sorcery_colors = toColors R
+    , sorcery_cost = cost
+    , sorcery_abilities = []
+    , sorcery_effect =
+        controllerOf this $ \you ->
+          A Target you $ masked @OTLand [] $ \target -> effect $ destroy target
+    }
  where
   cost = spellCost (2, R)
 
 stoneThrowingDevils :: Card OTCreature
 stoneThrowingDevils = mkCard "Stone-Throwing Devils" $ \_this ->
   CreatureDef
-    (toColors B)
-    cost
-    [Devil]
-    (Power 1)
-    (Toughness 1)
-    [Static FirstStrike]
+    { creature_colors = toColors B
+    , creature_cost = cost
+    , creature_subtypes = [Devil]
+    , creature_power = Power 1
+    , creature_toughness = Toughness 1
+    , creature_abilities = [Static FirstStrike]
+    }
  where
   cost = spellCost B
 
@@ -496,20 +610,30 @@ swamp = mkBasicLand Swamp
 
 swanSong :: Card OTInstant
 swanSong = mkCard "Swan Song" $ \this ->
-  InstantDef (toColors U) cost [] $
-    controllerOf this $ \you ->
-      A Target you $
-        masked @(OT3 'OTEnchantment 'OTInstant 'OTSorcery) [] $
-          \target -> controllerOf target $ \controller ->
-            effect [counterSpell target, addToBattlefield controller birdToken]
+  InstantDef
+    { instant_colors = toColors U
+    , instant_cost = cost
+    , instant_abilities = []
+    , instant_effect =
+        controllerOf this $ \you ->
+          A Target you $
+            masked @(OT3 'OTEnchantment 'OTInstant 'OTSorcery) [] $
+              \target -> controllerOf target $ \controller ->
+                effect [counterSpell target, addToBattlefield controller birdToken]
+    }
  where
   cost = spellCost U
 
 vindicate :: Card OTSorcery
 vindicate = mkCard "Vindicate" $ \this ->
-  SorceryDef (toColors (W, B)) cost [] $
-    controllerOf this $ \you ->
-      A Target you $ masked @OTPermanent [] $ \target -> effect $ destroy target
+  SorceryDef
+    { sorcery_colors = toColors (W, B)
+    , sorcery_cost = cost
+    , sorcery_abilities = []
+    , sorcery_effect =
+        controllerOf this $ \you ->
+          A Target you $ masked @OTPermanent [] $ \target -> effect $ destroy target
+    }
  where
   cost = spellCost (1, W, B)
 
@@ -518,9 +642,14 @@ wastes = mkBasicLand Wastes
 
 wrathOfGod :: Card OTSorcery
 wrathOfGod = mkCard "Wrath of God" $ \_this ->
-  SorceryDef (toColors W) cost [] $
-    All $
-      masked @OTCreature [] $ \creature ->
-        effect $ destroy creature
+  SorceryDef
+    { sorcery_colors = toColors W
+    , sorcery_cost = cost
+    , sorcery_abilities = []
+    , sorcery_effect =
+        All $
+          masked @OTCreature [] $ \creature ->
+            effect $ destroy creature
+    }
  where
   cost = spellCost (2, W, W)

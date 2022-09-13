@@ -180,70 +180,82 @@ instance ConsIndex (Card ot) where
 -- TODO: Turn each of these constructors into a record.
 data CardTypeDef (tribal :: Tribal) (ot :: Type) :: Type where
   ArtifactDef ::
-    Colors ->
-    Elect (Cost OTArtifact) OTArtifact ->
-    [Ability OTArtifact] ->
+    { artifact_colors :: Colors
+    , artifact_cost :: Elect (Cost OTArtifact) OTArtifact
+    , artifact_abilities :: [Ability OTArtifact]
+    } ->
     CardTypeDef 'NonTribal OTArtifact
   ArtifactCreatureDef ::
-    Colors ->
-    Elect (Cost OTArtifactCreature) OTArtifactCreature ->
-    [CreatureType] ->
-    Power ->
-    Toughness ->
-    [Ability OTArtifact] ->
-    [Ability OTCreature] ->
-    -- [Ability OTArtifactCreature] -> -- I don't think there exist any abilities in MTG yet that appear only on cards that are both artifacts and creatures.
+    { artifactCreature_colors :: Colors
+    , artifactCreature_cost :: Elect (Cost OTArtifactCreature) OTArtifactCreature
+    , artifactCreature_creatureTypes :: [CreatureType]
+    , artifactCreature_power :: Power
+    , artifactCreature_toughness :: Toughness
+    , artifactCreature_artifactAbilities :: [Ability OTArtifact]
+    , artifactCreature_creatureAbilities :: [Ability OTCreature]
+    -- , artifactCreature_artifactCreatureAbilities :: [Ability OTArtifactCreature]
+    -- , artifactCreature_creatureTypes :: [ArtifactType]
+    } ->
     CardTypeDef 'NonTribal OTArtifactCreature
   CreatureDef ::
-    Colors ->
-    Elect (Cost OTCreature) OTCreature ->
-    [CreatureType] ->
-    Power ->
-    Toughness ->
-    [Ability OTCreature] ->
+    { creature_colors :: Colors
+    , creature_cost :: Elect (Cost OTCreature) OTCreature
+    , creature_subtypes :: [CreatureType]
+    , creature_power :: Power
+    , creature_toughness :: Toughness
+    , creature_abilities :: [Ability OTCreature]
+    } ->
     CardTypeDef 'NonTribal OTCreature
   EnchantmentDef ::
-    Colors ->
-    Elect (Cost OTEnchantment) OTEnchantment ->
-    [EnchantmentType OTEnchantment] ->
-    [Ability OTEnchantment] ->
+    { enchantment_colors :: Colors
+    , enchantment_cost :: Elect (Cost OTEnchantment) OTEnchantment
+    , enchantment_subtypes :: [EnchantmentType OTEnchantment]
+    , enchantment_abilities :: [Ability OTEnchantment]
+    } ->
     CardTypeDef 'NonTribal OTEnchantment
   EnchantmentCreatureDef ::
-    Colors ->
-    Elect (Cost OTEnchantmentCreature) OTEnchantmentCreature ->
-    [CreatureType] ->
-    Power ->
-    Toughness ->
-    [Ability OTCreature] ->
-    [Ability OTEnchantment] ->
-    [Ability OTEnchantmentCreature] ->
+    { enchantmentCreature_colors :: Colors
+    , enchantmentCreature_cost :: Elect (Cost OTEnchantmentCreature) OTEnchantmentCreature
+    , enchantmentCreature_creatureTypes :: [CreatureType]
+    , enchantmentCreature_power :: Power
+    , enchantmentCreature_toughness :: Toughness
+    , enchantmentCreature_creatureAbilities :: [Ability OTCreature]
+    , enchantmentCreature_enchantmentAbilities :: [Ability OTEnchantment]
+    , enchantmentCreature_enchantmentCreatureAbilities :: [Ability OTEnchantmentCreature]
+    -- , enchantmentCreature_enchantmentTypes :: [EnchantmentType OTEnchantmentCreature]
+    } ->
     CardTypeDef 'NonTribal OTEnchantmentCreature
   InstantDef ::
-    Colors ->
-    Elect (Cost OTInstant) OTInstant ->
-    [Ability OTInstant] ->
-    Elect (Effect 'OneShot) OTInstant ->
+    { instant_colors :: Colors
+    , instant_cost :: Elect (Cost OTInstant) OTInstant
+    , instant_abilities :: [Ability OTInstant]
+    , instant_effect :: Elect (Effect 'OneShot) OTInstant
+    } ->
     CardTypeDef 'NonTribal OTInstant
   LandDef ::
-    [LandType] ->
-    [Ability OTLand] ->
+    { land_subtypes :: [LandType]
+    , land_abilities :: [Ability OTLand]
+    } ->
     CardTypeDef 'NonTribal OTLand
   PlaneswalkerDef ::
-    Colors ->
-    Elect (Cost OTPlaneswalker) OTPlaneswalker ->
-    Loyalty ->
-    [Ability OTPlaneswalker] ->
+    { planeswalker_colors :: Colors
+    , planeswalker_cost :: Elect (Cost OTPlaneswalker) OTPlaneswalker
+    , planeswalker_loyalty :: Loyalty
+    , planeswalker_abilities :: [Ability OTPlaneswalker]
+    } ->
     CardTypeDef 'NonTribal OTPlaneswalker
   SorceryDef ::
-    Colors ->
-    Elect (Cost OTSorcery) OTSorcery ->
-    [Ability OTSorcery] ->
-    Elect (Effect 'OneShot) OTSorcery ->
+    { sorcery_colors :: Colors
+    , sorcery_cost :: Elect (Cost OTSorcery) OTSorcery
+    , sorcery_abilities :: [Ability OTSorcery]
+    , sorcery_effect :: Elect (Effect 'OneShot) OTSorcery
+    } ->
     CardTypeDef 'NonTribal OTSorcery
   TribalDef ::
-    [CreatureType] ->
-    WNonCreatureCard ot ->
-    CardTypeDef 'NonTribal ot ->
+    { tribal_subtypes :: [CreatureType]
+    , tribal_witness :: WNonCreatureCard ot
+    , tribal_def :: CardTypeDef 'NonTribal ot
+    } ->
     CardTypeDef 'Tribal ot
   VariableDef ::
     (Variable -> CardTypeDef tribal ot) ->
