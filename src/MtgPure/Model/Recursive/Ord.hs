@@ -84,14 +84,6 @@ import safe MtgPure.Model.Variable (Variable (..))
 import safe MtgPure.Model.VisitObjectN (VisitObjectN (..))
 import safe MtgPure.Model.Zone (IsZone (..), SZone (..), Zone (..))
 import safe MtgPure.Model.ZoneObject (
-  OActivatedOrTriggeredAbility,
-  OAny,
-  OCreature,
-  OCreaturePlayerPlaneswalker,
-  ODamageSource,
-  OPermanent,
-  OPlayer,
-  OSpell,
   ZO,
   ZoneObject (..),
  )
@@ -321,6 +313,7 @@ toZone :: forall zone ot. IsZone zone => ObjectN ot -> ZO zone ot
 toZone = case singZone (Proxy @zone) of
   SBattlefield -> ZOBattlefield SBattlefield
   SLibrary -> ZOLibrary SLibrary
+  SStack -> ZOStack SStack
 
 ----------------------------------------
 
@@ -547,7 +540,7 @@ ordCost x = case x of
       seqM [ordWPermanent perm1 perm2, ordRequirements reqs1 reqs2]
     y -> compareIndexM x y
   TapCost obj1 -> \case
-    TapCost obj2 -> ordOPermanent obj1 obj2
+    TapCost obj2 -> ordZoneObject obj1 obj2
     y -> compareIndexM x y
 
 ordCosts :: [Cost ot] -> [Cost ot] -> EnvM Ordering
@@ -560,7 +553,7 @@ ordEffect :: Effect e -> Effect e -> EnvM Ordering
 ordEffect x = case x of
   AddMana player1 mana1 -> \case
     AddMana player2 mana2 ->
-      seqM [ordOPlayer player1 player2, ordManaPool mana1 mana2]
+      seqM [ordZoneObject player1 player2, ordManaPool mana1 mana2]
     y -> compareIndexM x y
   AddToBattlefield perm1 player1 token1 -> \case
     AddToBattlefield perm2 player2 token2 ->
@@ -575,13 +568,13 @@ ordEffect x = case x of
             Just (perm2, token2) ->
               seqM
                 [ ordWPermanent perm1 perm2
-                , ordOPlayer player1 player2
+                , ordZoneObject player1 player2
                 , ordToken token1 token2
                 ]
        in go perm1 perm2
     y -> compareIndexM x y
   CantBeRegenerated creature1 -> \case
-    CantBeRegenerated creature2 -> ordOCreature creature1 creature2
+    CantBeRegenerated creature2 -> ordZoneObject creature1 creature2
     y -> compareIndexM x y
   ChangeTo perm1 obj1 card1 -> \case
     ChangeTo perm2 obj2 card2 ->
@@ -591,32 +584,32 @@ ordEffect x = case x of
             Just (perm2, card2) ->
               seqM
                 [ ordWPermanent perm1 perm2
-                , ordOPermanent obj1 obj2
+                , ordZoneObject obj1 obj2
                 , ordCard card1 card2
                 ]
        in go perm1 perm2
     y -> compareIndexM x y
   CounterAbility ability1 -> \case
     CounterAbility ability2 ->
-      ordOActivatedOrTriggeredAbility ability1 ability2
+      ordZoneObject ability1 ability2
     y -> compareIndexM x y
   CounterSpell spell1 -> \case
-    CounterSpell spell2 -> ordOSpell spell1 spell2
+    CounterSpell spell2 -> ordZoneObject spell1 spell2
     y -> compareIndexM x y
   DealDamage source1 victim1 damage1 -> \case
     DealDamage source2 victim2 damage2 ->
       seqM
-        [ ordODamageSource source1 source2
-        , ordOCreaturePlayerPlaneswalker victim1 victim2
+        [ ordZoneObject source1 source2
+        , ordZoneObject victim1 victim2
         , ordDamage damage1 damage2
         ]
     y -> compareIndexM x y
   Destroy victim1 -> \case
-    Destroy victim2 -> ordOPermanent victim1 victim2
+    Destroy victim2 -> ordZoneObject victim1 victim2
     y -> compareIndexM x y
   DrawCards player1 amount1 -> \case
     DrawCards player2 amount2 ->
-      seqM [pure $ compare amount1 amount2, ordOPlayer player1 player2]
+      seqM [pure $ compare amount1 amount2, ordZoneObject player1 player2]
     y -> compareIndexM x y
   EffectContinuous effect1 -> \case
     EffectContinuous effect2 -> ordEffect effect1 effect2
@@ -658,7 +651,7 @@ ordEffect x = case x of
             Just (wPerm2, card2) ->
               seqM
                 [ ordWPermanent wPerm1 wPerm2
-                , ordOPlayer player1 player2
+                , ordZoneObject player1 player2
                 , ordZoneObject card1 card2
                 ]
        in go wPerm1 wPerm2
@@ -671,7 +664,7 @@ ordEffect x = case x of
             Just (perm2, reqs2) ->
               seqM
                 [ ordWPermanent perm1 perm2
-                , ordOPlayer player1 player2
+                , ordZoneObject player1 player2
                 , ordRequirements reqs1 reqs2
                 ]
        in go perm1 perm2
@@ -684,7 +677,7 @@ ordEffect x = case x of
             Just (wCard2, card2) ->
               seqM
                 [ ordWCard wCard1 wCard2
-                , ordOPlayer player1 player2
+                , ordZoneObject player1 player2
                 , ordWithLinkedObject ordElectE card1 card2
                 ]
        in go wCard1 wCard2
@@ -692,7 +685,7 @@ ordEffect x = case x of
   StatDelta creature1 power1 toughness1 -> \case
     StatDelta creature2 power2 toughness2 ->
       seqM
-        [ ordOCreature creature1 creature2
+        [ ordZoneObject creature1 creature2
         , pure $ compare power1 power2
         , pure $ compare toughness1 toughness2
         ]
@@ -722,7 +715,7 @@ ordElectE x = case x of
             Just with2 ->
               seqM
                 [ ordSelection sel1 sel2
-                , ordOPlayer player1 player2
+                , ordZoneObject player1 player2
                 , ordWithMaskedObjectElectE with1 with2
                 ]
        in go with1 with2
@@ -742,12 +735,22 @@ ordElectE x = case x of
     Condition cond2 -> ordCondition cond1 cond2
     y -> compareIndexM x y
   ControllerOf obj1 playerToElect1 -> \case
-    ControllerOf obj2 playerToElect2 -> do
-      player' <- newObjectN @ 'OTPlayer toObject1'
-      let player = ZOBattlefield SBattlefield player'
-          elect1 = playerToElect1 player
-          elect2 = playerToElect2 player
-      seqM [ordOAny obj1 obj2, ordElectE elect1 elect2]
+    ControllerOf obj2 playerToElect2 ->
+      let go ::
+            forall zone1 ot1 zone2 ot2.
+            (IsZO zone1 ot1, IsZO zone2 ot2) =>
+            ZO zone1 ot1 ->
+            ZO zone2 ot2 ->
+            EnvM Ordering
+          go obj1 obj2 = case cast obj2 of
+            Nothing -> compareOT @ot1 @ot2
+            Just obj2 -> do
+              player' <- newObjectN @ 'OTPlayer toObject1'
+              let player = ZOBattlefield SBattlefield player'
+                  elect1 = playerToElect1 player
+                  elect2 = playerToElect2 player
+              seqM [ordZoneObject obj1 obj2, ordElectE elect1 elect2]
+       in go obj1 obj2
     y -> compareIndexM x y
   Cost cost1 -> \case
     Cost cost2 -> ordCost cost1 cost2
@@ -774,7 +777,7 @@ ordElectE x = case x of
       var <- newVariable
       let elect1 = varToElect1 var
           elect2 = varToElect2 var
-      seqM [ordOCreature obj1 obj2, ordElectE elect1 elect2]
+      seqM [ordZoneObject obj1 obj2, ordElectE elect1 elect2]
     y -> compareIndexM x y
 
 ordElseE :: Else e ot -> Else e ot -> EnvM Ordering
@@ -1020,38 +1023,10 @@ ordObjectN objN1 objN2 = do
       i2 = visitObjectN' objectToId objN2
   pure $ compare i1 i2
 
-ordOActivatedOrTriggeredAbility ::
-  OActivatedOrTriggeredAbility ->
-  OActivatedOrTriggeredAbility ->
-  EnvM Ordering
-ordOActivatedOrTriggeredAbility = ordZoneObject
-
-ordOAny :: OAny -> OAny -> EnvM Ordering
-ordOAny = ordZoneObject
-
-ordOCreature :: OCreature -> OCreature -> EnvM Ordering
-ordOCreature = ordZoneObject
-
-ordOCreaturePlayerPlaneswalker ::
-  OCreaturePlayerPlaneswalker -> OCreaturePlayerPlaneswalker -> EnvM Ordering
-ordOCreaturePlayerPlaneswalker = ordZoneObject
-
-ordODamageSource :: ODamageSource -> ODamageSource -> EnvM Ordering
-ordODamageSource = ordZoneObject
-
-ordOPermanent :: OPermanent -> OPermanent -> EnvM Ordering
-ordOPermanent = ordZoneObject
-
-ordOPlayer :: OPlayer -> OPlayer -> EnvM Ordering
-ordOPlayer = ordZoneObject
-
-ordOSpell :: OSpell -> OSpell -> EnvM Ordering
-ordOSpell = ordZoneObject
-
 ordRequirement :: Requirement zone ot -> Requirement zone ot -> EnvM Ordering
 ordRequirement x = case x of
   ControlledBy player1 -> \case
-    ControlledBy player2 -> ordOPlayer player1 player2
+    ControlledBy player2 -> ordZoneObject player1 player2
     y -> compareIndexM x y
   ControlsA req1 -> \case
     ControlsA req2 ->
@@ -1082,7 +1057,7 @@ ordRequirement x = case x of
     OfColors colors2 -> ordColors colors1 colors2
     y -> compareIndexM x y
   OwnedBy player1 -> \case
-    OwnedBy player2 -> ordOPlayer player1 player2
+    OwnedBy player2 -> ordZoneObject player1 player2
     y -> compareIndexM x y
   PlayerPays cost1 -> \case
     PlayerPays cost2 -> ordCost cost1 cost2
@@ -1596,3 +1571,5 @@ ordZoneObject x = case x of
     ZOBattlefield _sZone2 objN2 -> ordObjectN objN1 objN2
   ZOLibrary _sZone1 objN1 -> \case
     ZOLibrary _sZone2 objN2 -> ordObjectN objN1 objN2
+  ZOStack _sZone1 objN1 -> \case
+    ZOStack _sZone2 objN2 -> ordObjectN objN1 objN2

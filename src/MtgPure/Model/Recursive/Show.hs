@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ExtendedDefaultRules #-}
@@ -96,6 +97,7 @@ import safe MtgPure.Model.ObjectType (
  )
 import safe MtgPure.Model.ObjectType.Any (WAny (..))
 import safe MtgPure.Model.ObjectType.Card (WCard (..))
+import MtgPure.Model.ObjectType.Kind (OTAny, OTCreaturePlaneswalker, OTCreaturePlayer, OTCreaturePlayerPlaneswalker, OTDamageSource, OTPermanent, OTPlayerPlaneswalker, OTSpell)
 import safe MtgPure.Model.ObjectType.NonCreatureCard (
   WNonCreatureCard (..),
  )
@@ -136,15 +138,6 @@ import safe MtgPure.Model.Variable (Variable (ReifiedVariable))
 import safe MtgPure.Model.VisitObjectN (KnownObjectN (..), VisitObjectN (..))
 import safe MtgPure.Model.Zone (IsZone (..), SZone (..))
 import safe MtgPure.Model.ZoneObject (
-  OActivatedOrTriggeredAbility,
-  OAny,
-  OCreaturePlaneswalker,
-  OCreaturePlayer,
-  OCreaturePlayerPlaneswalker,
-  ODamageSource,
-  OPermanent,
-  OPlayerPlaneswalker,
-  OSpell,
   ZO,
   ZoneObject (..),
  )
@@ -424,6 +417,7 @@ toZone :: forall zone ot. IsZone zone => ObjectN ot -> ZO zone ot
 toZone = case singZone (Proxy @zone) of
   SBattlefield -> ZOBattlefield SBattlefield
   SLibrary -> ZOLibrary SLibrary
+  SStack -> ZOStack SStack
 
 ----------------------------------------
 
@@ -725,7 +719,7 @@ showCost = \case
     sReqs <- dollar <$> showRequirements reqs
     pure $ pure "SacrificeCost " <> sPerm <> sReqs
   TapCost obj -> yesParens $ do
-    sObj <- dollar <$> showOPermanent obj
+    sObj <- dollar <$> showZoneObject obj
     pure $ pure "TapCost" <> sObj
 
 showCreatureTypes :: [CreatureType] -> EnvM ParenItems
@@ -756,22 +750,22 @@ showEffect = \case
     pure $ pure "CantBeRegenerated" <> sCreature
   ChangeTo perm before after -> yesParens $ do
     sPerm <- parens <$> showWPermanent perm
-    sBefore <- parens <$> showOPermanent before
+    sBefore <- parens <$> showZoneObject before
     sAfter <- dollar <$> showCard after
     pure $ pure "ChangeTo " <> sPerm <> pure " " <> sBefore <> sAfter
   CounterAbility obj -> yesParens $ do
-    sObj <- dollar <$> showOActivatedOrTriggeredAbility obj
+    sObj <- dollar <$> showZoneObject obj
     pure $ pure "CounterAbility" <> sObj
   CounterSpell obj -> yesParens $ do
-    sObj <- dollar <$> showOSpell obj
+    sObj <- dollar <$> showZoneObject obj
     pure $ pure "CounterSpell" <> sObj
   DealDamage source victim damage -> yesParens $ do
-    sSource <- parens <$> showODamageSource source
-    sVictim <- parens <$> showOCreaturePlayerPlaneswalker victim
+    sSource <- parens <$> showZoneObject source
+    sVictim <- parens <$> showZoneObject victim
     sDamage <- dollar <$> showDamage damage
     pure $ pure "DealDamage " <> sSource <> pure " " <> sVictim <> sDamage
   Destroy obj -> yesParens $ do
-    sObj <- dollar <$> showOPermanent obj
+    sObj <- dollar <$> showZoneObject obj
     pure $ pure "Destroy" <> sObj
   DrawCards player n -> yesParens $ do
     sPlayer <- parens <$> showZoneObject player
@@ -843,23 +837,28 @@ showElect = \case
   Condition cond -> yesParens $ do
     sCond <- dollar <$> showCondition cond
     pure $ pure "Condition" <> sCond
-  ControllerOf obj contElect -> yesParens $ do
-    objPrefix <- getObjectNamePrefix $
-      visitObjectN' objectToId $ case obj of
-        ZOBattlefield _ o -> o
+  ControllerOf zObj contElect -> yesParens $ do
+    objPrefix <-
+      getObjectNamePrefix $
+        let objN :: ObjectN OTAny
+            objN = case zObj of
+              ZOBattlefield _ o -> o
+              ZOLibrary _ o -> o
+              ZOStack _ o -> o
+         in visitObjectN' objectToId objN
     (controller', snap) <-
       newObjectN @ 'OTPlayer O $ case objPrefix == "this" of
         True -> "you"
         False -> "controller"
     let controller = ZOBattlefield SBattlefield controller'
     sController <- parens <$> showZoneObject controller
-    sObj <- parens <$> showOAny obj
+    sZObj <- parens <$> showZoneObject zObj
     let elect = contElect controller
     sElect <- dropParens <$> showElect elect
     restoreObject snap
     pure $
       pure "ControllerOf "
-        <> sObj
+        <> sZObj
         <> pure " $ \\"
         <> sController
         <> pure " -> "
@@ -1115,57 +1114,63 @@ showManaPool pool = yesParens $ do
 --     pure $ pure "NonProxyElectEffectOneShot"
 
 showO1 ::
-  (IsObjectType a) =>
+  forall zone a z.
+  (IsZone zone, IsObjectType a) =>
   IsOT (OT1 a) =>
   (z -> EnvM ParenItems) ->
   String ->
   (ON1 a -> z) ->
   EnvM ParenItems
-showO1 = showONImpl O
+showO1 = showONImpl @zone O
 
 showO2 ::
-  (Inst2 IsObjectType a b) =>
+  forall zone a b z.
+  (IsZone zone, Inst2 IsObjectType a b) =>
   (z -> EnvM ParenItems) ->
   String ->
   (ON2 a b -> z) ->
   EnvM ParenItems
-showO2 = showONImpl O2a
+showO2 = showONImpl @zone O2a
 
 showO3 ::
-  (Inst3 IsObjectType a b c) =>
+  forall zone a b c z.
+  (IsZone zone, Inst3 IsObjectType a b c) =>
   (z -> EnvM ParenItems) ->
   String ->
   (ON3 a b c -> z) ->
   EnvM ParenItems
-showO3 = showONImpl O3a
+showO3 = showONImpl @zone O3a
 
 showO4 ::
-  (Inst4 IsObjectType a b c d) =>
+  forall zone a b c d z.
+  (IsZone zone, Inst4 IsObjectType a b c d) =>
   (z -> EnvM ParenItems) ->
   String ->
   (ON4 a b c d -> z) ->
   EnvM ParenItems
-showO4 = showONImpl O4a
+showO4 = showONImpl @zone O4a
 
 showO5 ::
-  (Inst5 IsObjectType a b c d e) =>
+  forall zone a b c d e z.
+  (IsZone zone, Inst5 IsObjectType a b c d e) =>
   (z -> EnvM ParenItems) ->
   String ->
   (ON5 a b c d e -> z) ->
   EnvM ParenItems
-showO5 = showONImpl O5a
+showO5 = showONImpl @zone O5a
 
 showO6 ::
-  (Inst6 IsObjectType a b c d e f) =>
+  forall zone a b c d e f z.
+  (IsZone zone, Inst6 IsObjectType a b c d e f) =>
   (z -> EnvM ParenItems) ->
   String ->
   (ON6 a b c d e f -> z) ->
   EnvM ParenItems
-showO6 = showONImpl O6a
+showO6 = showONImpl @zone O6a
 
 showONImpl ::
-  forall z a ot.
-  (IsOT ot, IsObjectType a) =>
+  forall zone z a ot.
+  (IsZone zone, IsOT ot, IsObjectType a) =>
   (Object a -> ObjectN ot) ->
   (z -> EnvM ParenItems) ->
   String ->
@@ -1173,7 +1178,7 @@ showONImpl ::
   EnvM ParenItems
 showONImpl fromObject showM memo cont = yesParens $ do
   (objN, snap) <- newObjectN @a fromObject memo
-  objName <- parens <$> showObjectN objN
+  objName <- parens <$> showObjectN @zone objN
   let elect = cont objN
   sElect <- dropParens <$> showM elect
   restoreObject snap
@@ -1193,7 +1198,11 @@ showObjectNImpl objNRef prefix obj = do
       False -> yesParens $ pure $ pure prefix <> pure " " <> sObj
       True -> noParens $ pure sObj
 
-showObject1 :: IsObjectType a => ON1 a -> EnvM ParenItems
+showObject1 ::
+  forall zone a.
+  (IsZone zone, IsObjectType a) =>
+  ON1 a ->
+  EnvM ParenItems
 showObject1 objN = visitObjectN' visit objN
  where
   rep = typeOf objN
@@ -1203,7 +1212,11 @@ showObject1 objN = visitObjectN' visit objN
       if
           | otherwise -> "toZO1"
 
-showObject2 :: Inst2 IsObjectType a b => ON2 a b -> EnvM ParenItems
+showObject2 ::
+  forall zone a b.
+  (IsZone zone, Inst2 IsObjectType a b) =>
+  ON2 a b ->
+  EnvM ParenItems
 showObject2 objN = visitObjectN' visit objN
  where
   rep = typeOf objN
@@ -1211,16 +1224,20 @@ showObject2 objN = visitObjectN' visit objN
   visit =
     showObjectNImpl rep $
       if
-          | rep == typeRep (Proxy @OCreaturePlaneswalker) ->
+          | rep == typeRep (Proxy @(ZO zone OTCreaturePlaneswalker)) ->
             "asCreaturePlaneswalker"
-          | rep == typeRep (Proxy @OCreaturePlayer) ->
+          | rep == typeRep (Proxy @(ZO zone OTCreaturePlayer)) ->
             "asCreaturePlayer"
-          | rep == typeRep (Proxy @OPlayerPlaneswalker) ->
+          | rep == typeRep (Proxy @(ZO zone OTPlayerPlaneswalker)) ->
             "asPlayerPlaneswalker"
           | otherwise ->
             "toZO2"
 
-showObject3 :: Inst3 IsObjectType a b c => ON3 a b c -> EnvM ParenItems
+showObject3 ::
+  forall zone a b c.
+  (IsZone zone, Inst3 IsObjectType a b c) =>
+  ON3 a b c ->
+  EnvM ParenItems
 showObject3 objN = visitObjectN' visit objN
  where
   rep = typeOf objN
@@ -1228,12 +1245,16 @@ showObject3 objN = visitObjectN' visit objN
   visit =
     showObjectNImpl rep $
       if
-          | rep == typeRep (Proxy @OCreaturePlayerPlaneswalker) ->
+          | rep == typeRep (Proxy @(ZO zone OTCreaturePlayerPlaneswalker)) ->
             "asCreaturePlayerPlaneswalker"
           | otherwise ->
             "toZO3"
 
-showObject4 :: Inst4 IsObjectType a b c d => ON4 a b c d -> EnvM ParenItems
+showObject4 ::
+  forall zone a b c d.
+  (IsZone zone, Inst4 IsObjectType a b c d) =>
+  ON4 a b c d ->
+  EnvM ParenItems
 showObject4 objN = visitObjectN' visit objN
  where
   rep = typeOf objN
@@ -1243,7 +1264,11 @@ showObject4 objN = visitObjectN' visit objN
       if
           | otherwise -> "toZO4"
 
-showObject5 :: Inst5 IsObjectType a b c d e => ON5 a b c d e -> EnvM ParenItems
+showObject5 ::
+  forall zone a b c d e.
+  (IsZone zone, Inst5 IsObjectType a b c d e) =>
+  ON5 a b c d e ->
+  EnvM ParenItems
 showObject5 objN = visitObjectN' visit objN
  where
   rep = typeOf objN
@@ -1251,11 +1276,14 @@ showObject5 objN = visitObjectN' visit objN
   visit =
     showObjectNImpl rep $
       if
-          | rep == typeRep (Proxy @OPermanent) -> "asPermanent"
+          | rep == typeRep (Proxy @(ZO zone OTPermanent)) -> "asPermanent"
           | otherwise -> "toZO5"
 
 showObject6 ::
-  Inst6 IsObjectType a b c d e f => ON6 a b c d e f -> EnvM ParenItems
+  forall zone a b c d e f.
+  (IsZone zone, Inst6 IsObjectType a b c d e f) =>
+  ON6 a b c d e f ->
+  EnvM ParenItems
 showObject6 objN = visitObjectN' visit objN
  where
   rep = typeOf objN
@@ -1263,11 +1291,14 @@ showObject6 objN = visitObjectN' visit objN
   visit =
     showObjectNImpl rep $
       if
-          | rep == typeRep (Proxy @OSpell) -> "asSpell"
+          | rep == typeRep (Proxy @(ZO zone OTSpell)) -> "asSpell"
           | otherwise -> "toZO6"
 
 showObject7 ::
-  Inst7 IsObjectType a b c d e f g => ON7 a b c d e f g -> EnvM ParenItems
+  forall zone a b c d e f g.
+  (IsZone zone, Inst7 IsObjectType a b c d e f g) =>
+  ON7 a b c d e f g ->
+  EnvM ParenItems
 showObject7 objN = visitObjectN' visit objN
  where
   rep = typeOf objN
@@ -1278,7 +1309,8 @@ showObject7 objN = visitObjectN' visit objN
           | otherwise -> "toZO7"
 
 showObject8 ::
-  Inst8 IsObjectType a b c d e f g h =>
+  forall zone a b c d e f g h.
+  (IsZone zone, Inst8 IsObjectType a b c d e f g h) =>
   ON8 a b c d e f g h ->
   EnvM ParenItems
 showObject8 objN = visitObjectN' visit objN
@@ -1288,11 +1320,12 @@ showObject8 objN = visitObjectN' visit objN
   visit =
     showObjectNImpl rep $
       if
-          | rep == typeRep (Proxy @ODamageSource) -> "asDamageSource"
+          | rep == typeRep (Proxy @(ZO zone OTDamageSource)) -> "asDamageSource"
           | otherwise -> "toZO8"
 
 showObject9 ::
-  Inst9 IsObjectType a b c d e f g h i =>
+  forall zone a b c d e f g h i.
+  (IsZone zone, Inst9 IsObjectType a b c d e f g h i) =>
   ON9 a b c d e f g h i ->
   EnvM ParenItems
 showObject9 objN = visitObjectN' visit objN
@@ -1305,7 +1338,8 @@ showObject9 objN = visitObjectN' visit objN
           | otherwise -> "toZO9"
 
 showObject10 ::
-  Inst10 IsObjectType a b c d e f g h i j =>
+  forall zone a b c d e f g h i j.
+  (IsZone zone, Inst10 IsObjectType a b c d e f g h i j) =>
   ON10 a b c d e f g h i j ->
   EnvM ParenItems
 showObject10 objN = visitObjectN' visit objN
@@ -1318,7 +1352,8 @@ showObject10 objN = visitObjectN' visit objN
           | otherwise -> "toZO10"
 
 showObject11 ::
-  Inst11 IsObjectType a b c d e f g h i j k =>
+  forall zone a b c d e f g h i j k.
+  (IsZone zone, Inst11 IsObjectType a b c d e f g h i j k) =>
   ON11 a b c d e f g h i j k ->
   EnvM ParenItems
 showObject11 objN = visitObjectN' visit objN
@@ -1331,7 +1366,8 @@ showObject11 objN = visitObjectN' visit objN
           | otherwise -> "toZO11"
 
 showObject12 ::
-  Inst12 IsObjectType a b c d e f g h i j k l =>
+  forall zone a b c d e f g h i j k l.
+  (IsZone zone, Inst12 IsObjectType a b c d e f g h i j k l) =>
   ON12 a b c d e f g h i j k l ->
   EnvM ParenItems
 showObject12 objN = visitObjectN' visit objN
@@ -1341,43 +1377,23 @@ showObject12 objN = visitObjectN' visit objN
   visit =
     showObjectNImpl rep $
       if
-          | rep == typeRep (Proxy @OAny) -> "asAny"
+          | rep == typeRep (Proxy @(ZO zone OTAny)) -> "asAny"
           | otherwise -> "toZO12"
 
-showObjectN :: VisitObjectN ot => ObjectN ot -> EnvM ParenItems
+showObjectN :: forall zone ot. (IsZone zone, VisitObjectN ot) => ObjectN ot -> EnvM ParenItems
 showObjectN objN = case knownObjectN objN of
-  KO1 obj1 -> showObject1 obj1
-  KO2 obj2 -> showObject2 obj2
-  KO3 obj3 -> showObject3 obj3
-  KO4 obj4 -> showObject4 obj4
-  KO5 obj5 -> showObject5 obj5
-  KO6 obj6 -> showObject6 obj6
-  KO7 obj7 -> showObject7 obj7
-  KO8 obj8 -> showObject8 obj8
-  KO9 obj9 -> showObject9 obj9
-  KO10 obj10 -> showObject10 obj10
-  KO11 obj11 -> showObject11 obj11
-  KO12 obj12 -> showObject12 obj12
-
-showOActivatedOrTriggeredAbility ::
-  OActivatedOrTriggeredAbility -> EnvM ParenItems
-showOActivatedOrTriggeredAbility = showZoneObject
-
-showOAny :: OAny -> EnvM ParenItems
-showOAny = showZoneObject
-
-showOCreaturePlayerPlaneswalker ::
-  OCreaturePlayerPlaneswalker -> EnvM ParenItems
-showOCreaturePlayerPlaneswalker = showZoneObject
-
-showODamageSource :: ODamageSource -> EnvM ParenItems
-showODamageSource = showZoneObject
-
-showOPermanent :: OPermanent -> EnvM ParenItems
-showOPermanent = showZoneObject
-
-showOSpell :: OSpell -> EnvM ParenItems
-showOSpell = showZoneObject
+  KO1 obj1 -> showObject1 @zone obj1
+  KO2 obj2 -> showObject2 @zone obj2
+  KO3 obj3 -> showObject3 @zone obj3
+  KO4 obj4 -> showObject4 @zone obj4
+  KO5 obj5 -> showObject5 @zone obj5
+  KO6 obj6 -> showObject6 @zone obj6
+  KO7 obj7 -> showObject7 @zone obj7
+  KO8 obj8 -> showObject8 @zone obj8
+  KO9 obj9 -> showObject9 @zone obj9
+  KO10 obj10 -> showObject10 @zone obj10
+  KO11 obj11 -> showObject11 @zone obj11
+  KO12 obj12 -> showObject12 @zone obj12
 
 showPower :: Power -> EnvM ParenItems
 showPower = yesParens . pure . pure . fromString . show
@@ -1569,19 +1585,19 @@ showWithLinkedObject showM memo = \case
     pure $ pure "LProxy" <> sReqs
   L1 nonProxy reqs cont ->
     let ty = getType reqs
-     in go ty nonProxy reqs $ showO1 showM memo (cont . toZone)
+     in go ty nonProxy reqs $ showO1 @zone showM memo (cont . toZone)
   L2 nonProxy reqs cont ->
     let ty = getType reqs
-     in go ty nonProxy reqs $ showO2 showM memo (cont . toZone)
+     in go ty nonProxy reqs $ showO2 @zone showM memo (cont . toZone)
   L3 nonProxy reqs cont ->
     let ty = getType reqs
-     in go ty nonProxy reqs $ showO3 showM memo (cont . toZone)
+     in go ty nonProxy reqs $ showO3 @zone showM memo (cont . toZone)
   L4 nonProxy reqs cont ->
     let ty = getType reqs
-     in go ty nonProxy reqs $ showO4 showM memo (cont . toZone)
+     in go ty nonProxy reqs $ showO4 @zone showM memo (cont . toZone)
   L5 nonProxy reqs cont ->
     let ty = getType reqs
-     in go ty nonProxy reqs $ showO5 showM memo (cont . toZone)
+     in go ty nonProxy reqs $ showO5 @zone showM memo (cont . toZone)
  where
   getType :: [Requirement zone ot] -> Proxy ot
   getType _ = Proxy
@@ -1593,6 +1609,7 @@ showWithLinkedObject showM memo = \case
     pure $ pure "linked @" <> sTy <> pure " " <> sReqs <> sCont'
 
 showWithMaskedObject ::
+  forall zone z.
   IsZone zone =>
   (z -> EnvM ParenItems) ->
   String ->
@@ -1600,17 +1617,17 @@ showWithMaskedObject ::
   EnvM ParenItems
 showWithMaskedObject showM memo = \case
   M1 reqs cont ->
-    let ty = getType reqs in go ty reqs $ showO1 showM memo (cont . toZone)
+    let ty = getType reqs in go ty reqs $ showO1 @zone showM memo (cont . toZone)
   M2 reqs cont ->
-    let ty = getType reqs in go ty reqs $ showO2 showM memo (cont . toZone)
+    let ty = getType reqs in go ty reqs $ showO2 @zone showM memo (cont . toZone)
   M3 reqs cont ->
-    let ty = getType reqs in go ty reqs $ showO3 showM memo (cont . toZone)
+    let ty = getType reqs in go ty reqs $ showO3 @zone showM memo (cont . toZone)
   M4 reqs cont ->
-    let ty = getType reqs in go ty reqs $ showO4 showM memo (cont . toZone)
+    let ty = getType reqs in go ty reqs $ showO4 @zone showM memo (cont . toZone)
   M5 reqs cont ->
-    let ty = getType reqs in go ty reqs $ showO5 showM memo (cont . toZone)
+    let ty = getType reqs in go ty reqs $ showO5 @zone showM memo (cont . toZone)
   M6 reqs cont ->
-    let ty = getType reqs in go ty reqs $ showO6 showM memo (cont . toZone)
+    let ty = getType reqs in go ty reqs $ showO6 @zone showM memo (cont . toZone)
  where
   getType :: [Requirement zone ot] -> Proxy ot
   getType _ = Proxy
@@ -1633,7 +1650,7 @@ showWithThis showM memo = \case
   T1 cont ->
     let go = yesParens $ do
           sTy <- parens <$> showTypeOf (Proxy @ot)
-          sCont <- dollar <$> showO1 showM memo (cont . toZone)
+          sCont <- dollar <$> showO1 @zone showM memo (cont . toZone)
           pure $ pure "thisObject @" <> sTy <> sCont
      in go
   T2 cont ->
@@ -1646,8 +1663,8 @@ showWithThis showM memo = \case
           sTy <- parens <$> showTypeOf (Proxy @ot)
           (objNa, snap) <- newObjectN @a O memo
           (objNb, _) <- newObjectN @b O memo
-          sObjNa <- parens <$> showObjectN objNa
-          sObjNb <- parens <$> showObjectN objNb
+          sObjNa <- parens <$> showObjectN @zone objNa
+          sObjNb <- parens <$> showObjectN @zone objNb
           let elect = cont' (toZone objNa, toZone objNb)
           sElect <- dropParens <$> showM elect
           restoreObject snap
@@ -1779,7 +1796,8 @@ showWSpell wit = case wit of
   sWit :: EnvM Items
   sWit = pure $ pure $ fromString $ show wit
 
-showZoneObject :: IsZO zone ot => ZO zone ot -> EnvM ParenItems
+showZoneObject :: forall zone ot. IsZO zone ot => ZO zone ot -> EnvM ParenItems
 showZoneObject = \case
-  ZOBattlefield _ objN -> showObjectN objN
-  ZOLibrary _ objN -> showObjectN objN
+  ZOBattlefield _ objN -> showObjectN @zone objN
+  ZOLibrary _ objN -> showObjectN @zone objN
+  ZOStack _ objN -> showObjectN @zone objN

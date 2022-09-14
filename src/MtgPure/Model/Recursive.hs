@@ -65,6 +65,8 @@ import safe MtgPure.Model.ObjectType.Any (WAny)
 import safe MtgPure.Model.ObjectType.Card (WCard)
 import safe MtgPure.Model.ObjectType.Index (IndexOT)
 import safe MtgPure.Model.ObjectType.Kind (
+  OTActivatedOrTriggeredAbility,
+  OTAny,
   OTArtifact,
   OTArtifactCreature,
   OTCreature,
@@ -75,6 +77,7 @@ import safe MtgPure.Model.ObjectType.Kind (
   OTPlaneswalker,
   OTPlayer,
   OTSorcery,
+  OTSpell,
  )
 import safe MtgPure.Model.ObjectType.NonCreatureCard (WNonCreatureCard)
 import safe MtgPure.Model.ObjectType.Permanent (WPermanent)
@@ -90,14 +93,11 @@ import safe MtgPure.Model.Variable (Variable)
 import safe MtgPure.Model.VisitObjectN (VisitObjectN)
 import safe MtgPure.Model.Zone (IsZone (..), Zone (..))
 import safe MtgPure.Model.ZoneObject (
-  OActivatedOrTriggeredAbility,
-  OAny,
   OCreature,
   OCreaturePlayerPlaneswalker,
   ODamageSource,
   OPermanent,
   OPlayer,
-  OSpell,
   ZO,
  )
 
@@ -146,7 +146,8 @@ instance ConsIndex (Ability ot) where
 ----------------------------------------
 
 data Card (ot :: Type) :: Type where
-  -- For now Instants and Sorceries will use 'Battlefield for it's THIS zone.
+  -- For now Instants and Sorceries will use `'Battlefield` for it's `this` zone while the spell is resolving.
+  -- If it's on the stack, it's `'Stack` as expected.
   Card :: IsOT ot => CardName -> WCard ot -> WithThis 'Battlefield (CardTypeDef 'NonTribal) ot -> Card ot
   TribalCard :: IsOT ot => CardName -> WCard ot -> WithThis 'Battlefield (CardTypeDef 'Tribal) ot -> Card ot
   --
@@ -323,8 +324,8 @@ data Effect (ef :: EffectType) :: Type where
   AddToBattlefield :: IsOT ot => WPermanent ot -> OPlayer -> Token ot -> Effect 'OneShot
   CantBeRegenerated :: OCreature -> Effect 'Continuous
   ChangeTo :: IsOT ot => WPermanent ot -> OPermanent -> Card ot -> Effect 'Continuous
-  CounterAbility :: OActivatedOrTriggeredAbility -> Effect 'OneShot
-  CounterSpell :: OSpell -> Effect 'OneShot
+  CounterAbility :: ZO 'Stack OTActivatedOrTriggeredAbility -> Effect 'OneShot
+  CounterSpell :: ZO 'Stack OTSpell -> Effect 'OneShot
   DealDamage :: ODamageSource -> OCreaturePlayerPlaneswalker -> Damage -> Effect 'OneShot
   Destroy :: OPermanent -> Effect 'OneShot
   DrawCards :: OPlayer -> Int -> Effect 'OneShot
@@ -368,7 +369,7 @@ data Elect (el :: Type) (ot :: Type) :: Type where
   -- TODO: Add `SZone zone` witness and change `'Battlefield` to `zone`.
   All :: IsOT ot => WithMaskedObject 'Battlefield (Elect el ot) -> Elect el ot
   Condition :: Condition -> Elect Condition ot
-  ControllerOf :: OAny -> (OPlayer -> Elect el ot) -> Elect el ot
+  ControllerOf :: IsZO zone OTAny => ZO zone OTAny -> (OPlayer -> Elect el ot) -> Elect el ot
   Cost :: Cost ot -> Elect (Cost ot) ot
   Effect :: [Effect ef] -> Elect (Effect ef) ot
   Event :: Event -> Elect Event ot

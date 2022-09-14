@@ -312,7 +312,7 @@ instance (CoNonProxy x, Inst5 IsObjectType a b c d e) => AsWithLinkedObject (OT5
   linked = L5 coNonProxy
 
 class AsWithMaskedObject ot where
-  masked :: Typeable z => [Requirement zone ot] -> (ZO zone ot -> z) -> WithMaskedObject zone z
+  masked :: forall zone z. Typeable z => [Requirement zone ot] -> (ZO zone ot -> z) -> WithMaskedObject zone z
 
 instance Inst1 IsObjectType a => AsWithMaskedObject (OT1 a) where
   masked = M1
@@ -454,7 +454,7 @@ dealDamage source target =
     . asDamage
 
 controllerOf ::
-  AsAny ot' => ZO 'Battlefield ot' -> (OPlayer -> Elect e ot) -> Elect e ot
+  (AsAny ot', IsZO zone ot') => ZO zone ot' -> (OPlayer -> Elect e ot) -> Elect e ot
 controllerOf = ControllerOf . asAny
 
 sacrifice ::
@@ -478,10 +478,10 @@ destroy :: AsPermanent ot => ZO 'Battlefield ot -> Effect 'OneShot
 destroy = Destroy . asPermanent
 
 counterAbility ::
-  AsActivatedOrTriggeredAbility ot => ZO 'Battlefield ot -> Effect 'OneShot
+  AsActivatedOrTriggeredAbility ot => ZO 'Stack ot -> Effect 'OneShot
 counterAbility = CounterAbility . asActivatedOrTriggeredAbility
 
-counterSpell :: AsSpell ot => ZO 'Battlefield ot -> Effect 'OneShot
+counterSpell :: AsSpell ot => ZO 'Stack ot -> Effect 'OneShot
 counterSpell = CounterSpell . asSpell
 
 class IsOT ot => CoCard ot where

@@ -127,12 +127,14 @@ type ZO = ZoneObject
 data ZoneObject :: Zone -> Type -> Type where
   ZOBattlefield :: SZone 'Battlefield -> ObjectN ot -> ZoneObject 'Battlefield ot
   ZOLibrary :: SZone 'Library -> ObjectN ot -> ZoneObject 'Library ot
+  ZOStack :: SZone 'Stack -> ObjectN ot -> ZoneObject 'Stack ot
   deriving (Typeable)
 
 instance ConsIndex (ZO zone ot) where
   consIndex = \case
     ZOBattlefield{} -> 1
     ZOLibrary{} -> 2
+    ZOStack{} -> 3
 
 instance (IsZone zone, PrettyType ot) => PrettyType (ZO zone ot) where
   prettyType _ = "ZO '" ++ sZone ++ " " ++ open ++ sOT ++ close
@@ -147,43 +149,51 @@ toZO1 :: ToObject1 ot a => ZO zone ot -> ZO zone (OT1 a)
 toZO1 = \case
   ZOBattlefield SBattlefield o -> ZOBattlefield SBattlefield $ toObject1 o
   ZOLibrary SLibrary o -> ZOLibrary SLibrary $ toObject1 o
+  ZOStack SStack o -> ZOStack SStack $ toObject1 o
 
 toZO2 :: ToObject2 ot a b => ZO zone ot -> ZO zone (OT2 a b)
 toZO2 = \case
   ZOBattlefield SBattlefield o -> ZOBattlefield SBattlefield $ toObject2 o
   ZOLibrary SLibrary o -> ZOLibrary SLibrary $ toObject2 o
+  ZOStack SStack o -> ZOStack SStack $ toObject2 o
 
 toZO3 :: ToObject3 ot a b c => ZO zone ot -> ZO zone (OT3 a b c)
 toZO3 = \case
   ZOBattlefield SBattlefield o -> ZOBattlefield SBattlefield $ toObject3 o
   ZOLibrary SLibrary o -> ZOLibrary SLibrary $ toObject3 o
+  ZOStack SStack o -> ZOStack SStack $ toObject3 o
 
 toZO4 :: ToObject4 ot a b c d => ZO zone ot -> ZO zone (OT4 a b c d)
 toZO4 = \case
   ZOBattlefield SBattlefield o -> ZOBattlefield SBattlefield $ toObject4 o
   ZOLibrary SLibrary o -> ZOLibrary SLibrary $ toObject4 o
+  ZOStack SStack o -> ZOStack SStack $ toObject4 o
 
 toZO5 :: ToObject5 ot a b c d e => ZO zone ot -> ZO zone (OT5 a b c d e)
 toZO5 = \case
   ZOBattlefield SBattlefield o -> ZOBattlefield SBattlefield $ toObject5 o
   ZOLibrary SLibrary o -> ZOLibrary SLibrary $ toObject5 o
+  ZOStack SStack o -> ZOStack SStack $ toObject5 o
 
 toZO6 :: ToObject6 ot a b c d e f => ZO zone ot -> ZO zone (OT6 a b c d e f)
 toZO6 = \case
   ZOBattlefield SBattlefield o -> ZOBattlefield SBattlefield $ toObject6 o
   ZOLibrary SLibrary o -> ZOLibrary SLibrary $ toObject6 o
+  ZOStack SStack o -> ZOStack SStack $ toObject6 o
 
 toZO7 ::
   ToObject7 ot a b c d e f g => ZO zone ot -> ZO zone (OT7 a b c d e f g)
 toZO7 = \case
   ZOBattlefield SBattlefield o -> ZOBattlefield SBattlefield $ toObject7 o
   ZOLibrary SLibrary o -> ZOLibrary SLibrary $ toObject7 o
+  ZOStack SStack o -> ZOStack SStack $ toObject7 o
 
 toZO8 ::
   ToObject8 ot a b c d e f g h => ZO zone ot -> ZO zone (OT8 a b c d e f g h)
 toZO8 = \case
   ZOBattlefield SBattlefield o -> ZOBattlefield SBattlefield $ toObject8 o
   ZOLibrary SLibrary o -> ZOLibrary SLibrary $ toObject8 o
+  ZOStack SStack o -> ZOStack SStack $ toObject8 o
 
 toZO9 ::
   ToObject9 ot a b c d e f g h i =>
@@ -192,6 +202,7 @@ toZO9 ::
 toZO9 = \case
   ZOBattlefield SBattlefield o -> ZOBattlefield SBattlefield $ toObject9 o
   ZOLibrary SLibrary o -> ZOLibrary SLibrary $ toObject9 o
+  ZOStack SStack o -> ZOStack SStack $ toObject9 o
 
 toZO10 ::
   ToObject10 ot a b c d e f g h i j =>
@@ -200,6 +211,7 @@ toZO10 ::
 toZO10 = \case
   ZOBattlefield SBattlefield o -> ZOBattlefield SBattlefield $ toObject10 o
   ZOLibrary SLibrary o -> ZOLibrary SLibrary $ toObject10 o
+  ZOStack SStack o -> ZOStack SStack $ toObject10 o
 
 toZO11 ::
   ToObject11 ot a b c d e f g h i j k =>
@@ -208,6 +220,7 @@ toZO11 ::
 toZO11 = \case
   ZOBattlefield SBattlefield o -> ZOBattlefield SBattlefield $ toObject11 o
   ZOLibrary SLibrary o -> ZOLibrary SLibrary $ toObject11 o
+  ZOStack SStack o -> ZOStack SStack $ toObject11 o
 
 toZO12 ::
   ToObject12 ot a b c d e f g h i j k l =>
@@ -216,6 +229,7 @@ toZO12 ::
 toZO12 = \case
   ZOBattlefield SBattlefield o -> ZOBattlefield SBattlefield $ toObject12 o
   ZOLibrary SLibrary o -> ZOLibrary SLibrary $ toObject12 o
+  ZOStack SStack o -> ZOStack SStack $ toObject12 o
 
 type OAny = ZO 'Battlefield OTAny
 

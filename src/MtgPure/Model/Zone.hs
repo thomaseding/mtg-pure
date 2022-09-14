@@ -27,11 +27,13 @@ import safe Data.Typeable (Typeable)
 data Zone :: Type where
   Battlefield :: Zone
   Library :: Zone
+  Stack :: Zone
   deriving (Eq, Ord, Show, Typeable)
 
 data SZone :: Zone -> Type where
   SBattlefield :: SZone 'Battlefield
   SLibrary :: SZone 'Library
+  SStack :: SZone 'Stack
   deriving (Typeable)
 
 deriving instance Eq (SZone zone)
@@ -51,3 +53,7 @@ instance IsZone 'Battlefield where
 instance IsZone 'Library where
   singZone _ = SLibrary
   litZone _ = Library
+
+instance IsZone 'Stack where
+  singZone _ = SStack
+  litZone _ = Stack
