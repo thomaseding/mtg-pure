@@ -37,6 +37,7 @@ import safe MtgPure.Cards (
   holyStrength,
   island,
   lavaAxe,
+  manaLeak,
   mountain,
   nyxbornRollicker,
   ornithopter,
@@ -78,6 +79,7 @@ allCards =
   , toCard holyStrength
   , toCard island
   , toCard lavaAxe
+  , toCard manaLeak
   , toCard mountain
   , toCard nyxbornRollicker
   , toCard ornithopter

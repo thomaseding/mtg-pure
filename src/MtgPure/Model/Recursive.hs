@@ -45,7 +45,7 @@ module MtgPure.Model.Recursive (
 ) where
 
 import safe Data.ConsIndex (ConsIndex (..))
-import safe Data.Inst (Inst1, Inst2, Inst3, Inst4, Inst5)
+import safe Data.Inst (Inst1, Inst2, Inst3, Inst4, Inst5, Inst6)
 import safe Data.Kind (Type)
 import safe Data.Proxy (Proxy (..))
 import safe Data.Typeable (Typeable)
@@ -60,7 +60,7 @@ import safe MtgPure.Model.LandType (LandType)
 import safe MtgPure.Model.Loyalty (Loyalty)
 import safe MtgPure.Model.ManaCost (ManaCost)
 import safe MtgPure.Model.ManaPool (ManaPool)
-import safe MtgPure.Model.ObjectType (OT1, OT2, OT3, OT4, OT5)
+import safe MtgPure.Model.ObjectType (OT1, OT2, OT3, OT4, OT5, OT6)
 import safe MtgPure.Model.ObjectType.Any (WAny)
 import safe MtgPure.Model.ObjectType.Card (WCard)
 import safe MtgPure.Model.ObjectType.Index (IndexOT)
@@ -674,6 +674,11 @@ data WithMaskedObject (zone :: Zone) (liftedOT :: Type) :: Type where
     [Requirement zone (OT5 a b c d e)] ->
     (ZO zone (OT5 a b c d e) -> liftedOT) ->
     WithMaskedObject zone liftedOT
+  M6 ::
+    (Typeable liftedOT, IsOT (OT6 a b c d e f), Inst6 IsObjectType a b c d e f) =>
+    [Requirement zone (OT6 a b c d e f)] ->
+    (ZO zone (OT6 a b c d e f) -> liftedOT) ->
+    WithMaskedObject zone liftedOT
   deriving (Typeable)
 
 instance ConsIndex (WithMaskedObject zone liftedOT) where
@@ -683,6 +688,7 @@ instance ConsIndex (WithMaskedObject zone liftedOT) where
     M3{} -> 3
     M4{} -> 4
     M5{} -> 5
+    M6{} -> 6
 
 ----------------------------------------
 

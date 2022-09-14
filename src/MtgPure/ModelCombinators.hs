@@ -81,7 +81,7 @@ module MtgPure.ModelCombinators (
   searchLibrary,
 ) where
 
-import safe Data.Inst (Inst1, Inst2, Inst3, Inst4, Inst5)
+import safe Data.Inst (Inst1, Inst2, Inst3, Inst4, Inst5, Inst6)
 import safe Data.Proxy (Proxy (..))
 import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.BasicLandType (BasicLandType)
@@ -94,7 +94,7 @@ import safe MtgPure.Model.IsObjectType (IsObjectType)
 import safe MtgPure.Model.LandType (LandType (BasicLand))
 import safe MtgPure.Model.ManaCost (ManaCost)
 import safe MtgPure.Model.ManaSymbol (ManaSymbol (..))
-import safe MtgPure.Model.ObjectType (OT1, OT2, OT3, OT4, OT5, ObjectType (..))
+import safe MtgPure.Model.ObjectType (OT1, OT2, OT3, OT4, OT5, OT6, ObjectType (..))
 import safe MtgPure.Model.ObjectType.Any (WAny (..))
 import safe MtgPure.Model.ObjectType.Card (IsCardType, WCard (..))
 import safe MtgPure.Model.ObjectType.Kind (
@@ -328,6 +328,9 @@ instance Inst4 IsObjectType a b c d => AsWithMaskedObject (OT4 a b c d) where
 
 instance Inst5 IsObjectType a b c d e => AsWithMaskedObject (OT5 a b c d e) where
   masked = M5
+
+instance Inst6 IsObjectType a b c d e f => AsWithMaskedObject (OT6 a b c d e f) where
+  masked = M6
 
 class IsZO zone ot => AsWithThis ot zone liftOT ot1s | ot zone liftOT -> ot1s, ot1s -> ot zone where
   thisObject :: (ot1s -> liftOT ot) -> WithThis zone liftOT ot

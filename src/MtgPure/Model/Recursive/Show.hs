@@ -1155,6 +1155,14 @@ showO5 ::
   EnvM ParenItems
 showO5 = showONImpl O5a
 
+showO6 ::
+  (Inst6 IsObjectType a b c d e f) =>
+  (z -> EnvM ParenItems) ->
+  String ->
+  (ON6 a b c d e f -> z) ->
+  EnvM ParenItems
+showO6 = showONImpl O6a
+
 showONImpl ::
   forall z a ot.
   (IsOT ot, IsObjectType a) =>
@@ -1601,6 +1609,8 @@ showWithMaskedObject showM memo = \case
     let ty = getType reqs in go ty reqs $ showO4 showM memo (cont . toZone)
   M5 reqs cont ->
     let ty = getType reqs in go ty reqs $ showO5 showM memo (cont . toZone)
+  M6 reqs cont ->
+    let ty = getType reqs in go ty reqs $ showO6 showM memo (cont . toZone)
  where
   getType :: [Requirement zone ot] -> Proxy ot
   getType _ = Proxy

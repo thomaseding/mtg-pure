@@ -33,6 +33,7 @@ module MtgPure.Cards (
   holyStrength,
   island,
   lavaAxe,
+  manaLeak,
   mountain,
   nyxbornRollicker,
   ornithopter,
@@ -78,6 +79,7 @@ import safe MtgPure.Model.ObjectType.Kind (
   OTPermanent,
   OTPlayerPlaneswalker,
   OTSorcery,
+  OTSpell,
  )
 import safe MtgPure.Model.ObjectType.NonCreatureCard (WNonCreatureCard (..))
 import safe MtgPure.Model.Power (Power (..))
@@ -92,7 +94,7 @@ import safe MtgPure.Model.Recursive (
   Enchant (Enchant),
   EnchantmentType (Aura),
   EventListener' (TimePoint),
-  Requirement (ControlsA, HasLandType, Not, ROr),
+  Requirement (ControlledBy, ControlsA, HasLandType, Not, ROr),
   StaticAbility (Bestow, FirstStrike, Flying, Haste, StaticContinuous, Suspend),
   Token,
   TriggeredAbility (When),
@@ -205,7 +207,7 @@ allIsDust = mkCard "All Is Dust" $ \_this ->
           All $
             masked [] $
               \player -> All $
-                masked @OTPermanent [colored] $
+                masked @OTPermanent [ControlledBy player, colored] $
                   \perm ->
                     effect $ sacrifice player [is perm]
       }
@@ -234,7 +236,7 @@ backlash = mkCard "Backlash" $ \this ->
     , instant_effect =
         controllerOf this $ \you ->
           A Target you $
-            masked @OTCreature [Not tapped] $ \target ->
+            masked [Not tapped] $ \target ->
               VariableFromPower target $ \power ->
                 controllerOf target $ \targetController ->
                   effect $ dealDamage target targetController $ VariableDamage power
@@ -401,6 +403,23 @@ lavaAxe = mkCard "Lava Axe" $ \this ->
     }
  where
   cost = spellCost (4, R)
+
+manaLeak :: Card OTInstant
+manaLeak = mkCard "Mana Leak" $ \this ->
+  InstantDef
+    { instant_colors = toColors U
+    , instant_cost = cost
+    , instant_abilities = []
+    , instant_effect =
+        controllerOf this $ \you ->
+          A Target you $
+            masked @OTSpell [] $ \spell ->
+              controllerOf spell $ \controller ->
+                ifElse (satisfies controller [playerPays $ toManaCost 3]) $
+                  effect $ counterSpell spell
+    }
+ where
+  cost = spellCost (1, U)
 
 mountain :: Card OTLand
 mountain = mkBasicLand Mountain

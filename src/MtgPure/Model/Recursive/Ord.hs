@@ -987,6 +987,33 @@ ordO5 ordM reqs1 reqs2 cont1 cont2 = case cast' (reqs2, cont2) of
       ([Requirement zone (OT5 a b c d e)], ZO zone (OT5 a b c d e) -> x)
   cast' = cast
 
+ordO6 ::
+  forall zone a b c d e f x ot.
+  ( Typeable x
+  , IsZO zone ot
+  , Inst6 IsObjectType a b c d e f
+  , IsZO zone (OT6 a b c d e f)
+  ) =>
+  (x -> x -> EnvM Ordering) ->
+  [Requirement zone (OT6 a b c d e f)] ->
+  [Requirement zone ot] ->
+  (ZO zone (OT6 a b c d e f) -> x) ->
+  (ZO zone ot -> x) ->
+  EnvM Ordering
+ordO6 ordM reqs1 reqs2 cont1 cont2 = case cast' (reqs2, cont2) of
+  Nothing -> compareOT @(OT6 a b c d e f) @ot
+  Just (reqs2, cont2) ->
+    seqM
+      [ ordRequirements reqs1 reqs2
+      , withObjectCont @a ordM O6a (cont1 . toZone) (cont2 . toZone)
+      ]
+ where
+  cast' ::
+    ([Requirement zone ot], ZO zone ot -> x) ->
+    Maybe
+      ([Requirement zone (OT6 a b c d e f)], ZO zone (OT6 a b c d e f) -> x)
+  cast' = cast
+
 ordObjectN :: VisitObjectN ot => ObjectN ot -> ObjectN ot -> EnvM Ordering
 ordObjectN objN1 objN2 = do
   let i1 = visitObjectN' objectToId objN1
@@ -1255,6 +1282,9 @@ ordWithMaskedObjectElectE x = case x of
     y -> pure $ compare (consIndex x) (consIndex y)
   M5 reqs1 cont1 -> \case
     M5 reqs2 cont2 -> ordO5 ordM reqs1 reqs2 cont1 cont2
+    y -> pure $ compare (consIndex x) (consIndex y)
+  M6 reqs1 cont1 -> \case
+    M6 reqs2 cont2 -> ordO6 ordM reqs1 reqs2 cont1 cont2
     y -> pure $ compare (consIndex x) (consIndex y)
  where
   ordM = ordElectE
