@@ -1,0 +1,5 @@
+{
+    "haskell.toolchain": {
+        "hls": "1.7.0.0"
+    }
+}
