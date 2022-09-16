@@ -207,7 +207,7 @@ generateObjectToObjectN desc sym symN =
     unwords
       [ "toObject" ++ show n ++ "'"
       , "="
-      , "O1" ++ if n == 1 then "" else show n ++ interpretSym SymLetter sym
+      , "O" ++ if n == 1 then "1" else show n ++ interpretSym SymLetter sym
       ]
 
 ----------------------------------------
