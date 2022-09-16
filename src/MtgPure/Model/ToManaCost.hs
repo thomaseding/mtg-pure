@@ -19,15 +19,15 @@ module MtgPure.Model.ToManaCost (
 ) where
 
 import safe Data.Inst (Inst2, Inst3, Inst4, Inst5, Inst6, Inst7)
+import safe Data.Kind (Type)
 import safe MtgPure.Model.GenericMana (GenericMana (GenericMana'))
-import safe MtgPure.Model.Mana (Mana (..))
+import safe MtgPure.Model.Mana (Mana (..), Snow (..))
 import safe MtgPure.Model.ManaCost (ManaCost (..), emptyManaCost)
-import safe MtgPure.Model.ManaPool (ManaPool (..))
 import safe MtgPure.Model.ManaSymbol (ManaSymbol (..))
 import safe MtgPure.Model.ToMana (toMana)
 
-class ToManaCost a where
-  toManaCost :: a -> ManaCost
+class ToManaCost (mana :: Type) where
+  toManaCost :: mana -> ManaCost
 
 instance ToManaCost ManaCost where
   toManaCost = id
@@ -72,9 +72,9 @@ instance ToManaCost Int where
   toManaCost = toManaCost . GenericMana'
 
 instance ToManaCost GenericMana where
-  toManaCost = toManaCost . GenericMana
+  toManaCost x = emptyManaCost{costGeneric = GenericMana x}
 
-instance ToManaCost (Mana a) where
+instance ToManaCost (Mana 'NonSnow a) where
   toManaCost = \case
     x@(WhiteMana _) -> emptyManaCost{costWhite = x}
     x@(BlueMana _) -> emptyManaCost{costBlue = x}
@@ -92,6 +92,7 @@ instance ToManaCost (ManaSymbol a, Int) where
     x@(R, _) -> emptyManaCost{costRed = toMana x}
     x@(G, _) -> emptyManaCost{costGreen = toMana x}
     x@(C, _) -> emptyManaCost{costColorless = toMana x}
+    x@(S, _) -> emptyManaCost{costSnow = toMana x}
 
 instance ToManaCost (ManaSymbol a) where
   toManaCost = \case
@@ -101,10 +102,4 @@ instance ToManaCost (ManaSymbol a) where
     R -> toManaCost (R, 1 :: Int)
     G -> toManaCost (G, 1 :: Int)
     C -> toManaCost (C, 1 :: Int)
-
-instance ToManaCost ManaPool where
-  toManaCost (ManaPool w u b r g c) = ManaCost' w u b r g c mempty
-
-instance ToManaCost (Int, ManaPool) where
-  toManaCost (generic, pool) =
-    (toManaCost pool){costGeneric = toMana generic}
+    S -> toManaCost (S, 1 :: Int)

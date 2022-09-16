@@ -25,6 +25,7 @@ module MtgPure.Model.ObjectType.Card (
 import safe Data.Inst (Inst2, Inst3)
 import safe Data.Kind (Type)
 import safe Data.Proxy (Proxy)
+import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.CardType (CardType (..))
 import safe MtgPure.Model.IsObjectType (IsObjectType)
 import safe MtgPure.Model.ObjectType (OT1, OT2, OT3, ObjectType (..))
@@ -52,6 +53,7 @@ data WCard :: Type -> Type where
   WCard :: WCard OTCard
   WCard2 :: Inst2 IsCardType a b => WCard (OT2 a b)
   WCard3 :: Inst3 IsCardType a b c => WCard (OT3 a b c)
+  deriving (Typeable)
 
 deriving instance Show (WCard a)
 
@@ -64,6 +66,7 @@ data CardVisitor zone z = CardVisitor
   , visitCPlaneswalker :: ZO zone OTPlaneswalker -> z
   , visitCSorcery :: ZO zone OTSorcery -> z
   }
+  deriving (Typeable)
 
 class IsObjectType a => IsCardType a where
   singCardType :: Proxy a -> CardType

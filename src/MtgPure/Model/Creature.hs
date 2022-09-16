@@ -7,28 +7,30 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE Safe #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.AbilityType (
-  AbilityType (..),
+module MtgPure.Model.Creature (
+  Creature (..),
 ) where
 
 import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
-import safe MtgPure.Model.EffectType (EffectType (..))
+import safe MtgPure.Model.CreatureType (CreatureType)
+import safe MtgPure.Model.ObjectType.Kind (OTCreature)
+import safe MtgPure.Model.Power (Power (..))
+import safe MtgPure.Model.Recursive (Ability)
+import safe MtgPure.Model.Toughness (Toughness (..))
 
-data AbilityType :: EffectType -> Type where
-  ActivatedAbility :: AbilityType 'OneShot
-  ManaAbility :: AbilityType 'OneShot
-  StaticAbility :: AbilityType 'Continuous
-  TriggeredAbility :: AbilityType 'OneShot
+data Creature :: Type where
+  Creature ::
+    { creatureTypes :: [CreatureType]
+    , creaturePower :: Power
+    , creatureToughness :: Toughness
+    , creatureAbilities :: [Ability OTCreature]
+    } ->
+    Creature
   deriving (Typeable)
-
-deriving instance Eq (AbilityType e)
-
-deriving instance Ord (AbilityType e)

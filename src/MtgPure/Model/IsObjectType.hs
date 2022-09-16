@@ -40,6 +40,7 @@ data ObjectVisitor a = ObjectVisitor
   , visitOStaticAbility :: Object 'OTStaticAbility -> a
   , visitOTriggeredAbility :: Object 'OTTriggeredAbility -> a
   }
+  deriving (Typeable)
 
 class Typeable a => IsObjectType (a :: ObjectType) where
   idToObject :: ObjectId -> Object a

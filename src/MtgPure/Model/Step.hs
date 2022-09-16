@@ -19,6 +19,7 @@ module MtgPure.Model.Step (
 ) where
 
 import safe Data.Kind (Type)
+import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.Phase (Phase (..))
 
 data Step :: Phase -> Type where
@@ -27,6 +28,7 @@ data Step :: Phase -> Type where
   DrawStep :: Step 'BeginningPhase
   EndStep :: Step 'EndingPhase
   CleanupStep :: Step 'EndingPhase
+  deriving (Typeable)
 
 deriving instance Eq (Step p)
 

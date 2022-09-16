@@ -19,6 +19,7 @@ module MtgPure.Model.ColoredMana (
 ) where
 
 import safe Data.Kind (Type)
+import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.Color (Color (..))
 import safe MtgPure.Model.ColorToManaType (ColorToManaType)
 import safe MtgPure.Model.ManaSymbol (ManaSymbol)
@@ -28,6 +29,7 @@ data ColoredMana :: Color -> Type where
   ColoredMana' :: ManaSymbol (ColorToManaType c) -> Int -> ColoredMana c
   VariableColoredMana :: ManaSymbol (ColorToManaType c) -> Variable -> ColoredMana c
   SumColoredMana :: ManaSymbol (ColorToManaType c) -> ColoredMana c -> ColoredMana c -> ColoredMana c
+  deriving (Typeable)
 
 deriving instance Eq (ColoredMana c)
 

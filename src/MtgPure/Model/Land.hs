@@ -7,28 +7,26 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE Safe #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.AbilityType (
-  AbilityType (..),
+module MtgPure.Model.Land (
+  Land (..),
 ) where
 
 import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
-import safe MtgPure.Model.EffectType (EffectType (..))
+import safe MtgPure.Model.LandType (LandType)
+import safe MtgPure.Model.ObjectType.Kind (OTLand)
+import safe MtgPure.Model.Recursive (Ability)
 
-data AbilityType :: EffectType -> Type where
-  ActivatedAbility :: AbilityType 'OneShot
-  ManaAbility :: AbilityType 'OneShot
-  StaticAbility :: AbilityType 'Continuous
-  TriggeredAbility :: AbilityType 'OneShot
+data Land :: Type where
+  Land ::
+    { landTypes :: [LandType]
+    , landAbilities :: [Ability OTLand]
+    } ->
+    Land
   deriving (Typeable)
-
-deriving instance Eq (AbilityType e)
-
-deriving instance Ord (AbilityType e)

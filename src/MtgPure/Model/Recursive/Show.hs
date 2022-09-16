@@ -97,7 +97,16 @@ import safe MtgPure.Model.ObjectType (
  )
 import safe MtgPure.Model.ObjectType.Any (WAny (..))
 import safe MtgPure.Model.ObjectType.Card (WCard (..))
-import MtgPure.Model.ObjectType.Kind (OTAny, OTCreaturePlaneswalker, OTCreaturePlayer, OTCreaturePlayerPlaneswalker, OTDamageSource, OTPermanent, OTPlayerPlaneswalker, OTSpell)
+import safe MtgPure.Model.ObjectType.Kind (
+  OTAny,
+  OTCreaturePlaneswalker,
+  OTCreaturePlayer,
+  OTCreaturePlayerPlaneswalker,
+  OTDamageSource,
+  OTPermanent,
+  OTPlayerPlaneswalker,
+  OTSpell,
+ )
 import safe MtgPure.Model.ObjectType.NonCreatureCard (
   WNonCreatureCard (..),
  )
@@ -194,10 +203,10 @@ instance IsZO zone ot => Show (WithMaskedObject zone (Elect e ot)) where
 
 ----------------------------------------
 
-class LiteralMana a where
-  literalMana :: a -> Maybe Int
+class LiteralMana mana where
+  literalMana :: mana -> Maybe Int
 
-instance LiteralMana (ColoredMana a) where
+instance LiteralMana (ColoredMana mt) where
   literalMana = \case
     ColoredMana' _ x -> Just x
     VariableColoredMana{} -> Nothing
@@ -215,7 +224,7 @@ instance LiteralMana GenericMana where
     VariableGenericMana{} -> Nothing
     SumGenericMana{} -> Nothing
 
-instance LiteralMana (Mana a) where
+instance LiteralMana (Mana snow mt) where
   literalMana = \case
     WhiteMana x -> literalMana x
     BlueMana x -> literalMana x
@@ -415,9 +424,12 @@ showListM f xs = noParens $ do
 
 toZone :: forall zone ot. IsZone zone => ObjectN ot -> ZO zone ot
 toZone = case singZone (Proxy @zone) of
-  SBattlefield -> ZOBattlefield SBattlefield
-  SLibrary -> ZOLibrary SLibrary
-  SStack -> ZOStack SStack
+  SZBattlefield -> ZOBattlefield SZBattlefield
+  SZExile -> ZOExile SZExile
+  SZGraveyard -> ZOGraveyard SZGraveyard
+  SZHand -> ZOHand SZHand
+  SZLibrary -> ZOLibrary SZLibrary
+  SZStack -> ZOStack SZStack
 
 ----------------------------------------
 
@@ -824,8 +836,8 @@ showElect = \case
       dollar <$> showWithMaskedObject showElect (selectionMemo sel) withObject
     pure $ pure "A " <> sSel <> pure " " <> sPlayer <> sWithObject
   ActivePlayer contElect -> yesParens $ do
-    (active', snap) <- newObjectN @ 'OTPlayer O "active"
-    let active = ZOBattlefield SBattlefield active'
+    (active', snap) <- newObjectN @ 'OTPlayer O1 "active"
+    let active = toZone active'
     sActive <- parens <$> showZoneObject active
     let elect = contElect active
     sElect <- dropParens <$> showElect elect
@@ -843,14 +855,17 @@ showElect = \case
         let objN :: ObjectN OTAny
             objN = case zObj of
               ZOBattlefield _ o -> o
+              ZOExile _ o -> o
+              ZOGraveyard _ o -> o
+              ZOHand _ o -> o
               ZOLibrary _ o -> o
               ZOStack _ o -> o
          in visitObjectN' objectToId objN
     (controller', snap) <-
-      newObjectN @ 'OTPlayer O $ case objPrefix == "this" of
+      newObjectN @ 'OTPlayer O1 $ case objPrefix == "this" of
         True -> "you"
         False -> "controller"
-    let controller = ZOBattlefield SBattlefield controller'
+    let controller = toZone controller'
     sController <- parens <$> showZoneObject controller
     sZObj <- parens <$> showZoneObject zObj
     let elect = contElect controller
@@ -983,7 +998,7 @@ showLandType landType = case landType of
 showLoyalty :: Loyalty -> EnvM ParenItems
 showLoyalty = yesParens . pure . pure . fromString . show
 
-showMana :: Mana a -> EnvM ParenItems
+showMana :: Mana snow a -> EnvM ParenItems
 showMana =
   yesParens . \case
     WhiteMana m -> (pure "WhiteMana" <>) . dollar <$> showColoredMana m
@@ -996,8 +1011,15 @@ showMana =
 
 showManaCost :: ManaCost -> EnvM ParenItems
 showManaCost cost = yesParens $ do
-  let ManaCost'{costWhite = w, costBlue = u, costBlack = b, costRed = r, costGreen = g, costColorless = c, costGeneric = x} =
-        cost
+  let ManaCost'
+        { costWhite = w
+        , costBlue = u
+        , costBlack = b
+        , costRed = r
+        , costGreen = g
+        , costColorless = c
+        , costGeneric = x
+        } = cost
       lits =
         sequence
           [ literalMana w
@@ -1056,10 +1078,16 @@ showManaCost cost = yesParens $ do
           <> pure " "
           <> sX
 
-showManaPool :: ManaPool -> EnvM ParenItems
+showManaPool :: ManaPool snow -> EnvM ParenItems
 showManaPool pool = yesParens $ do
-  let ManaPool{poolWhite = w, poolBlue = u, poolBlack = b, poolRed = r, poolGreen = g, poolColorless = c} =
-        pool
+  let ManaPool
+        { poolWhite = w
+        , poolBlue = u
+        , poolBlack = b
+        , poolRed = r
+        , poolGreen = g
+        , poolColorless = c
+        } = pool
       lits =
         sequence
           [ literalMana w
@@ -1121,7 +1149,7 @@ showO1 ::
   String ->
   (ON1 a -> z) ->
   EnvM ParenItems
-showO1 = showONImpl @zone O
+showO1 = showONImpl @zone O1
 
 showO2 ::
   forall zone a b z.
@@ -1416,6 +1444,8 @@ showRequirement = \case
     sWAny <- parens <$> showWAny wAny
     sObjN <- dollar <$> showZoneObject objN
     pure $ pure "Is " <> sWAny <> sObjN
+  IsTapped perm -> yesParens $ do
+    pure $ pure $ fromString $ "IsTapped " ++ show perm
   Not req -> yesParens $ do
     sReq <- dollar <$> showRequirement req
     pure $ pure "Not" <> sReq
@@ -1427,8 +1457,6 @@ showRequirement = \case
   PlayerPays cost -> yesParens $ do
     sCost <- dollar <$> showCost cost
     pure $ pure "PlayerPays" <> sCost
-  Tapped perm -> yesParens $ do
-    pure $ pure $ fromString $ "Tapped " ++ show perm
   RAnd reqs -> yesParens $ do
     sReqs <- dollar <$> showRequirements reqs
     pure $ pure "RAnd" <> sReqs
@@ -1661,8 +1689,8 @@ showWithThis showM memo = \case
           EnvM ParenItems
         go cont' = yesParens $ do
           sTy <- parens <$> showTypeOf (Proxy @ot)
-          (objNa, snap) <- newObjectN @a O memo
-          (objNb, _) <- newObjectN @b O memo
+          (objNa, snap) <- newObjectN @a O1 memo
+          (objNb, _) <- newObjectN @b O1 memo
           sObjNa <- parens <$> showObjectN @zone objNa
           sObjNb <- parens <$> showObjectN @zone objNb
           let elect = cont' (toZone objNa, toZone objNb)
@@ -1799,5 +1827,8 @@ showWSpell wit = case wit of
 showZoneObject :: forall zone ot. IsZO zone ot => ZO zone ot -> EnvM ParenItems
 showZoneObject = \case
   ZOBattlefield _ objN -> showObjectN @zone objN
+  ZOExile _ objN -> showObjectN @zone objN
+  ZOGraveyard _ objN -> showObjectN @zone objN
+  ZOHand _ objN -> showObjectN @zone objN
   ZOLibrary _ objN -> showObjectN @zone objN
   ZOStack _ objN -> showObjectN @zone objN

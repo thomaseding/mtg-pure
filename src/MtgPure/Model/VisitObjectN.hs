@@ -82,6 +82,7 @@ data KnownObjectTypeN :: Type -> Type where
   KOT10 :: Inst10 IsObjectType a b c d e f g h i j => KnownObjectTypeN (OT10 a b c d e f g h i j)
   KOT11 :: Inst11 IsObjectType a b c d e f g h i j k => KnownObjectTypeN (OT11 a b c d e f g h i j k)
   KOT12 :: Inst12 IsObjectType a b c d e f g h i j k l => KnownObjectTypeN (OT12 a b c d e f g h i j k l)
+  deriving (Typeable)
 
 data KnownObjectN :: Type -> Type where
   KO1 :: Inst1 IsObjectType a => ON1 a -> KnownObjectN (OT1 a)
@@ -96,6 +97,7 @@ data KnownObjectN :: Type -> Type where
   KO10 :: Inst10 IsObjectType a b c d e f g h i j => ON10 a b c d e f g h i j -> KnownObjectN (OT10 a b c d e f g h i j)
   KO11 :: Inst11 IsObjectType a b c d e f g h i j k => ON11 a b c d e f g h i j k -> KnownObjectN (OT11 a b c d e f g h i j k)
   KO12 :: Inst12 IsObjectType a b c d e f g h i j k l => ON12 a b c d e f g h i j k l -> KnownObjectN (OT12 a b c d e f g h i j k l)
+  deriving (Typeable)
 
 class Typeable ot => VisitObjectN ot where
   data ObjectVisitorN ot :: Type -> Type
@@ -115,7 +117,7 @@ instance Inst1 IsObjectType a => VisitObjectN (OT1 a) where
 
   visitObjectN' f = visitObjectN $ ObjectVisitor1 f
   visitObjectN v = \case
-    O x -> visitObject1 v x
+    O1 x -> visitObject1 v x
   orderObjectN _ = 1
   knownObjectN = KO1
   knownObjectTypeN _ = KOT1

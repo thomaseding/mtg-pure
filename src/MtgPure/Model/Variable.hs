@@ -17,5 +17,7 @@ module MtgPure.Model.Variable (
   Variable (..),
 ) where
 
+import safe Data.Typeable (Typeable)
+
 newtype Variable = ReifiedVariable Int -- e.g. X
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Typeable)

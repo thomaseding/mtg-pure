@@ -18,9 +18,12 @@ module MtgPure.Model.CardName (
 ) where
 
 import safe Data.String (IsString (..))
+import safe Data.Typeable (Typeable)
 
-newtype CardName = CardName {unCardName :: String}
-  deriving (Eq, Ord)
+newtype CardName = CardName
+  { unCardName :: String
+  }
+  deriving (Eq, Ord, Typeable)
 
 instance IsString CardName where
   fromString = CardName

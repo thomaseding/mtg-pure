@@ -7,28 +7,29 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE Safe #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.AbilityType (
-  AbilityType (..),
+module MtgPure.Model.Player (
+  Player (..),
 ) where
 
 import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
-import safe MtgPure.Model.EffectType (EffectType (..))
+import safe MtgPure.Model.Graveyard (Graveyard)
+import safe MtgPure.Model.Hand (Hand)
+import safe MtgPure.Model.Life (Life)
+import safe MtgPure.Model.ManaPool (CompleteManaPool)
 
-data AbilityType :: EffectType -> Type where
-  ActivatedAbility :: AbilityType 'OneShot
-  ManaAbility :: AbilityType 'OneShot
-  StaticAbility :: AbilityType 'Continuous
-  TriggeredAbility :: AbilityType 'OneShot
+data Player :: Type where
+  Player ::
+    { playerGraveyard :: Graveyard
+    , playerHand :: Hand
+    , playerLife :: Life
+    , playerMana :: CompleteManaPool
+    } ->
+    Player
   deriving (Typeable)
-
-deriving instance Eq (AbilityType e)
-
-deriving instance Ord (AbilityType e)

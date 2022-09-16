@@ -44,7 +44,7 @@ data PermanentType
   | PTEnchantment
   | PTLand
   | PTPlaneswalker
-  deriving (Bounded, Enum, Eq, Ord, Show)
+  deriving (Bounded, Enum, Eq, Ord, Show, Typeable)
 
 -- Witness type
 data WPermanent :: Type -> Type where
@@ -68,6 +68,7 @@ data PermanentVisitor zone z = PermanentVisitor
   , visitPLand :: ZO zone OTLand -> z
   , visitPPlaneswalker :: ZO zone OTPlaneswalker -> z
   }
+  deriving (Typeable)
 
 class IsObjectType a => IsPermanentType a where
   singPermanentType :: Proxy a -> PermanentType

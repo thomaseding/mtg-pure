@@ -20,10 +20,12 @@ module MtgPure.Model.Selection (
 
 import safe Data.ConsIndex (ConsIndex (..))
 import safe Data.Kind (Type)
+import safe Data.Typeable (Typeable)
 
 data Selection :: Type where
   Choose :: Selection
   Target :: Selection
+  deriving (Typeable)
 
 instance ConsIndex Selection where
   consIndex = \case

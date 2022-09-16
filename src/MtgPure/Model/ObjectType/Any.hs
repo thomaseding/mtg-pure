@@ -21,8 +21,9 @@ module MtgPure.Model.ObjectType.Any (
 
 import safe Data.Inst (Inst2, Inst3, Inst4, Inst5, Inst6)
 import safe Data.Kind (Type)
+import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.IsObjectType (IsObjectType)
-import MtgPure.Model.ObjectType (OT2, OT3, OT4, OT5, OT6)
+import safe MtgPure.Model.ObjectType (OT2, OT3, OT4, OT5, OT6)
 import safe MtgPure.Model.ObjectType.Kind (
   OTAny,
   OTArtifact,
@@ -51,6 +52,7 @@ data WAny :: Type -> Type where
   WAny4 :: Inst4 IsAnyType a b c d => WAny (OT4 a b c d)
   WAny5 :: Inst5 IsAnyType a b c d e => WAny (OT5 a b c d e)
   WAny6 :: Inst6 IsAnyType a b c d e f => WAny (OT6 a b c d e f)
+  deriving (Typeable)
 
 deriving instance Show (WAny ot)
 

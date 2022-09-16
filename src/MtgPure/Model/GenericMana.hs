@@ -18,13 +18,14 @@ module MtgPure.Model.GenericMana (
 ) where
 
 import safe Data.Kind (Type)
+import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.Variable (Variable)
 
 data GenericMana :: Type where
   GenericMana' :: Int -> GenericMana
   VariableGenericMana :: Variable -> GenericMana
   SumGenericMana :: GenericMana -> GenericMana -> GenericMana
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Typeable)
 
 instance Semigroup GenericMana where
   (<>) (GenericMana' x) (GenericMana' y) = GenericMana' (x + y)

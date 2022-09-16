@@ -18,9 +18,10 @@ module MtgPure.Model.Damage (
 ) where
 
 import safe Data.Kind (Type)
+import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.Variable (Variable)
 
 data Damage :: Type where
   Damage :: Int -> Damage
   VariableDamage :: Variable -> Damage
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Typeable)

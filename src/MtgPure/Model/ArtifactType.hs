@@ -13,11 +13,12 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.Power (
-  Power (..),
+module MtgPure.Model.ArtifactType (
+  ArtifactType (..),
 ) where
 
 import safe Data.Typeable (Typeable)
 
-newtype Power = Power Int
+data ArtifactType
+  = Gold
   deriving (Eq, Ord, Show, Typeable)

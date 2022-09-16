@@ -18,6 +18,7 @@ module MtgPure.Model.Colors (
 ) where
 
 import safe Data.Kind (Type)
+import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.ManaSymbol (ManaSymbol)
 import safe MtgPure.Model.ManaType (ManaType (..))
 
@@ -29,7 +30,7 @@ data Colors :: Type where
     Maybe (ManaSymbol 'MTRed) ->
     Maybe (ManaSymbol 'MTGreen) ->
     Colors
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Typeable)
 
 instance Semigroup Colors where
   Colors w1 u1 b1 r1 g1 <> Colors w2 u2 b2 r2 g2 =

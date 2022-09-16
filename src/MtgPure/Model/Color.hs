@@ -1,3 +1,4 @@
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -18,6 +19,7 @@ module MtgPure.Model.Color (
 ) where
 
 import safe Data.Kind (Type)
+import safe Data.Typeable (Typeable)
 
 data Colorless :: Type
 
@@ -27,4 +29,4 @@ data Color :: Type where
   Black :: Color
   Red :: Color
   Green :: Color
-  deriving (Bounded, Enum, Eq, Ord, Show)
+  deriving (Bounded, Enum, Eq, Ord, Show, Typeable)

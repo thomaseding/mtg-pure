@@ -17,6 +17,8 @@ module MtgPure.Model.CreatureType (
   CreatureType (..),
 ) where
 
+import safe Data.Typeable (Typeable)
+
 data CreatureType
   = Bird
   | Devil
@@ -32,4 +34,4 @@ data CreatureType
   | Satyr
   | Soldier
   | Zombie
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Typeable)

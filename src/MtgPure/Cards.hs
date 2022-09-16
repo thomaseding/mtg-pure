@@ -105,7 +105,6 @@ import safe MtgPure.Model.TimePoint (TimePoint (..))
 import safe MtgPure.Model.ToManaCost (ToManaCost (toManaCost))
 import safe MtgPure.Model.ToObjectN.Instances ()
 import safe MtgPure.Model.Toughness (Toughness (..))
-import MtgPure.Model.Zone (Zone (Stack))
 import safe MtgPure.ModelCombinators (
   AsWithLinkedObject (linked),
   AsWithMaskedObject (masked),
@@ -414,7 +413,7 @@ manaLeak = mkCard "Mana Leak" $ \this ->
     , instant_effect =
         controllerOf this $ \you ->
           A Target you $
-            masked @OTSpell @ 'Stack [] $ \spell ->
+            masked @OTSpell [] $ \spell ->
               controllerOf spell $ \controller ->
                 ifElse (satisfies controller [playerPays $ toManaCost 3]) $
                   effect $ counterSpell spell

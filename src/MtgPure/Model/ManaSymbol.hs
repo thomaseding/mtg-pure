@@ -19,6 +19,7 @@ module MtgPure.Model.ManaSymbol (
 ) where
 
 import safe Data.Kind (Type)
+import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.ManaType (ManaType (..))
 
 data ManaSymbol :: ManaType -> Type where
@@ -28,6 +29,8 @@ data ManaSymbol :: ManaType -> Type where
   R :: ManaSymbol 'MTRed
   G :: ManaSymbol 'MTGreen
   C :: ManaSymbol 'MTColorless
+  S :: ManaSymbol 'MTSnow
+  deriving (Typeable)
 
 deriving instance Eq (ManaSymbol a)
 
@@ -50,6 +53,9 @@ instance Semigroup (ManaSymbol 'MTRed) where
 instance Semigroup (ManaSymbol 'MTGreen) where
   ~G <> ~G = G
 
+instance Semigroup (ManaSymbol 'MTSnow) where
+  ~S <> ~S = S
+
 instance Monoid (ManaSymbol 'MTWhite) where
   mempty = W
 
@@ -64,3 +70,6 @@ instance Monoid (ManaSymbol 'MTRed) where
 
 instance Monoid (ManaSymbol 'MTGreen) where
   mempty = G
+
+instance Monoid (ManaSymbol 'MTSnow) where
+  mempty = S

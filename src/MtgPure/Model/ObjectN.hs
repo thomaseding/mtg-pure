@@ -38,6 +38,7 @@ import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.IsObjectType (IsObjectType)
 import safe MtgPure.Model.Object (Object)
+import safe MtgPure.Model.ObjectId (ObjectId)
 import safe MtgPure.Model.ObjectType (
   OT0,
   OT1,
@@ -60,11 +61,12 @@ data family ObjectN (ot :: Type) :: Type
 -- The constructors should be private to disallow pattern matching during authoring
 -- Supply factory constructors for authoring
 
-data instance ObjectN OT0
+data instance ObjectN OT0 where
+  O0 :: ObjectId -> ObjectN OT0
   deriving (Typeable)
 
 data instance ObjectN (OT1 a) where
-  O :: Inst1 IsObjectType a => Object a -> ObjectN (OT1 a)
+  O1 :: Inst1 IsObjectType a => Object a -> ObjectN (OT1 a)
   deriving (Typeable)
 
 data instance ObjectN (OT2 a b) where

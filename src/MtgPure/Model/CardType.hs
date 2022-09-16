@@ -18,6 +18,7 @@ module MtgPure.Model.CardType (
 ) where
 
 import safe Data.Kind (Type)
+import safe Data.Typeable (Typeable)
 
 data CardType :: Type where
   CTArtifact :: CardType
@@ -27,4 +28,4 @@ data CardType :: Type where
   CTLand :: CardType
   CTPlaneswalker :: CardType
   CTSorcery :: CardType
-  deriving (Bounded, Enum, Eq, Ord, Show)
+  deriving (Bounded, Enum, Eq, Ord, Show, Typeable)

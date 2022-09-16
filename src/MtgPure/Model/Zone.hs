@@ -25,15 +25,21 @@ import safe Data.Proxy (Proxy)
 import safe Data.Typeable (Typeable)
 
 data Zone :: Type where
-  Battlefield :: Zone
-  Library :: Zone
-  Stack :: Zone
+  ZBattlefield :: Zone
+  ZExile :: Zone
+  ZGraveyard :: Zone
+  ZHand :: Zone
+  ZLibrary :: Zone
+  ZStack :: Zone
   deriving (Eq, Ord, Show, Typeable)
 
 data SZone :: Zone -> Type where
-  SBattlefield :: SZone 'Battlefield
-  SLibrary :: SZone 'Library
-  SStack :: SZone 'Stack
+  SZBattlefield :: SZone 'ZBattlefield
+  SZExile :: SZone 'ZExile
+  SZGraveyard :: SZone 'ZGraveyard
+  SZHand :: SZone 'ZHand
+  SZLibrary :: SZone 'ZLibrary
+  SZStack :: SZone 'ZStack
   deriving (Typeable)
 
 deriving instance Eq (SZone zone)
@@ -46,14 +52,26 @@ class Typeable zone => IsZone zone where
   singZone :: Proxy zone -> SZone zone
   litZone :: Proxy zone -> Zone
 
-instance IsZone 'Battlefield where
-  singZone _ = SBattlefield
-  litZone _ = Battlefield
+instance IsZone 'ZBattlefield where
+  singZone _ = SZBattlefield
+  litZone _ = ZBattlefield
 
-instance IsZone 'Library where
-  singZone _ = SLibrary
-  litZone _ = Library
+instance IsZone 'ZExile where
+  singZone _ = SZExile
+  litZone _ = ZExile
 
-instance IsZone 'Stack where
-  singZone _ = SStack
-  litZone _ = Stack
+instance IsZone 'ZGraveyard where
+  singZone _ = SZGraveyard
+  litZone _ = ZGraveyard
+
+instance IsZone 'ZHand where
+  singZone _ = SZHand
+  litZone _ = ZHand
+
+instance IsZone 'ZLibrary where
+  singZone _ = SZLibrary
+  litZone _ = ZLibrary
+
+instance IsZone 'ZStack where
+  singZone _ = SZStack
+  litZone _ = ZStack

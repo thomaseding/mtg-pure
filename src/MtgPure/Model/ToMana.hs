@@ -18,76 +18,83 @@ module MtgPure.Model.ToMana (
   ToMana (..),
 ) where
 
+import safe Data.Kind (Type)
 import safe MtgPure.Model.Color (Color (..))
 import safe MtgPure.Model.ColoredMana (ColoredMana (..))
 import safe MtgPure.Model.ColorlessMana (ColorlessMana (..))
 import safe MtgPure.Model.GenericMana (GenericMana (..))
-import safe MtgPure.Model.Mana (Mana (..))
+import safe MtgPure.Model.Mana (Mana (..), Snow (..))
 import safe MtgPure.Model.ManaSymbol (ManaSymbol (..))
 import safe MtgPure.Model.ManaType (ManaType (..))
 
-class ToMana a b | a -> b where
-  toMana :: a -> Mana b
+class ToMana (mana :: Type) (snow :: Snow) (mt :: ManaType) | mana -> snow mt where
+  toMana :: mana -> Mana snow mt
 
-instance ToMana (Mana a) a where
+instance ToMana (Mana snow a) snow a where
   toMana = id
 
-instance ToMana (ColoredMana 'White) 'MTWhite where
+instance ToMana (ColoredMana 'White) 'NonSnow 'MTWhite where
   toMana = WhiteMana
 
-instance ToMana (ColoredMana 'Blue) 'MTBlue where
+instance ToMana (ColoredMana 'Blue) 'NonSnow 'MTBlue where
   toMana = BlueMana
 
-instance ToMana (ColoredMana 'Black) 'MTBlack where
+instance ToMana (ColoredMana 'Black) 'NonSnow 'MTBlack where
   toMana = BlackMana
 
-instance ToMana (ColoredMana 'Red) 'MTRed where
+instance ToMana (ColoredMana 'Red) 'NonSnow 'MTRed where
   toMana = RedMana
 
-instance ToMana (ColoredMana 'Green) 'MTGreen where
+instance ToMana (ColoredMana 'Green) 'NonSnow 'MTGreen where
   toMana = GreenMana
 
-instance ToMana ColorlessMana 'MTColorless where
+instance ToMana ColorlessMana 'NonSnow 'MTColorless where
   toMana = ColorlessMana
 
-instance ToMana GenericMana 'MTGeneric where
+instance ToMana GenericMana 'NonSnow 'MTGeneric where
   toMana = GenericMana
 
-instance ToMana Int 'MTGeneric where
+instance ToMana Int 'NonSnow 'MTGeneric where
   toMana = toMana . GenericMana'
 
-instance ToMana (ManaSymbol 'MTWhite, Int) 'MTWhite where
+instance ToMana (ManaSymbol 'MTWhite, Int) 'NonSnow 'MTWhite where
   toMana = toMana . uncurry ColoredMana'
 
-instance ToMana (ManaSymbol 'MTBlue, Int) 'MTBlue where
+instance ToMana (ManaSymbol 'MTBlue, Int) 'NonSnow 'MTBlue where
   toMana = toMana . uncurry ColoredMana'
 
-instance ToMana (ManaSymbol 'MTBlack, Int) 'MTBlack where
+instance ToMana (ManaSymbol 'MTBlack, Int) 'NonSnow 'MTBlack where
   toMana = toMana . uncurry ColoredMana'
 
-instance ToMana (ManaSymbol 'MTRed, Int) 'MTRed where
+instance ToMana (ManaSymbol 'MTRed, Int) 'NonSnow 'MTRed where
   toMana = toMana . uncurry ColoredMana'
 
-instance ToMana (ManaSymbol 'MTGreen, Int) 'MTGreen where
+instance ToMana (ManaSymbol 'MTGreen, Int) 'NonSnow 'MTGreen where
   toMana = toMana . uncurry ColoredMana'
 
-instance ToMana (ManaSymbol 'MTColorless, Int) 'MTColorless where
+instance ToMana (ManaSymbol 'MTColorless, Int) 'NonSnow 'MTColorless where
   toMana (~C, n) = toMana $ ColorlessMana' n
 
-instance ToMana (ManaSymbol 'MTWhite) 'MTWhite where
+instance ToMana (ManaSymbol 'MTSnow, Int) 'Snow 'MTGeneric where
+  toMana (~S, n) = GenericMana $ GenericMana' n
+
+instance ToMana (ManaSymbol 'MTWhite) 'NonSnow 'MTWhite where
   toMana ~W = toMana (W, 1 :: Int)
 
-instance ToMana (ManaSymbol 'MTBlue) 'MTBlue where
+instance ToMana (ManaSymbol 'MTBlue) 'NonSnow 'MTBlue where
   toMana ~U = toMana (U, 1 :: Int)
 
-instance ToMana (ManaSymbol 'MTBlack) 'MTBlack where
+instance ToMana (ManaSymbol 'MTBlack) 'NonSnow 'MTBlack where
   toMana ~B = toMana (B, 1 :: Int)
 
-instance ToMana (ManaSymbol 'MTRed) 'MTRed where
+instance ToMana (ManaSymbol 'MTRed) 'NonSnow 'MTRed where
   toMana ~R = toMana (R, 1 :: Int)
 
-instance ToMana (ManaSymbol 'MTGreen) 'MTGreen where
+instance ToMana (ManaSymbol 'MTGreen) 'NonSnow 'MTGreen where
   toMana ~G = toMana (G, 1 :: Int)
 
-instance ToMana (ManaSymbol 'MTColorless) 'MTColorless where
+instance ToMana (ManaSymbol 'MTColorless) 'NonSnow 'MTColorless where
   toMana ~C = toMana (C, 1 :: Int)
+
+instance ToMana (ManaSymbol 'MTSnow) 'Snow 'MTGeneric where
+  toMana ~S = toMana (S, 1 :: Int)

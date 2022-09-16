@@ -17,5 +17,7 @@ module MtgPure.Model.Toughness (
   Toughness (..),
 ) where
 
+import safe Data.Typeable (Typeable)
+
 newtype Toughness = Toughness Int
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Typeable)

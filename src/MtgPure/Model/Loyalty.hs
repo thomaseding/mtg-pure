@@ -17,5 +17,7 @@ module MtgPure.Model.Loyalty (
   Loyalty (..),
 ) where
 
+import safe Data.Typeable (Typeable)
+
 newtype Loyalty = Loyalty Int
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Typeable)

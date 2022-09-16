@@ -18,13 +18,14 @@ module MtgPure.Model.ColorlessMana (
 ) where
 
 import safe Data.Kind (Type)
+import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.Variable (Variable)
 
 data ColorlessMana :: Type where
   ColorlessMana' :: Int -> ColorlessMana
   VariableColorlessMana :: Variable -> ColorlessMana
   SumColorlessMana :: ColorlessMana -> ColorlessMana -> ColorlessMana
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Typeable)
 
 instance Semigroup ColorlessMana where
   (<>) (ColorlessMana' x) (ColorlessMana' y) = ColorlessMana' (x + y)

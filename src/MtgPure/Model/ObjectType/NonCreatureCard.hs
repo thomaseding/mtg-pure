@@ -25,6 +25,7 @@ module MtgPure.Model.ObjectType.NonCreatureCard (
 import safe Data.Inst (Inst2, Inst3)
 import safe Data.Kind (Type)
 import safe Data.Proxy (Proxy)
+import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.IsObjectType (IsObjectType)
 import safe MtgPure.Model.ObjectType (OT1, OT2, OT3, ObjectType (..))
 import safe MtgPure.Model.ObjectType.Kind (
@@ -36,7 +37,7 @@ import safe MtgPure.Model.ObjectType.Kind (
   OTPlaneswalker,
   OTSorcery,
  )
-import MtgPure.Model.ZoneObject (ZO)
+import safe MtgPure.Model.ZoneObject (ZO)
 
 data NonCreatureCardType
   = NCTArtifact
@@ -45,7 +46,7 @@ data NonCreatureCardType
   | NCTLand
   | NCTPlaneswalker
   | NCTSorcery
-  deriving (Bounded, Enum, Eq, Ord, Show)
+  deriving (Bounded, Enum, Eq, Ord, Show, Typeable)
 
 -- Witness type
 data WNonCreatureCard :: Type -> Type where
@@ -58,6 +59,7 @@ data WNonCreatureCard :: Type -> Type where
   WNonCreatureCard :: WNonCreatureCard OTNonCreature
   WNonCreatureCard2 :: Inst2 IsNonCreatureCardType a b => WNonCreatureCard (OT2 a b)
   WNonCreatureCard3 :: Inst3 IsNonCreatureCardType a b c => WNonCreatureCard (OT3 a b c)
+  deriving (Typeable)
 
 deriving instance Show (WNonCreatureCard a)
 
@@ -69,6 +71,7 @@ data NonCreatureCardVisitor zone z = NonCreatureCardVisitor
   , visitNCPlaneswalker :: ZO zone OTPlaneswalker -> z
   , visitNCSorcery :: ZO zone OTSorcery -> z
   }
+  deriving (Typeable)
 
 class IsObjectType a => IsNonCreatureCardType a where
   singNonCreatureCardType :: Proxy a -> NonCreatureCardType

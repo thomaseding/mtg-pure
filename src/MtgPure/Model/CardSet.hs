@@ -17,6 +17,8 @@ module MtgPure.Model.CardSet (
   CardSet (..),
 ) where
 
+import safe Data.Typeable (Typeable)
+
 data CardSet -- Sorted by release date
   = Alpha
   | ArabianNights
@@ -31,4 +33,4 @@ data CardSet -- Sorted by release date
   | TenthEdition
   | OathOfTheGatewatch
   | Kaldheim
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Typeable)

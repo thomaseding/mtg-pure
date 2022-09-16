@@ -36,6 +36,10 @@ module MtgPure.Model.Recursive (
   Requirement (..),
   SetCard (..),
   SetToken (..),
+  Some (..),
+  SomeCard,
+  SomeCardOrToken,
+  SomeToken,
   StaticAbility (..),
   Token (..),
   TriggeredAbility (..),
@@ -58,6 +62,7 @@ import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.IsObjectType (IsObjectType)
 import safe MtgPure.Model.LandType (LandType)
 import safe MtgPure.Model.Loyalty (Loyalty)
+import safe MtgPure.Model.Mana (Snow (..))
 import safe MtgPure.Model.ManaCost (ManaCost)
 import safe MtgPure.Model.ManaPool (ManaPool)
 import safe MtgPure.Model.ObjectType (OT1, OT2, OT3, OT4, OT5, OT6)
@@ -114,6 +119,7 @@ import safe MtgPure.Model.ZoneObject (
 -- "ot is (at least) one of (a,b,c,...)"
 --    Enchant zone ot
 --    Requirement zone ot
+--    Some liftOT ot
 --    ZO zone ot
 
 ----------------------------------------
@@ -146,10 +152,10 @@ instance ConsIndex (Ability ot) where
 ----------------------------------------
 
 data Card (ot :: Type) :: Type where
-  -- For now Instants and Sorceries will use `'Battlefield` for it's `this` zone while the spell is resolving.
-  -- If it's on the stack, it's `'Stack` as expected.
-  Card :: IsOT ot => CardName -> WCard ot -> WithThis 'Battlefield (CardTypeDef 'NonTribal) ot -> Card ot
-  TribalCard :: IsOT ot => CardName -> WCard ot -> WithThis 'Battlefield (CardTypeDef 'Tribal) ot -> Card ot
+  -- For now Instants and Sorceries will use `ZBattlefield` for it's `this` zone while the spell is resolving.
+  -- If it's on the stack, it's `ZStack` as expected.
+  Card :: IsOT ot => CardName -> WCard ot -> WithThis 'ZBattlefield (CardTypeDef 'NonTribal) ot -> Card ot
+  TribalCard :: IsOT ot => CardName -> WCard ot -> WithThis 'ZBattlefield (CardTypeDef 'Tribal) ot -> Card ot
   --
   ArtifactCard :: Card OTArtifact -> Card ()
   ArtifactCreatureCard :: Card OTArtifactCreature -> Card ()
@@ -302,7 +308,7 @@ data Cost (ot :: Type) :: Type where
   ManaCost :: ManaCost -> Cost ot
   OrCosts :: [Cost ot] -> Cost ot
   PayLife :: Int -> Cost ot -- TODO: PositiveInt
-  SacrificeCost :: IsOT ot => WPermanent ot -> [Requirement 'Battlefield ot] -> Cost ot
+  SacrificeCost :: IsOT ot => WPermanent ot -> [Requirement 'ZBattlefield ot] -> Cost ot
   TapCost :: OPermanent -> Cost ot
   deriving (Typeable)
 
@@ -320,22 +326,22 @@ instance ConsIndex (Cost ot) where
 ----------------------------------------
 
 data Effect (ef :: EffectType) :: Type where
-  AddMana :: OPlayer -> ManaPool -> Effect 'OneShot
+  AddMana :: OPlayer -> ManaPool 'NonSnow -> Effect 'OneShot -- NB: Engine will reinterpret as Snow when source is Snow.
   AddToBattlefield :: IsOT ot => WPermanent ot -> OPlayer -> Token ot -> Effect 'OneShot
   CantBeRegenerated :: OCreature -> Effect 'Continuous
   ChangeTo :: IsOT ot => WPermanent ot -> OPermanent -> Card ot -> Effect 'Continuous
-  CounterAbility :: ZO 'Stack OTActivatedOrTriggeredAbility -> Effect 'OneShot
-  CounterSpell :: ZO 'Stack OTSpell -> Effect 'OneShot
+  CounterAbility :: ZO 'ZStack OTActivatedOrTriggeredAbility -> Effect 'OneShot
+  CounterSpell :: ZO 'ZStack OTSpell -> Effect 'OneShot
   DealDamage :: ODamageSource -> OCreaturePlayerPlaneswalker -> Damage -> Effect 'OneShot
   Destroy :: OPermanent -> Effect 'OneShot
   DrawCards :: OPlayer -> Int -> Effect 'OneShot
   EffectContinuous :: Effect 'Continuous -> Effect 'OneShot -- 611.2
   EOr :: [Effect ef] -> Effect ef
-  Gain :: IsOT ot => WAny ot -> ZO 'Battlefield ot -> Ability ot -> Effect 'Continuous
-  Lose :: IsOT ot => WAny ot -> ZO 'Battlefield ot -> Ability ot -> Effect 'Continuous
-  PutOntoBattlefield :: IsZO zone ot => WPermanent ot -> OPlayer -> ZO zone ot -> Effect 'OneShot -- TODO: zone /= 'Battlefield
-  Sacrifice :: IsOT ot => WPermanent ot -> OPlayer -> [Requirement 'Battlefield ot] -> Effect 'OneShot
-  SearchLibrary :: IsOT ot => WCard ot -> OPlayer -> WithLinkedObject 'Library (Elect (Effect 'OneShot)) ot -> Effect 'OneShot
+  Gain :: IsOT ot => WAny ot -> ZO 'ZBattlefield ot -> Ability ot -> Effect 'Continuous
+  Lose :: IsOT ot => WAny ot -> ZO 'ZBattlefield ot -> Ability ot -> Effect 'Continuous
+  PutOntoBattlefield :: IsZO zone ot => WPermanent ot -> OPlayer -> ZO zone ot -> Effect 'OneShot -- TODO: zone /= 'ZBattlefield
+  Sacrifice :: IsOT ot => WPermanent ot -> OPlayer -> [Requirement 'ZBattlefield ot] -> Effect 'OneShot
+  SearchLibrary :: IsOT ot => WCard ot -> OPlayer -> WithLinkedObject 'ZLibrary (Elect (Effect 'OneShot)) ot -> Effect 'OneShot
   StatDelta :: OCreature -> Power -> Toughness -> Effect 'Continuous
   Until :: Elect Event OTPlayer -> Effect 'Continuous -> Effect 'Continuous
   deriving (Typeable)
@@ -366,8 +372,8 @@ instance ConsIndex (Effect ef) where
 data Elect (el :: Type) (ot :: Type) :: Type where
   A :: (el ~ Effect 'OneShot, IsZO zone ot) => Selection -> OPlayer -> WithMaskedObject zone (Elect el ot) -> Elect el ot
   ActivePlayer :: (OPlayer -> Elect el ot) -> Elect el ot
-  -- TODO: Add `SZone zone` witness and change `'Battlefield` to `zone`.
-  All :: IsOT ot => WithMaskedObject 'Battlefield (Elect el ot) -> Elect el ot
+  -- TODO: Add `SZone zone` witness and change `'ZBattlefield` to `zone`.
+  All :: IsOT ot => WithMaskedObject 'ZBattlefield (Elect el ot) -> Elect el ot
   Condition :: Condition -> Elect Condition ot
   ControllerOf :: IsZO zone OTAny => ZO zone OTAny -> (OPlayer -> Elect el ot) -> Elect el ot
   Cost :: Cost ot -> Elect (Cost ot) ot
@@ -375,8 +381,8 @@ data Elect (el :: Type) (ot :: Type) :: Type where
   Event :: Event -> Elect Event ot
   If :: Condition -> Elect el ot -> Else el ot -> Elect el ot
   Listen :: EventListener -> Elect EventListener ot
-  -- TODO: Add `SZone zone` witness and change `'Battlefield` to `zone`.
-  Random :: IsOT ot => WithMaskedObject 'Battlefield (Elect el ot) -> Elect el ot -- Interpreted as "Arbitrary" in some contexts, such as Event and EventListener
+  -- TODO: Add `SZone zone` witness and change `'ZBattlefield` to `zone`.
+  Random :: IsOT ot => WithMaskedObject 'ZBattlefield (Elect el ot) -> Elect el ot -- Interpreted as "Arbitrary" in some contexts, such as Event and EventListener
   VariableFromPower :: OCreature -> (Variable -> Elect el ot) -> Elect el ot
   deriving (Typeable)
 
@@ -418,6 +424,7 @@ instance ConsIndex (Else el ot) where
 
 data Enchant (zone :: Zone) (ot :: Type) :: Type where
   Enchant :: IsZO zone ot => WithLinkedObject zone (Elect (Effect 'Continuous)) ot -> Enchant zone ot
+  deriving (Typeable)
 
 instance ConsIndex (Enchant zone ot) where
   consIndex = \case
@@ -427,6 +434,7 @@ instance ConsIndex (Enchant zone ot) where
 
 data EnchantmentType (ot :: Type) :: Type where
   Aura :: (ot ~ OTEnchantment, IsZO zone ot') => Enchant zone ot' -> EnchantmentType ot
+  deriving (Typeable)
 
 instance ConsIndex (EnchantmentType ot) where
   consIndex = \case
@@ -439,9 +447,9 @@ type Event = EventListener' Proxy
 type EventListener = EventListener' (Elect (Effect 'OneShot))
 
 data EventListener' (liftOT :: Type -> Type) :: Type where
-  BecomesTapped :: (IsOT ot, Typeable liftOT) => WPermanent ot -> WithLinkedObject 'Battlefield liftOT ot -> EventListener' liftOT
+  BecomesTapped :: (IsOT ot, Typeable liftOT) => WPermanent ot -> WithLinkedObject 'ZBattlefield liftOT ot -> EventListener' liftOT
   Events :: [EventListener' liftOT] -> EventListener' liftOT
-  SpellIsCast :: IsOT ot => WSpell ot -> WithLinkedObject 'Battlefield liftOT ot -> EventListener' liftOT
+  SpellIsCast :: IsOT ot => WSpell ot -> WithLinkedObject 'ZBattlefield liftOT ot -> EventListener' liftOT
   TimePoint :: Typeable p => TimePoint p -> liftOT OTPlayer -> EventListener' liftOT
   deriving (Typeable)
 
@@ -456,6 +464,7 @@ instance ConsIndex (EventListener' liftOT) where
 
 data NonProxy (liftOT :: Type -> Type) :: Type where
   NonProxyElectEffect :: NonProxy (Elect (Effect ef))
+  deriving (Typeable)
 
 instance ConsIndex (NonProxy liftOT) where
   consIndex = \case
@@ -464,18 +473,18 @@ instance ConsIndex (NonProxy liftOT) where
 ----------------------------------------
 
 data Requirement (zone :: Zone) (ot :: Type) :: Type where
-  ControlledBy :: OPlayer -> Requirement 'Battlefield ot
-  ControlsA :: IsOT ot => Requirement 'Battlefield ot -> Requirement zone OTPlayer
+  ControlledBy :: OPlayer -> Requirement 'ZBattlefield ot
+  ControlsA :: IsOT ot => Requirement 'ZBattlefield ot -> Requirement zone OTPlayer
   HasAbility :: IsZO zone ot => WithThis zone Ability ot -> Requirement zone ot -- Non-unique differing representations will not be considered the same
   HasLandType :: LandType -> Requirement zone OTLand
   Is :: IsZO zone ot => WAny ot -> ZO zone ot -> Requirement zone ot
+  IsTapped :: IsOT ot => WPermanent ot -> Requirement 'ZBattlefield ot
   Not :: IsZO zone ot => Requirement zone ot -> Requirement zone ot
   OfColors :: Colors -> Requirement zone ot -- needs `WCard a` witness
   OwnedBy :: OPlayer -> Requirement zone ot
   PlayerPays :: Cost OPlayer -> Requirement zone OTPlayer
   RAnd :: [Requirement zone ot] -> Requirement zone ot
   ROr :: [Requirement zone ot] -> Requirement zone ot
-  Tapped :: IsOT ot => WPermanent ot -> Requirement 'Battlefield ot
   -- TODO: Try to add some combinators that go from: forall a b. [forall liftOT. Requirement x] -> Requirement (ON2 a, b)
   R2 ::
     Inst2 IsObjectType a b =>
@@ -512,13 +521,13 @@ instance ConsIndex (Requirement zone ot) where
     HasAbility{} -> 3
     HasLandType{} -> 4
     Is{} -> 5
-    Not{} -> 6
-    OfColors{} -> 7
-    OwnedBy{} -> 8
-    PlayerPays{} -> 9
-    RAnd{} -> 10
-    ROr{} -> 11
-    Tapped{} -> 12
+    IsTapped{} -> 6
+    Not{} -> 7
+    OfColors{} -> 8
+    OwnedBy{} -> 9
+    PlayerPays{} -> 10
+    RAnd{} -> 11
+    ROr{} -> 12
     R2{} -> 13
     R3{} -> 14
     R4{} -> 15
@@ -526,6 +535,7 @@ instance ConsIndex (Requirement zone ot) where
 
 ----------------------------------------
 
+-- XXX: Better to just make this take a user type `a` which can encode CardSet and Rarirty amongst other things.
 data SetCard (ot :: Type) :: Type where
   SetCard :: CardSet -> Rarity -> Card ot -> SetCard ot
   deriving (Typeable)
@@ -536,6 +546,7 @@ instance ConsIndex (SetCard ot) where
 
 ----------------------------------------
 
+-- XXX: Better to just make this take a user type `a` which can encode CardSet and Rarirty amongst other things.
 data SetToken (ot :: Type) :: Type where
   SetToken :: CardSet -> Rarity -> Token ot -> SetToken ot
   deriving (Typeable)
@@ -546,9 +557,22 @@ instance ConsIndex (SetToken ot) where
 
 ----------------------------------------
 
+data Some (liftOT :: Type -> Type) (ot :: Type) :: Type where
+  SomeArtifact :: liftOT OTArtifact -> Some liftOT OTArtifact
+  SomeCreature :: liftOT OTCreature -> Some liftOT OTCreature
+  Some2a :: Inst2 IsObjectType a b => Some liftOT (OT1 a) -> Some liftOT (OT2 a b)
+  Some2b :: Inst2 IsObjectType a b => Some liftOT (OT1 b) -> Some liftOT (OT2 a b)
+  deriving (Typeable)
+
+type SomeCard = Some Card
+type SomeToken = Some Token
+type SomeCardOrToken ot = Either (SomeCard ot) (SomeToken ot)
+
+----------------------------------------
+
 data StaticAbility (ot :: Type) :: Type where
   As :: IsOT ot => Elect EventListener ot -> StaticAbility ot -- 603.6d: not a triggered ability
-  Bestow :: ot ~ OTEnchantmentCreature => Elect (Cost ot) ot -> Enchant 'Battlefield OTCreature -> StaticAbility ot
+  Bestow :: ot ~ OTEnchantmentCreature => Elect (Cost ot) ot -> Enchant 'ZBattlefield OTCreature -> StaticAbility ot
   FirstStrike :: StaticAbility OTCreature
   Flying :: StaticAbility OTCreature
   Haste :: StaticAbility OTCreature

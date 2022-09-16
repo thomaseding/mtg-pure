@@ -382,7 +382,7 @@ type AsDamageSource ot =
     'OTSorcery
 
 asDamageSource ::
-  AsDamageSource ot => ZO 'Battlefield ot -> ZO 'Battlefield OTDamageSource
+  AsDamageSource ot => ZO 'ZBattlefield ot -> ZO 'ZBattlefield OTDamageSource
 asDamageSource = toZO8
 
 type AsPermanent ot =
@@ -445,8 +445,8 @@ dealDamage ::
   , AsCreaturePlayerPlaneswalker target
   , AsDamage damage
   ) =>
-  ZO 'Battlefield source ->
-  ZO 'Battlefield target ->
+  ZO 'ZBattlefield source ->
+  ZO 'ZBattlefield target ->
   damage ->
   Effect 'OneShot
 dealDamage source target =
@@ -460,28 +460,28 @@ controllerOf = ControllerOf . asAny
 sacrifice ::
   CoPermanent ot =>
   OPlayer ->
-  [Requirement 'Battlefield ot] ->
+  [Requirement 'ZBattlefield ot] ->
   Effect 'OneShot
 sacrifice = Sacrifice coPermanent
 
 changeTo ::
   (AsPermanent ot, CoPermanent ot) =>
-  ZO 'Battlefield ot ->
+  ZO 'ZBattlefield ot ->
   Card ot ->
   Effect 'Continuous
 changeTo = ChangeTo coPermanent . asPermanent
 
-tapCost :: AsPermanent ot => ZO 'Battlefield ot -> Cost ot
+tapCost :: AsPermanent ot => ZO 'ZBattlefield ot -> Cost ot
 tapCost = TapCost . asPermanent
 
-destroy :: AsPermanent ot => ZO 'Battlefield ot -> Effect 'OneShot
+destroy :: AsPermanent ot => ZO 'ZBattlefield ot -> Effect 'OneShot
 destroy = Destroy . asPermanent
 
 counterAbility ::
-  AsActivatedOrTriggeredAbility ot => ZO 'Stack ot -> Effect 'OneShot
+  AsActivatedOrTriggeredAbility ot => ZO 'ZStack ot -> Effect 'OneShot
 counterAbility = CounterAbility . asActivatedOrTriggeredAbility
 
-counterSpell :: AsSpell ot => ZO 'Stack ot -> Effect 'OneShot
+counterSpell :: AsSpell ot => ZO 'ZStack ot -> Effect 'OneShot
 counterSpell = CounterSpell . asSpell
 
 class IsOT ot => CoCard ot where
@@ -593,11 +593,11 @@ satisfies ::
   (IsZone zone, CoAny ot) => ZO zone ot -> [Requirement zone ot] -> Condition
 satisfies = Satisfies coAny
 
-sacrificeCost :: CoPermanent ot => [Requirement 'Battlefield ot] -> Cost ot
+sacrificeCost :: CoPermanent ot => [Requirement 'ZBattlefield ot] -> Cost ot
 sacrificeCost = SacrificeCost coPermanent
 
-tapped :: CoPermanent ot => Requirement 'Battlefield ot
-tapped = Tapped coPermanent
+tapped :: CoPermanent ot => Requirement 'ZBattlefield ot
+tapped = IsTapped coPermanent
 
 addToBattlefield :: CoPermanent ot => OPlayer -> Token ot -> Effect 'OneShot
 addToBattlefield = AddToBattlefield coPermanent
@@ -699,7 +699,7 @@ addManaAnyColor player amount =
     ]
 
 class
-  (AsWithThis ot 'Battlefield (CardTypeDef tribal) ot1s) =>
+  (AsWithThis ot 'ZBattlefield (CardTypeDef tribal) ot1s) =>
   MkCard tribal ot ot1s
   where
   mkCard :: CardName -> (ot1s -> CardTypeDef tribal ot) -> Card ot
@@ -708,7 +708,7 @@ instance
   MkCard
     'NonTribal
     OTArtifactCreature
-    (ZO 'Battlefield OTArtifact, ZO 'Battlefield OTCreature)
+    (ZO 'ZBattlefield OTArtifact, ZO 'ZBattlefield OTCreature)
   where
   mkCard name = Card name coCard . T2
 
@@ -716,31 +716,31 @@ instance
   MkCard
     'NonTribal
     OTEnchantmentCreature
-    (ZO 'Battlefield OTCreature, ZO 'Battlefield OTEnchantment)
+    (ZO 'ZBattlefield OTCreature, ZO 'ZBattlefield OTEnchantment)
   where
   mkCard name = Card name coCard . T2
 
 instance
   (CoCard (OT1 a), IsObjectType a) =>
-  MkCard 'NonTribal (OT1 a) (ZO 'Battlefield (OT1 a))
+  MkCard 'NonTribal (OT1 a) (ZO 'ZBattlefield (OT1 a))
   where
   mkCard name = Card name coCard . thisObject
 
 instance
   (CoCard (OT1 a), IsObjectType a) =>
-  MkCard 'Tribal (OT1 a) (ZO 'Battlefield (OT1 a))
+  MkCard 'Tribal (OT1 a) (ZO 'ZBattlefield (OT1 a))
   where
   mkCard name = TribalCard name coCard . thisObject
 
 -- instance
 --   (CoCard (OT2 a b), Inst2 IsObjectType a b) =>
---   MkCard 'NonTribal (OT2 a b) (ZO 'Battlefield (OT1 a), ZO 'Battlefield (OT1 b))
+--   MkCard 'NonTribal (OT2 a b) (ZO 'ZBattlefield (OT1 a), ZO 'ZBattlefield (OT1 b))
 --   where
 --   mkCard name = Card name coCard . thisObject
 
 -- instance
 --   (CoCard (OT2 a b), Inst2 IsObjectType a b) =>
---   MkCard 'Tribal (OT2 a b) (ZO 'Battlefield (OT1 a), ZO 'Battlefield (OT1 b))
+--   MkCard 'Tribal (OT2 a b) (ZO 'ZBattlefield (OT1 a), ZO 'ZBattlefield (OT1 b))
 --   where
 --   mkCard name = TribalCard name coCard . thisObject
 
@@ -759,7 +759,7 @@ hasAbility = HasAbility . thisObject
 
 becomesTapped ::
   CoPermanent ot =>
-  WithLinkedObject 'Battlefield (Elect (Effect 'OneShot)) ot ->
+  WithLinkedObject 'ZBattlefield (Elect (Effect 'OneShot)) ot ->
   EventListener
 becomesTapped = BecomesTapped coPermanent
 
@@ -767,10 +767,10 @@ untilEndOfTurn :: Effect 'Continuous -> Effect 'OneShot
 untilEndOfTurn =
   EffectContinuous . Until (event $ TimePoint (StepBegin CleanupStep) Proxy)
 
-gain :: CoAny ot => ZO 'Battlefield ot -> Ability ot -> Effect 'Continuous
+gain :: CoAny ot => ZO 'ZBattlefield ot -> Ability ot -> Effect 'Continuous
 gain = Gain coAny
 
-lose :: CoAny ot => ZO 'Battlefield ot -> Ability ot -> Effect 'Continuous
+lose :: CoAny ot => ZO 'ZBattlefield ot -> Ability ot -> Effect 'Continuous
 lose = Lose coAny
 
 class HasLandType a where
@@ -789,6 +789,6 @@ putOntoBattlefield = PutOntoBattlefield coPermanent
 searchLibrary ::
   CoCard ot =>
   OPlayer ->
-  WithLinkedObject 'Library (Elect (Effect 'OneShot)) ot ->
+  WithLinkedObject 'ZLibrary (Elect (Effect 'OneShot)) ot ->
   Effect 'OneShot
 searchLibrary = SearchLibrary coCard

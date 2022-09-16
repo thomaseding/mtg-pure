@@ -25,6 +25,7 @@ module MtgPure.Model.ObjectType.Spell (
 import safe Data.Inst (Inst2, Inst3, Inst4)
 import safe Data.Kind (Type)
 import safe Data.Proxy (Proxy)
+import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.IsObjectType (IsObjectType)
 import safe MtgPure.Model.ObjectType (OT1, OT2, OT3, OT4, ObjectType (..))
 import safe MtgPure.Model.ObjectType.Kind (
@@ -45,7 +46,7 @@ data SpellType
   | STInstant
   | STPlaneswalker
   | STSorcery
-  deriving (Bounded, Enum, Eq, Ord, Show)
+  deriving (Bounded, Enum, Eq, Ord, Show, Typeable)
 
 -- Witness type
 data WSpell :: Type -> Type where
@@ -59,6 +60,7 @@ data WSpell :: Type -> Type where
   WSpell2 :: Inst2 IsSpellType a b => WSpell (OT2 a b)
   WSpell3 :: Inst3 IsSpellType a b c => WSpell (OT3 a b c)
   WSpell4 :: Inst4 IsSpellType a b c d => WSpell (OT4 a b c d)
+  deriving (Typeable)
 
 deriving instance Show (WSpell a)
 
@@ -70,6 +72,7 @@ data SpellVisitor zone z = SpellVisitor
   , visitSPlaneswalker :: ZO zone OTPlaneswalker -> z
   , visitSSorcery :: ZO zone OTSorcery -> z
   }
+  deriving (Typeable)
 
 class IsObjectType a => IsSpellType a where
   singSpellType :: Proxy a -> SpellType

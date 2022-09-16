@@ -311,9 +311,12 @@ compareOT = pure $ compare (indexOT (Proxy @ot1)) (indexOT (Proxy @ot2))
 
 toZone :: forall zone ot. IsZone zone => ObjectN ot -> ZO zone ot
 toZone = case singZone (Proxy @zone) of
-  SBattlefield -> ZOBattlefield SBattlefield
-  SLibrary -> ZOLibrary SLibrary
-  SStack -> ZOStack SStack
+  SZBattlefield -> ZOBattlefield SZBattlefield
+  SZExile -> ZOExile SZExile
+  SZGraveyard -> ZOGraveyard SZGraveyard
+  SZHand -> ZOHand SZHand
+  SZLibrary -> ZOLibrary SZLibrary
+  SZStack -> ZOStack SZStack
 
 ----------------------------------------
 
@@ -723,7 +726,7 @@ ordElectE x = case x of
   ActivePlayer playerToElect1 -> \case
     ActivePlayer playerToElect2 -> do
       player' <- newObjectN @ 'OTPlayer toObject1'
-      let player = ZOBattlefield SBattlefield player'
+      let player = toZone player'
           elect1 = playerToElect1 player
           elect2 = playerToElect2 player
       ordElectE elect1 elect2
@@ -746,7 +749,7 @@ ordElectE x = case x of
             Nothing -> compareOT @ot1 @ot2
             Just obj2 -> do
               player' <- newObjectN @ 'OTPlayer toObject1'
-              let player = ZOBattlefield SBattlefield player'
+              let player = toZone player'
                   elect1 = playerToElect1 player
                   elect2 = playerToElect2 player
               seqM [ordZoneObject obj1 obj2, ordElectE elect1 elect2]
@@ -864,7 +867,7 @@ ordEventListener = ordEventListener' ordElectE
 ordManaCost :: ManaCost -> ManaCost -> EnvM Ordering
 ordManaCost x y = pure $ compare x y
 
-ordManaPool :: ManaPool -> ManaPool -> EnvM Ordering
+ordManaPool :: ManaPool snow -> ManaPool snow -> EnvM Ordering
 ordManaPool x y = pure $ compare x y
 
 ordO1 ::
@@ -881,7 +884,7 @@ ordO1 ordM reqs1 reqs2 cont1 cont2 = case cast' (reqs2, cont2) of
   Just (reqs2, cont2) ->
     seqM
       [ ordRequirements reqs1 reqs2
-      , withObjectCont @a ordM O (cont1 . toZone) (cont2 . toZone)
+      , withObjectCont @a ordM O1 (cont1 . toZone) (cont2 . toZone)
       ]
  where
   cast' ::
@@ -1033,8 +1036,8 @@ ordRequirement x = case x of
       let go ::
             forall ot1 ot2.
             (IsOT ot1, IsOT ot2) =>
-            Requirement 'Battlefield ot1 ->
-            Requirement 'Battlefield ot2 ->
+            Requirement 'ZBattlefield ot1 ->
+            Requirement 'ZBattlefield ot2 ->
             EnvM Ordering
           go req1 req2 = case cast req2 of
             Nothing -> compareOT @ot1 @ot2
@@ -1049,6 +1052,9 @@ ordRequirement x = case x of
     y -> compareIndexM x y
   Is any1 obj1 -> \case
     Is any2 obj2 -> seqM [ordWAny any1 any2, ordZoneObject obj1 obj2]
+    y -> compareIndexM x y
+  IsTapped perm1 -> \case
+    IsTapped perm2 -> ordWPermanent perm1 perm2
     y -> compareIndexM x y
   Not req1 -> \case
     Not req2 -> ordRequirement req1 req2
@@ -1067,9 +1073,6 @@ ordRequirement x = case x of
     y -> compareIndexM x y
   ROr reqs1 -> \case
     ROr reqs2 -> ordRequirements reqs1 reqs2
-    y -> compareIndexM x y
-  Tapped perm1 -> \case
-    Tapped perm2 -> ordWPermanent perm1 perm2
     y -> compareIndexM x y
   R2 reqsA1 reqsB1 -> \case
     R2 reqsA2 reqsB2 ->
@@ -1282,8 +1285,8 @@ ordWithThisAbility = \case
             ((ZO zone (OT1 a), ZO zone (OT1 b)) -> Ability (OT2 a b)) ->
             EnvM Ordering
           go cont1 cont2 = do
-            objNa' <- newObjectN @a O
-            objNb' <- newObjectN @b O
+            objNa' <- newObjectN @a O1
+            objNb' <- newObjectN @b O1
             let objNa = toZone objNa'
             let objNb = toZone objNb'
             let ability1 = cont1 (objNa, objNb)
@@ -1315,8 +1318,8 @@ ordWithThisCardTypeDef = \case
             ((ZO zone (OT1 a), ZO zone (OT1 b)) -> CardTypeDef tribal (OT2 a b)) ->
             EnvM Ordering
           go cont1 cont2 = do
-            objNa' <- newObjectN @a O
-            objNb' <- newObjectN @b O
+            objNa' <- newObjectN @a O1
+            objNb' <- newObjectN @b O1
             let objNa = toZone objNa'
             let objNb = toZone objNb'
             let def1 = cont1 (objNa, objNb)
@@ -1346,8 +1349,8 @@ ordWithThisCardTypeDef = \case
 --             ((ZO zone (OT1 a), ZO zone (OT1 b)) -> Elect el (OT2 a b)) ->
 --             EnvM Ordering
 --           go cont1 cont2 = do
---             objNa' <- newObjectN @a O
---             objNb' <- newObjectN @b O
+--             objNa' <- newObjectN @a O1
+--             objNb' <- newObjectN @b O1
 --             let objNa = toZone objNa'
 --             let objNb = toZone objNb'
 --             let elect1 = cont1 (objNa, objNb)
@@ -1569,6 +1572,12 @@ ordZoneObject :: IsZO zone ot => ZO zone ot -> ZO zone ot -> EnvM Ordering
 ordZoneObject x = case x of
   ZOBattlefield _sZone1 objN1 -> \case
     ZOBattlefield _sZone2 objN2 -> ordObjectN objN1 objN2
+  ZOExile _sZone1 objN1 -> \case
+    ZOExile _sZone2 objN2 -> ordObjectN objN1 objN2
+  ZOGraveyard _sZone1 objN1 -> \case
+    ZOGraveyard _sZone2 objN2 -> ordObjectN objN1 objN2
+  ZOHand _sZone1 objN1 -> \case
+    ZOHand _sZone2 objN2 -> ordObjectN objN1 objN2
   ZOLibrary _sZone1 objN1 -> \case
     ZOLibrary _sZone2 objN2 -> ordObjectN objN1 objN2
   ZOStack _sZone1 objN1 -> \case
