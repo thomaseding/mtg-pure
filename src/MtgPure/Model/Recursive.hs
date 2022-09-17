@@ -565,7 +565,9 @@ data Some (liftOT :: Type -> Type) (ot :: Type) :: Type where
   deriving (Typeable)
 
 type SomeCard = Some Card
+
 type SomeToken = Some Token
+
 type SomeCardOrToken ot = Either (SomeCard ot) (SomeToken ot)
 
 ----------------------------------------

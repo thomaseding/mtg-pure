@@ -15,7 +15,7 @@
 {-# HLINT ignore "Use const" #-}
 
 module MtgPure.Model.ToObjectN (
-    module MtgPure.Model.ToObjectN.Classes,
+  module MtgPure.Model.ToObjectN.Classes,
 ) where
 
 import safe MtgPure.Model.ToObjectN.Classes
