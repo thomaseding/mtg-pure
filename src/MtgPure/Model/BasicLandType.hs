@@ -25,5 +25,4 @@ data BasicLandType
   | Mountain
   | Plains
   | Swamp
-  | Wastes
   deriving (Bounded, Enum, Eq, Ord, Show, Typeable)

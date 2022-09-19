@@ -146,14 +146,16 @@ import safe MtgPure.ModelCombinators (
 
 ----------------------------------------
 
-mkBasicLand :: BasicLandType -> Card OTLand
-mkBasicLand ty = mkCard name $ \_this ->
+mkBasicLand :: Maybe BasicLandType -> Card OTLand
+mkBasicLand mTy = mkCard name $ \_this ->
   LandDef
-    { land_subtypes = [BasicLand ty]
+    { land_subtypes = case mTy of
+        Just ty -> [BasicLand ty]
+        Nothing -> []
     , land_abilities = []
     }
  where
-  name = CardName $ show ty
+  name = CardName $ maybe "Wastes" show mTy
 
 mkDualLand :: String -> BasicLandType -> BasicLandType -> Card OTLand
 mkDualLand name ty1 ty2 =
@@ -368,7 +370,7 @@ damnation = mkCard "Damnation" $ \_this ->
   cost = spellCost (2, B, B)
 
 forest :: Card OTLand
-forest = mkBasicLand Forest
+forest = mkBasicLand $ Just Forest
 
 holyStrength :: Card OTEnchantment
 holyStrength = mkCard "Holy Strength" $ \_this ->
@@ -387,7 +389,7 @@ holyStrength = mkCard "Holy Strength" $ \_this ->
   cost = spellCost W
 
 island :: Card OTLand
-island = mkBasicLand Island
+island = mkBasicLand $ Just Island
 
 lavaAxe :: Card OTSorcery
 lavaAxe = mkCard "Lava Axe" $ \this ->
@@ -422,7 +424,7 @@ manaLeak = mkCard "Mana Leak" $ \this ->
   cost = spellCost (1, U)
 
 mountain :: Card OTLand
-mountain = mkBasicLand Mountain
+mountain = mkBasicLand $ Just Mountain
 
 nyxbornRollicker :: Card OTEnchantmentCreature
 nyxbornRollicker = mkCard "Nyxborn Rollicker" $ \_this ->
@@ -460,7 +462,7 @@ ornithopter = mkCard "Ornithopter" $ \_this ->
   cost = spellCost 0
 
 plains :: Card OTLand
-plains = mkBasicLand Plains
+plains = mkBasicLand $ Just Plains
 
 plummet :: Card OTInstant
 plummet = mkCard "Plummet" $ \this ->
@@ -625,7 +627,7 @@ stoneThrowingDevils = mkCard "Stone-Throwing Devils" $ \_this ->
   cost = spellCost B
 
 swamp :: Card OTLand
-swamp = mkBasicLand Swamp
+swamp = mkBasicLand $ Just Swamp
 
 swanSong :: Card OTInstant
 swanSong = mkCard "Swan Song" $ \this ->
@@ -657,7 +659,7 @@ vindicate = mkCard "Vindicate" $ \this ->
   cost = spellCost (1, W, B)
 
 wastes :: Card OTLand
-wastes = mkBasicLand Wastes
+wastes = mkBasicLand Nothing
 
 wrathOfGod :: Card OTSorcery
 wrathOfGod = mkCard "Wrath of God" $ \_this ->
