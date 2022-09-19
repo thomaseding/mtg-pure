@@ -122,6 +122,33 @@ instance Inst2 IsObjectType a b => GetObjectId (ObjectN (OT2 a b)) where
 instance Inst3 IsObjectType a b c => GetObjectId (ObjectN (OT3 a b c)) where
   getObjectId = visitObjectN' objectToId
 
+instance Inst4 IsObjectType a b c d => GetObjectId (ObjectN (OT4 a b c d)) where
+  getObjectId = visitObjectN' objectToId
+
+instance Inst5 IsObjectType a b c d e => GetObjectId (ObjectN (OT5 a b c d e)) where
+  getObjectId = visitObjectN' objectToId
+
+instance Inst6 IsObjectType a b c d e f => GetObjectId (ObjectN (OT6 a b c d e f)) where
+  getObjectId = visitObjectN' objectToId
+
+instance Inst7 IsObjectType a b c d e f g => GetObjectId (ObjectN (OT7 a b c d e f g)) where
+  getObjectId = visitObjectN' objectToId
+
+instance Inst8 IsObjectType a b c d e f g h => GetObjectId (ObjectN (OT8 a b c d e f g h)) where
+  getObjectId = visitObjectN' objectToId
+
+instance Inst9 IsObjectType a b c d e f g h i => GetObjectId (ObjectN (OT9 a b c d e f g h i)) where
+  getObjectId = visitObjectN' objectToId
+
+instance Inst10 IsObjectType a b c d e f g h i j => GetObjectId (ObjectN (OT10 a b c d e f g h i j)) where
+  getObjectId = visitObjectN' objectToId
+
+instance Inst11 IsObjectType a b c d e f g h i j k => GetObjectId (ObjectN (OT11 a b c d e f g h i j k)) where
+  getObjectId = visitObjectN' objectToId
+
+instance Inst12 IsObjectType a b c d e f g h i j k l => GetObjectId (ObjectN (OT12 a b c d e f g h i j k l)) where
+  getObjectId = visitObjectN' objectToId
+
 vn :: VisitObjectN ot => ObjectVisitorN ot x -> ObjectN ot -> x
 vn = visitObjectN
 

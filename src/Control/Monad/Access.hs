@@ -25,6 +25,7 @@ module Control.Monad.Access (
   safeFromPublic,
   safeFromRO,
   unsafeFromPrivate,
+  unsafeFromRW,
   unsafeToPublic,
   unsafeToRO,
 ) where
@@ -91,6 +92,9 @@ safeFromRO (AccessM a) = AccessM a
 
 unsafeFromPrivate :: AccessM 'Private rw m a -> AccessM v rw m a
 unsafeFromPrivate (AccessM a) = AccessM a
+
+unsafeFromRW :: AccessM v 'RW m a -> AccessM v rw m a
+unsafeFromRW (AccessM a) = AccessM a
 
 unsafeToPublic :: AccessM v rw m a -> AccessM 'Public rw m a
 unsafeToPublic (AccessM a) = AccessM a

@@ -20,6 +20,7 @@ module MtgPure.Model.ObjectType.Kind (
   OTAny,
   OTArtifact,
   OTArtifactCreature,
+  OTArtifactLand,
   OTCard,
   OTCreature,
   OTCreaturePlaneswalker,
@@ -108,6 +109,13 @@ type OTArtifactCreature =
     '( '()
      , 'OTArtifact
      , 'OTCreature
+     )
+
+type OTArtifactLand =
+  OT
+    '( '()
+     , 'OTArtifact
+     , 'OTLand
      )
 
 type OTCreaturePlayer =

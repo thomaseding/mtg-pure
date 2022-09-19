@@ -69,6 +69,27 @@ data ObjectType
   | OTTriggeredAbility
   deriving (Bounded, Enum, Eq, Ord, Show, Typeable)
 
+data SObjectType :: ObjectType -> Type where
+  SActivatedAbility :: SObjectType 'OTActivatedAbility
+  SArtifact :: SObjectType 'OTArtifact
+  SCreature :: SObjectType 'OTCreature
+  SEmblem :: SObjectType 'OTEmblem
+  SEnchantment :: SObjectType 'OTEnchantment
+  SInstant :: SObjectType 'OTInstant
+  SLand :: SObjectType 'OTLand
+  SPlaneswalker :: SObjectType 'OTPlaneswalker
+  SPlayer :: SObjectType 'OTPlayer
+  SSorcery :: SObjectType 'OTSorcery
+  SStaticAbility :: SObjectType 'OTStaticAbility
+  STriggeredAbility :: SObjectType 'OTTriggeredAbility
+  deriving (Typeable)
+
+deriving instance Eq (SObjectType a)
+
+deriving instance Ord (SObjectType a)
+
+deriving instance Show (SObjectType a)
+
 type ObjectType0 = ()
 
 type ObjectType1 = ((), ObjectType)
@@ -237,25 +258,3 @@ type OT11 a b c d e f g h i j k =
 type OT12 a b c d e f g h i j k l =
   OT
     '( '(), a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType, k :: ObjectType, l :: ObjectType)
-
--- XXX: Data.Sing
-data SObjectType :: ObjectType -> Type where
-  SActivatedAbility :: SObjectType 'OTActivatedAbility
-  SArtifact :: SObjectType 'OTArtifact
-  SCreature :: SObjectType 'OTCreature
-  SEmblem :: SObjectType 'OTEmblem
-  SEnchantment :: SObjectType 'OTEnchantment
-  SInstant :: SObjectType 'OTInstant
-  SLand :: SObjectType 'OTLand
-  SPlaneswalker :: SObjectType 'OTPlaneswalker
-  SPlayer :: SObjectType 'OTPlayer
-  SSorcery :: SObjectType 'OTSorcery
-  SStaticAbility :: SObjectType 'OTStaticAbility
-  STriggeredAbility :: SObjectType 'OTTriggeredAbility
-  deriving (Typeable)
-
-deriving instance Eq (SObjectType a)
-
-deriving instance Ord (SObjectType a)
-
-deriving instance Show (SObjectType a)

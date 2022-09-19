@@ -34,9 +34,8 @@ import Data.Inst (
   Inst8,
   Inst9,
  )
-import safe Data.Proxy (Proxy (..))
 import safe Data.Typeable (Typeable)
-import safe MtgPure.Model.IsObjectType (IsObjectType (..), objectTypeIndex)
+import safe MtgPure.Model.IsObjectType (IsObjectType (..))
 import safe MtgPure.Model.ObjectType (
   OT0,
   OT1,
@@ -51,122 +50,123 @@ import safe MtgPure.Model.ObjectType (
   OT7,
   OT8,
   OT9,
+  ObjectType,
  )
 
-oti :: forall ot. IsObjectType ot => Int
-oti = objectTypeIndex (Proxy @ot)
+idx :: forall ot. IsObjectType ot => ObjectType
+idx = litObjectType @ot
 
 class Typeable ot => IndexOT ot where
-  indexOT :: Proxy ot -> [Int]
+  indexOT :: [ObjectType]
 
 instance IndexOT OT0 where
-  indexOT _ = []
+  indexOT = []
 
 instance
   (Inst1 IsObjectType a) =>
   IndexOT (OT1 a)
   where
-  indexOT _ = [oti @a]
+  indexOT = [idx @a]
 
 instance
   (Inst2 IsObjectType a b) =>
   IndexOT (OT2 a b)
   where
-  indexOT _ = [oti @a, oti @b]
+  indexOT = [idx @a, idx @b]
 
 instance
   (Inst3 IsObjectType a b c) =>
   IndexOT (OT3 a b c)
   where
-  indexOT _ = [oti @a, oti @b, oti @c]
+  indexOT = [idx @a, idx @b, idx @c]
 
 instance
   (Inst4 IsObjectType a b c d) =>
   IndexOT (OT4 a b c d)
   where
-  indexOT _ = [oti @a, oti @b, oti @c, oti @d]
+  indexOT = [idx @a, idx @b, idx @c, idx @d]
 
 instance
   (Inst5 IsObjectType a b c d e) =>
   IndexOT (OT5 a b c d e)
   where
-  indexOT _ = [oti @a, oti @b, oti @c, oti @d, oti @e]
+  indexOT = [idx @a, idx @b, idx @c, idx @d, idx @e]
 
 instance
   (Inst6 IsObjectType a b c d e f) =>
   IndexOT (OT6 a b c d e f)
   where
-  indexOT _ = [oti @a, oti @b, oti @c, oti @d, oti @e, oti @f]
+  indexOT = [idx @a, idx @b, idx @c, idx @d, idx @e, idx @f]
 
 instance
   (Inst7 IsObjectType a b c d e f g) =>
   IndexOT (OT7 a b c d e f g)
   where
-  indexOT _ = [oti @a, oti @b, oti @c, oti @d, oti @e, oti @f, oti @g]
+  indexOT = [idx @a, idx @b, idx @c, idx @d, idx @e, idx @f, idx @g]
 
 instance
   (Inst8 IsObjectType a b c d e f g h) =>
   IndexOT (OT8 a b c d e f g h)
   where
-  indexOT _ = [oti @a, oti @b, oti @c, oti @d, oti @e, oti @f, oti @g, oti @h]
+  indexOT = [idx @a, idx @b, idx @c, idx @d, idx @e, idx @f, idx @g, idx @h]
 
 instance
   (Inst9 IsObjectType a b c d e f g h i) =>
   IndexOT (OT9 a b c d e f g h i)
   where
-  indexOT _ =
-    [oti @a, oti @b, oti @c, oti @d, oti @e, oti @f, oti @g, oti @h, oti @i]
+  indexOT =
+    [idx @a, idx @b, idx @c, idx @d, idx @e, idx @f, idx @g, idx @h, idx @i]
 
 instance
   (Inst10 IsObjectType a b c d e f g h i j) =>
   IndexOT (OT10 a b c d e f g h i j)
   where
-  indexOT _ =
-    [ oti @a
-    , oti @b
-    , oti @c
-    , oti @d
-    , oti @e
-    , oti @f
-    , oti @g
-    , oti @h
-    , oti @i
-    , oti @j
+  indexOT =
+    [ idx @a
+    , idx @b
+    , idx @c
+    , idx @d
+    , idx @e
+    , idx @f
+    , idx @g
+    , idx @h
+    , idx @i
+    , idx @j
     ]
 
 instance
   (Inst11 IsObjectType a b c d e f g h i j k) =>
   IndexOT (OT11 a b c d e f g h i j k)
   where
-  indexOT _ =
-    [ oti @a
-    , oti @b
-    , oti @c
-    , oti @d
-    , oti @e
-    , oti @f
-    , oti @g
-    , oti @h
-    , oti @i
-    , oti @j
-    , oti @k
+  indexOT =
+    [ idx @a
+    , idx @b
+    , idx @c
+    , idx @d
+    , idx @e
+    , idx @f
+    , idx @g
+    , idx @h
+    , idx @i
+    , idx @j
+    , idx @k
     ]
 
 instance
   (Inst12 IsObjectType a b c d e f g h i j k l) =>
   IndexOT (OT12 a b c d e f g h i j k l)
   where
-  indexOT _ =
-    [ oti @a
-    , oti @b
-    , oti @c
-    , oti @d
-    , oti @e
-    , oti @f
-    , oti @g
-    , oti @h
-    , oti @i
-    , oti @j
-    , oti @k
-    , oti @l
+  indexOT =
+    [ idx @a
+    , idx @b
+    , idx @c
+    , idx @d
+    , idx @e
+    , idx @f
+    , idx @g
+    , idx @h
+    , idx @i
+    , idx @j
+    , idx @k
+    , idx @l
     ]

@@ -32,19 +32,25 @@ import safe MtgPure.Model.Land (Land)
 import safe MtgPure.Model.Object (Object (..))
 import safe MtgPure.Model.ObjectType (ObjectType (..))
 import safe MtgPure.Model.ObjectType.Kind (OTPermanent)
-import safe MtgPure.Model.Recursive (Card (..), Some (..), SomeCard, SomeCardOrToken)
+import safe MtgPure.Model.Recursive (
+  Card (..),
+  Some (..),
+  SomeCard,
+  SomeCardOrToken,
+  SomeTerm (..),
+ )
 
 data Tapped = Tapped | Untapped
-  deriving (Typeable)
+  deriving (Eq, Ord, Show, Typeable)
 
 data Flipped = Flipped | Unflipped
-  deriving (Typeable)
+  deriving (Eq, Ord, Show, Typeable)
 
 data Face = FaceUp | FaceDown
-  deriving (Typeable)
+  deriving (Eq, Ord, Show, Typeable)
 
 data Phased = PhasedIn | PhasedOut
-  deriving (Typeable)
+  deriving (Eq, Ord, Show, Typeable)
 
 data Permanent :: Type where
   Permanent ::

@@ -17,8 +17,6 @@
 {-# HLINT ignore "Use if" #-}
 
 module MtgPure.Model.Recursive (
-  IsOT,
-  IsZO,
   Ability (..),
   Card (..),
   CardTypeDef (..),
@@ -39,6 +37,7 @@ module MtgPure.Model.Recursive (
   Some (..),
   SomeCard,
   SomeCardOrToken,
+  SomeTerm (..),
   SomeToken,
   StaticAbility (..),
   Token (..),
@@ -68,12 +67,12 @@ import safe MtgPure.Model.ManaPool (ManaPool)
 import safe MtgPure.Model.ObjectType (OT1, OT2, OT3, OT4, OT5, OT6)
 import safe MtgPure.Model.ObjectType.Any (WAny)
 import safe MtgPure.Model.ObjectType.Card (WCard)
-import safe MtgPure.Model.ObjectType.Index (IndexOT)
 import safe MtgPure.Model.ObjectType.Kind (
   OTActivatedOrTriggeredAbility,
   OTAny,
   OTArtifact,
   OTArtifactCreature,
+  OTArtifactLand,
   OTCreature,
   OTEnchantment,
   OTEnchantmentCreature,
@@ -88,16 +87,16 @@ import safe MtgPure.Model.ObjectType.NonCreatureCard (WNonCreatureCard)
 import safe MtgPure.Model.ObjectType.Permanent (WPermanent)
 import safe MtgPure.Model.ObjectType.Spell (WSpell (..))
 import safe MtgPure.Model.Power (Power)
-import safe MtgPure.Model.PrettyType (PrettyType (..))
 import safe MtgPure.Model.Rarity (Rarity)
 import safe MtgPure.Model.Selection (Selection)
 import safe MtgPure.Model.TimePoint (TimePoint)
 import safe MtgPure.Model.Toughness (Toughness)
-import safe MtgPure.Model.Tribal (Tribal (..))
+import safe MtgPure.Model.Tribal (IsTribal, Tribal (..))
 import safe MtgPure.Model.Variable (Variable)
-import safe MtgPure.Model.VisitObjectN (VisitObjectN)
-import safe MtgPure.Model.Zone (IsZone (..), Zone (..))
+import safe MtgPure.Model.Zone (Zone (..))
 import safe MtgPure.Model.ZoneObject (
+  IsOT,
+  IsZO,
   OCreature,
   OCreaturePlayerPlaneswalker,
   ODamageSource,
@@ -124,17 +123,6 @@ import safe MtgPure.Model.ZoneObject (
 
 ----------------------------------------
 
-type IsOT (ot :: Type) =
-  ( IndexOT ot
-  , VisitObjectN ot
-  , PrettyType ot
-  )
-
-type IsZO (zone :: Zone) (ot :: Type) =
-  (IsOT ot, IsZone zone, PrettyType (ZO zone ot))
-
-----------------------------------------
-
 data Ability (ot :: Type) :: Type where
   Activated :: Elect (Cost ot) ot -> Elect (Effect 'OneShot) ot -> Ability ot
   Static :: StaticAbility ot -> Ability ot
@@ -158,8 +146,10 @@ instance ConsIndex (Ability ot) where
 data Card (ot :: Type) :: Type where
   -- For now Instants and Sorceries will use `ZBattlefield` for it's `this` zone while the spell is resolving.
   -- If it's on the stack, it's `ZStack` as expected.
-  Card :: IsOT ot => CardName -> WCard ot -> WithThis 'ZBattlefield (CardTypeDef 'NonTribal) ot -> Card ot
-  TribalCard :: IsOT ot => CardName -> WCard ot -> WithThis 'ZBattlefield (CardTypeDef 'Tribal) ot -> Card ot
+  -- If I need references to `this` from other zones, add an appropriate constructor that has a `WithThis theZone`,
+  -- such something like `SomethingThatNeedsGraveyardThis :: WithThis 'ZGraveyard (Elect (Cost ot)) ot :: Ability ot`
+  Card :: IsOT ot => CardName -> WCard ot -> WithThis 'ZBattlefield (Elect (CardTypeDef 'NonTribal ot)) ot -> Card ot
+  TribalCard :: IsOT ot => CardName -> WCard ot -> WithThis 'ZBattlefield (Elect (CardTypeDef 'Tribal ot)) ot -> Card ot
   --
   ArtifactCard :: Card OTArtifact -> Card ()
   ArtifactCreatureCard :: Card OTArtifactCreature -> Card ()
@@ -188,7 +178,6 @@ instance ConsIndex (Card ot) where
 
 ----------------------------------------
 
--- TODO: Turn each of these constructors into a record.
 data CardTypeDef (tribal :: Tribal) (ot :: Type) :: Type where
   ArtifactDef ::
     { artifact_colors :: Colors
@@ -205,9 +194,17 @@ data CardTypeDef (tribal :: Tribal) (ot :: Type) :: Type where
     , artifactCreature_artifactAbilities :: [Ability OTArtifact]
     , artifactCreature_creatureAbilities :: [Ability OTCreature]
     -- , artifactCreature_artifactCreatureAbilities :: [Ability OTArtifactCreature]
-    -- , artifactCreature_creatureTypes :: [ArtifactType]
+    -- , artifactCreature_artifactTypes :: [ArtifactType]
     } ->
     CardTypeDef 'NonTribal OTArtifactCreature
+  ArtifactLandDef ::
+    { artifactLand_landTypes :: [LandType]
+    , artifactLand_artifactAbilities :: [Ability OTArtifact]
+    , artifactLand_landAbilities :: [Ability OTLand]
+    -- , artifactLand_artifactLandAbilities :: [Ability OTArtifactLand]
+    -- , artifactLand_artifactTypes :: [ArtifactType]
+    } ->
+    CardTypeDef 'NonTribal OTArtifactLand
   CreatureDef ::
     { creature_colors :: Colors
     , creature_cost :: Elect (Cost OTCreature) OTCreature
@@ -275,17 +272,18 @@ data CardTypeDef (tribal :: Tribal) (ot :: Type) :: Type where
 
 instance ConsIndex (CardTypeDef tribe ot) where
   consIndex = \case
-    ArtifactCreatureDef{} -> 1
-    ArtifactDef{} -> 2
-    CreatureDef{} -> 3
-    EnchantmentDef{} -> 4
+    ArtifactDef{} -> 1
+    ArtifactCreatureDef{} -> 2
+    ArtifactLandDef{} -> 3
+    CreatureDef{} -> 4
     EnchantmentCreatureDef{} -> 5
-    InstantDef{} -> 6
-    LandDef{} -> 7
-    PlaneswalkerDef{} -> 8
-    SorceryDef{} -> 9
-    TribalDef{} -> 10
-    VariableDef{} -> 11
+    EnchantmentDef{} -> 6
+    InstantDef{} -> 7
+    LandDef{} -> 8
+    PlaneswalkerDef{} -> 9
+    SorceryDef{} -> 10
+    TribalDef{} -> 11
+    VariableDef{} -> 12
 
 ----------------------------------------
 
@@ -305,6 +303,13 @@ instance ConsIndex Condition where
 
 ----------------------------------------
 
+-- XXX: Uggh... need to add another type index for what to do after since some effects and abilities need to
+-- know which costs were paid. (e.g. "If black mana was spend to pay this card's cost then ..."). Then a
+-- continuation constructor needs to be provided. Then constructors of other types that use costs and something
+-- else need to be updated accordingly. Ponder a less intrusive and less annoying solution... Perhaps Effect
+-- (or whatever types) gets a constructor that can obtain an abtract runtime Cost which can be queried by
+-- the API. This would likely require the model to encode more contingencies to handle dynamic issues, but this
+-- is likely overwhelmingly worth it to avoid the continuation approach.
 data Cost (ot :: Type) :: Type where
   AndCosts :: [Cost ot] -> Cost ot
   DiscardRandomCost :: Int -> Cost ot -- TODO: PositiveInt
@@ -312,8 +317,8 @@ data Cost (ot :: Type) :: Type where
   ManaCost :: ManaCost -> Cost ot
   OrCosts :: [Cost ot] -> Cost ot
   PayLife :: Int -> Cost ot -- TODO: PositiveInt
-  SacrificeCost :: IsOT ot => WPermanent ot -> [Requirement 'ZBattlefield ot] -> Cost ot
-  TapCost :: OPermanent -> Cost ot
+  SacrificeCost :: IsZO 'ZBattlefield ot' => WPermanent ot' -> [Requirement 'ZBattlefield ot'] -> Cost ot
+  TapCost :: IsZO 'ZBattlefield ot' => WPermanent ot' -> [Requirement 'ZBattlefield ot'] -> Cost ot
   deriving (Typeable)
 
 instance ConsIndex (Cost ot) where
@@ -374,16 +379,18 @@ instance ConsIndex (Effect ef) where
 ----------------------------------------
 
 data Elect (el :: Type) (ot :: Type) :: Type where
-  A :: (el ~ Effect 'OneShot, IsZO zone ot) => Selection -> OPlayer -> WithMaskedObject zone (Elect el ot) -> Elect el ot
+  -- TODO: Disallow `A` for some types of `el` using a witness arg, in particular Event and EventListener
+  A :: (Typeable el, IsZO zone ot) => Selection -> OPlayer -> WithMaskedObject zone (Elect el ot) -> Elect el ot
   ActivePlayer :: (OPlayer -> Elect el ot) -> Elect el ot
   -- TODO: Add `SZone zone` witness and change `'ZBattlefield` to `zone`.
   All :: IsOT ot => WithMaskedObject 'ZBattlefield (Elect el ot) -> Elect el ot
+  CardTypeDef :: IsTribal tribal => CardTypeDef tribal ot -> Elect (CardTypeDef tribal ot) ot
   Condition :: Condition -> Elect Condition ot
   ControllerOf :: IsZO zone OTAny => ZO zone OTAny -> (OPlayer -> Elect el ot) -> Elect el ot
   Cost :: Cost ot -> Elect (Cost ot) ot
   Effect :: [Effect ef] -> Elect (Effect ef) ot
   Event :: Event -> Elect Event ot
-  If :: Condition -> Elect el ot -> Else el ot -> Elect el ot
+  If :: Condition -> Elect el ot -> Else el ot -> Elect el ot -- NB: It is probably correct to allow this constructor with CardTypeDef usage in order to encode split cards and such.
   Listen :: EventListener -> Elect EventListener ot
   -- TODO: Add `SZone zone` witness and change `'ZBattlefield` to `zone`.
   Random :: IsOT ot => WithMaskedObject 'ZBattlefield (Elect el ot) -> Elect el ot -- Interpreted as "Arbitrary" in some contexts, such as Event and EventListener
@@ -395,15 +402,16 @@ instance ConsIndex (Elect el ot) where
     A{} -> 1
     ActivePlayer{} -> 2
     All{} -> 3
-    Condition{} -> 4
-    ControllerOf{} -> 5
-    Cost{} -> 6
-    Effect{} -> 7
-    Event{} -> 8
-    If{} -> 9
-    Listen{} -> 10
-    Random{} -> 11
-    VariableFromPower{} -> 12
+    CardTypeDef{} -> 4
+    Condition{} -> 5
+    ControllerOf{} -> 6
+    Cost{} -> 7
+    Effect{} -> 8
+    Event{} -> 9
+    If{} -> 10
+    Listen{} -> 11
+    Random{} -> 12
+    VariableFromPower{} -> 13
 
 ----------------------------------------
 
@@ -561,23 +569,43 @@ instance ConsIndex (SetToken ot) where
 
 ----------------------------------------
 
+-- TODO: Move all these Some* stuff to another file
+
 data Some (liftOT :: Type -> Type) (ot :: Type) :: Type where
-  SomeArtifact :: liftOT OTArtifact -> Some liftOT OTArtifact
-  SomeCreature :: liftOT OTCreature -> Some liftOT OTCreature
-  SomeEnchantment :: liftOT OTEnchantment -> Some liftOT OTEnchantment
-  SomeLand :: liftOT OTLand -> Some liftOT OTLand
-  SomePlaneswalker :: liftOT OTPlaneswalker -> Some liftOT OTPlaneswalker
-  SomeArtifactCreature :: liftOT OTArtifactCreature -> Some liftOT OTArtifactCreature
-  SomeEnchantmentCreature :: liftOT OTEnchantmentCreature -> Some liftOT OTEnchantmentCreature
-  Some2a :: Inst2 IsObjectType a b => Some liftOT (OT1 a) -> Some liftOT (OT2 a b)
-  Some2b :: Inst2 IsObjectType a b => Some liftOT (OT1 b) -> Some liftOT (OT2 a b)
-  Some5a :: Inst5 IsObjectType a b c d e => Some liftOT (OT1 a) -> Some liftOT (OT5 a b c d e)
-  Some5b :: Inst5 IsObjectType a b c d e => Some liftOT (OT1 b) -> Some liftOT (OT5 a b c d e)
-  Some5c :: Inst5 IsObjectType a b c d e => Some liftOT (OT1 c) -> Some liftOT (OT5 a b c d e)
-  Some5d :: Inst5 IsObjectType a b c d e => Some liftOT (OT1 d) -> Some liftOT (OT5 a b c d e)
-  Some5e :: Inst5 IsObjectType a b c d e => Some liftOT (OT1 e) -> Some liftOT (OT5 a b c d e)
-  Some5ab :: Inst5 IsObjectType a b c d e => Some liftOT (OT2 a b) -> Some liftOT (OT5 a b c d e)
-  Some5bc :: Inst5 IsObjectType a b c d e => Some liftOT (OT2 b c) -> Some liftOT (OT5 a b c d e)
+  Some2a :: Inst2 IsObjectType a b => SomeTerm liftOT (OT1 a) -> Some liftOT (OT2 a b)
+  Some2b :: Inst2 IsObjectType a b => SomeTerm liftOT (OT1 b) -> Some liftOT (OT2 a b)
+  --
+  Some5a :: Inst5 IsObjectType a b c d e => SomeTerm liftOT (OT1 a) -> Some liftOT (OT5 a b c d e)
+  Some5b :: Inst5 IsObjectType a b c d e => SomeTerm liftOT (OT1 b) -> Some liftOT (OT5 a b c d e)
+  Some5c :: Inst5 IsObjectType a b c d e => SomeTerm liftOT (OT1 c) -> Some liftOT (OT5 a b c d e)
+  Some5d :: Inst5 IsObjectType a b c d e => SomeTerm liftOT (OT1 d) -> Some liftOT (OT5 a b c d e)
+  Some5e :: Inst5 IsObjectType a b c d e => SomeTerm liftOT (OT1 e) -> Some liftOT (OT5 a b c d e)
+  Some5ab :: Inst5 IsObjectType a b c d e => SomeTerm liftOT (OT2 a b) -> Some liftOT (OT5 a b c d e)
+  Some5ad :: Inst5 IsObjectType a b c d e => SomeTerm liftOT (OT2 a d) -> Some liftOT (OT5 a b c d e)
+  Some5bc :: Inst5 IsObjectType a b c d e => SomeTerm liftOT (OT2 b c) -> Some liftOT (OT5 a b c d e)
+  --
+  Some6a :: Inst6 IsObjectType a b c d e f => SomeTerm liftOT (OT1 a) -> Some liftOT (OT6 a b c d e f)
+  Some6b :: Inst6 IsObjectType a b c d e f => SomeTerm liftOT (OT1 b) -> Some liftOT (OT6 a b c d e f)
+  Some6c :: Inst6 IsObjectType a b c d e f => SomeTerm liftOT (OT1 c) -> Some liftOT (OT6 a b c d e f)
+  Some6d :: Inst6 IsObjectType a b c d e f => SomeTerm liftOT (OT1 d) -> Some liftOT (OT6 a b c d e f)
+  Some6e :: Inst6 IsObjectType a b c d e f => SomeTerm liftOT (OT1 e) -> Some liftOT (OT6 a b c d e f)
+  Some6f :: Inst6 IsObjectType a b c d e f => SomeTerm liftOT (OT1 f) -> Some liftOT (OT6 a b c d e f)
+  Some6ab :: Inst6 IsObjectType a b c d e f => SomeTerm liftOT (OT2 a b) -> Some liftOT (OT6 a b c d e f)
+  Some6bc :: Inst6 IsObjectType a b c d e f => SomeTerm liftOT (OT2 b c) -> Some liftOT (OT6 a b c d e f)
+  -- TODO: Write a script to generate other Some6xy flavors
+  deriving (Typeable)
+
+data SomeTerm (liftOT :: Type -> Type) (ot :: Type) :: Type where
+  SomeArtifact :: liftOT OTArtifact -> SomeTerm liftOT OTArtifact
+  SomeCreature :: liftOT OTCreature -> SomeTerm liftOT OTCreature
+  SomeEnchantment :: liftOT OTEnchantment -> SomeTerm liftOT OTEnchantment
+  SomeInstant :: liftOT OTInstant -> SomeTerm liftOT OTInstant
+  SomeLand :: liftOT OTLand -> SomeTerm liftOT OTLand
+  SomePlaneswalker :: liftOT OTPlaneswalker -> SomeTerm liftOT OTPlaneswalker
+  SomeSorcery :: liftOT OTSorcery -> SomeTerm liftOT OTSorcery
+  SomeArtifactCreature :: liftOT OTArtifactCreature -> SomeTerm liftOT OTArtifactCreature
+  SomeArtifactLand :: liftOT OTArtifactLand -> SomeTerm liftOT OTArtifactLand
+  SomeEnchantmentCreature :: liftOT OTEnchantmentCreature -> SomeTerm liftOT OTEnchantmentCreature
   deriving (Typeable)
 
 type SomeCard = Some Card

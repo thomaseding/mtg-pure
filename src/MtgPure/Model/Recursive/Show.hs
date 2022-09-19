@@ -130,8 +130,6 @@ import safe MtgPure.Model.Recursive (
   Event,
   EventListener,
   EventListener' (..),
-  IsOT,
-  IsZO,
   Requirement (..),
   SetCard (SetCard),
   SetToken (SetToken),
@@ -149,6 +147,8 @@ import safe MtgPure.Model.Variable (Variable (ReifiedVariable))
 import safe MtgPure.Model.VisitObjectN (KnownObjectN (..), VisitObjectN (..))
 import safe MtgPure.Model.Zone (IsZone (..), SZone (..))
 import safe MtgPure.Model.ZoneObject (
+  IsOT,
+  IsZO,
   ZO,
   ZoneObject (..),
  )
@@ -429,12 +429,12 @@ showListM f xs = noParens $ do
 
 toZone :: forall zone ot. IsZone zone => ObjectN ot -> ZO zone ot
 toZone = case singZone @zone of
-  SZBattlefield -> ZOBattlefield SZBattlefield
-  SZExile -> ZOExile SZExile
-  SZGraveyard -> ZOGraveyard SZGraveyard
-  SZHand -> ZOHand SZHand
-  SZLibrary -> ZOLibrary SZLibrary
-  SZStack -> ZOStack SZStack
+  SZBattlefield -> ZOBattlefield
+  SZExile -> ZOExile
+  SZGraveyard -> ZOGraveyard
+  SZHand -> ZOHand
+  SZLibrary -> ZOLibrary
+  SZStack -> ZOStack
 
 ----------------------------------------
 
@@ -497,7 +497,7 @@ showCard = \case
       _ -> do
         sWCard <- parens <$> showWCard wCard
         sWithCardTypeDef <-
-          dollar <$> showWithThis showCardTypeDef "this" withCardTypeDef
+          dollar <$> showWithThis showElect "this" withCardTypeDef
         pure $
           pure consName
             <> pure " "
@@ -536,6 +536,17 @@ showCardTypeDef = \case
           <> pure " "
           <> sArtAbils
           <> sCreatAbils
+  ArtifactLandDef landTypes artAbils landAbils ->
+    yesParens $ do
+      sLandTypes <- parens <$> showListM showLandType landTypes
+      sArtAbils <- parens <$> showAbilities artAbils
+      sLandAbils <- dollar <$> showAbilities landAbils
+      pure $
+        pure "ArtifactLandDef "
+          <> sLandTypes
+          <> pure " "
+          <> sArtAbils
+          <> sLandAbils
   CreatureDef colors cost creatureTypes power toughness abilities ->
     yesParens $ do
       sColors <- parens <$> showColors colors
@@ -735,9 +746,10 @@ showCost = \case
     sPerm <- parens <$> showWPermanent perm
     sReqs <- dollar <$> showRequirements reqs
     pure $ pure "SacrificeCost " <> sPerm <> sReqs
-  TapCost obj -> yesParens $ do
-    sObj <- dollar <$> showZoneObject obj
-    pure $ pure "TapCost" <> sObj
+  TapCost perm reqs -> yesParens $ do
+    sPerm <- parens <$> showWPermanent perm
+    sReqs <- dollar <$> showRequirements reqs
+    pure $ pure "TapCost " <> sPerm <> sReqs
 
 showCreatureTypes :: [CreatureType] -> EnvM ParenItems
 showCreatureTypes = noParens . pure . pure . fromString . show
@@ -851,6 +863,9 @@ showElect = \case
   All withObject -> yesParens $ do
     sWithObject <- dollar <$> showWithMaskedObject showElect "all" withObject
     pure $ pure "All" <> sWithObject
+  CardTypeDef def -> yesParens $ do
+    sDef <- dollar <$> showCardTypeDef def
+    pure $ pure "CardTypeDef" <> sDef
   Condition cond -> yesParens $ do
     sCond <- dollar <$> showCondition cond
     pure $ pure "Condition" <> sCond
@@ -859,12 +874,12 @@ showElect = \case
       getObjectNamePrefix $
         let objN :: ObjectN OTAny
             objN = case zObj of
-              ZOBattlefield _ o -> o
-              ZOExile _ o -> o
-              ZOGraveyard _ o -> o
-              ZOHand _ o -> o
-              ZOLibrary _ o -> o
-              ZOStack _ o -> o
+              ZOBattlefield o -> o
+              ZOExile o -> o
+              ZOGraveyard o -> o
+              ZOHand o -> o
+              ZOLibrary o -> o
+              ZOStack o -> o
          in visitObjectN' objectToId objN
     (controller', snap) <-
       newObjectN @ 'OTPlayer O1 $ case objPrefix == "this" of
@@ -1610,7 +1625,7 @@ showTypeOf :: forall a. PrettyType a => Proxy a -> EnvM ParenItems
 showTypeOf _ = conditionalParens $ do
   pure $ pure $ fromString name
  where
-  name = prettyType (Proxy @a)
+  name = prettyType @a
   conditionalParens = case ' ' `elem` name of
     True -> yesParens
     False -> noParens
@@ -1841,18 +1856,18 @@ showWSpell wit = case wit of
 
 showZoneObject :: forall zone ot. IsZO zone ot => ZO zone ot -> EnvM ParenItems
 showZoneObject = \case
-  ZOBattlefield _ objN -> showObjectN @zone objN
-  ZOExile _ objN -> showObjectN @zone objN
-  ZOGraveyard _ objN -> showObjectN @zone objN
-  ZOHand _ objN -> showObjectN @zone objN
-  ZOLibrary _ objN -> showObjectN @zone objN
-  ZOStack _ objN -> showObjectN @zone objN
+  ZOBattlefield objN -> showObjectN @zone objN
+  ZOExile objN -> showObjectN @zone objN
+  ZOGraveyard objN -> showObjectN @zone objN
+  ZOHand objN -> showObjectN @zone objN
+  ZOLibrary objN -> showObjectN @zone objN
+  ZOStack objN -> showObjectN @zone objN
 
 showZoneObject0 :: forall zone. IsZone zone => ZO zone OT0 -> EnvM ParenItems
 showZoneObject0 = \case
-  ZOBattlefield _ objN -> showObject0 @zone objN
-  ZOExile _ objN -> showObject0 @zone objN
-  ZOGraveyard _ objN -> showObject0 @zone objN
-  ZOHand _ objN -> showObject0 @zone objN
-  ZOLibrary _ objN -> showObject0 @zone objN
-  ZOStack _ objN -> showObject0 @zone objN
+  ZOBattlefield objN -> showObject0 @zone objN
+  ZOExile objN -> showObject0 @zone objN
+  ZOGraveyard objN -> showObject0 @zone objN
+  ZOHand objN -> showObject0 @zone objN
+  ZOLibrary objN -> showObject0 @zone objN
+  ZOStack objN -> showObject0 @zone objN

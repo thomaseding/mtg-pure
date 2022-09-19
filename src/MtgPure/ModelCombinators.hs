@@ -16,69 +16,69 @@
 {-# HLINT ignore "Use const" #-}
 
 module MtgPure.ModelCombinators (
-  Proxy (Proxy),
-  tyAp,
-  ToCard (..),
-  ToToken (..),
-  ToSetCard (..),
-  ToSetToken (..),
-  AsAny,
-  asAny,
-  AsActivatedOrTriggeredAbility,
+  addManaAnyColor,
+  addToBattlefield,
   asActivatedOrTriggeredAbility,
-  AsPermanent,
-  asPermanent,
-  AsSpell,
-  asSpell,
-  AsCreaturePlayerPlaneswalker,
-  asCreaturePlayerPlaneswalker,
-  AsDamage (..),
+  AsActivatedOrTriggeredAbility,
+  asAny,
+  AsAny,
   AsCost (..),
-  ElectEffect (..),
-  CoAny (..),
-  CoPermanent (..),
+  asCreaturePlayerPlaneswalker,
+  AsCreaturePlayerPlaneswalker,
+  AsDamage (..),
+  AsIfThen (..),
+  AsIfThenElse (..),
+  asPermanent,
+  AsPermanent,
+  asSpell,
+  AsSpell,
   AsWithLinkedObject (..),
   AsWithMaskedObject (..),
   AsWithThis (..),
-  HasLandType (..),
-  AsIfThen (..),
-  AsIfThenElse (..),
-  mkCard,
-  mkToken,
   becomesTapped,
-  event,
-  ifThen,
-  ifElse,
-  ifThenElse,
-  isBasic,
-  nonBasic,
-  tapCost,
-  ofColors,
-  playerPays,
-  addManaAnyColor,
-  gain,
-  lose,
-  is,
-  satisfies,
-  hasAbility,
-  spellCost,
-  noCost,
-  dealDamage,
-  controllerOf,
   changeTo,
-  sacrifice,
-  destroy,
-  counterAbility,
-  counterSpell,
-  sacrificeCost,
-  addToBattlefield,
+  CoAny (..),
   colored,
   colorless,
+  controllerOf,
+  CoPermanent (..),
+  counterAbility,
+  counterSpell,
+  dealDamage,
+  destroy,
+  ElectEffect (..),
+  event,
+  gain,
+  hasAbility,
+  HasLandType (..),
+  ifElse,
+  ifThen,
+  ifThenElse,
+  is,
+  isBasic,
+  lose,
+  mkCard,
+  mkToken,
+  noCost,
+  nonBasic,
   nonBlack,
-  tapped,
-  untilEndOfTurn,
+  ofColors,
+  playerPays,
+  Proxy (Proxy),
   putOntoBattlefield,
+  sacrifice,
+  sacrificeCost,
+  satisfies,
   searchLibrary,
+  spellCost,
+  tapCost,
+  tapped,
+  ToCard (..),
+  ToSetCard (..),
+  ToSetToken (..),
+  ToToken (..),
+  tyAp,
+  untilEndOfTurn,
 ) where
 
 import safe Data.Inst (Inst1, Inst2, Inst3, Inst4, Inst5, Inst6)
@@ -129,8 +129,6 @@ import safe MtgPure.Model.Recursive (
   Event,
   EventListener,
   EventListener' (..),
-  IsOT,
-  IsZO,
   NonProxy (..),
   Requirement (..),
   SetCard (..),
@@ -157,6 +155,8 @@ import safe MtgPure.Model.Tribal (Tribal (..))
 import safe MtgPure.Model.Variable (Variable)
 import safe MtgPure.Model.Zone (IsZone, Zone (..))
 import safe MtgPure.Model.ZoneObject (
+  IsOT,
+  IsZO,
   OPlayer,
   ZO,
   toZO12,
@@ -332,8 +332,8 @@ instance Inst5 IsObjectType a b c d e => AsWithMaskedObject (OT5 a b c d e) wher
 instance Inst6 IsObjectType a b c d e f => AsWithMaskedObject (OT6 a b c d e f) where
   masked = M6
 
-class IsZO zone ot => AsWithThis ot zone liftOT ot1s | ot zone liftOT -> ot1s, ot1s -> ot zone where
-  thisObject :: (ot1s -> liftOT ot) -> WithThis zone liftOT ot
+class IsZO zone ot => AsWithThis ot zone liftOT ots | ot zone liftOT -> ots, ots -> ot zone where
+  thisObject :: (ots -> liftOT ot) -> WithThis zone liftOT ot
 
 instance (IsZO zone (OT1 a), Inst1 IsObjectType a) => AsWithThis (OT1 a) zone liftOT (ZO zone (OT1 a)) where
   thisObject = T1
@@ -434,11 +434,11 @@ instance AsDamage Damage where
 instance AsDamage Variable where
   asDamage = VariableDamage
 
-spellCost :: ToManaCost a => a -> Elect (Cost ot) ot
-spellCost = Cost . ManaCost . toManaCost
+spellCost :: ToManaCost a => a -> Cost ot
+spellCost = ManaCost . toManaCost
 
-noCost :: Elect (Cost ot) ot
-noCost = Cost $ OrCosts []
+noCost :: Cost ot
+noCost = OrCosts []
 
 dealDamage ::
   ( AsDamageSource source
@@ -470,9 +470,6 @@ changeTo ::
   Card ot ->
   Effect 'Continuous
 changeTo = ChangeTo coPermanent . asPermanent
-
-tapCost :: AsPermanent ot => ZO 'ZBattlefield ot -> Cost ot
-tapCost = TapCost . asPermanent
 
 destroy :: AsPermanent ot => ZO 'ZBattlefield ot -> Effect 'OneShot
 destroy = Destroy . asPermanent
@@ -593,8 +590,11 @@ satisfies ::
   (IsZone zone, CoAny ot) => ZO zone ot -> [Requirement zone ot] -> Condition
 satisfies = Satisfies coAny
 
-sacrificeCost :: CoPermanent ot => [Requirement 'ZBattlefield ot] -> Cost ot
+sacrificeCost :: CoPermanent ot' => [Requirement 'ZBattlefield ot'] -> Cost ot
 sacrificeCost = SacrificeCost coPermanent
+
+tapCost :: CoPermanent ot' => [Requirement 'ZBattlefield ot'] -> Cost ot
+tapCost = TapCost coPermanent
 
 tapped :: CoPermanent ot => Requirement 'ZBattlefield ot
 tapped = IsTapped coPermanent
@@ -699,10 +699,10 @@ addManaAnyColor player amount =
     ]
 
 class
-  (AsWithThis ot 'ZBattlefield (CardTypeDef tribal) ot1s) =>
-  MkCard tribal ot ot1s
+  (AsWithThis ot 'ZBattlefield (CardTypeDef tribal) ots) =>
+  MkCard tribal ot ots
   where
-  mkCard :: CardName -> (ot1s -> CardTypeDef tribal ot) -> Card ot
+  mkCard :: CardName -> (ots -> Elect (CardTypeDef tribal ot) ot) -> Card ot
 
 instance
   MkCard
@@ -745,15 +745,15 @@ instance
 --   mkCard name = TribalCard name coCard . thisObject
 
 mkToken ::
-  (CoPermanent ot, MkCard tribal ot ot1s) =>
+  (CoPermanent ot, MkCard tribal ot ots) =>
   CardName ->
-  (ot1s -> CardTypeDef tribal ot) ->
+  (ots -> Elect (CardTypeDef tribal ot) ot) ->
   Token ot
 mkToken name = Token coPermanent . mkCard name
 
 hasAbility ::
-  (AsWithThis ot zone Ability ot1s, IsZO zone ot) =>
-  (ot1s -> Ability ot) ->
+  (AsWithThis ot zone Ability ots, IsZO zone ot) =>
+  (ots -> Ability ot) ->
   Requirement zone ot
 hasAbility = HasAbility . thisObject
 

@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
@@ -20,17 +21,19 @@ module MtgPure.Engine.Monad (
   runMagicRO,
   runMagicRW,
   magicThrow,
+  magicCatch,
   modify,
   put,
   get,
   gets,
   local,
-  safeToPrivate,
-  safeToRW,
-  safeFromPublicRO,
-  safeFromPublic,
-  safeFromRO,
-  unsafeFromPrivate,
+  toPrivate,
+  toRW,
+  fromPublicRO,
+  fromPublic,
+  fromRO,
+  internalFromPrivate,
+  internalFromRW,
 ) where
 
 import safe Control.Monad.Access (
@@ -43,57 +46,64 @@ import safe Control.Monad.Access (
 import safe qualified Control.Monad.Access as Access
 import safe qualified Control.Monad.State.Strict as State
 import safe Control.Monad.Trans (MonadTrans (..))
-import safe Control.Monad.Trans.Except (ExceptT (ExceptT), runExceptT, throwE)
+import safe Control.Monad.Trans.Except (ExceptT (ExceptT), catchE, runExceptT, throwE)
+import safe Data.Functor ((<&>))
 import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
 
 type Inner st v rw m = AccessM v rw (State.StateT st m)
 
-data family
+data
   Magic'
     (ex :: Type)
     (st :: Type)
     (v :: Visibility)
     (rw :: ReadWrite)
     (m :: Type -> Type)
-    (a :: Type) ::
-    Type
-
-newtype instance Magic' ex st v 'RO m a = MagicRO
-  { unMagicRO :: Inner st v 'RO m a
-  }
+    (a :: Type) :: Type
+  where
+  MagicRO ::
+    { unMagicRO :: Inner st v 'RO m a
+    } ->
+    Magic' ex st v 'RO m a
+  MagicRW ::
+    { unMagicRW :: ExceptT ex (Inner st v 'RW m) a
+    } ->
+    Magic' ex st v 'RW m a
   deriving (Typeable)
 
-newtype instance Magic' ex st v 'RW m a = MagicRW
-  { unMagicRW :: ExceptT ex (Inner st v 'RW m) a
-  }
-  deriving (Typeable)
-
-instance (IsReadWrite rw, Functor m) => Functor (Magic' ex st v rw m) where
-  fmap f magic = case (singReadWrite @rw, magic) of
-    (SRO, MagicRO a) -> MagicRO $ fmap f a
-    (SRW, MagicRW a) -> MagicRW $ fmap f a
+instance Functor m => Functor (Magic' ex st v rw m) where
+  fmap f = \case
+    MagicRO a -> MagicRO $ fmap f a
+    MagicRW a -> MagicRW $ fmap f a
 
 instance (IsReadWrite rw, Monad m) => Applicative (Magic' ex st v rw m) where
   pure = case singReadWrite @rw of
     SRO -> MagicRO . pure
     SRW -> MagicRW . pure
-  magicF <*> magicA = case (singReadWrite @rw, magicF, magicA) of
-    (SRO, MagicRO f, MagicRO a) -> MagicRO $ f <*> a
-    (SRW, MagicRW f, MagicRW a) -> MagicRW $ f <*> a
+  magicF <*> magicA = case (magicF, magicA) of
+    (MagicRO f, MagicRO a) -> MagicRO $ f <*> a
+    (MagicRW f, MagicRW a) -> MagicRW $ f <*> a
 
 instance (IsReadWrite rw, Monad m) => Monad (Magic' ex st v rw m) where
-  magicA >>= f = case (singReadWrite @rw, magicA) of
-    (SRO, MagicRO a) -> MagicRO $ a >>= unMagicRO . f
-    (SRW, MagicRW a) -> MagicRW $ a >>= unMagicRW . f
+  magicA >>= f = case magicA of
+    MagicRO a -> MagicRO $ a >>= unMagicRO . f
+    MagicRW a -> MagicRW $ a >>= unMagicRW . f
 
 instance (IsReadWrite rw) => MonadTrans (Magic' ex st v rw) where
   lift = case singReadWrite @rw of
     SRO -> MagicRO . lift . lift
     SRW -> MagicRW . lift . lift . lift
 
-magicThrow :: Monad m => ex -> Magic' ex st v 'RW m b
+magicThrow :: Monad m => ex -> Magic' ex st 'Private 'RW m b
 magicThrow ex = MagicRW $ throwE ex
+
+magicCatch ::
+  Monad m =>
+  Magic' ex st 'Private 'RW m a ->
+  (ex -> Magic' ex st 'Private 'RW m a) ->
+  Magic' ex st 'Private 'RW m a
+magicCatch (MagicRW m) f = MagicRW $ catchE m $ unMagicRW . f
 
 runMagicRO :: Monad m => st -> Magic' ex st v 'RO m a -> m a
 runMagicRO st (MagicRO accessM) =
@@ -138,54 +148,69 @@ local f m = do
   liftState $ State.put st
   pure x
 
-safeToPrivate ::
+toPrivate ::
   forall ex st v rw m a.
-  (IsReadWrite rw, Monad m) =>
+  Monad m =>
   Magic' ex st v rw m a ->
   Magic' ex st 'Private rw m a
-safeToPrivate magic = case (singReadWrite @rw, magic) of
-  (SRO, MagicRO m) -> MagicRO $ Access.safeToPrivate m
-  (SRW, MagicRW (ExceptT m)) -> MagicRW $ ExceptT $ Access.safeToPrivate m
+toPrivate = \case
+  MagicRO m -> MagicRO $ Access.safeToPrivate m
+  MagicRW (ExceptT m) -> MagicRW $ ExceptT $ Access.safeToPrivate m
 
-safeToRW ::
+toRW ::
   forall ex st v rw m a.
-  (IsReadWrite rw, Monad m) =>
+  Monad m =>
   Magic' ex st v rw m a ->
   Magic' ex st v 'RW m a
-safeToRW magic = case (singReadWrite @rw, magic) of
-  (SRO, MagicRO m) -> MagicRW $ ExceptT $ Right <$> Access.safeToRW m
-  (SRW, _) -> magic
+toRW = \case
+  MagicRO m -> MagicRW $ ExceptT $ Right <$> Access.safeToRW m
+  magic@MagicRW{} -> magic
 
-safeFromPublicRO ::
+fromPublicRO ::
   forall ex st v rw m a.
   (IsReadWrite rw, Monad m) =>
   Magic' ex st 'Public 'RO m a ->
   Magic' ex st v rw m a
-safeFromPublicRO = safeFromPublic . safeFromRO
+fromPublicRO = fromPublic . fromRO
 
-safeFromPublic ::
+fromPublic ::
   forall ex st v rw m a.
-  (IsReadWrite rw, Monad m) =>
+  Monad m =>
   Magic' ex st 'Public rw m a ->
   Magic' ex st v rw m a
-safeFromPublic magic = case (singReadWrite @rw, magic) of
-  (SRO, MagicRO m) -> MagicRO $ Access.safeFromPublic m
-  (SRW, MagicRW (ExceptT m)) -> MagicRW $ ExceptT $ Access.safeFromPublic m
+fromPublic = \case
+  MagicRO m -> MagicRO $ Access.safeFromPublic m
+  MagicRW (ExceptT m) -> MagicRW $ ExceptT $ Access.safeFromPublic m
 
-safeFromRO ::
+fromRO ::
   forall ex st v rw m a.
   (IsReadWrite rw, Monad m) =>
   Magic' ex st v 'RO m a ->
   Magic' ex st v rw m a
-safeFromRO magic = case (singReadWrite @rw, magic) of
-  (SRO, MagicRO m) -> MagicRO $ Access.safeFromRO m
-  (SRW, MagicRO m) -> MagicRW $ ExceptT $ Right <$> Access.safeFromRO m
+fromRO (MagicRO m) = case singReadWrite @rw of
+  SRO -> MagicRO $ Access.safeFromRO m
+  SRW -> MagicRW $ ExceptT $ Right <$> Access.safeFromRO m
 
-unsafeFromPrivate ::
+internalFromPrivate ::
   forall ex st v rw m a.
-  (IsReadWrite rw, Monad m) =>
+  Monad m =>
   Magic' ex st 'Private rw m a ->
   Magic' ex st v rw m a
-unsafeFromPrivate magic = case (singReadWrite @rw, magic) of
-  (SRO, MagicRO m) -> MagicRO $ Access.unsafeFromPrivate m
-  (SRW, MagicRW (ExceptT m)) -> MagicRW $ ExceptT $ Access.unsafeFromPrivate m
+internalFromPrivate = \case
+  MagicRO m -> MagicRO $ Access.unsafeFromPrivate m
+  MagicRW (ExceptT m) -> MagicRW $ ExceptT $ Access.unsafeFromPrivate m
+
+internalFromRW ::
+  forall ex st v rw m a.
+  (IsReadWrite rw, Monad m) =>
+  (ex -> a) ->
+  Magic' ex st v 'RW m a ->
+  Magic' ex st v rw m a
+internalFromRW f magic@(MagicRW m) = case singReadWrite @rw of
+  SRO ->
+    MagicRO $
+      Access.unsafeFromRW $
+        runExceptT m <&> \case
+          Left ex -> f ex
+          Right a -> a
+  SRW -> magic

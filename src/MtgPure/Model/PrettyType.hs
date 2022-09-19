@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -35,7 +36,7 @@ import safe Data.Inst (
   Inst9,
  )
 import safe Data.Proxy (Proxy (Proxy))
-import safe Data.Typeable (Typeable, typeRep)
+import safe Data.Typeable (TypeRep, Typeable, typeRep)
 import safe MtgPure.Model.IsObjectType (IsObjectType (litObjectType))
 import safe MtgPure.Model.ObjectType (
   OT1,
@@ -66,13 +67,16 @@ import safe MtgPure.Model.ObjectType.Kind (
  )
 
 class Typeable ty => PrettyType ty where
-  prettyType :: Proxy ty -> String
+  prettyType :: String
 
 instance IsObjectType a => PrettyType a where
-  prettyType = show . litObjectType
+  prettyType = show (litObjectType @a)
+
+getRep :: forall a. Typeable a => TypeRep
+getRep = typeRep (Proxy @a)
 
 instance IsObjectType a => PrettyType (OT1 a) where
-  prettyType _ = case litObjectType (Proxy @a) of
+  prettyType = case litObjectType @a of
     OTActivatedAbility -> "OTActivatedAbility"
     OTArtifact -> "OTArtifact"
     OTCreature -> "OTCreature"
@@ -87,263 +91,263 @@ instance IsObjectType a => PrettyType (OT1 a) where
     OTTriggeredAbility -> "OTTriggeredAbility"
 
 instance Inst2 IsObjectType a b => PrettyType (OT2 a b) where
-  prettyType proxy =
+  prettyType =
     if
-        | rep == typeRep (Proxy @OTArtifactCreature) ->
+        | rep == getRep @OTArtifactCreature ->
           "OTArtifactCreature"
-        | rep == typeRep (Proxy @OTCreaturePlaneswalker) ->
+        | rep == getRep @OTCreaturePlaneswalker ->
           "OTCreaturePlaneswalker"
-        | rep == typeRep (Proxy @OTCreaturePlayer) ->
+        | rep == getRep @OTCreaturePlayer ->
           "OTCreaturePlayer"
-        | rep == typeRep (Proxy @OTEnchantmentCreature) ->
+        | rep == getRep @OTEnchantmentCreature ->
           "OTEnchantmentCreature"
-        | rep == typeRep (Proxy @OTPlayerPlaneswalker) ->
+        | rep == getRep @OTPlayerPlaneswalker ->
           "OTPlayerPlaneswalker"
         | otherwise ->
           "OT '( '(), "
-            ++ show (typeRep (Proxy @a))
+            ++ show (getRep @a)
             ++ ", "
-            ++ show (typeRep (Proxy @b))
+            ++ show (getRep @b)
             ++ ")"
    where
-    rep = typeRep proxy
+    rep = getRep @(OT2 a b)
 
 instance Inst3 IsObjectType a b c => PrettyType (OT3 a b c) where
-  prettyType proxy =
+  prettyType =
     if
-        | rep == typeRep (Proxy @OTCreaturePlayerPlaneswalker) ->
+        | rep == getRep @OTCreaturePlayerPlaneswalker ->
           "OTCreaturePlayerPlaneswalker"
         | otherwise ->
           "OT '( '(), "
-            ++ show (typeRep (Proxy @a))
+            ++ show (getRep @a)
             ++ ", "
-            ++ show (typeRep (Proxy @b))
+            ++ show (getRep @b)
             ++ ", "
-            ++ show (typeRep (Proxy @c))
+            ++ show (getRep @c)
             ++ ")"
    where
-    rep = typeRep proxy
+    rep = getRep @(OT3 a b c)
 
 instance Inst4 IsObjectType a b c d => PrettyType (OT4 a b c d) where
-  prettyType proxy =
+  prettyType =
     if
         | otherwise ->
           "OT '( '(), "
-            ++ show (typeRep (Proxy @a))
+            ++ show (getRep @a)
             ++ ", "
-            ++ show (typeRep (Proxy @b))
+            ++ show (getRep @b)
             ++ ", "
-            ++ show (typeRep (Proxy @c))
+            ++ show (getRep @c)
             ++ ", "
-            ++ show (typeRep (Proxy @d))
+            ++ show (getRep @d)
             ++ ")"
    where
-    _rep = typeRep proxy
+    _rep = getRep @(OT4 a b c d)
 
 instance Inst5 IsObjectType a b c d e => PrettyType (OT5 a b c d e) where
-  prettyType proxy =
+  prettyType =
     if
-        | rep == typeRep (Proxy @OTPermanent) ->
+        | rep == getRep @OTPermanent ->
           "OTPermanent"
         | otherwise ->
           "OT '( '(), "
-            ++ show (typeRep (Proxy @a))
+            ++ show (getRep @a)
             ++ ", "
-            ++ show (typeRep (Proxy @b))
+            ++ show (getRep @b)
             ++ ", "
-            ++ show (typeRep (Proxy @c))
+            ++ show (getRep @c)
             ++ ", "
-            ++ show (typeRep (Proxy @d))
+            ++ show (getRep @d)
             ++ ", "
-            ++ show (typeRep (Proxy @e))
+            ++ show (getRep @e)
             ++ ")"
    where
-    rep = typeRep proxy
+    rep = getRep @(OT5 a b c d e)
 
 instance Inst6 IsObjectType a b c d e f => PrettyType (OT6 a b c d e f) where
-  prettyType proxy =
+  prettyType =
     if
-        | rep == typeRep (Proxy @OTSpell) ->
+        | rep == getRep @OTSpell ->
           "OTSpell"
         | otherwise ->
           "OT '( '(), "
-            ++ show (typeRep (Proxy @a))
+            ++ show (getRep @a)
             ++ ", "
-            ++ show (typeRep (Proxy @b))
+            ++ show (getRep @b)
             ++ ", "
-            ++ show (typeRep (Proxy @c))
+            ++ show (getRep @c)
             ++ ", "
-            ++ show (typeRep (Proxy @d))
+            ++ show (getRep @d)
             ++ ", "
-            ++ show (typeRep (Proxy @e))
+            ++ show (getRep @e)
             ++ ", "
-            ++ show (typeRep (Proxy @f))
+            ++ show (getRep @f)
             ++ ")"
    where
-    rep = typeRep proxy
+    rep = getRep @(OT6 a b c d e f)
 
 instance Inst7 IsObjectType a b c d e f g => PrettyType (OT7 a b c d e f g) where
-  prettyType proxy =
+  prettyType =
     if
         | otherwise ->
-          "OT '( '(), "
-            ++ show (typeRep (Proxy @a))
+          "OT '(),  '("
+            ++ show (getRep @a)
             ++ ", "
-            ++ show (typeRep (Proxy @b))
+            ++ show (getRep @b)
             ++ ", "
-            ++ show (typeRep (Proxy @c))
+            ++ show (getRep @c)
             ++ ", "
-            ++ show (typeRep (Proxy @d))
+            ++ show (getRep @d)
             ++ ", "
-            ++ show (typeRep (Proxy @e))
+            ++ show (getRep @e)
             ++ ", "
-            ++ show (typeRep (Proxy @f))
+            ++ show (getRep @f)
             ++ ", "
-            ++ show (typeRep (Proxy @g))
+            ++ show (getRep @g)
             ++ ")"
    where
-    _rep = typeRep proxy
+    _rep = getRep @(OT7 a b c d e f g)
 
 instance Inst8 IsObjectType a b c d e f g h => PrettyType (OT8 a b c d e f g h) where
-  prettyType proxy =
+  prettyType =
     if
-        | rep == typeRep (Proxy @OTDamageSource) ->
+        | rep == getRep @OTDamageSource ->
           "OTDamageSource"
         | otherwise ->
           "OT '( '(), "
-            ++ show (typeRep (Proxy @a))
+            ++ show (getRep @a)
             ++ ", "
-            ++ show (typeRep (Proxy @b))
+            ++ show (getRep @b)
             ++ ", "
-            ++ show (typeRep (Proxy @c))
+            ++ show (getRep @c)
             ++ ", "
-            ++ show (typeRep (Proxy @d))
+            ++ show (getRep @d)
             ++ ", "
-            ++ show (typeRep (Proxy @e))
+            ++ show (getRep @e)
             ++ ", "
-            ++ show (typeRep (Proxy @f))
+            ++ show (getRep @f)
             ++ ", "
-            ++ show (typeRep (Proxy @g))
+            ++ show (getRep @g)
             ++ ", "
-            ++ show (typeRep (Proxy @h))
+            ++ show (getRep @h)
             ++ ")"
    where
-    rep = typeRep proxy
+    rep = getRep @(OT8 a b c d e f g h)
 
 instance Inst9 IsObjectType a b c d e f g h i => PrettyType (OT9 a b c d e f g h i) where
-  prettyType proxy =
+  prettyType =
     if
         | otherwise ->
           "OT '( '(), "
-            ++ show (typeRep (Proxy @a))
+            ++ show (getRep @a)
             ++ ", "
-            ++ show (typeRep (Proxy @b))
+            ++ show (getRep @b)
             ++ ", "
-            ++ show (typeRep (Proxy @c))
+            ++ show (getRep @c)
             ++ ", "
-            ++ show (typeRep (Proxy @d))
+            ++ show (getRep @d)
             ++ ", "
-            ++ show (typeRep (Proxy @e))
+            ++ show (getRep @e)
             ++ ", "
-            ++ show (typeRep (Proxy @f))
+            ++ show (getRep @f)
             ++ ", "
-            ++ show (typeRep (Proxy @g))
+            ++ show (getRep @g)
             ++ ", "
-            ++ show (typeRep (Proxy @h))
+            ++ show (getRep @h)
             ++ ","
-            ++ show (typeRep (Proxy @i))
+            ++ show (getRep @i)
             ++ ")"
    where
-    _rep = typeRep proxy
+    _rep = getRep @(OT9 a b c d e f g h i)
 
 instance Inst10 IsObjectType a b c d e f g h i j => PrettyType (OT10 a b c d e f g h i j) where
-  prettyType proxy =
+  prettyType =
     if
         | otherwise ->
           "OT '( '(), "
-            ++ show (typeRep (Proxy @a))
+            ++ show (getRep @a)
             ++ ", "
-            ++ show (typeRep (Proxy @b))
+            ++ show (getRep @b)
             ++ ", "
-            ++ show (typeRep (Proxy @c))
+            ++ show (getRep @c)
             ++ ", "
-            ++ show (typeRep (Proxy @d))
+            ++ show (getRep @d)
             ++ ", "
-            ++ show (typeRep (Proxy @e))
+            ++ show (getRep @e)
             ++ ", "
-            ++ show (typeRep (Proxy @f))
+            ++ show (getRep @f)
             ++ ", "
-            ++ show (typeRep (Proxy @g))
+            ++ show (getRep @g)
             ++ ", "
-            ++ show (typeRep (Proxy @h))
+            ++ show (getRep @h)
             ++ ","
-            ++ show (typeRep (Proxy @i))
+            ++ show (getRep @i)
             ++ ","
-            ++ show (typeRep (Proxy @j))
+            ++ show (getRep @j)
             ++ ")"
    where
-    _rep = typeRep proxy
+    _rep = getRep @(OT10 a b c d e f g h i j)
 
 instance Inst11 IsObjectType a b c d e f g h i j k => PrettyType (OT11 a b c d e f g h i j k) where
-  prettyType proxy =
+  prettyType =
     if
         | otherwise ->
           "OT '( '(), "
-            ++ show (typeRep (Proxy @a))
+            ++ show (getRep @a)
             ++ ", "
-            ++ show (typeRep (Proxy @b))
+            ++ show (getRep @b)
             ++ ", "
-            ++ show (typeRep (Proxy @c))
+            ++ show (getRep @c)
             ++ ", "
-            ++ show (typeRep (Proxy @d))
+            ++ show (getRep @d)
             ++ ", "
-            ++ show (typeRep (Proxy @e))
+            ++ show (getRep @e)
             ++ ", "
-            ++ show (typeRep (Proxy @f))
+            ++ show (getRep @f)
             ++ ", "
-            ++ show (typeRep (Proxy @g))
+            ++ show (getRep @g)
             ++ ", "
-            ++ show (typeRep (Proxy @h))
+            ++ show (getRep @h)
             ++ ","
-            ++ show (typeRep (Proxy @i))
+            ++ show (getRep @i)
             ++ ","
-            ++ show (typeRep (Proxy @j))
+            ++ show (getRep @j)
             ++ ","
-            ++ show (typeRep (Proxy @k))
+            ++ show (getRep @k)
             ++ ")"
    where
-    _rep = typeRep proxy
+    _rep = getRep @(OT11 a b c d e f g h i j k)
 
 instance Inst12 IsObjectType a b c d e f g h i j k l => PrettyType (OT12 a b c d e f g h i j k l) where
-  prettyType proxy =
+  prettyType =
     if
-        | rep == typeRep (Proxy @OTAny) ->
+        | rep == getRep @OTAny ->
           "OTAny"
         | otherwise ->
           "OT '( '(), "
-            ++ show (typeRep (Proxy @a))
+            ++ show (getRep @a)
             ++ ", "
-            ++ show (typeRep (Proxy @b))
+            ++ show (getRep @b)
             ++ ", "
-            ++ show (typeRep (Proxy @c))
+            ++ show (getRep @c)
             ++ ", "
-            ++ show (typeRep (Proxy @d))
+            ++ show (getRep @d)
             ++ ", "
-            ++ show (typeRep (Proxy @e))
+            ++ show (getRep @e)
             ++ ", "
-            ++ show (typeRep (Proxy @f))
+            ++ show (getRep @f)
             ++ ", "
-            ++ show (typeRep (Proxy @g))
+            ++ show (getRep @g)
             ++ ", "
-            ++ show (typeRep (Proxy @h))
+            ++ show (getRep @h)
             ++ ","
-            ++ show (typeRep (Proxy @i))
+            ++ show (getRep @i)
             ++ ","
-            ++ show (typeRep (Proxy @j))
+            ++ show (getRep @j)
             ++ ","
-            ++ show (typeRep (Proxy @k))
+            ++ show (getRep @k)
             ++ ","
-            ++ show (typeRep (Proxy @l))
+            ++ show (getRep @l)
             ++ ")"
    where
-    rep = typeRep proxy
+    rep = getRep @(OT12 a b c d e f g h i j k l)

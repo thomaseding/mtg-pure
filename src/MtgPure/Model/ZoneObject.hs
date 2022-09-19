@@ -18,6 +18,8 @@
 {-# HLINT ignore "Use if" #-}
 
 module MtgPure.Model.ZoneObject (
+  IsOT,
+  IsZO,
   ZO,
   ZoneObject (..),
   zoToObjectN,
@@ -34,6 +36,7 @@ module MtgPure.Model.ZoneObject (
   toZO10,
   toZO11,
   toZO12,
+  objectToZO,
   OAbility,
   OActivatedAbility,
   OActivatedOrTriggeredAbility,
@@ -62,12 +65,15 @@ module MtgPure.Model.ZoneObject (
 ) where
 
 import safe Data.ConsIndex (ConsIndex (..))
+import safe Data.Inst (
+  Inst1,
+ )
 import safe Data.Kind (Type)
-import safe Data.Proxy (Proxy (..))
-import safe Data.Typeable (Typeable)
-import MtgPure.Model.Object (Object)
+import safe Data.Typeable (Typeable, cast)
+import safe MtgPure.Model.IsObjectType (HasSingOT (..), IsObjectType, SingOT (..))
+import safe MtgPure.Model.Object (Object)
 import safe MtgPure.Model.ObjectId (GetObjectId (..), ObjectId (..))
-import safe MtgPure.Model.ObjectN (ObjectN (O0))
+import safe MtgPure.Model.ObjectN (ObjectN (..))
 import safe MtgPure.Model.ObjectType (
   OT0,
   OT1,
@@ -83,6 +89,7 @@ import safe MtgPure.Model.ObjectType (
   OT8,
   OT9,
  )
+import safe MtgPure.Model.ObjectType.Index (IndexOT (..))
 import safe MtgPure.Model.ObjectType.Kind (
   OTAbility,
   OTActivatedAbility,
@@ -125,19 +132,18 @@ import safe MtgPure.Model.ToObjectN.Classes (
   ToObject8 (..),
   ToObject9 (..),
  )
-import MtgPure.Model.VisitObjectN (VisitObjectN (..))
+import safe MtgPure.Model.VisitObjectN (VisitObjectN (..))
 import safe MtgPure.Model.Zone (IsZone (..), SZone (..), Zone (..))
 
 type ZO = ZoneObject
 
--- TODO: Place zone-specific record data into these, such as Controller and Owner information.
 data ZoneObject (zone :: Zone) (ot :: Type) :: Type where
-  ZOBattlefield :: SZone 'ZBattlefield -> ObjectN ot -> ZoneObject 'ZBattlefield ot
-  ZOExile :: SZone 'ZExile -> ObjectN ot -> ZoneObject 'ZExile ot
-  ZOGraveyard :: SZone 'ZGraveyard -> ObjectN ot -> ZoneObject 'ZGraveyard ot
-  ZOHand :: SZone 'ZHand -> ObjectN ot -> ZoneObject 'ZHand ot
-  ZOLibrary :: SZone 'ZLibrary -> ObjectN ot -> ZoneObject 'ZLibrary ot
-  ZOStack :: SZone 'ZStack -> ObjectN ot -> ZoneObject 'ZStack ot
+  ZOBattlefield :: ObjectN ot -> ZoneObject 'ZBattlefield ot
+  ZOExile :: ObjectN ot -> ZoneObject 'ZExile ot
+  ZOGraveyard :: ObjectN ot -> ZoneObject 'ZGraveyard ot
+  ZOHand :: ObjectN ot -> ZoneObject 'ZHand ot
+  ZOLibrary :: ObjectN ot -> ZoneObject 'ZLibrary ot
+  ZOStack :: ObjectN ot -> ZoneObject 'ZStack ot
   deriving (Typeable)
 
 instance ConsIndex (ZO zone ot) where
@@ -150,10 +156,10 @@ instance ConsIndex (ZO zone ot) where
     ZOStack{} -> 6
 
 instance (IsZone zone, PrettyType ot) => PrettyType (ZO zone ot) where
-  prettyType _ = "ZO '" ++ sZone ++ " " ++ open ++ sOT ++ close
+  prettyType = "ZO '" ++ sZone ++ " " ++ open ++ sOT ++ close
    where
-    sZone = show $ litZone (Proxy @zone)
-    sOT = prettyType (Proxy @ot)
+    sZone = show (litZone @zone)
+    sOT = prettyType @ot
     (open, close) = case ' ' `elem` sOT of
       True -> ("(", ")")
       False -> ("", "")
@@ -163,24 +169,24 @@ instance GetObjectId (ObjectN ot) => GetObjectId (ZO zone ot) where
 
 zoToObjectN :: ZO zone ot -> ObjectN ot
 zoToObjectN = \case
-  ZOBattlefield _ o -> o
-  ZOExile _ o -> o
-  ZOGraveyard _ o -> o
-  ZOHand _ o -> o
-  ZOLibrary _ o -> o
-  ZOStack _ o -> o
+  ZOBattlefield o -> o
+  ZOExile o -> o
+  ZOGraveyard o -> o
+  ZOHand o -> o
+  ZOLibrary o -> o
+  ZOStack o -> o
 
 class ToZO0 (zone :: Zone) (object :: Type) where
   toZO0 :: object -> ZO zone OT0
 
 instance IsZone zone => ToZO0 zone ObjectId where
   toZO0 o = case singZone @zone of
-    SZBattlefield -> ZOBattlefield SZBattlefield $ O0 o
-    SZExile -> ZOExile SZExile $ O0 o
-    SZGraveyard -> ZOGraveyard SZGraveyard $ O0 o
-    SZHand -> ZOHand SZHand $ O0 o
-    SZLibrary -> ZOLibrary SZLibrary $ O0 o
-    SZStack -> ZOStack SZStack $ O0 o
+    SZBattlefield -> ZOBattlefield $ O0 o
+    SZExile -> ZOExile $ O0 o
+    SZGraveyard -> ZOGraveyard $ O0 o
+    SZHand -> ZOHand $ O0 o
+    SZLibrary -> ZOLibrary $ O0 o
+    SZStack -> ZOStack $ O0 o
 
 instance IsZone zone => ToZO0 zone (Object ot) where
   toZO0 = toZO0 . getObjectId
@@ -193,125 +199,168 @@ instance (VisitObjectN ot, IsZone zone) => ToZO0 zone (ZO zone ot) where
 
 toZO1 :: ToObject1 ot a => ZO zone ot -> ZO zone (OT1 a)
 toZO1 = \case
-  ZOBattlefield SZBattlefield o -> ZOBattlefield SZBattlefield $ toObject1 o
-  ZOExile SZExile o -> ZOExile SZExile $ toObject1 o
-  ZOGraveyard SZGraveyard o -> ZOGraveyard SZGraveyard $ toObject1 o
-  ZOHand SZHand o -> ZOHand SZHand $ toObject1 o
-  ZOLibrary SZLibrary o -> ZOLibrary SZLibrary $ toObject1 o
-  ZOStack SZStack o -> ZOStack SZStack $ toObject1 o
+  ZOBattlefield o -> ZOBattlefield $ toObject1 o
+  ZOExile o -> ZOExile $ toObject1 o
+  ZOGraveyard o -> ZOGraveyard $ toObject1 o
+  ZOHand o -> ZOHand $ toObject1 o
+  ZOLibrary o -> ZOLibrary $ toObject1 o
+  ZOStack o -> ZOStack $ toObject1 o
 
 toZO2 :: ToObject2 ot a b => ZO zone ot -> ZO zone (OT2 a b)
 toZO2 = \case
-  ZOBattlefield SZBattlefield o -> ZOBattlefield SZBattlefield $ toObject2 o
-  ZOExile SZExile o -> ZOExile SZExile $ toObject2 o
-  ZOGraveyard SZGraveyard o -> ZOGraveyard SZGraveyard $ toObject2 o
-  ZOHand SZHand o -> ZOHand SZHand $ toObject2 o
-  ZOLibrary SZLibrary o -> ZOLibrary SZLibrary $ toObject2 o
-  ZOStack SZStack o -> ZOStack SZStack $ toObject2 o
+  ZOBattlefield o -> ZOBattlefield $ toObject2 o
+  ZOExile o -> ZOExile $ toObject2 o
+  ZOGraveyard o -> ZOGraveyard $ toObject2 o
+  ZOHand o -> ZOHand $ toObject2 o
+  ZOLibrary o -> ZOLibrary $ toObject2 o
+  ZOStack o -> ZOStack $ toObject2 o
 
 toZO3 :: ToObject3 ot a b c => ZO zone ot -> ZO zone (OT3 a b c)
 toZO3 = \case
-  ZOBattlefield SZBattlefield o -> ZOBattlefield SZBattlefield $ toObject3 o
-  ZOExile SZExile o -> ZOExile SZExile $ toObject3 o
-  ZOGraveyard SZGraveyard o -> ZOGraveyard SZGraveyard $ toObject3 o
-  ZOHand SZHand o -> ZOHand SZHand $ toObject3 o
-  ZOLibrary SZLibrary o -> ZOLibrary SZLibrary $ toObject3 o
-  ZOStack SZStack o -> ZOStack SZStack $ toObject3 o
+  ZOBattlefield o -> ZOBattlefield $ toObject3 o
+  ZOExile o -> ZOExile $ toObject3 o
+  ZOGraveyard o -> ZOGraveyard $ toObject3 o
+  ZOHand o -> ZOHand $ toObject3 o
+  ZOLibrary o -> ZOLibrary $ toObject3 o
+  ZOStack o -> ZOStack $ toObject3 o
 
 toZO4 :: ToObject4 ot a b c d => ZO zone ot -> ZO zone (OT4 a b c d)
 toZO4 = \case
-  ZOBattlefield SZBattlefield o -> ZOBattlefield SZBattlefield $ toObject4 o
-  ZOExile SZExile o -> ZOExile SZExile $ toObject4 o
-  ZOGraveyard SZGraveyard o -> ZOGraveyard SZGraveyard $ toObject4 o
-  ZOHand SZHand o -> ZOHand SZHand $ toObject4 o
-  ZOLibrary SZLibrary o -> ZOLibrary SZLibrary $ toObject4 o
-  ZOStack SZStack o -> ZOStack SZStack $ toObject4 o
+  ZOBattlefield o -> ZOBattlefield $ toObject4 o
+  ZOExile o -> ZOExile $ toObject4 o
+  ZOGraveyard o -> ZOGraveyard $ toObject4 o
+  ZOHand o -> ZOHand $ toObject4 o
+  ZOLibrary o -> ZOLibrary $ toObject4 o
+  ZOStack o -> ZOStack $ toObject4 o
 
 toZO5 :: ToObject5 ot a b c d e => ZO zone ot -> ZO zone (OT5 a b c d e)
 toZO5 = \case
-  ZOBattlefield SZBattlefield o -> ZOBattlefield SZBattlefield $ toObject5 o
-  ZOExile SZExile o -> ZOExile SZExile $ toObject5 o
-  ZOGraveyard SZGraveyard o -> ZOGraveyard SZGraveyard $ toObject5 o
-  ZOHand SZHand o -> ZOHand SZHand $ toObject5 o
-  ZOLibrary SZLibrary o -> ZOLibrary SZLibrary $ toObject5 o
-  ZOStack SZStack o -> ZOStack SZStack $ toObject5 o
+  ZOBattlefield o -> ZOBattlefield $ toObject5 o
+  ZOExile o -> ZOExile $ toObject5 o
+  ZOGraveyard o -> ZOGraveyard $ toObject5 o
+  ZOHand o -> ZOHand $ toObject5 o
+  ZOLibrary o -> ZOLibrary $ toObject5 o
+  ZOStack o -> ZOStack $ toObject5 o
 
 toZO6 :: ToObject6 ot a b c d e f => ZO zone ot -> ZO zone (OT6 a b c d e f)
 toZO6 = \case
-  ZOBattlefield SZBattlefield o -> ZOBattlefield SZBattlefield $ toObject6 o
-  ZOExile SZExile o -> ZOExile SZExile $ toObject6 o
-  ZOGraveyard SZGraveyard o -> ZOGraveyard SZGraveyard $ toObject6 o
-  ZOHand SZHand o -> ZOHand SZHand $ toObject6 o
-  ZOLibrary SZLibrary o -> ZOLibrary SZLibrary $ toObject6 o
-  ZOStack SZStack o -> ZOStack SZStack $ toObject6 o
+  ZOBattlefield o -> ZOBattlefield $ toObject6 o
+  ZOExile o -> ZOExile $ toObject6 o
+  ZOGraveyard o -> ZOGraveyard $ toObject6 o
+  ZOHand o -> ZOHand $ toObject6 o
+  ZOLibrary o -> ZOLibrary $ toObject6 o
+  ZOStack o -> ZOStack $ toObject6 o
 
 toZO7 ::
   ToObject7 ot a b c d e f g => ZO zone ot -> ZO zone (OT7 a b c d e f g)
 toZO7 = \case
-  ZOBattlefield SZBattlefield o -> ZOBattlefield SZBattlefield $ toObject7 o
-  ZOExile SZExile o -> ZOExile SZExile $ toObject7 o
-  ZOGraveyard SZGraveyard o -> ZOGraveyard SZGraveyard $ toObject7 o
-  ZOHand SZHand o -> ZOHand SZHand $ toObject7 o
-  ZOLibrary SZLibrary o -> ZOLibrary SZLibrary $ toObject7 o
-  ZOStack SZStack o -> ZOStack SZStack $ toObject7 o
+  ZOBattlefield o -> ZOBattlefield $ toObject7 o
+  ZOExile o -> ZOExile $ toObject7 o
+  ZOGraveyard o -> ZOGraveyard $ toObject7 o
+  ZOHand o -> ZOHand $ toObject7 o
+  ZOLibrary o -> ZOLibrary $ toObject7 o
+  ZOStack o -> ZOStack $ toObject7 o
 
 toZO8 ::
   ToObject8 ot a b c d e f g h => ZO zone ot -> ZO zone (OT8 a b c d e f g h)
 toZO8 = \case
-  ZOBattlefield SZBattlefield o -> ZOBattlefield SZBattlefield $ toObject8 o
-  ZOExile SZExile o -> ZOExile SZExile $ toObject8 o
-  ZOGraveyard SZGraveyard o -> ZOGraveyard SZGraveyard $ toObject8 o
-  ZOHand SZHand o -> ZOHand SZHand $ toObject8 o
-  ZOLibrary SZLibrary o -> ZOLibrary SZLibrary $ toObject8 o
-  ZOStack SZStack o -> ZOStack SZStack $ toObject8 o
+  ZOBattlefield o -> ZOBattlefield $ toObject8 o
+  ZOExile o -> ZOExile $ toObject8 o
+  ZOGraveyard o -> ZOGraveyard $ toObject8 o
+  ZOHand o -> ZOHand $ toObject8 o
+  ZOLibrary o -> ZOLibrary $ toObject8 o
+  ZOStack o -> ZOStack $ toObject8 o
 
 toZO9 ::
   ToObject9 ot a b c d e f g h i =>
   ZO zone ot ->
   ZO zone (OT9 a b c d e f g h i)
 toZO9 = \case
-  ZOBattlefield SZBattlefield o -> ZOBattlefield SZBattlefield $ toObject9 o
-  ZOExile SZExile o -> ZOExile SZExile $ toObject9 o
-  ZOGraveyard SZGraveyard o -> ZOGraveyard SZGraveyard $ toObject9 o
-  ZOHand SZHand o -> ZOHand SZHand $ toObject9 o
-  ZOLibrary SZLibrary o -> ZOLibrary SZLibrary $ toObject9 o
-  ZOStack SZStack o -> ZOStack SZStack $ toObject9 o
+  ZOBattlefield o -> ZOBattlefield $ toObject9 o
+  ZOExile o -> ZOExile $ toObject9 o
+  ZOGraveyard o -> ZOGraveyard $ toObject9 o
+  ZOHand o -> ZOHand $ toObject9 o
+  ZOLibrary o -> ZOLibrary $ toObject9 o
+  ZOStack o -> ZOStack $ toObject9 o
 
 toZO10 ::
   ToObject10 ot a b c d e f g h i j =>
   ZO zone ot ->
   ZO zone (OT10 a b c d e f g h i j)
 toZO10 = \case
-  ZOBattlefield SZBattlefield o -> ZOBattlefield SZBattlefield $ toObject10 o
-  ZOExile SZExile o -> ZOExile SZExile $ toObject10 o
-  ZOGraveyard SZGraveyard o -> ZOGraveyard SZGraveyard $ toObject10 o
-  ZOHand SZHand o -> ZOHand SZHand $ toObject10 o
-  ZOLibrary SZLibrary o -> ZOLibrary SZLibrary $ toObject10 o
-  ZOStack SZStack o -> ZOStack SZStack $ toObject10 o
+  ZOBattlefield o -> ZOBattlefield $ toObject10 o
+  ZOExile o -> ZOExile $ toObject10 o
+  ZOGraveyard o -> ZOGraveyard $ toObject10 o
+  ZOHand o -> ZOHand $ toObject10 o
+  ZOLibrary o -> ZOLibrary $ toObject10 o
+  ZOStack o -> ZOStack $ toObject10 o
 
 toZO11 ::
   ToObject11 ot a b c d e f g h i j k =>
   ZO zone ot ->
   ZO zone (OT11 a b c d e f g h i j k)
 toZO11 = \case
-  ZOBattlefield SZBattlefield o -> ZOBattlefield SZBattlefield $ toObject11 o
-  ZOExile SZExile o -> ZOExile SZExile $ toObject11 o
-  ZOGraveyard SZGraveyard o -> ZOGraveyard SZGraveyard $ toObject11 o
-  ZOHand SZHand o -> ZOHand SZHand $ toObject11 o
-  ZOLibrary SZLibrary o -> ZOLibrary SZLibrary $ toObject11 o
-  ZOStack SZStack o -> ZOStack SZStack $ toObject11 o
+  ZOBattlefield o -> ZOBattlefield $ toObject11 o
+  ZOExile o -> ZOExile $ toObject11 o
+  ZOGraveyard o -> ZOGraveyard $ toObject11 o
+  ZOHand o -> ZOHand $ toObject11 o
+  ZOLibrary o -> ZOLibrary $ toObject11 o
+  ZOStack o -> ZOStack $ toObject11 o
 
 toZO12 ::
   ToObject12 ot a b c d e f g h i j k l =>
   ZO zone ot ->
   ZO zone (OT12 a b c d e f g h i j k l)
 toZO12 = \case
-  ZOBattlefield SZBattlefield o -> ZOBattlefield SZBattlefield $ toObject12 o
-  ZOExile SZExile o -> ZOExile SZExile $ toObject12 o
-  ZOGraveyard SZGraveyard o -> ZOGraveyard SZGraveyard $ toObject12 o
-  ZOHand SZHand o -> ZOHand SZHand $ toObject12 o
-  ZOLibrary SZLibrary o -> ZOLibrary SZLibrary $ toObject12 o
-  ZOStack SZStack o -> ZOStack SZStack $ toObject12 o
+  ZOBattlefield o -> ZOBattlefield $ toObject12 o
+  ZOExile o -> ZOExile $ toObject12 o
+  ZOGraveyard o -> ZOGraveyard $ toObject12 o
+  ZOHand o -> ZOHand $ toObject12 o
+  ZOLibrary o -> ZOLibrary $ toObject12 o
+  ZOStack o -> ZOStack $ toObject12 o
+
+type IsOT (ot :: Type) =
+  ( IndexOT ot
+  , VisitObjectN ot
+  , PrettyType ot
+  , HasSingOT ot
+  , GetObjectId (ObjectN ot)
+  )
+
+type IsZO (zone :: Zone) (ot :: Type) =
+  ( IsOT ot
+  , IsZone zone
+  , PrettyType (ZO zone ot)
+  )
+
+objectToZO :: forall z zone ot. (IsObjectType z, IsZO zone ot) => Object z -> Maybe (ZO zone ot)
+objectToZO o = case singOT @ot of
+  ot@OT1 ->
+    let go :: forall a. Inst1 IsObjectType a => SingOT (OT1 a) -> Maybe (ZO zone (OT1 a))
+        go _ = case cast o of
+          Nothing -> Nothing
+          Just o' ->
+            let obj1 = O1 @a o'
+                zo1 = case singZone @zone of
+                  SZBattlefield -> ZOBattlefield obj1
+                  SZExile -> undefined
+                  SZGraveyard -> undefined
+                  SZHand -> undefined
+                  SZLibrary -> undefined
+                  SZStack -> undefined
+             in Just zo1
+     in go ot
+  ot@OT2 -> undefined ot
+  ot@OT3 -> undefined ot
+  ot@OT4 -> undefined ot
+  ot@OT5 -> undefined ot
+  ot@OT6 -> undefined ot
+  ot@OT7 -> undefined ot
+  ot@OT8 -> undefined ot
+  ot@OT9 -> undefined ot
+  ot@OT10 -> undefined ot
+  ot@OT11 -> undefined ot
+  ot@OT12 -> undefined ot
 
 type OAny = ZO 'ZBattlefield OTAny
 

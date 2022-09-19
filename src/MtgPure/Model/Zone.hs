@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -21,7 +22,6 @@ module MtgPure.Model.Zone (
 ) where
 
 import safe Data.Kind (Type)
-import safe Data.Proxy (Proxy)
 import safe Data.Typeable (Typeable)
 
 data Zone :: Type where
@@ -50,28 +50,28 @@ deriving instance Show (SZone zone)
 
 class Typeable zone => IsZone zone where
   singZone :: SZone zone
-  litZone :: Proxy zone -> Zone
+  litZone :: Zone
 
 instance IsZone 'ZBattlefield where
   singZone = SZBattlefield
-  litZone _ = ZBattlefield
+  litZone = ZBattlefield
 
 instance IsZone 'ZExile where
   singZone = SZExile
-  litZone _ = ZExile
+  litZone = ZExile
 
 instance IsZone 'ZGraveyard where
   singZone = SZGraveyard
-  litZone _ = ZGraveyard
+  litZone = ZGraveyard
 
 instance IsZone 'ZHand where
   singZone = SZHand
-  litZone _ = ZHand
+  litZone = ZHand
 
 instance IsZone 'ZLibrary where
   singZone = SZLibrary
-  litZone _ = ZLibrary
+  litZone = ZLibrary
 
 instance IsZone 'ZStack where
   singZone = SZStack
-  litZone _ = ZStack
+  litZone = ZStack

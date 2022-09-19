@@ -7,6 +7,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE Safe #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
@@ -15,11 +16,34 @@
 
 module MtgPure.Model.Tribal (
   Tribal (..),
+  STribal (..),
+  IsTribal (..),
 ) where
 
-import Data.Typeable (Typeable)
+import safe Data.Kind (Type)
+import safe Data.Typeable (Typeable)
 
 data Tribal
   = Tribal
   | NonTribal
-  deriving (Eq, Ord, Typeable)
+  deriving (Eq, Ord, Show, Typeable)
+
+data STribal (tribal :: Tribal) :: Type where
+  STribal :: STribal 'Tribal
+  SNonTribal :: STribal 'NonTribal
+  deriving (Typeable)
+
+deriving instance Eq (STribal tribal)
+
+deriving instance Ord (STribal tribal)
+
+deriving instance Show (STribal tribal)
+
+class IsTribal (tribal :: Tribal) where
+  singTribal :: STribal tribal
+
+instance IsTribal 'Tribal where
+  singTribal = STribal
+
+instance IsTribal 'NonTribal where
+  singTribal = SNonTribal

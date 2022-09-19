@@ -33,6 +33,7 @@ import safe MtgPure.Cards (
   cleanse,
   conversion,
   damnation,
+  fling,
   forest,
   holyStrength,
   island,
@@ -75,6 +76,7 @@ allCards =
   , toCard cityOfBrass
   , toCard conversion
   , toCard damnation
+  , toCard fling
   , toCard forest
   , toCard holyStrength
   , toCard island

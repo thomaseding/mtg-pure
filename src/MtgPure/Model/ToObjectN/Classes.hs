@@ -76,6 +76,8 @@ import safe MtgPure.Model.ObjectType (
  )
 
 class (IsObjectType z, Inst1 IsObjectType a) => ToObject1' z a where
+  -- NOTE: This is the same as `O1` for N=1, but uniqueness is not guaranteed
+  -- for other values of N. This exists for uniformity.
   toObject1' :: Object z -> ObjectN (OT1 a)
 
 class (IsObjectType z, Inst2 IsObjectType a b) => ToObject2' z a b where
