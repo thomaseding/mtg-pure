@@ -26,6 +26,11 @@ data Step :: Phase -> Type where
   UntapStep :: Step 'BeginningPhase
   UpkeepStep :: Step 'BeginningPhase
   DrawStep :: Step 'BeginningPhase
+  BeginningOfCombatStep :: Step 'CombatPhase
+  DeclareAttackersStep :: Step 'CombatPhase
+  DeclareBlockersStep :: Step 'CombatPhase
+  CombatDamageStep :: Step 'CombatPhase
+  EndOfCombatStep :: Step 'CombatPhase
   EndStep :: Step 'EndingPhase
   CleanupStep :: Step 'EndingPhase
   deriving (Typeable)

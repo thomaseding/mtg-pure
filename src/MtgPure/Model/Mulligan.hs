@@ -13,18 +13,12 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.ObjectId (
-  ObjectId (..),
-  GetObjectId (..),
+module MtgPure.Model.Mulligan (
+  Mulligan (..),
 ) where
 
-import safe Data.Typeable (Typeable)
-
-newtype ObjectId = ObjectId Int
-  deriving (Show, Eq, Ord, Typeable)
-
-class GetObjectId a where
-  getObjectId :: a -> ObjectId
-
-instance GetObjectId ObjectId where
-  getObjectId = id
+data Mulligan
+  = DisableMulligan
+  | ParisMulligan
+  | VancouverMulligan
+  | LondonMulligan

@@ -19,17 +19,28 @@ module MtgPure.Model.Player (
 
 import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
+import safe MtgPure.Model.Deck (Deck)
 import safe MtgPure.Model.Graveyard (Graveyard)
 import safe MtgPure.Model.Hand (Hand)
+import safe MtgPure.Model.Library (Library)
 import safe MtgPure.Model.Life (Life)
 import safe MtgPure.Model.ManaPool (CompleteManaPool)
+import safe MtgPure.Model.Sideboard (Sideboard)
 
 data Player :: Type where
   Player ::
-    { playerGraveyard :: Graveyard
+    { playerDrewFromEmptyLibrary :: Bool
+    , playerGraveyard :: Graveyard
     , playerHand :: Hand
+    , playerLandsPlayedThisTurn :: Int
+    , playerLibrary :: Library
     , playerLife :: Life
+    , playerLost :: Bool
     , playerMana :: CompleteManaPool
+    , playerStartingDeck :: Deck
+    , playerStartingHandSize :: Int
+    , playerStartingLife :: Life
+    , playerStartingSideboard :: Sideboard
     } ->
     Player
   deriving (Typeable)

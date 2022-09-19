@@ -19,10 +19,17 @@ module MtgPure.Model.Library (
 
 import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
+import safe MtgPure.Model.IsCardList (IsCardList (..))
 import safe MtgPure.Model.Recursive (Card)
-import safe MtgPure.Model.Zone (Zone (..))
-import safe MtgPure.Model.ZoneObject (ZO)
 
 newtype Library :: Type where
-  Library :: [ZO 'ZLibrary (Card ())] -> Library
+  -- NB: No need for ZO/ObjectN/Object ID here since cards in this zone are guaranteed to be stateless.
+  Library ::
+    { unLibrary :: [Card ()]
+    } ->
+    Library
   deriving (Typeable)
+
+instance IsCardList Library where
+  toCardList = Library
+  fromCardList = unLibrary

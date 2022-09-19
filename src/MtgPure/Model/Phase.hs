@@ -20,7 +20,7 @@ module MtgPure.Model.Phase (
   SPhase (..),
 ) where
 
-import Data.ConsIndex (ConsIndex (..))
+import safe Data.ConsIndex (ConsIndex (..))
 import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
 

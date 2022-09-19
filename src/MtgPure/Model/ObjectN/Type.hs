@@ -16,6 +16,7 @@
 {-# HLINT ignore "Redundant multi-way if" #-}
 
 module MtgPure.Model.ObjectN.Type (
+  ON0,
   ON1,
   ON2,
   ON3,
@@ -32,6 +33,7 @@ module MtgPure.Model.ObjectN.Type (
 
 import safe MtgPure.Model.ObjectN (ObjectN)
 import safe MtgPure.Model.ObjectType (
+  OT0,
   OT1,
   OT10,
   OT11,
@@ -45,6 +47,8 @@ import safe MtgPure.Model.ObjectType (
   OT8,
   OT9,
  )
+
+type ON0 = ObjectN OT0
 
 type ON1 a = ObjectN (OT1 a)
 

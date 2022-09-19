@@ -124,7 +124,11 @@ import safe MtgPure.Model.ZoneObject (
 
 ----------------------------------------
 
-type IsOT (ot :: Type) = (IndexOT ot, VisitObjectN ot, PrettyType ot)
+type IsOT (ot :: Type) =
+  ( IndexOT ot
+  , VisitObjectN ot
+  , PrettyType ot
+  )
 
 type IsZO (zone :: Zone) (ot :: Type) =
   (IsOT ot, IsZone zone, PrettyType (ZO zone ot))
@@ -560,8 +564,20 @@ instance ConsIndex (SetToken ot) where
 data Some (liftOT :: Type -> Type) (ot :: Type) :: Type where
   SomeArtifact :: liftOT OTArtifact -> Some liftOT OTArtifact
   SomeCreature :: liftOT OTCreature -> Some liftOT OTCreature
+  SomeEnchantment :: liftOT OTEnchantment -> Some liftOT OTEnchantment
+  SomeLand :: liftOT OTLand -> Some liftOT OTLand
+  SomePlaneswalker :: liftOT OTPlaneswalker -> Some liftOT OTPlaneswalker
+  SomeArtifactCreature :: liftOT OTArtifactCreature -> Some liftOT OTArtifactCreature
+  SomeEnchantmentCreature :: liftOT OTEnchantmentCreature -> Some liftOT OTEnchantmentCreature
   Some2a :: Inst2 IsObjectType a b => Some liftOT (OT1 a) -> Some liftOT (OT2 a b)
   Some2b :: Inst2 IsObjectType a b => Some liftOT (OT1 b) -> Some liftOT (OT2 a b)
+  Some5a :: Inst5 IsObjectType a b c d e => Some liftOT (OT1 a) -> Some liftOT (OT5 a b c d e)
+  Some5b :: Inst5 IsObjectType a b c d e => Some liftOT (OT1 b) -> Some liftOT (OT5 a b c d e)
+  Some5c :: Inst5 IsObjectType a b c d e => Some liftOT (OT1 c) -> Some liftOT (OT5 a b c d e)
+  Some5d :: Inst5 IsObjectType a b c d e => Some liftOT (OT1 d) -> Some liftOT (OT5 a b c d e)
+  Some5e :: Inst5 IsObjectType a b c d e => Some liftOT (OT1 e) -> Some liftOT (OT5 a b c d e)
+  Some5ab :: Inst5 IsObjectType a b c d e => Some liftOT (OT2 a b) -> Some liftOT (OT5 a b c d e)
+  Some5bc :: Inst5 IsObjectType a b c d e => Some liftOT (OT2 b c) -> Some liftOT (OT5 a b c d e)
   deriving (Typeable)
 
 type SomeCard = Some Card

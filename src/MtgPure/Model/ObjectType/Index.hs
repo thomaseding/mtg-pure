@@ -38,6 +38,7 @@ import safe Data.Proxy (Proxy (..))
 import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.IsObjectType (IsObjectType (..), objectTypeIndex)
 import safe MtgPure.Model.ObjectType (
+  OT0,
   OT1,
   OT10,
   OT11,
@@ -57,6 +58,9 @@ oti = objectTypeIndex (Proxy @ot)
 
 class Typeable ot => IndexOT ot where
   indexOT :: Proxy ot -> [Int]
+
+instance IndexOT OT0 where
+  indexOT _ = []
 
 instance
   (Inst1 IsObjectType a) =>

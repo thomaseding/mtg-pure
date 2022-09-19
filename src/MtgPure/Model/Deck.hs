@@ -13,18 +13,14 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.Object (
-  Object (..),
+module MtgPure.Model.Deck (
+  Deck (..),
 ) where
 
 import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
-import safe MtgPure.Model.ObjectId (GetObjectId (..), ObjectId)
-import safe MtgPure.Model.ObjectType (ObjectType (..), SObjectType)
+import safe MtgPure.Model.Recursive (Card)
 
-data Object :: ObjectType -> Type where
-  Object :: SObjectType a -> ObjectId -> Object a
-  deriving (Eq, Ord, Show, Typeable)
-
-instance GetObjectId (Object ot) where
-  getObjectId (Object _ i) = i
+newtype Deck :: Type where
+  Deck :: [Card ()] -> Deck
+  deriving (Typeable)

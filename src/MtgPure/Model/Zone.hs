@@ -49,29 +49,29 @@ deriving instance Ord (SZone zone)
 deriving instance Show (SZone zone)
 
 class Typeable zone => IsZone zone where
-  singZone :: Proxy zone -> SZone zone
+  singZone :: SZone zone
   litZone :: Proxy zone -> Zone
 
 instance IsZone 'ZBattlefield where
-  singZone _ = SZBattlefield
+  singZone = SZBattlefield
   litZone _ = ZBattlefield
 
 instance IsZone 'ZExile where
-  singZone _ = SZExile
+  singZone = SZExile
   litZone _ = ZExile
 
 instance IsZone 'ZGraveyard where
-  singZone _ = SZGraveyard
+  singZone = SZGraveyard
   litZone _ = ZGraveyard
 
 instance IsZone 'ZHand where
-  singZone _ = SZHand
+  singZone = SZHand
   litZone _ = ZHand
 
 instance IsZone 'ZLibrary where
-  singZone _ = SZLibrary
+  singZone = SZLibrary
   litZone _ = ZLibrary
 
 instance IsZone 'ZStack where
-  singZone _ = SZStack
+  singZone = SZStack
   litZone _ = ZStack

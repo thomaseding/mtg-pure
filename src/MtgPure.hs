@@ -5,6 +5,7 @@
 module MtgPure (
   module MtgPure.AllCards,
   module MtgPure.Cards,
+  module MtgPure.Engine,
   module MtgPure.Model,
   module MtgPure.ModelCombinators,
   codeGenToObjectN,
@@ -12,6 +13,7 @@ module MtgPure (
 
 import safe MtgPure.AllCards
 import safe MtgPure.Cards
+import safe MtgPure.Engine
 import safe MtgPure.Model
 import safe MtgPure.Model.ToObjectN.CodeGen (codeGenToObjectN)
 import safe MtgPure.ModelCombinators

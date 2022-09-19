@@ -32,9 +32,10 @@ import safe MtgPure.Model.IsObjectType (IsObjectType (..))
 import safe MtgPure.Model.ManaCost (ManaCost)
 import safe MtgPure.Model.ManaPool (ManaPool)
 import safe MtgPure.Model.Object (Object (..))
-import safe MtgPure.Model.ObjectId (ObjectId (..))
+import safe MtgPure.Model.ObjectId (GetObjectId (getObjectId), ObjectId (..))
 import safe MtgPure.Model.ObjectN (ObjectN (..))
 import safe MtgPure.Model.ObjectType (
+  OT0,
   OT1,
   OT2,
   OT3,
@@ -159,6 +160,27 @@ instance Eq (WNonCreatureCard ot) where
 instance Eq (WPermanent ot) where
   (==) x y = runEnvM (ordWPermanent x y) == EQ
 
+instance (IsZone zone) => Eq (ZoneObject zone OT0) where
+  (==) x y = runEnvM (ordZoneObject0 x y) == EQ
+
+instance (IsZone zone, Inst1 IsObjectType a) => Eq (ZoneObject zone (OT1 a)) where
+  (==) x y = runEnvM (ordZoneObject x y) == EQ
+
+instance (IsZone zone, Inst2 IsObjectType a b) => Eq (ZoneObject zone (OT2 a b)) where
+  (==) x y = runEnvM (ordZoneObject x y) == EQ
+
+instance (IsZone zone, Inst3 IsObjectType a b c) => Eq (ZoneObject zone (OT3 a b c)) where
+  (==) x y = runEnvM (ordZoneObject x y) == EQ
+
+instance (IsZone zone, Inst4 IsObjectType a b c d) => Eq (ZoneObject zone (OT4 a b c d)) where
+  (==) x y = runEnvM (ordZoneObject x y) == EQ
+
+instance (IsZone zone, Inst5 IsObjectType a b c d e) => Eq (ZoneObject zone (OT5 a b c d e)) where
+  (==) x y = runEnvM (ordZoneObject x y) == EQ
+
+instance (IsZone zone, Inst6 IsObjectType a b c d e f) => Eq (ZoneObject zone (OT6 a b c d e f)) where
+  (==) x y = runEnvM (ordZoneObject x y) == EQ
+
 ----------------------------------------
 
 instance IsOT ot => Ord (Ability ot) where
@@ -230,18 +252,41 @@ instance Ord (WNonCreatureCard ot) where
 instance Ord (WPermanent ot) where
   compare x y = runEnvM (ordWPermanent x y)
 
+instance (IsZone zone) => Ord (ZoneObject zone OT0) where
+  compare x y = runEnvM (ordZoneObject0 x y)
+
+instance (IsZone zone, Inst1 IsObjectType a) => Ord (ZoneObject zone (OT1 a)) where
+  compare x y = runEnvM (ordZoneObject x y)
+
+instance (IsZone zone, Inst2 IsObjectType a b) => Ord (ZoneObject zone (OT2 a b)) where
+  compare x y = runEnvM (ordZoneObject x y)
+
+instance (IsZone zone, Inst3 IsObjectType a b c) => Ord (ZoneObject zone (OT3 a b c)) where
+  compare x y = runEnvM (ordZoneObject x y)
+
+instance (IsZone zone, Inst4 IsObjectType a b c d) => Ord (ZoneObject zone (OT4 a b c d)) where
+  compare x y = runEnvM (ordZoneObject x y)
+
+instance (IsZone zone, Inst5 IsObjectType a b c d e) => Ord (ZoneObject zone (OT5 a b c d e)) where
+  compare x y = runEnvM (ordZoneObject x y)
+
+instance (IsZone zone, Inst6 IsObjectType a b c d e f) => Ord (ZoneObject zone (OT6 a b c d e f)) where
+  compare x y = runEnvM (ordZoneObject x y)
+
 ----------------------------------------
 
 type EnvM = State.State Env
 
 -- TODO: Smarts need to be added to handle Card loops
-data Env = Env
+newtype Env = Env
   { nextRawId :: Int
-  , envThing :: ()
   }
 
 mkEnv :: Env
-mkEnv = Env{nextRawId = 0, envThing = ()}
+mkEnv =
+  Env
+    { nextRawId = 0
+    }
 
 runEnvM :: EnvM a -> a
 runEnvM m = State.evalState m mkEnv
@@ -310,7 +355,7 @@ compareOT ::
 compareOT = pure $ compare (indexOT (Proxy @ot1)) (indexOT (Proxy @ot2))
 
 toZone :: forall zone ot. IsZone zone => ObjectN ot -> ZO zone ot
-toZone = case singZone (Proxy @zone) of
+toZone = case singZone @zone of
   SZBattlefield -> ZOBattlefield SZBattlefield
   SZExile -> ZOExile SZExile
   SZGraveyard -> ZOGraveyard SZGraveyard
@@ -1020,6 +1065,12 @@ ordO6 ordM reqs1 reqs2 cont1 cont2 = case cast' (reqs2, cont2) of
       ([Requirement zone (OT6 a b c d e f)], ZO zone (OT6 a b c d e f) -> x)
   cast' = cast
 
+ordObject0 :: ObjectN OT0 -> ObjectN OT0 -> EnvM Ordering
+ordObject0 objN1 objN2 = do
+  let i1 = getObjectId objN1
+      i2 = getObjectId objN2
+  pure $ compare i1 i2
+
 ordObjectN :: VisitObjectN ot => ObjectN ot -> ObjectN ot -> EnvM Ordering
 ordObjectN objN1 objN2 = do
   let i1 = visitObjectN' objectToId objN1
@@ -1568,7 +1619,7 @@ ordWSpell = \case
   x@WSpell4 -> \case
     y@WSpell4 -> ordW4 x y
 
-ordZoneObject :: IsZO zone ot => ZO zone ot -> ZO zone ot -> EnvM Ordering
+ordZoneObject :: (IndexOT ot, VisitObjectN ot) => ZO zone ot -> ZO zone ot -> EnvM Ordering
 ordZoneObject x = case x of
   ZOBattlefield _sZone1 objN1 -> \case
     ZOBattlefield _sZone2 objN2 -> ordObjectN objN1 objN2
@@ -1582,3 +1633,18 @@ ordZoneObject x = case x of
     ZOLibrary _sZone2 objN2 -> ordObjectN objN1 objN2
   ZOStack _sZone1 objN1 -> \case
     ZOStack _sZone2 objN2 -> ordObjectN objN1 objN2
+
+ordZoneObject0 :: ZO zone OT0 -> ZO zone OT0 -> EnvM Ordering
+ordZoneObject0 x = case x of
+  ZOBattlefield _sZone1 objN1 -> \case
+    ZOBattlefield _sZone2 objN2 -> ordObject0 objN1 objN2
+  ZOExile _sZone1 objN1 -> \case
+    ZOExile _sZone2 objN2 -> ordObject0 objN1 objN2
+  ZOGraveyard _sZone1 objN1 -> \case
+    ZOGraveyard _sZone2 objN2 -> ordObject0 objN1 objN2
+  ZOHand _sZone1 objN1 -> \case
+    ZOHand _sZone2 objN2 -> ordObject0 objN1 objN2
+  ZOLibrary _sZone1 objN1 -> \case
+    ZOLibrary _sZone2 objN2 -> ordObject0 objN1 objN2
+  ZOStack _sZone1 objN1 -> \case
+    ZOStack _sZone2 objN2 -> ordObject0 objN1 objN2

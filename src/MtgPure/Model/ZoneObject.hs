@@ -20,6 +20,8 @@
 module MtgPure.Model.ZoneObject (
   ZO,
   ZoneObject (..),
+  zoToObjectN,
+  toZO0,
   toZO1,
   toZO2,
   toZO3,
@@ -63,8 +65,11 @@ import safe Data.ConsIndex (ConsIndex (..))
 import safe Data.Kind (Type)
 import safe Data.Proxy (Proxy (..))
 import safe Data.Typeable (Typeable)
-import safe MtgPure.Model.ObjectN (ObjectN)
+import MtgPure.Model.Object (Object)
+import safe MtgPure.Model.ObjectId (GetObjectId (..), ObjectId (..))
+import safe MtgPure.Model.ObjectN (ObjectN (O0))
 import safe MtgPure.Model.ObjectType (
+  OT0,
   OT1,
   OT10,
   OT11,
@@ -120,12 +125,13 @@ import safe MtgPure.Model.ToObjectN.Classes (
   ToObject8 (..),
   ToObject9 (..),
  )
-import safe MtgPure.Model.Zone (IsZone (litZone), SZone (..), Zone (..))
+import MtgPure.Model.VisitObjectN (VisitObjectN (..))
+import safe MtgPure.Model.Zone (IsZone (..), SZone (..), Zone (..))
 
 type ZO = ZoneObject
 
 -- TODO: Place zone-specific record data into these, such as Controller and Owner information.
-data ZoneObject :: Zone -> Type -> Type where
+data ZoneObject (zone :: Zone) (ot :: Type) :: Type where
   ZOBattlefield :: SZone 'ZBattlefield -> ObjectN ot -> ZoneObject 'ZBattlefield ot
   ZOExile :: SZone 'ZExile -> ObjectN ot -> ZoneObject 'ZExile ot
   ZOGraveyard :: SZone 'ZGraveyard -> ObjectN ot -> ZoneObject 'ZGraveyard ot
@@ -151,6 +157,39 @@ instance (IsZone zone, PrettyType ot) => PrettyType (ZO zone ot) where
     (open, close) = case ' ' `elem` sOT of
       True -> ("(", ")")
       False -> ("", "")
+
+instance GetObjectId (ObjectN ot) => GetObjectId (ZO zone ot) where
+  getObjectId = getObjectId . zoToObjectN
+
+zoToObjectN :: ZO zone ot -> ObjectN ot
+zoToObjectN = \case
+  ZOBattlefield _ o -> o
+  ZOExile _ o -> o
+  ZOGraveyard _ o -> o
+  ZOHand _ o -> o
+  ZOLibrary _ o -> o
+  ZOStack _ o -> o
+
+class ToZO0 (zone :: Zone) (object :: Type) where
+  toZO0 :: object -> ZO zone OT0
+
+instance IsZone zone => ToZO0 zone ObjectId where
+  toZO0 o = case singZone @zone of
+    SZBattlefield -> ZOBattlefield SZBattlefield $ O0 o
+    SZExile -> ZOExile SZExile $ O0 o
+    SZGraveyard -> ZOGraveyard SZGraveyard $ O0 o
+    SZHand -> ZOHand SZHand $ O0 o
+    SZLibrary -> ZOLibrary SZLibrary $ O0 o
+    SZStack -> ZOStack SZStack $ O0 o
+
+instance IsZone zone => ToZO0 zone (Object ot) where
+  toZO0 = toZO0 . getObjectId
+
+instance (VisitObjectN ot, IsZone zone) => ToZO0 zone (ObjectN ot) where
+  toZO0 = toZO0 . visitObjectN' getObjectId
+
+instance (VisitObjectN ot, IsZone zone) => ToZO0 zone (ZO zone ot) where
+  toZO0 = toZO0 . zoToObjectN
 
 toZO1 :: ToObject1 ot a => ZO zone ot -> ZO zone (OT1 a)
 toZO1 = \case

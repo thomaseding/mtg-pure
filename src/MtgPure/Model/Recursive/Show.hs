@@ -70,9 +70,10 @@ import safe MtgPure.Model.ManaCost (ManaCost (..))
 import safe MtgPure.Model.ManaPool (ManaPool (..))
 import safe MtgPure.Model.ManaSymbol (ManaSymbol (..))
 import safe MtgPure.Model.Object (Object (..))
-import safe MtgPure.Model.ObjectId (ObjectId (ObjectId))
+import safe MtgPure.Model.ObjectId (GetObjectId (..), ObjectId (ObjectId))
 import safe MtgPure.Model.ObjectN (ObjectN (..))
 import safe MtgPure.Model.ObjectN.Type (
+  ON0,
   ON1,
   ON10,
   ON11,
@@ -87,6 +88,7 @@ import safe MtgPure.Model.ObjectN.Type (
   ON9,
  )
 import safe MtgPure.Model.ObjectType (
+  OT0,
   OT1,
   OT2,
   OT3,
@@ -200,6 +202,9 @@ instance Show (TriggeredAbility ot) where
 
 instance IsZO zone ot => Show (WithMaskedObject zone (Elect e ot)) where
   show = runEnvM defaultDepthLimit . showWithMaskedObject showElect "obj"
+
+instance IsZone zone => Show (ZO zone OT0) where
+  show = runEnvM defaultDepthLimit . showZoneObject0
 
 ----------------------------------------
 
@@ -423,7 +428,7 @@ showListM f xs = noParens $ do
   pure $ pure "[" <> DList.intercalate (pure ", ") ss <> pure "]"
 
 toZone :: forall zone ot. IsZone zone => ObjectN ot -> ZO zone ot
-toZone = case singZone (Proxy @zone) of
+toZone = case singZone @zone of
   SZBattlefield -> ZOBattlefield SZBattlefield
   SZExile -> ZOExile SZExile
   SZGraveyard -> ZOGraveyard SZGraveyard
@@ -1226,6 +1231,16 @@ showObjectNImpl objNRef prefix obj = do
       False -> yesParens $ pure $ pure prefix <> pure " " <> sObj
       True -> noParens $ pure sObj
 
+showObject0 ::
+  forall zone.
+  (IsZone zone) =>
+  ON0 ->
+  EnvM ParenItems
+showObject0 objN = yesParens $ do
+  pure $ pure $ fromString $ "toZO0 " ++ show i
+ where
+  i = getObjectId objN
+
 showObject1 ::
   forall zone a.
   (IsZone zone, IsObjectType a) =>
@@ -1832,3 +1847,12 @@ showZoneObject = \case
   ZOHand _ objN -> showObjectN @zone objN
   ZOLibrary _ objN -> showObjectN @zone objN
   ZOStack _ objN -> showObjectN @zone objN
+
+showZoneObject0 :: forall zone. IsZone zone => ZO zone OT0 -> EnvM ParenItems
+showZoneObject0 = \case
+  ZOBattlefield _ objN -> showObject0 @zone objN
+  ZOExile _ objN -> showObject0 @zone objN
+  ZOGraveyard _ objN -> showObject0 @zone objN
+  ZOHand _ objN -> showObject0 @zone objN
+  ZOLibrary _ objN -> showObject0 @zone objN
+  ZOStack _ objN -> showObject0 @zone objN

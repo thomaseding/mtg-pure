@@ -9,6 +9,7 @@
 {-# LANGUAGE Safe #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Avoid lambda" #-}
@@ -37,8 +38,9 @@ import safe Data.Inst (
 import safe Data.Kind (Type)
 import safe Data.Proxy (Proxy)
 import safe Data.Typeable (Typeable)
-import safe MtgPure.Model.IsObjectType (IsObjectType)
+import safe MtgPure.Model.IsObjectType (IsObjectType (objectToId))
 import safe MtgPure.Model.Object (Object)
+import MtgPure.Model.ObjectId (GetObjectId (..))
 import safe MtgPure.Model.ObjectN (ObjectN (..))
 import safe MtgPure.Model.ObjectN.Type (
   ON1,
@@ -55,6 +57,7 @@ import safe MtgPure.Model.ObjectN.Type (
   ON9,
  )
 import safe MtgPure.Model.ObjectType (
+  OT0,
   OT1,
   OT10,
   OT11,
@@ -106,6 +109,18 @@ class Typeable ot => VisitObjectN ot where
   orderObjectN :: Proxy ot -> Int
   knownObjectN :: ObjectN ot -> KnownObjectN ot
   knownObjectTypeN :: Proxy ot -> KnownObjectTypeN ot
+
+instance GetObjectId (ObjectN OT0) where
+  getObjectId (O0 i) = i
+
+instance Inst1 IsObjectType a => GetObjectId (ObjectN (OT1 a)) where
+  getObjectId = visitObjectN' objectToId
+
+instance Inst2 IsObjectType a b => GetObjectId (ObjectN (OT2 a b)) where
+  getObjectId = visitObjectN' objectToId
+
+instance Inst3 IsObjectType a b c => GetObjectId (ObjectN (OT3 a b c)) where
+  getObjectId = visitObjectN' objectToId
 
 vn :: VisitObjectN ot => ObjectVisitorN ot x -> ObjectN ot -> x
 vn = visitObjectN

@@ -13,18 +13,19 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.Object (
-  Object (..),
+module MtgPure.Model.PhaseStep (
+  PhaseStep (..),
 ) where
 
 import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
-import safe MtgPure.Model.ObjectId (GetObjectId (..), ObjectId)
-import safe MtgPure.Model.ObjectType (ObjectType (..), SObjectType)
+import safe MtgPure.Model.Phase (Phase (..))
+import safe MtgPure.Model.Step (Step)
 
-data Object :: ObjectType -> Type where
-  Object :: SObjectType a -> ObjectId -> Object a
-  deriving (Eq, Ord, Show, Typeable)
-
-instance GetObjectId (Object ot) where
-  getObjectId (Object _ i) = i
+data PhaseStep :: Type where
+  PSBeginningPhase :: Step 'BeginningPhase -> PhaseStep
+  PSPreCombatMainPhase :: PhaseStep
+  PSCombatPhase :: Step 'CombatPhase -> PhaseStep
+  PSPostCombatMainPhase :: PhaseStep
+  PSEndingPhase :: Step 'EndingPhase -> PhaseStep
+  deriving (Eq, Ord, Typeable)

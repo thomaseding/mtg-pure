@@ -18,12 +18,14 @@ module MtgPure.Model (
   module MtgPure.Model.Creature,
   module MtgPure.Model.CreatureType,
   module MtgPure.Model.Damage,
+  module MtgPure.Model.Deck,
   module MtgPure.Model.EffectType,
   module MtgPure.Model.Exile,
   module MtgPure.Model.GenericMana,
   module MtgPure.Model.Graveyard,
   module MtgPure.Model.Hand,
   module MtgPure.Model.HasManaSymbol,
+  module MtgPure.Model.IsCardList,
   module MtgPure.Model.IsObjectType,
   module MtgPure.Model.LandType,
   module MtgPure.Model.Library,
@@ -48,12 +50,14 @@ module MtgPure.Model (
   module MtgPure.Model.ObjectType.Spell,
   module MtgPure.Model.Permanent,
   module MtgPure.Model.Phase,
+  module MtgPure.Model.PhaseStep,
   module MtgPure.Model.Player,
   module MtgPure.Model.Power,
   module MtgPure.Model.PrettyType,
   module MtgPure.Model.Rarity,
   module MtgPure.Model.Recursive,
   module MtgPure.Model.Selection,
+  module MtgPure.Model.Sideboard,
   module MtgPure.Model.Stack,
   module MtgPure.Model.Step,
   module MtgPure.Model.TimePoint,
@@ -91,12 +95,14 @@ import safe MtgPure.Model.ColorsLike
 import safe MtgPure.Model.Creature
 import safe MtgPure.Model.CreatureType
 import safe MtgPure.Model.Damage
+import safe MtgPure.Model.Deck
 import safe MtgPure.Model.EffectType
 import safe MtgPure.Model.Exile
 import safe MtgPure.Model.GenericMana
 import safe MtgPure.Model.Graveyard
 import safe MtgPure.Model.Hand
 import safe MtgPure.Model.HasManaSymbol
+import safe MtgPure.Model.IsCardList
 import safe MtgPure.Model.IsObjectType
 import safe MtgPure.Model.LandType
 import safe MtgPure.Model.Library
@@ -121,6 +127,7 @@ import safe MtgPure.Model.ObjectType.Permanent
 import safe MtgPure.Model.ObjectType.Spell
 import safe MtgPure.Model.Permanent
 import safe MtgPure.Model.Phase
+import safe MtgPure.Model.PhaseStep
 import safe MtgPure.Model.Player
 import safe MtgPure.Model.Power
 import safe MtgPure.Model.PrettyType
@@ -129,6 +136,7 @@ import safe MtgPure.Model.Recursive
 import safe MtgPure.Model.Recursive.Ord ()
 import safe MtgPure.Model.Recursive.Show ()
 import safe MtgPure.Model.Selection
+import safe MtgPure.Model.Sideboard
 import safe MtgPure.Model.Stack
 import safe MtgPure.Model.Step
 import safe MtgPure.Model.TimePoint
