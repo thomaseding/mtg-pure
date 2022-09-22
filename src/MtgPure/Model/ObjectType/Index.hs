@@ -35,8 +35,8 @@ import Data.Inst (
   Inst9,
  )
 import safe Data.Typeable (Typeable)
-import safe MtgPure.Model.IsObjectType (IsObjectType (..))
-import safe MtgPure.Model.ObjectType (
+import safe MtgPure.Model.Object (
+  IsObjectType (..),
   OT0,
   OT1,
   OT10,

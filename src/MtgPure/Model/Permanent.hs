@@ -29,8 +29,7 @@ import safe MtgPure.Model.Artifact (Artifact)
 import safe MtgPure.Model.Creature (Creature)
 import safe MtgPure.Model.Damage (Damage (Damage))
 import safe MtgPure.Model.Land (Land)
-import safe MtgPure.Model.Object (Object (..))
-import safe MtgPure.Model.ObjectType (ObjectType (..))
+import safe MtgPure.Model.Object (Object (..), ObjectType (..))
 import safe MtgPure.Model.ObjectType.Kind (OTPermanent)
 import safe MtgPure.Model.Recursive (
   Card (..),

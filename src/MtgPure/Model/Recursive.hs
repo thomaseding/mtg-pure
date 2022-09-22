@@ -58,13 +58,12 @@ import safe MtgPure.Model.Colors (Colors)
 import safe MtgPure.Model.CreatureType (CreatureType)
 import safe MtgPure.Model.Damage (Damage)
 import safe MtgPure.Model.EffectType (EffectType (..))
-import safe MtgPure.Model.IsObjectType (IsObjectType)
 import safe MtgPure.Model.LandType (LandType)
 import safe MtgPure.Model.Loyalty (Loyalty)
 import safe MtgPure.Model.Mana (Snow (..))
 import safe MtgPure.Model.ManaCost (ManaCost)
 import safe MtgPure.Model.ManaPool (ManaPool)
-import safe MtgPure.Model.ObjectType (OT1, OT2, OT3, OT4, OT5, OT6)
+import safe MtgPure.Model.Object (IsObjectType, OT1, OT2, OT3, OT4, OT5, OT6)
 import safe MtgPure.Model.ObjectType.Any (WAny)
 import safe MtgPure.Model.ObjectType.Card (WCard)
 import safe MtgPure.Model.ObjectType.Kind (
@@ -345,6 +344,7 @@ data Effect (ef :: EffectType) :: Type where
   Destroy :: OPermanent -> Effect 'OneShot
   DrawCards :: OPlayer -> Int -> Effect 'OneShot
   EffectContinuous :: Effect 'Continuous -> Effect 'OneShot -- 611.2
+  EAnd :: [Effect ef] -> Effect ef
   EOr :: [Effect ef] -> Effect ef
   Gain :: IsOT ot => WAny ot -> ZO 'ZBattlefield ot -> Ability ot -> Effect 'Continuous
   Lose :: IsOT ot => WAny ot -> ZO 'ZBattlefield ot -> Ability ot -> Effect 'Continuous
@@ -366,15 +366,16 @@ instance ConsIndex (Effect ef) where
     DealDamage{} -> 7
     Destroy{} -> 8
     EffectContinuous{} -> 9
-    EOr{} -> 10
-    DrawCards{} -> 11
-    Gain{} -> 12
-    Lose{} -> 13
-    PutOntoBattlefield{} -> 14
-    Sacrifice{} -> 15
-    SearchLibrary{} -> 16
-    StatDelta{} -> 17
-    Until{} -> 18
+    EAnd{} -> 10
+    EOr{} -> 11
+    DrawCards{} -> 12
+    Gain{} -> 13
+    Lose{} -> 14
+    PutOntoBattlefield{} -> 15
+    Sacrifice{} -> 16
+    SearchLibrary{} -> 17
+    StatDelta{} -> 18
+    Until{} -> 19
 
 ----------------------------------------
 

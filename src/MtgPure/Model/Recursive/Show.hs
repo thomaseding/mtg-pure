@@ -62,17 +62,26 @@ import safe MtgPure.Model.CreatureType (CreatureType)
 import safe MtgPure.Model.Damage (Damage (..))
 import safe MtgPure.Model.EffectType (EffectType (OneShot))
 import safe MtgPure.Model.GenericMana (GenericMana (..))
-import safe MtgPure.Model.IsObjectType (IsObjectType (..))
 import safe MtgPure.Model.LandType (LandType (..))
 import safe MtgPure.Model.Loyalty (Loyalty)
 import safe MtgPure.Model.Mana (Mana (..))
 import safe MtgPure.Model.ManaCost (ManaCost (..))
 import safe MtgPure.Model.ManaPool (ManaPool (..))
 import safe MtgPure.Model.ManaSymbol (ManaSymbol (..))
-import safe MtgPure.Model.Object (Object (..))
+import safe MtgPure.Model.Object (
+  IsObjectType (..),
+  OT0,
+  OT1,
+  OT2,
+  OT3,
+  OT4,
+  OT5,
+  OT6,
+  Object (..),
+  ObjectType (..),
+ )
 import safe MtgPure.Model.ObjectId (GetObjectId (..), ObjectId (ObjectId))
-import safe MtgPure.Model.ObjectN (ObjectN (..))
-import safe MtgPure.Model.ObjectN.Type (
+import safe MtgPure.Model.ObjectN (
   ON0,
   ON1,
   ON10,
@@ -86,16 +95,7 @@ import safe MtgPure.Model.ObjectN.Type (
   ON7,
   ON8,
   ON9,
- )
-import safe MtgPure.Model.ObjectType (
-  OT0,
-  OT1,
-  OT2,
-  OT3,
-  OT4,
-  OT5,
-  OT6,
-  ObjectType (..),
+  ObjectN (..),
  )
 import safe MtgPure.Model.ObjectType.Any (WAny (..))
 import safe MtgPure.Model.ObjectType.Card (WCard (..))
@@ -803,6 +803,9 @@ showEffect = \case
   EffectContinuous effect -> yesParens $ do
     sEffect <- dollar <$> showEffect effect
     pure $ pure "EffectContinuous" <> sEffect
+  EAnd effects -> yesParens $ do
+    sEffects <- dollar <$> showEffects effects
+    pure $ pure "EAnd" <> sEffects
   EOr effects -> yesParens $ do
     sEffects <- dollar <$> showEffects effects
     pure $ pure "EOr" <> sEffects

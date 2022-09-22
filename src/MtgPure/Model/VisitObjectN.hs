@@ -38,25 +38,8 @@ import safe Data.Inst (
 import safe Data.Kind (Type)
 import safe Data.Proxy (Proxy)
 import safe Data.Typeable (Typeable)
-import safe MtgPure.Model.IsObjectType (IsObjectType (objectToId))
-import safe MtgPure.Model.Object (Object)
-import MtgPure.Model.ObjectId (GetObjectId (..))
-import safe MtgPure.Model.ObjectN (ObjectN (..))
-import safe MtgPure.Model.ObjectN.Type (
-  ON1,
-  ON10,
-  ON11,
-  ON12,
-  ON2,
-  ON3,
-  ON4,
-  ON5,
-  ON6,
-  ON7,
-  ON8,
-  ON9,
- )
-import safe MtgPure.Model.ObjectType (
+import safe MtgPure.Model.Object (
+  IsObjectType (objectToId),
   OT0,
   OT1,
   OT10,
@@ -70,6 +53,23 @@ import safe MtgPure.Model.ObjectType (
   OT7,
   OT8,
   OT9,
+  Object,
+ )
+import safe MtgPure.Model.ObjectId (GetObjectId (..))
+import safe MtgPure.Model.ObjectN (
+  ON1,
+  ON10,
+  ON11,
+  ON12,
+  ON2,
+  ON3,
+  ON4,
+  ON5,
+  ON6,
+  ON7,
+  ON8,
+  ON9,
+  ObjectN (..),
  )
 
 data KnownObjectTypeN :: Type -> Type where

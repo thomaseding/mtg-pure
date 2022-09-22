@@ -67,7 +67,7 @@ import safe MtgPure.Model.Damage (Damage (..))
 import safe MtgPure.Model.GenericMana (GenericMana (..))
 import safe MtgPure.Model.LandType (LandType (..))
 import safe MtgPure.Model.ManaSymbol (ManaSymbol (..))
-import safe MtgPure.Model.ObjectType (OT3, ObjectType (..))
+import safe MtgPure.Model.Object (OT3, ObjectType (..))
 import safe MtgPure.Model.ObjectType.Kind (
   OTActivatedOrTriggeredAbility,
   OTArtifactCreature,

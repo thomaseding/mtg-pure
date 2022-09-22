@@ -28,13 +28,10 @@ import safe Data.Proxy (Proxy (Proxy))
 import safe Data.Typeable (Typeable, cast)
 import safe MtgPure.Model.Colors (Colors)
 import safe MtgPure.Model.Damage (Damage (..))
-import safe MtgPure.Model.IsObjectType (IsObjectType (..))
 import safe MtgPure.Model.ManaCost (ManaCost)
 import safe MtgPure.Model.ManaPool (ManaPool)
-import safe MtgPure.Model.Object (Object (..))
-import safe MtgPure.Model.ObjectId (GetObjectId (getObjectId), ObjectId (..))
-import safe MtgPure.Model.ObjectN (ObjectN (..))
-import safe MtgPure.Model.ObjectType (
+import safe MtgPure.Model.Object (
+  IsObjectType (..),
   OT0,
   OT1,
   OT2,
@@ -42,8 +39,11 @@ import safe MtgPure.Model.ObjectType (
   OT4,
   OT5,
   OT6,
+  Object (..),
   ObjectType (..),
  )
+import safe MtgPure.Model.ObjectId (GetObjectId (getObjectId), ObjectId (..))
+import safe MtgPure.Model.ObjectN (ObjectN (..))
 import safe MtgPure.Model.ObjectType.Any (WAny (..))
 import safe MtgPure.Model.ObjectType.Card (WCard (..))
 import safe MtgPure.Model.ObjectType.Index (IndexOT (indexOT))
@@ -679,6 +679,9 @@ ordEffect x = case x of
     y -> compareIndexM x y
   EffectContinuous effect1 -> \case
     EffectContinuous effect2 -> ordEffect effect1 effect2
+    y -> compareIndexM x y
+  EAnd effects1 -> \case
+    EAnd effects2 -> listM ordEffect effects1 effects2
     y -> compareIndexM x y
   EOr effects1 -> \case
     EOr effects2 -> listM ordEffect effects1 effects2

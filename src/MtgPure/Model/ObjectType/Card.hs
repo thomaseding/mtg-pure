@@ -27,8 +27,13 @@ import safe Data.Kind (Type)
 import safe Data.Proxy (Proxy)
 import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.CardType (CardType (..))
-import safe MtgPure.Model.IsObjectType (IsObjectType)
-import safe MtgPure.Model.ObjectType (OT1, OT2, OT3, ObjectType (..))
+import safe MtgPure.Model.Object (
+  IsObjectType,
+  OT1,
+  OT2,
+  OT3,
+  ObjectType (..),
+ )
 import safe MtgPure.Model.ObjectType.Kind (
   OTArtifact,
   OTCard,

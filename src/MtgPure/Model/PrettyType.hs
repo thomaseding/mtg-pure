@@ -37,8 +37,8 @@ import safe Data.Inst (
  )
 import safe Data.Proxy (Proxy (Proxy))
 import safe Data.Typeable (TypeRep, Typeable, typeRep)
-import safe MtgPure.Model.IsObjectType (IsObjectType (litObjectType))
-import safe MtgPure.Model.ObjectType (
+import safe MtgPure.Model.Object (
+  IsObjectType (litObjectType),
   OT1,
   OT10,
   OT11,

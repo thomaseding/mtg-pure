@@ -90,11 +90,19 @@ import safe MtgPure.Model.Color (Color (..))
 import safe MtgPure.Model.ColorsLike (ColorsLike (..))
 import safe MtgPure.Model.Damage (Damage (..))
 import safe MtgPure.Model.EffectType (EffectType (..))
-import safe MtgPure.Model.IsObjectType (IsObjectType)
 import safe MtgPure.Model.LandType (LandType (BasicLand))
 import safe MtgPure.Model.ManaCost (ManaCost)
 import safe MtgPure.Model.ManaSymbol (ManaSymbol (..))
-import safe MtgPure.Model.ObjectType (OT1, OT2, OT3, OT4, OT5, OT6, ObjectType (..))
+import safe MtgPure.Model.Object (
+  IsObjectType,
+  OT1,
+  OT2,
+  OT3,
+  OT4,
+  OT5,
+  OT6,
+  ObjectType (..),
+ )
 import safe MtgPure.Model.ObjectType.Any (WAny (..))
 import safe MtgPure.Model.ObjectType.Card (IsCardType, WCard (..))
 import safe MtgPure.Model.ObjectType.Kind (

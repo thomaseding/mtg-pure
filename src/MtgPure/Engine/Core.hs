@@ -85,19 +85,19 @@ import safe MtgPure.Model.IsCardList (
   pushCard,
   removeCard,
  )
-import safe MtgPure.Model.IsObjectType (IsObjectType (..))
 import safe MtgPure.Model.Library (Library (..))
 import safe MtgPure.Model.Life (Life (..))
 import safe MtgPure.Model.ManaCost (ManaCost (..))
 import safe MtgPure.Model.Mulligan (Mulligan)
-import safe MtgPure.Model.Object (Object (..))
-import safe MtgPure.Model.ObjectId (GetObjectId (..), ObjectId (..))
-import safe MtgPure.Model.ObjectN (ObjectN (..))
-import safe MtgPure.Model.ObjectType (
+import safe MtgPure.Model.Object (
+  IsObjectType (..),
   OT0,
+  Object (..),
   ObjectType (..),
   SObjectType (..),
  )
+import safe MtgPure.Model.ObjectId (GetObjectId (..), ObjectId (..))
+import safe MtgPure.Model.ObjectN (ObjectN (..))
 import safe MtgPure.Model.ObjectType.Index (IndexOT (..))
 import safe MtgPure.Model.ObjectType.Kind (
   OTAbility,
@@ -152,6 +152,11 @@ data InternalLogicError
   | InvalidPermanent (ZO 'ZBattlefield OT0)
   | InvalidPlayer (Object 'OTPlayer)
   | ImpossibleGameOver
+  deriving (Typeable)
+
+deriving instance Eq InternalLogicError
+
+deriving instance Ord InternalLogicError
 
 deriving instance Show InternalLogicError
 
@@ -589,7 +594,7 @@ castSpell oPlayer someCard = rewindIllegal $ case someCard of
               goCost cost =
                 let goElectEffect :: Elect (Effect 'OneShot) OTSorcery -> Magic 'Private 'RW m Legality
                     goElectEffect = \case
-                      Effect effect -> castElected $ ElectedSorcery oPlayer card def cost effect
+                      Effect effect -> castElected $ ElectedSorcery oPlayer card def cost $ EAnd effect
                       _ -> undefined
                  in goElectEffect $ sorcery_effect def
            in goElectCost $ sorcery_cost def
@@ -599,19 +604,20 @@ castSpell oPlayer someCard = rewindIllegal $ case someCard of
   Some6ab (SomeArtifactCreature card) -> undefined card
   Some6bc (SomeEnchantmentCreature card) -> undefined card
 
-data family Elected (tribal :: Tribal) (ot :: Type) :: Type
-
-data AnyElected :: Type where
-  AnyElectedSorcery :: IsTribal tribal => Elected tribal OTSorcery -> AnyElected
+data Elected (tribal :: Tribal) (ot :: Type) :: Type where
+  ElectedSorcery ::
+    IsTribal tribal =>
+    { electedSorcery_controller :: Object 'OTPlayer
+    , electedSorcery_card :: Card OTSorcery
+    , electedSorcery_def :: CardTypeDef tribal OTSorcery
+    , electedSorcery_cost :: Cost OTSorcery
+    , electedSorcery_effect :: Effect 'OneShot
+    } ->
+    Elected tribal OTSorcery
   deriving (Typeable)
 
-data instance Elected tribal OTSorcery = ElectedSorcery
-  { electedSorcery_controller :: Object 'OTPlayer
-  , electedSorcery_card :: Card OTSorcery
-  , electedSorcery_def :: CardTypeDef tribal OTSorcery
-  , electedSorcery_cost :: Cost OTSorcery
-  , electedSorcery_effect :: [Effect 'OneShot]
-  }
+data AnyElected :: Type where
+  AnyElectedSorcery :: Elected tribal OTSorcery -> AnyElected
   deriving (Typeable)
 
 class CastElected (tribal :: Tribal) (ot :: Type) where

@@ -16,6 +16,7 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 {-# HLINT ignore "Use if" #-}
+{-# HLINT ignore "Use lambda-case" #-}
 
 module MtgPure.Model.ZoneObject (
   IsOT,
@@ -67,14 +68,16 @@ module MtgPure.Model.ZoneObject (
 import safe Data.ConsIndex (ConsIndex (..))
 import safe Data.Inst (
   Inst1,
+  Inst2,
+  Inst3,
  )
 import safe Data.Kind (Type)
+import Data.Monoid (First (..))
 import safe Data.Typeable (Typeable, cast)
-import safe MtgPure.Model.IsObjectType (HasSingOT (..), IsObjectType, SingOT (..))
-import safe MtgPure.Model.Object (Object)
-import safe MtgPure.Model.ObjectId (GetObjectId (..), ObjectId (..))
-import safe MtgPure.Model.ObjectN (ObjectN (..))
-import safe MtgPure.Model.ObjectType (
+import safe MtgPure.Model.Object (
+  IsObjectType,
+  LitOT (..),
+  OT (..),
   OT0,
   OT1,
   OT10,
@@ -88,7 +91,10 @@ import safe MtgPure.Model.ObjectType (
   OT7,
   OT8,
   OT9,
+  Object,
  )
+import safe MtgPure.Model.ObjectId (GetObjectId (..), ObjectId (..))
+import safe MtgPure.Model.ObjectN (ObjectN (..))
 import safe MtgPure.Model.ObjectType.Index (IndexOT (..))
 import safe MtgPure.Model.ObjectType.Kind (
   OTAbility,
@@ -323,7 +329,7 @@ type IsOT (ot :: Type) =
   ( IndexOT ot
   , VisitObjectN ot
   , PrettyType ot
-  , HasSingOT ot
+  , LitOT ot
   , GetObjectId (ObjectN ot)
   )
 
@@ -333,34 +339,56 @@ type IsZO (zone :: Zone) (ot :: Type) =
   , PrettyType (ZO zone ot)
   )
 
+-- NB: Wrapper to get higher kinded types to type-check in `mapOT`.
+newtype MaybeObjectN (ot :: Type) = MaybeObjectN {unMaybeObjectN :: Maybe (ObjectN ot)}
+
 objectToZO :: forall z zone ot. (IsObjectType z, IsZO zone ot) => Object z -> Maybe (ZO zone ot)
-objectToZO o = case singOT @ot of
-  ot@OT1 ->
-    let go :: forall a. Inst1 IsObjectType a => SingOT (OT1 a) -> Maybe (ZO zone (OT1 a))
-        go _ = case cast o of
-          Nothing -> Nothing
-          Just o' ->
-            let obj1 = O1 @a o'
-                zo1 = case singZone @zone of
-                  SZBattlefield -> ZOBattlefield obj1
-                  SZExile -> undefined
-                  SZGraveyard -> undefined
-                  SZHand -> undefined
-                  SZLibrary -> undefined
-                  SZStack -> undefined
-             in Just zo1
-     in go ot
-  ot@OT2 -> undefined ot
-  ot@OT3 -> undefined ot
-  ot@OT4 -> undefined ot
-  ot@OT5 -> undefined ot
-  ot@OT6 -> undefined ot
-  ot@OT7 -> undefined ot
-  ot@OT8 -> undefined ot
-  ot@OT9 -> undefined ot
-  ot@OT10 -> undefined ot
-  ot@OT11 -> undefined ot
-  ot@OT12 -> undefined ot
+objectToZO o = case singZone @zone of
+  SZBattlefield -> ZOBattlefield <$> objN
+  SZExile -> undefined
+  SZGraveyard -> undefined
+  SZHand -> undefined
+  SZLibrary -> undefined
+  SZStack -> undefined
+ where
+  objN :: Maybe (ObjectN ot)
+  objN = unMaybeObjectN $
+    mapOT @ot $ \case
+      ot@OT1 ->
+        let go :: forall a. Inst1 IsObjectType a => OT1 a -> MaybeObjectN (OT1 a)
+            go _ = MaybeObjectN $ goCast $ O1 @a
+         in go ot
+      ot@OT2 ->
+        let go :: forall a b. Inst2 IsObjectType a b => OT2 a b -> MaybeObjectN (OT2 a b)
+            go _ =
+              goConcat
+                [ goCast $ O2a @a @b
+                , goCast $ O2b @a @b
+                ]
+         in go ot
+      ot@OT3 ->
+        let go :: forall a b c. Inst3 IsObjectType a b c => OT3 a b c -> MaybeObjectN (OT3 a b c)
+            go _ =
+              goConcat
+                [ goCast $ O3a @a @b @c
+                , goCast $ O3b @a @b @c
+                , goCast $ O3c @a @b @c
+                ]
+         in go ot
+      ot@OT4 -> undefined ot
+      ot@OT5 -> undefined ot
+      ot@OT6 -> undefined ot
+      ot@OT7 -> undefined ot
+      ot@OT8 -> undefined ot
+      ot@OT9 -> undefined ot
+      ot@OT10 -> undefined ot
+      ot@OT11 -> undefined ot
+      ot@OT12 -> undefined ot
+   where
+    goConcat = MaybeObjectN . getFirst . mconcat . map First
+
+    goCast :: Typeable z' => (Object z' -> ObjectN ot') -> Maybe (ObjectN ot')
+    goCast f = f <$> cast o
 
 type OAny = ZO 'ZBattlefield OTAny
 

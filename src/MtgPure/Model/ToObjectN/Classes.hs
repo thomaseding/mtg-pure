@@ -57,10 +57,8 @@ import safe Data.Inst (
   Inst8,
   Inst9,
  )
-import safe MtgPure.Model.IsObjectType (IsObjectType)
-import safe MtgPure.Model.Object (Object (..))
-import safe MtgPure.Model.ObjectN (ObjectN (..))
-import safe MtgPure.Model.ObjectType (
+import safe MtgPure.Model.Object (
+  IsObjectType,
   OT1,
   OT10,
   OT11,
@@ -73,7 +71,9 @@ import safe MtgPure.Model.ObjectType (
   OT7,
   OT8,
   OT9,
+  Object (..),
  )
+import safe MtgPure.Model.ObjectN (ObjectN (..))
 
 class (IsObjectType z, Inst1 IsObjectType a) => ToObject1' z a where
   -- NOTE: This is the same as `O1` for N=1, but uniqueness is not guaranteed

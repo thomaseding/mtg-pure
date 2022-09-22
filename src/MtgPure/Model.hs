@@ -26,7 +26,6 @@ module MtgPure.Model (
   module MtgPure.Model.Hand,
   module MtgPure.Model.HasManaSymbol,
   module MtgPure.Model.IsCardList,
-  module MtgPure.Model.IsObjectType,
   module MtgPure.Model.LandType,
   module MtgPure.Model.Library,
   module MtgPure.Model.Life,
@@ -40,8 +39,6 @@ module MtgPure.Model (
   module MtgPure.Model.Object,
   module MtgPure.Model.ObjectId,
   module MtgPure.Model.ObjectN,
-  module MtgPure.Model.ObjectN.Type,
-  module MtgPure.Model.ObjectType,
   module MtgPure.Model.ObjectType.Any,
   module MtgPure.Model.ObjectType.Card,
   module MtgPure.Model.ObjectType.Kind,
@@ -103,7 +100,6 @@ import safe MtgPure.Model.Graveyard
 import safe MtgPure.Model.Hand
 import safe MtgPure.Model.HasManaSymbol
 import safe MtgPure.Model.IsCardList
-import safe MtgPure.Model.IsObjectType
 import safe MtgPure.Model.LandType
 import safe MtgPure.Model.Library
 import safe MtgPure.Model.Life
@@ -117,8 +113,6 @@ import safe MtgPure.Model.ManaTypeToColor
 import safe MtgPure.Model.Object
 import safe MtgPure.Model.ObjectId
 import safe MtgPure.Model.ObjectN
-import safe MtgPure.Model.ObjectN.Type
-import safe MtgPure.Model.ObjectType
 import safe MtgPure.Model.ObjectType.Any
 import safe MtgPure.Model.ObjectType.Card
 import safe MtgPure.Model.ObjectType.Kind

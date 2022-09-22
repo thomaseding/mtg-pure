@@ -27,7 +27,7 @@ module MtgPure.Model.ToObjectN.CodeGen (
 import safe Data.List (intercalate, sort, sortBy, subsequences, (\\))
 import safe Data.Maybe (catMaybes)
 import safe qualified Data.Set as Set
-import safe MtgPure.Model.ObjectType (ObjectType)
+import safe MtgPure.Model.Object (ObjectType)
 
 -- runhaskell MtgPure/Model/ToObjectN/CodeGen.hs > MtgPure/Model/ToObjectN/Instances.hs
 main :: IO ()
@@ -73,9 +73,8 @@ header =
   \    Inst11,\n\
   \    Inst12,\n\
   \  )\n\
-  \import safe MtgPure.Model.IsObjectType (IsObjectType)\n\
+  \import safe MtgPure.Model.Object (IsObjectType, OT)\n\
   \import safe MtgPure.Model.ObjectN (ObjectN (..))\n\
-  \import safe MtgPure.Model.ObjectType (OT)\n\
   \import safe MtgPure.Model.ToObjectN.Classes\n\
   \  ( ToObject1'(..),\n\
   \    ToObject2'(..),\n\
