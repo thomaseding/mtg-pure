@@ -50,6 +50,7 @@ module MtgPure.Model (
   module MtgPure.Model.PhaseStep,
   module MtgPure.Model.Player,
   module MtgPure.Model.Power,
+  module MtgPure.Model.PrePost,
   module MtgPure.Model.PrettyType,
   module MtgPure.Model.Rarity,
   module MtgPure.Model.Recursive,
@@ -124,6 +125,7 @@ import safe MtgPure.Model.Phase
 import safe MtgPure.Model.PhaseStep
 import safe MtgPure.Model.Player
 import safe MtgPure.Model.Power
+import safe MtgPure.Model.PrePost
 import safe MtgPure.Model.PrettyType
 import safe MtgPure.Model.Rarity
 import safe MtgPure.Model.Recursive

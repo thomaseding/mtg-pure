@@ -55,7 +55,7 @@ import safe Data.Functor ((<&>))
 import safe Data.Kind (Type)
 import safe qualified Data.List as List
 import safe qualified Data.Map.Strict as Map
-import safe Data.Maybe (catMaybes)
+import safe Data.Maybe (catMaybes, mapMaybe)
 import safe qualified Data.Stream as Stream
 import safe Data.Typeable (Typeable)
 import safe Data.Void (Void, absurd)
@@ -93,8 +93,9 @@ import safe MtgPure.Model.Object (
   IsObjectType (..),
   OT0,
   Object (..),
+  ObjectDiscriminant,
   ObjectType (..),
-  SObjectType (..),
+  pattern DefaultObjectDiscriminant,
  )
 import safe MtgPure.Model.ObjectId (GetObjectId (..), ObjectId (..))
 import safe MtgPure.Model.ObjectN (ObjectN (..))
@@ -114,24 +115,29 @@ import safe MtgPure.Model.Permanent (
  )
 import safe MtgPure.Model.PhaseStep (PhaseStep (..))
 import safe MtgPure.Model.Player (Player (..))
+import safe MtgPure.Model.PrePost (PrePost (..))
 import safe MtgPure.Model.Recursive (
   Card (..),
   CardTypeDef (..),
   Cost (..),
   Effect (..),
   Elect (..),
+  ElectPrePost,
   Requirement (..),
   Some (..),
   SomeCard,
   SomeTerm (..),
+  WithMaskedObject (..),
   WithThis (..),
  )
 import safe MtgPure.Model.Recursive.Ord ()
 import safe MtgPure.Model.Recursive.Show ()
+import safe MtgPure.Model.Selection (Selection (..))
 import safe MtgPure.Model.Sideboard (Sideboard (..))
 import safe MtgPure.Model.Stack (Stack (..))
 import safe MtgPure.Model.Step (Step (..))
 import safe MtgPure.Model.Tribal (IsTribal, Tribal (..))
+import safe MtgPure.Model.VisitObjectN (VisitObjectN (..))
 import safe MtgPure.Model.Zone (
   IsZone,
   SZone (..),
@@ -145,6 +151,7 @@ import safe MtgPure.Model.ZoneObject (
   ZoneObject (..),
   objectToZO,
   toZO0,
+  zo1ToObject,
  )
 
 data InternalLogicError
@@ -182,6 +189,7 @@ data Prompt (m :: Type -> Type) = Prompt
   , promptDebugMessage :: String -> m ()
   , promptGetStartingPlayer :: PlayerCount -> m PlayerIndex
   , promptPerformMulligan :: Object 'OTPlayer -> [Card ()] -> m Bool -- TODO: Encode limited game state about players' mulligan states and [Serum Powder].
+  , promptPickZO :: forall zone ot. IsZO zone ot => Object 'OTPlayer -> [ZO zone ot] -> m (ZO zone ot)
   , promptPlayLand :: OpaqueGameState m -> Object 'OTPlayer -> m (Maybe PlayLand)
   , promptShuffle :: CardCount -> Object 'OTPlayer -> m [CardIndex]
   }
@@ -251,13 +259,18 @@ takeUnique n s = case n <= 0 of
 mkAPNAP :: PlayerCount -> Stream.Stream (Object 'OTPlayer) -> Stream.Stream (Object 'OTPlayer)
 mkAPNAP (PlayerCount n) = Stream.cycle . takeUnique n
 
+type TargetId = ObjectId
+
+data AnyRequirement :: Type where
+  AnyRequirement :: IsZO zone ot => Requirement zone ot -> AnyRequirement
+
 data GameState (m :: Type -> Type) where
   GameState ::
     { magicCurrentTurn :: Int
-    , magicElected :: Map.Map (ZO 'ZStack OT0) AnyElected
     , magicGraveyardCards :: Map.Map (ZO 'ZGraveyard OT0) (Card ())
     , magicHandCards :: Map.Map (ZO 'ZHand OT0) (Card ())
     , magicManaBurn :: Bool
+    , magicNextObjectDiscriminant :: ObjectDiscriminant
     , magicNextObjectId :: ObjectId
     , magicPermanents :: Map.Map (ZO 'ZBattlefield OT0) Permanent
     , magicPhaseStep :: PhaseStep
@@ -265,9 +278,12 @@ data GameState (m :: Type -> Type) where
     , magicPlayerOrderAPNAP :: Stream.Stream (Object 'OTPlayer) -- does not contain losers
     , magicPlayerOrderPriority :: [Object 'OTPlayer] -- does not contain losers
     , magicPlayerOrderTurn :: Stream.Stream (Object 'OTPlayer) -- does not contain losers
+    , magicPreElected :: Map.Map (ZO 'ZStack OT0) (AnyElected 'Pre)
     , magicPrompt :: Prompt m
     , magicStartingPlayer :: Object 'OTPlayer
     , magicStack :: Stack
+    , magicStackItemToTargets :: Map.Map (ZO 'ZStack OT0) [TargetId]
+    , magicTargetProperties :: Map.Map TargetId [AnyRequirement]
     } ->
     GameState m
   deriving (Typeable)
@@ -279,10 +295,10 @@ mkGameState input = case playerObjects of
     Just
       GameState
         { magicCurrentTurn = 0
-        , magicElected = mempty
         , magicGraveyardCards = mempty
         , magicHandCards = mempty
         , magicManaBurn = False
+        , magicNextObjectDiscriminant = DefaultObjectDiscriminant + 1
         , magicNextObjectId = ObjectId playerCount
         , magicPermanents = mempty
         , magicPhaseStep = PSBeginningPhase UntapStep
@@ -290,15 +306,18 @@ mkGameState input = case playerObjects of
         , magicPlayerOrderAPNAP = Stream.cycle playerObjects
         , magicPlayerOrderPriority = []
         , magicPlayerOrderTurn = Stream.cycle playerObjects
+        , magicPreElected = mempty
         , magicPrompt = gameInput_prompt input
         , magicStack = Stack []
         , magicStartingPlayer = oPlayer
+        , magicStackItemToTargets = mempty
+        , magicTargetProperties = mempty
         }
  where
   format = gameInput_gameFormat input
   players = map (uncurry $ mkPlayer format) $ gameInput_decks input
   playerCount = length players
-  playerObjects = map (Object SPlayer . ObjectId) [0 .. playerCount - 1]
+  playerObjects = map (idToObject . ObjectId) [0 .. playerCount - 1]
   playerMap = Map.fromList $ zip playerObjects players
 
 newtype OpaqueGameState m = OpaqueGameState (GameState m)
@@ -356,6 +375,14 @@ untilJust m =
     Just x -> pure x
     Nothing -> untilJust m
 
+andM :: Monad m => [m Bool] -> m Bool
+andM = \case
+  [] -> pure True
+  m : ms ->
+    m >>= \case
+      True -> andM ms
+      False -> pure False
+
 getAlivePlayerCount :: Monad m => Magic 'Public 'RO m PlayerCount
 getAlivePlayerCount = undefined
 
@@ -372,7 +399,7 @@ getPlayers = do
   pure $ map fst $ filter (not . playerLost . snd) ps
 
 withEachPlayer_ :: (IsReadWrite rw, Monad m) => (Object 'OTPlayer -> Magic v rw m ()) -> Magic v rw m ()
-withEachPlayer_ f = fromPublicRO getPlayers >>= M.mapM_ f
+withEachPlayer_ f = fromPublicRO getPlayers >>= mapM_ f
 
 getPermanents :: Monad m => Magic v 'RO m [ZO 'ZBattlefield OT0]
 getPermanents = internalFromPrivate $ gets $ Map.keys . magicPermanents
@@ -381,13 +408,13 @@ withEachPermanent ::
   (IsReadWrite rw, Monad m) =>
   (ZO 'ZBattlefield OT0 -> Magic v rw m a) ->
   Magic v rw m [a]
-withEachPermanent f = fromRO getPermanents >>= M.mapM f
+withEachPermanent f = fromRO getPermanents >>= mapM f
 
 withEachPermanent_ ::
   (IsReadWrite rw, Monad m) =>
   (ZO 'ZBattlefield OT0 -> Magic v rw m ()) ->
   Magic v rw m ()
-withEachPermanent_ f = fromRO getPermanents >>= M.mapM_ f
+withEachPermanent_ f = fromRO getPermanents >>= mapM_ f
 
 withEachControlledPermanent_ ::
   (IsReadWrite rw, Monad m) =>
@@ -568,7 +595,7 @@ rewindIllegal m = do
     Illegal -> put st >> pure False
 
 castSpell :: forall m. Monad m => Object 'OTPlayer -> SomeCard OTSpell -> Magic 'Private 'RW m Bool
-castSpell oPlayer someCard = rewindIllegal $ case someCard of
+castSpell oCaster someCard = rewindIllegal $ case someCard of
   Some6a (SomeArtifact card) -> undefined card
   Some6b (SomeCreature card) -> undefined card
   Some6c (SomeEnchantment card) -> undefined card
@@ -576,26 +603,30 @@ castSpell oPlayer someCard = rewindIllegal $ case someCard of
   Some6e (SomePlaneswalker card) -> undefined card
   Some6f (SomeSorcery card@(Card _name _wCard (T1 thisToElectDef))) -> do
     i <- newObjectId
-    let this = ZOBattlefield $ O1 $ Object SSorcery i
+    let this = ZO SZBattlefield $ O1 $ idToObject i
 
-        goElectDef :: Elect (CardTypeDef 'NonTribal OTSorcery) OTSorcery -> Magic 'Private 'RW m Legality
+        goElectDef :: Elect 'Pre (CardTypeDef 'NonTribal OTSorcery) OTSorcery -> Magic 'Private 'RW m Legality
         goElectDef = \case
+          A sel oPlayer thisToElect -> electA goElectDef sel oPlayer thisToElect
           CardTypeDef def -> goDef def
           _ -> undefined
 
         goDef :: CardTypeDef 'NonTribal OTSorcery -> Magic 'Private 'RW m Legality
         goDef def =
-          let goElectCost :: Elect (Cost OTSorcery) OTSorcery -> Magic 'Private 'RW m Legality
+          let goElectCost :: ElectPrePost (Cost OTSorcery) OTSorcery -> Magic 'Private 'RW m Legality
               goElectCost = \case
-                Cost cost -> goCost cost
+                Elect cost -> goCost $ Pending cost
                 _ -> undefined
 
-              goCost :: Cost OTSorcery -> Magic 'Private 'RW m Legality
+              goCost :: Pending (Cost OTSorcery) OTSorcery -> Magic 'Private 'RW m Legality
               goCost cost =
-                let goElectEffect :: Elect (Effect 'OneShot) OTSorcery -> Magic 'Private 'RW m Legality
+                let goElectEffect :: ElectPrePost (Effect 'OneShot) OTSorcery -> Magic 'Private 'RW m Legality
                     goElectEffect = \case
-                      Effect effect -> castElected $ ElectedSorcery oPlayer card def cost $ EAnd effect
+                      Elect effect -> goEffect $ Pending effect
                       _ -> undefined
+
+                    goEffect :: Pending (Effect 'OneShot) OTSorcery -> Magic 'Private 'RW m Legality
+                    goEffect effect = castElected $ ElectedSorcery oCaster card def cost effect
                  in goElectEffect $ sorcery_effect def
            in goElectCost $ sorcery_cost def
 
@@ -604,43 +635,143 @@ castSpell oPlayer someCard = rewindIllegal $ case someCard of
   Some6ab (SomeArtifactCreature card) -> undefined card
   Some6bc (SomeEnchantmentCreature card) -> undefined card
 
-data Elected (tribal :: Tribal) (ot :: Type) :: Type where
+electA ::
+  forall zone m el ot.
+  (IsZO zone ot, Monad m) =>
+  (Elect 'Pre el ot -> Magic 'Private 'RW m Legality) ->
+  Selection ->
+  OPlayer ->
+  WithMaskedObject zone (Elect 'Pre el ot) ->
+  Magic 'Private 'RW m Legality
+electA goElect sel oPlayer = \case
+  M1 reqs zoToElect -> go reqs zoToElect
+  M2 reqs zoToElect -> go reqs zoToElect
+  M3 reqs zoToElect -> go reqs zoToElect
+  M4 reqs zoToElect -> go reqs zoToElect
+  M5 reqs zoToElect -> go reqs zoToElect
+  _ -> undefined
+ where
+  go ::
+    (IsZO zone ot', Eq (ZO zone ot')) =>
+    [Requirement zone ot'] ->
+    (ZO zone ot' -> Elect 'Pre el ot) ->
+    Magic 'Private 'RW m Legality
+  go reqs zoToElect = do
+    prompt <- fromRO $ gets magicPrompt
+    fromRO (findObjectsSatisfying (RAnd reqs)) >>= \case
+      [] -> pure Illegal
+      zos -> do
+        zo <- lift $
+          untilJust $ do
+            zo <- promptPickZO prompt (zo1ToObject oPlayer) zos
+            pure $ case zo `elem` zos of
+              False -> Nothing
+              True -> Just zo
+        zo' <- case sel of
+          Choose -> pure zo
+          Target -> mkTarget zo $ RAnd reqs
+        let elect = zoToElect zo'
+        goElect elect
+
+mkTarget ::
+  (Monad m, IsZO zone ot) =>
+  ZO zone ot ->
+  Requirement zone ot ->
+  Magic 'Private 'RW m (ZO zone ot)
+mkTarget zo reqs = do
+  -- TODO: map target object to until the spell resolves/counters/fizzles
+  -- type Target = ObjectN OT0
+  -- magicTargetProperties :: Map.Map Target [([ObjectType] | OT otk | SomeRequirement)]
+  -- magicStackItemToTargets :: Map.Map (ZO 'ZStack OT0) [TargetId]
+  disc <- fromRO $ gets magicNextObjectDiscriminant
+  modify $ \st -> st{magicNextObjectDiscriminant = disc + 1}
+  let (ZO sZone objN) = zo
+      go :: Object a -> Object a
+      go = \case
+        Object wit oldDisc i ->
+          assert (oldDisc == DefaultObjectDiscriminant) $ Object wit disc i
+      objN' = mapObjectN go objN
+      zo' = ZO sZone objN'
+  M.void $ undefined reqs
+  pure zo'
+
+electAll ::
+  forall zone m el ot.
+  (IsZO zone ot, Monad m) =>
+  (Elect 'Post el ot -> Magic 'Private 'RW m Legality) ->
+  WithMaskedObject zone (Elect 'Post el ot) ->
+  Magic 'Private 'RW m Legality
+electAll goElect = \case
+  M1 reqs zoToElect -> go reqs zoToElect
+  M2 reqs zoToElect -> go reqs zoToElect
+  M3 reqs zoToElect -> go reqs zoToElect
+  M4 reqs zoToElect -> go reqs zoToElect
+  M5 reqs zoToElect -> go reqs zoToElect
+  _ -> undefined
+ where
+  go ::
+    (IsZO zone ot', Eq (ZO zone ot')) =>
+    [Requirement zone ot'] ->
+    (ZO zone ot' -> Elect 'Post el ot) ->
+    Magic 'Private 'RW m Legality
+  go reqs zoToElect = do
+    zos <- fromRO $ findObjectsSatisfying $ RAnd reqs
+    fmap toLegality $ andM $ map (fmap fromLegality . goElect . zoToElect) zos
+
+data PendingReady (p :: PrePost) (el :: Type) (ot :: Type) where
+  Pending :: {unPending :: Elect 'Post el ot} -> Pending el ot
+  Ready :: {unReady :: el} -> Ready el ot
+
+type Pending = PendingReady 'Pre
+
+type Ready = PendingReady 'Post
+
+data Elected (p :: PrePost) (tribal :: Tribal) (ot :: Type) :: Type where
   ElectedSorcery ::
     IsTribal tribal =>
     { electedSorcery_controller :: Object 'OTPlayer
     , electedSorcery_card :: Card OTSorcery
     , electedSorcery_def :: CardTypeDef tribal OTSorcery
-    , electedSorcery_cost :: Cost OTSorcery
-    , electedSorcery_effect :: Effect 'OneShot
+    , electedSorcery_cost :: PendingReady p (Cost OTSorcery) OTSorcery
+    , electedSorcery_effect :: PendingReady p (Effect 'OneShot) OTSorcery
     } ->
-    Elected tribal OTSorcery
+    Elected p tribal OTSorcery
   deriving (Typeable)
 
-data AnyElected :: Type where
-  AnyElectedSorcery :: Elected tribal OTSorcery -> AnyElected
+data AnyElected (p :: PrePost) :: Type where
+  AnyElectedSorcery :: Elected p tribal OTSorcery -> AnyElected p
   deriving (Typeable)
 
 class CastElected (tribal :: Tribal) (ot :: Type) where
-  castElected :: Monad m => Elected tribal ot -> Magic 'Private 'RW m Legality
+  castElected :: Monad m => Elected 'Pre tribal ot -> Magic 'Private 'RW m Legality
 
 instance CastElected tribal OTSorcery where
   castElected elected =
-    payCost (electedSorcery_controller elected) (electedSorcery_cost elected) >>= \case
-      Illegal -> pure Illegal
-      Legal -> do
-        pure () -- TODO: make zo stack object
-        pure () -- TODO: map zo to elected
-        pure Legal
+    let goElectCost :: Monad m => Elect 'Post (Cost OTSorcery) OTSorcery -> Magic 'Private 'RW m Legality
+        goElectCost = \case
+          All masked -> electAll goElectCost masked
+          Cost cost -> goCost cost
+          _ -> undefined
+
+        goCost :: Monad m => Cost OTSorcery -> Magic 'Private 'RW m Legality
+        goCost cost =
+          payCost (electedSorcery_controller elected) cost >>= \case
+            Illegal -> pure Illegal
+            Legal -> do
+              pure () -- TODO: make zo stack object
+              pure () -- TODO: map zo to elected
+              pure Legal
+     in goElectCost $ unPending $ electedSorcery_cost elected
 
 toLegality :: Bool -> Legality
 toLegality = \case
   True -> Legal
   False -> Illegal
 
--- fromLegality :: Legality -> Bool
--- fromLegality = \case
---   Legal -> True
---   Illegal -> False
+fromLegality :: Legality -> Bool
+fromLegality = \case
+  Legal -> True
+  Illegal -> False
 
 payCost :: Monad m => Object 'OTPlayer -> Cost ot -> Magic 'Private 'RW m Legality
 payCost oPlayer = \case
@@ -659,11 +790,17 @@ payTapCost ::
   Requirement 'ZBattlefield ot ->
   Magic 'Private 'RW m Legality
 payTapCost oPlayer req =
-  fromRO (findObjectsSatisfying $ RAnd [ControlledBy $ ZOBattlefield $ O1 oPlayer, req]) >>= \case
+  fromRO (findObjectsSatisfying $ RAnd [ControlledBy $ ZO SZBattlefield $ O1 oPlayer, req]) >>= \case
     [] -> pure Illegal
-    o : _os ->
-      -- TODO: Offer other choices
-      tapPermanent (toZO0 o) <&> toLegality
+    zos -> do
+      prompt <- fromRO $ gets magicPrompt
+      zo <- lift $
+        untilJust $ do
+          zo <- promptPickZO prompt oPlayer zos
+          pure $ case zo `elem` zos of
+            False -> Nothing
+            True -> Just zo
+      tapPermanent (toZO0 zo) <&> toLegality
 
 untapPermanent :: Monad m => ZO 'ZBattlefield OT0 -> Magic 'Private 'RW m Bool
 untapPermanent oPerm = do
@@ -681,31 +818,38 @@ allZoneObjects :: forall m zone ot. (Monad m, IsZO zone ot) => Magic 'Private 'R
 allZoneObjects = case singZone @zone of
   SZBattlefield -> case indexOT @ot of
     objectTypes ->
-      let go :: [ObjectType] -> Magic 'Private 'RO m (DList.DList (ZO zone ot))
-          go = \case
+      let goPerms :: ObjectType -> Magic 'Private 'RO m [ZO zone ot]
+          goPerms ot = fmap catMaybes $
+            withEachPermanent $ \oPerm -> do
+              perm <- getPermanent oPerm
+              let goPerm ::
+                    forall a x.
+                    IsObjectType a =>
+                    (Permanent -> Maybe x) ->
+                    Maybe (ZO 'ZBattlefield ot)
+                  goPerm viewPerm = case viewPerm perm of
+                    Nothing -> Nothing
+                    Just{} -> objectToZO $ idToObject @a $ getObjectId oPerm
+              pure $ case ot of
+                OTArtifact -> goPerm @ 'OTArtifact permanentArtifact
+                OTCreature -> goPerm @ 'OTCreature permanentCreature
+                OTEnchantment -> goPerm @ 'OTEnchantment undefined
+                OTLand -> goPerm @ 'OTLand permanentLand
+                OTPlaneswalker -> goPerm @ 'OTPlaneswalker undefined
+                _ -> Nothing
+          goPlayers :: ObjectType -> Magic 'Private 'RO m [ZO zone ot]
+          goPlayers = \case
+            OTPlayer -> mapMaybe objectToZO <$> fromPublic getPlayers
+            _ -> pure []
+          goRec :: [ObjectType] -> Magic 'Private 'RO m (DList.DList (ZO zone ot))
+          goRec = \case
             [] -> pure DList.empty
             ot : ots -> do
-              zos <- fmap catMaybes $
-                withEachPermanent $ \oPerm -> do
-                  perm <- getPermanent oPerm
-                  let goPermanent ::
-                        forall a x.
-                        IsObjectType a =>
-                        (Permanent -> Maybe x) ->
-                        Maybe (ZO 'ZBattlefield ot)
-                      goPermanent viewPerm = case viewPerm perm of
-                        Nothing -> Nothing
-                        Just{} -> objectToZO $ idToObject @a $ getObjectId oPerm
-                  pure $ case ot of
-                    OTArtifact -> goPermanent @ 'OTArtifact permanentArtifact
-                    OTCreature -> goPermanent @ 'OTCreature permanentCreature
-                    OTEnchantment -> goPermanent @ 'OTEnchantment undefined
-                    OTLand -> goPermanent @ 'OTLand permanentLand
-                    OTPlaneswalker -> goPermanent @ 'OTPlaneswalker undefined
-                    _ -> Nothing
-              zos' <- go ots
-              pure $ DList.fromList zos <> zos'
-       in DList.toList <$> go objectTypes
+              oPerms <- goPerms ot
+              oPlayers <- goPlayers ot
+              oRecs <- goRec ots
+              pure $ DList.fromList oPerms <> DList.fromList oPlayers <> oRecs
+       in DList.toList <$> goRec objectTypes
   _ -> undefined
 
 objectSatisfies ::
@@ -727,10 +871,10 @@ objectSatisfiesControlledBy ::
   ZO zone ot ->
   OPlayer ->
   Magic 'Private 'RO m Bool
-objectSatisfiesControlledBy oPerm oPlayer = case singZone @zone of
+objectSatisfiesControlledBy oAny oPlayer = case singZone @zone of
   SZBattlefield ->
-    findPermanent (toZO0 oPerm) <&> \case
-      Nothing -> False
+    findPermanent (toZO0 oAny) <&> \case
+      Nothing -> getObjectId oAny == getObjectId oPlayer -- TODO: [Mindslaver]
       Just perm -> getObjectId (permanentController perm) == getObjectId oPlayer
   _ -> undefined
 

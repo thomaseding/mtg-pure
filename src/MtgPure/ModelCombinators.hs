@@ -40,6 +40,7 @@ module MtgPure.ModelCombinators (
   CoAny (..),
   colored,
   colorless,
+  CoNonProxy (..),
   controllerOf,
   CoPermanent (..),
   counterAbility,
@@ -82,6 +83,7 @@ module MtgPure.ModelCombinators (
 ) where
 
 import safe Data.Inst (Inst1, Inst2, Inst3, Inst4, Inst5, Inst6)
+import safe Data.Kind (Type)
 import safe Data.Proxy (Proxy (..))
 import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.BasicLandType (BasicLandType)
@@ -125,6 +127,7 @@ import safe MtgPure.Model.ObjectType.Kind (
   OTSpell,
  )
 import safe MtgPure.Model.ObjectType.Permanent (IsPermanentType, WPermanent (..))
+import safe MtgPure.Model.PrePost (PrePost (..))
 import safe MtgPure.Model.Recursive (
   Ability,
   Card (..),
@@ -298,8 +301,11 @@ instance ToSetToken (SetToken OTPlaneswalker) where
 class Typeable x => CoNonProxy x where
   coNonProxy :: NonProxy x
 
-instance Typeable ef => CoNonProxy (Elect (Effect ef)) where
+instance (Typeable p, Typeable ef) => CoNonProxy (Elect p (Effect ef)) where
   coNonProxy = NonProxyElectEffect
+
+instance (Typeable ot) => CoNonProxy (Elect 'Pre (Elect 'Post (Effect 'Continuous) ot)) where
+  coNonProxy = NonProxyElectPrePostEffect
 
 class (IsOT ot, Typeable liftOT) => AsWithLinkedObject ot zone liftOT where
   linked :: [Requirement zone ot] -> (ZO zone ot -> liftOT ot) -> WithLinkedObject zone liftOT ot
@@ -462,7 +468,7 @@ dealDamage source target =
     . asDamage
 
 controllerOf ::
-  (AsAny ot', IsZO zone ot') => ZO zone ot' -> (OPlayer -> Elect e ot) -> Elect e ot
+  (AsAny ot', IsZO zone ot') => ZO zone ot' -> (OPlayer -> Elect p e ot) -> Elect p e ot
 controllerOf = ControllerOf . asAny
 
 sacrifice ::
@@ -610,7 +616,7 @@ tapped = IsTapped coPermanent
 addToBattlefield :: CoPermanent ot => OPlayer -> Token ot -> Effect 'OneShot
 addToBattlefield = AddToBattlefield coPermanent
 
-ofColors :: ColorsLike c => c -> Requirement zone ot
+ofColors :: (IsZO zone ot, ColorsLike c) => c -> Requirement zone ot
 ofColors = OfColors . toColors
 
 class AsCost c ot where
@@ -622,23 +628,23 @@ instance AsCost (Cost ot) ot where
 instance AsCost ManaCost ot where
   asCost = ManaCost
 
-playerPays :: AsCost c OPlayer => c -> Requirement zone OTPlayer
+playerPays :: (IsZone zone, AsCost c OPlayer) => c -> Requirement zone OTPlayer
 playerPays = PlayerPays . asCost
 
 class ElectEffect effect elect where
   effect :: effect -> elect ot
 
-instance ElectEffect (Effect e) (Elect (Effect e)) where
+instance ElectEffect (Effect e) (Elect 'Post (Effect e)) where
   effect = Effect . pure
 
-instance ElectEffect [Effect e] (Elect (Effect e)) where
+instance ElectEffect [Effect e] (Elect 'Post (Effect e)) where
   effect = Effect
 
-instance ElectEffect (Effect 'Continuous) (Elect (Effect 'OneShot)) where
+instance ElectEffect (Effect 'Continuous) (Elect 'Post (Effect 'OneShot)) where
   effect = Effect . pure . EffectContinuous
 
-class EventLike x where
-  event :: x -> Elect x ot
+class EventLike el where
+  event :: el -> Elect 'Post el ot
 
 instance EventLike Event where
   event = Event
@@ -646,39 +652,47 @@ instance EventLike Event where
 instance EventLike EventListener where
   event = Listen
 
-class AsIfThen e ot where
-  thenEmpty :: Elect e ot
-  elseEmpty :: Else e ot
-  default elseEmpty :: AsIfThenElse e ot => Else e ot
+class AsIfThen (p :: PrePost) (el :: Type) (ot :: Type) where
+  thenEmpty :: Elect p el ot
+
+class AsIfThen p el ot => AsIfElse p el ot where
+  elseEmpty :: Else p el ot
+  default elseEmpty :: AsIfThenElse p el ot => Else p el ot
   elseEmpty = liftElse thenEmpty
 
-instance AsIfThen (Cost ot) ot where
+class AsIfThen (p :: PrePost) (el :: Type) (ot :: Type) => AsIfThenElse p el ot where
+  liftElse :: Elect p el ot -> Else p el ot
+
+instance AsIfThen 'Post (Cost ot) ot where
   thenEmpty = Cost $ AndCosts []
 
-instance AsIfThen (Effect 'OneShot) ot where
+instance AsIfElse 'Post (Cost ot) ot
+
+instance AsIfThen 'Post (Effect 'OneShot) ot where
   thenEmpty = Effect []
 
-instance AsIfThen EventListener ot where
+instance AsIfElse 'Post (Effect 'OneShot) ot
+
+instance AsIfThen 'Post EventListener ot where
   thenEmpty = event $ Events []
+
+instance AsIfElse 'Post EventListener ot where
   elseEmpty = ElseEvent
 
-class AsIfThen e ot => AsIfThenElse e ot where
-  liftElse :: Elect e ot -> Else e ot
-
-instance AsIfThenElse (Cost ot) ot where
+instance AsIfThenElse 'Post (Cost ot) ot where
   liftElse = ElseCost
 
-instance AsIfThenElse (Effect 'OneShot) ot where
+instance AsIfThenElse 'Post (Effect 'OneShot) ot where
   liftElse = ElseEffect
 
-ifThen :: AsIfThen e ot => Condition -> Elect e ot -> Elect e ot
+ifThen :: AsIfElse p el ot => Condition -> Elect p el ot -> Elect p el ot
 ifThen cond then_ = If cond then_ elseEmpty
 
-ifElse :: AsIfThen e ot => Condition -> Elect e ot -> Elect e ot
+ifElse :: AsIfElse p el ot => Condition -> Elect p el ot -> Elect p el ot
 ifElse cond else_ = If (CNot cond) else_ elseEmpty
 
 ifThenElse ::
-  AsIfThenElse e ot => Condition -> Elect e ot -> Elect e ot -> Elect e ot
+  AsIfThenElse p el ot => Condition -> Elect p el ot -> Elect p el ot -> Elect p el ot
 ifThenElse cond then_ else_ = If cond then_ $ liftElse else_
 
 isBasic :: IsZone zone => Requirement zone OTLand
@@ -690,7 +704,7 @@ nonBasic = RAnd $ map (Not . HasLandType . BasicLand) [minBound ..]
 nonBlack :: IsZO zone ot => Requirement zone ot
 nonBlack = Not $ ofColors Black
 
-colored :: Requirement zone ot
+colored :: IsZO zone ot => Requirement zone ot
 colored = ROr $ map ofColors [minBound :: Color ..]
 
 colorless :: IsZO zone ot => Requirement zone ot
@@ -710,7 +724,7 @@ class
   (AsWithThis ot 'ZBattlefield (CardTypeDef tribal) ots) =>
   MkCard tribal ot ots
   where
-  mkCard :: CardName -> (ots -> Elect (CardTypeDef tribal ot) ot) -> Card ot
+  mkCard :: CardName -> (ots -> Elect 'Pre (CardTypeDef tribal ot) ot) -> Card ot
 
 instance
   MkCard
@@ -755,7 +769,7 @@ instance
 mkToken ::
   (CoPermanent ot, MkCard tribal ot ots) =>
   CardName ->
-  (ots -> Elect (CardTypeDef tribal ot) ot) ->
+  (ots -> Elect 'Pre (CardTypeDef tribal ot) ot) ->
   Token ot
 mkToken name = Token coPermanent . mkCard name
 
@@ -767,7 +781,7 @@ hasAbility = HasAbility . thisObject
 
 becomesTapped ::
   CoPermanent ot =>
-  WithLinkedObject 'ZBattlefield (Elect (Effect 'OneShot)) ot ->
+  WithLinkedObject 'ZBattlefield (Elect 'Post (Effect 'OneShot)) ot ->
   EventListener
 becomesTapped = BecomesTapped coPermanent
 
@@ -782,7 +796,7 @@ lose :: CoAny ot => ZO 'ZBattlefield ot -> Ability ot -> Effect 'Continuous
 lose = Lose coAny
 
 class HasLandType a where
-  hasLandType :: a -> Requirement zone OTLand
+  hasLandType :: IsZone zone => a -> Requirement zone OTLand
 
 instance HasLandType BasicLandType where
   hasLandType = HasLandType . BasicLand
@@ -797,6 +811,6 @@ putOntoBattlefield = PutOntoBattlefield coPermanent
 searchLibrary ::
   CoCard ot =>
   OPlayer ->
-  WithLinkedObject 'ZLibrary (Elect (Effect 'OneShot)) ot ->
+  WithLinkedObject 'ZLibrary (Elect 'Post (Effect 'OneShot)) ot ->
   Effect 'OneShot
 searchLibrary = SearchLibrary coCard

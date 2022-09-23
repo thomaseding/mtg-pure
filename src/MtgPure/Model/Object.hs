@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE Safe #-}
@@ -62,6 +63,8 @@ module MtgPure.Model.Object (
   ObjectVisitor (..),
   visitObject',
   LitOT (..),
+  ObjectDiscriminant,
+  pattern DefaultObjectDiscriminant,
   Object (..),
 ) where
 
@@ -258,19 +261,19 @@ type OTK12 a b c d e f g h i j k l =
   '( '(), a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType, h :: ObjectType, i :: ObjectType, j :: ObjectType, k :: ObjectType, l :: ObjectType)
 
 data OT (otk :: k) :: Type where
-  --OT0 :: OT0
-  OT1 :: Inst1 IsObjectType a => OT (OTK1 a)
-  OT2 :: Inst2 IsObjectType a b => OT (OTK2 a b)
-  OT3 :: Inst3 IsObjectType a b c => OT (OTK3 a b c)
-  OT4 :: Inst4 IsObjectType a b c d => OT (OTK4 a b c d)
-  OT5 :: Inst5 IsObjectType a b c d e => OT (OTK5 a b c d e)
-  OT6 :: Inst6 IsObjectType a b c d e f => OT (OTK6 a b c d e f)
-  OT7 :: Inst7 IsObjectType a b c d e f g => OT (OTK7 a b c d e f g)
-  OT8 :: Inst8 IsObjectType a b c d e f g h => OT (OTK8 a b c d e f g h)
-  OT9 :: Inst9 IsObjectType a b c d e f g h i => OT (OTK9 a b c d e f g h i)
-  OT10 :: Inst10 IsObjectType a b c d e f g h i j => OT (OTK10 a b c d e f g h i j)
-  OT11 :: Inst11 IsObjectType a b c d e f g h i j k => OT (OTK11 a b c d e f g h i j k)
-  OT12 :: Inst12 IsObjectType a b c d e f g h i j k l => OT (OTK12 a b c d e f g h i j k l)
+  OT0 :: OT0
+  OT1 :: Inst1 IsObjectType a => OT1 a
+  OT2 :: Inst2 IsObjectType a b => OT2 a b
+  OT3 :: Inst3 IsObjectType a b c => OT3 a b c
+  OT4 :: Inst4 IsObjectType a b c d => OT4 a b c d
+  OT5 :: Inst5 IsObjectType a b c d e => OT5 a b c d e
+  OT6 :: Inst6 IsObjectType a b c d e f => OT6 a b c d e f
+  OT7 :: Inst7 IsObjectType a b c d e f g => OT7 a b c d e f g
+  OT8 :: Inst8 IsObjectType a b c d e f g h => OT8 a b c d e f g h
+  OT9 :: Inst9 IsObjectType a b c d e f g h i => OT9 a b c d e f g h i
+  OT10 :: Inst10 IsObjectType a b c d e f g h i j => OT10 a b c d e f g h i j
+  OT11 :: Inst11 IsObjectType a b c d e f g h i j k => OT11 a b c d e f g h i j k
+  OT12 :: Inst12 IsObjectType a b c d e f g h i j k l => OT12 a b c d e f g h i j k l
 
 type OT0 = OT OTK0
 
@@ -329,85 +332,85 @@ visitObject' ::
 visitObject' f = visitObject $ ObjectVisitor f f f f f f f f f f f f
 
 instance IsObjectType 'OTActivatedAbility where
-  idToObject = Object SActivatedAbility
-  objectToId (Object SActivatedAbility i) = i
+  idToObject = Object SActivatedAbility DefaultObjectDiscriminant
+  objectToId (Object SActivatedAbility _ i) = i
   singObjectType = SActivatedAbility
   litObjectType = OTActivatedAbility
   visitObject = visitOActivatedAbility
 
 instance IsObjectType 'OTArtifact where
-  idToObject = Object SArtifact
-  objectToId (Object SArtifact i) = i
+  idToObject = Object SArtifact DefaultObjectDiscriminant
+  objectToId (Object SArtifact _ i) = i
   singObjectType = SArtifact
   litObjectType = OTArtifact
   visitObject = visitOArtifact
 
 instance IsObjectType 'OTCreature where
-  idToObject = Object SCreature
-  objectToId (Object SCreature i) = i
+  idToObject = Object SCreature DefaultObjectDiscriminant
+  objectToId (Object SCreature _ i) = i
   singObjectType = SCreature
   litObjectType = OTCreature
   visitObject = visitOCreature
 
 instance IsObjectType 'OTEmblem where
-  idToObject = Object SEmblem
-  objectToId (Object SEmblem i) = i
+  idToObject = Object SEmblem DefaultObjectDiscriminant
+  objectToId (Object SEmblem _ i) = i
   singObjectType = SEmblem
   litObjectType = OTEmblem
   visitObject = visitOEmblem
 
 instance IsObjectType 'OTEnchantment where
-  idToObject = Object SEnchantment
-  objectToId (Object SEnchantment i) = i
+  idToObject = Object SEnchantment DefaultObjectDiscriminant
+  objectToId (Object SEnchantment _ i) = i
   singObjectType = SEnchantment
   litObjectType = OTEnchantment
   visitObject = visitOEnchantment
 
 instance IsObjectType 'OTInstant where
-  idToObject = Object SInstant
-  objectToId (Object SInstant i) = i
+  idToObject = Object SInstant DefaultObjectDiscriminant
+  objectToId (Object SInstant _ i) = i
   singObjectType = SInstant
   litObjectType = OTInstant
   visitObject = visitOInstant
 
 instance IsObjectType 'OTLand where
-  idToObject = Object SLand
-  objectToId (Object SLand i) = i
+  idToObject = Object SLand DefaultObjectDiscriminant
+  objectToId (Object SLand _ i) = i
   singObjectType = SLand
   litObjectType = OTLand
   visitObject = visitOLand
 
 instance IsObjectType 'OTPlaneswalker where
-  idToObject = Object SPlaneswalker
-  objectToId (Object SPlaneswalker i) = i
+  idToObject = Object SPlaneswalker DefaultObjectDiscriminant
+  objectToId (Object SPlaneswalker _ i) = i
   singObjectType = SPlaneswalker
   litObjectType = OTPlaneswalker
   visitObject = visitOPlaneswalker
 
 instance IsObjectType 'OTPlayer where
-  idToObject = Object SPlayer
-  objectToId (Object SPlayer i) = i
+  idToObject = Object SPlayer DefaultObjectDiscriminant
+  objectToId (Object SPlayer _ i) = i
   singObjectType = SPlayer
   litObjectType = OTPlayer
   visitObject = visitOPlayer
 
 instance IsObjectType 'OTSorcery where
-  idToObject = Object SSorcery
-  objectToId (Object SSorcery i) = i
+  idToObject = Object SSorcery DefaultObjectDiscriminant
+  objectToId (Object SSorcery _ i) = i
   singObjectType = SSorcery
   litObjectType = OTSorcery
   visitObject = visitOSorcery
 
 instance IsObjectType 'OTStaticAbility where
-  idToObject = Object SStaticAbility
-  objectToId (Object SStaticAbility i) = i
+  idToObject = Object SStaticAbility DefaultObjectDiscriminant
+  objectToId (Object SStaticAbility _ i) = i
   singObjectType = SStaticAbility
   litObjectType = OTStaticAbility
   visitObject = visitOStaticAbility
 
 instance IsObjectType 'OTTriggeredAbility where
-  idToObject = Object STriggeredAbility
-  objectToId (Object STriggeredAbility i) = i
+  idToObject = Object STriggeredAbility DefaultObjectDiscriminant
+  objectToId (Object STriggeredAbility _ i) = i
   singObjectType = STriggeredAbility
   litObjectType = OTTriggeredAbility
   visitObject = visitOTriggeredAbility
@@ -415,6 +418,10 @@ instance IsObjectType 'OTTriggeredAbility where
 class LitOT (ot :: Type) where
   litOT :: ot
   mapOT :: (forall k (otk :: k). OT otk -> liftOT (OT otk)) -> liftOT ot
+
+instance LitOT OT0 where
+  litOT = OT0
+  mapOT f = f litOT
 
 instance Inst1 IsObjectType a => LitOT (OT1 a) where
   litOT = OT1
@@ -464,9 +471,20 @@ instance Inst12 IsObjectType a b c d e f g h i j k l => LitOT (OT12 a b c d e f 
   litOT = OT12
   mapOT f = f litOT
 
+type ObjectDiscriminant = Int
+
+pattern DefaultObjectDiscriminant :: ObjectDiscriminant
+pattern DefaultObjectDiscriminant = 0
+
 data Object :: ObjectType -> Type where
-  Object :: SObjectType a -> ObjectId -> Object a
-  deriving (Eq, Ord, Show, Typeable)
+  Object :: SObjectType a -> ObjectDiscriminant -> ObjectId -> Object a
+  deriving (Show, Typeable)
+
+instance Eq (Object ot) where
+  Object _ _ i == Object _ _ j = i == j
+
+instance Ord (Object ot) where
+  compare (Object _ _ i) (Object _ _ j) = compare i j
 
 instance GetObjectId (Object ot) where
-  getObjectId (Object _ i) = i
+  getObjectId (Object _ _ i) = i

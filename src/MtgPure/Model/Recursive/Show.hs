@@ -124,6 +124,7 @@ import safe MtgPure.Model.Recursive (
   Cost (..),
   Effect (..),
   Elect (..),
+  ElectPrePost,
   Else (..),
   Enchant (..),
   EnchantmentType (..),
@@ -145,7 +146,7 @@ import safe MtgPure.Model.TimePoint (TimePoint (..))
 import safe MtgPure.Model.Toughness (Toughness)
 import safe MtgPure.Model.Variable (Variable (ReifiedVariable))
 import safe MtgPure.Model.VisitObjectN (KnownObjectN (..), VisitObjectN (..))
-import safe MtgPure.Model.Zone (IsZone (..), SZone (..))
+import safe MtgPure.Model.Zone (IsZone (..))
 import safe MtgPure.Model.ZoneObject (
   IsOT,
   IsZO,
@@ -176,7 +177,7 @@ instance Show (Cost ot) where
 instance Show (Effect e) where
   show = runEnvM defaultDepthLimit . showEffect
 
-instance Show (Elect e ot) where
+instance Show (Elect p e ot) where
   show = runEnvM defaultDepthLimit . showElect
 
 instance Show EventListener where
@@ -200,7 +201,7 @@ instance Show (Token ot) where
 instance Show (TriggeredAbility ot) where
   show = runEnvM defaultDepthLimit . showTriggeredAbility
 
-instance IsZO zone ot => Show (WithMaskedObject zone (Elect e ot)) where
+instance IsZO zone ot => Show (WithMaskedObject zone (Elect p e ot)) where
   show = runEnvM defaultDepthLimit . showWithMaskedObject showElect "obj"
 
 instance IsZone zone => Show (ZO zone OT0) where
@@ -368,7 +369,7 @@ getVarName = \case
   ReifiedVariable n -> VariableItem n
 
 getObjectName :: Object a -> EnvM Item
-getObjectName (Object _ i) = do
+getObjectName (Object _ _ i) = do
   gens <- State.gets objectGenerations
   case Map.lookup i gens of
     Nothing -> error "impossible"
@@ -428,13 +429,7 @@ showListM f xs = noParens $ do
   pure $ pure "[" <> DList.intercalate (pure ", ") ss <> pure "]"
 
 toZone :: forall zone ot. IsZone zone => ObjectN ot -> ZO zone ot
-toZone = case singZone @zone of
-  SZBattlefield -> ZOBattlefield
-  SZExile -> ZOExile
-  SZGraveyard -> ZOGraveyard
-  SZHand -> ZOHand
-  SZLibrary -> ZOLibrary
-  SZStack -> ZOStack
+toZone = ZO (singZone @zone)
 
 ----------------------------------------
 
@@ -644,9 +639,9 @@ showCardTypeDef = \case
     IsObjectType a =>
     Item ->
     Colors ->
-    Elect (Cost (OT1 a)) (OT1 a) ->
+    ElectPrePost (Cost (OT1 a)) (OT1 a) ->
     [Ability (OT1 a)] ->
-    Elect (Effect 'OneShot) (OT1 a) ->
+    ElectPrePost (Effect 'OneShot) (OT1 a) ->
     EnvM ParenItems
   showOneShot def colors cost abilities oneShot = yesParens $ do
     sColors <- parens <$> showColors colors
@@ -847,7 +842,7 @@ showEffect = \case
 showEffects :: [Effect e] -> EnvM ParenItems
 showEffects = showListM showEffect
 
-showElect :: Elect e ot -> EnvM ParenItems
+showElect :: Elect p e ot -> EnvM ParenItems
 showElect = \case
   A sel player withObject -> yesParens $ do
     sSel <- parens <$> showSelection sel
@@ -877,12 +872,7 @@ showElect = \case
       getObjectNamePrefix $
         let objN :: ObjectN OTAny
             objN = case zObj of
-              ZOBattlefield o -> o
-              ZOExile o -> o
-              ZOGraveyard o -> o
-              ZOHand o -> o
-              ZOLibrary o -> o
-              ZOStack o -> o
+              ZO _ o -> o
          in visitObjectN' objectToId objN
     (controller', snap) <-
       newObjectN @ 'OTPlayer O1 $ case objPrefix == "this" of
@@ -907,6 +897,9 @@ showElect = \case
   Effect effect -> yesParens $ do
     sEffect <- dollar <$> showEffects effect
     pure $ pure "Effect" <> sEffect
+  Elect elect -> yesParens $ do
+    sElect <- dollar <$> showElect elect
+    pure $ pure "Elect" <> sElect
   Event event -> yesParens $ do
     sEvent <- dollar <$> showEvent event
     pure $ pure "Event" <> sEvent
@@ -937,7 +930,7 @@ showElect = \case
         <> pure " -> "
         <> sElect
 
-showElse :: Else e ot -> EnvM ParenItems
+showElse :: Else p e ot -> EnvM ParenItems
 showElse = \case
   ElseCost elect -> yesParens $ do
     sElect <- dollar <$> showElect elect
@@ -1859,18 +1852,8 @@ showWSpell wit = case wit of
 
 showZoneObject :: forall zone ot. IsZO zone ot => ZO zone ot -> EnvM ParenItems
 showZoneObject = \case
-  ZOBattlefield objN -> showObjectN @zone objN
-  ZOExile objN -> showObjectN @zone objN
-  ZOGraveyard objN -> showObjectN @zone objN
-  ZOHand objN -> showObjectN @zone objN
-  ZOLibrary objN -> showObjectN @zone objN
-  ZOStack objN -> showObjectN @zone objN
+  ZO _ objN -> showObjectN @zone objN
 
 showZoneObject0 :: forall zone. IsZone zone => ZO zone OT0 -> EnvM ParenItems
 showZoneObject0 = \case
-  ZOBattlefield objN -> showObject0 @zone objN
-  ZOExile objN -> showObject0 @zone objN
-  ZOGraveyard objN -> showObject0 @zone objN
-  ZOHand objN -> showObject0 @zone objN
-  ZOLibrary objN -> showObject0 @zone objN
-  ZOStack objN -> showObject0 @zone objN
+  ZO _ objN -> showObject0 @zone objN

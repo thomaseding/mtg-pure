@@ -50,6 +50,7 @@ import safe MtgPure.Model.ObjectType.Index (IndexOT (indexOT))
 import safe MtgPure.Model.ObjectType.NonCreatureCard (WNonCreatureCard (..))
 import safe MtgPure.Model.ObjectType.Permanent (WPermanent (..))
 import safe MtgPure.Model.ObjectType.Spell (WSpell (..))
+import safe MtgPure.Model.PrePost (IsPrePost (..), PrePost (..))
 import safe MtgPure.Model.Recursive (
   Ability (..),
   Card (..),
@@ -81,7 +82,7 @@ import safe MtgPure.Model.ToObjectN.Classes (ToObject1' (toObject1'))
 import safe MtgPure.Model.ToObjectN.Instances ()
 import safe MtgPure.Model.Variable (Variable (..))
 import safe MtgPure.Model.VisitObjectN (VisitObjectN (..))
-import safe MtgPure.Model.Zone (IsZone (..), SZone (..), Zone (..))
+import safe MtgPure.Model.Zone (IsZone (..), Zone (..))
 import safe MtgPure.Model.ZoneObject (
   IsOT,
   IsZO,
@@ -109,13 +110,13 @@ instance Eq (Cost ot) where
 instance Eq (Effect e) where
   (==) x y = runEnvM (ordEffect x y) == EQ
 
-instance (Typeable e, IsOT ot) => Eq (Elect e ot) where
-  (==) x y = runEnvM (ordElectE x y) == EQ
+instance (Typeable e, IsOT ot) => Eq (Elect p e ot) where
+  (==) x y = runEnvM (ordElectEl x y) == EQ
 
 instance Eq EventListener where
   (==) x y = runEnvM (ordEventListener x y) == EQ
 
-instance VisitObjectN ot => Eq (ObjectN ot) where
+instance Eq (ObjectN ot) where
   (==) x y = runEnvM (ordObjectN x y) == EQ
 
 instance Eq (Requirement zone ot) where
@@ -142,13 +143,13 @@ instance Eq (Token ot) where
 instance Eq (TriggeredAbility ot) where
   (==) x y = runEnvM (ordTriggeredAbility x y) == EQ
 
-instance (Typeable e, IsZO zone ot) => Eq (WithMaskedObject zone (Elect e ot)) where
-  (==) x y = runEnvM (ordWithMaskedObjectElectE x y) == EQ
+instance (Typeable el, IsZO zone ot) => Eq (WithMaskedObject zone (Elect p el ot)) where
+  (==) x y = runEnvM (ordWithMaskedObjectElectEl x y) == EQ
 
 instance IsZO zone ot => Eq (WithThis zone Ability ot) where
   (==) x y = runEnvM (ordWithThisAbility x y) == EQ
 
-instance (IsZO zone ot, Typeable tribal) => Eq (WithThis zone (Elect (CardTypeDef tribal ot)) ot) where
+instance (IsZO zone ot, Typeable tribal) => Eq (WithThis zone (Elect 'Pre (CardTypeDef tribal ot)) ot) where
   (==) x y = runEnvM (ordWithThisElectCardTypeDef x y) == EQ
 
 instance Eq (WAny ot) where
@@ -160,25 +161,7 @@ instance Eq (WNonCreatureCard ot) where
 instance Eq (WPermanent ot) where
   (==) x y = runEnvM (ordWPermanent x y) == EQ
 
-instance (IsZone zone) => Eq (ZoneObject zone OT0) where
-  (==) x y = runEnvM (ordZoneObject0 x y) == EQ
-
-instance (IsZone zone, Inst1 IsObjectType a) => Eq (ZoneObject zone (OT1 a)) where
-  (==) x y = runEnvM (ordZoneObject x y) == EQ
-
-instance (IsZone zone, Inst2 IsObjectType a b) => Eq (ZoneObject zone (OT2 a b)) where
-  (==) x y = runEnvM (ordZoneObject x y) == EQ
-
-instance (IsZone zone, Inst3 IsObjectType a b c) => Eq (ZoneObject zone (OT3 a b c)) where
-  (==) x y = runEnvM (ordZoneObject x y) == EQ
-
-instance (IsZone zone, Inst4 IsObjectType a b c d) => Eq (ZoneObject zone (OT4 a b c d)) where
-  (==) x y = runEnvM (ordZoneObject x y) == EQ
-
-instance (IsZone zone, Inst5 IsObjectType a b c d e) => Eq (ZoneObject zone (OT5 a b c d e)) where
-  (==) x y = runEnvM (ordZoneObject x y) == EQ
-
-instance (IsZone zone, Inst6 IsObjectType a b c d e f) => Eq (ZoneObject zone (OT6 a b c d e f)) where
+instance Eq (ZoneObject zone ot) where
   (==) x y = runEnvM (ordZoneObject x y) == EQ
 
 ----------------------------------------
@@ -201,13 +184,13 @@ instance Ord (Cost ot) where
 instance Ord (Effect e) where
   compare x y = runEnvM (ordEffect x y)
 
-instance (Typeable e, IsOT ot) => Ord (Elect e ot) where
-  compare x y = runEnvM (ordElectE x y)
+instance (Typeable e, IsOT ot) => Ord (Elect p e ot) where
+  compare x y = runEnvM (ordElectEl x y)
 
 instance Ord EventListener where
   compare x y = runEnvM (ordEventListener x y)
 
-instance VisitObjectN ot => Ord (ObjectN ot) where
+instance Ord (ObjectN ot) where
   compare x y = runEnvM (ordObjectN x y)
 
 instance Ord (Requirement zone ot) where
@@ -234,13 +217,13 @@ instance Ord (Token ot) where
 instance Ord (TriggeredAbility ot) where
   compare x y = runEnvM (ordTriggeredAbility x y)
 
-instance (Typeable e, IsZO zone ot) => Ord (WithMaskedObject zone (Elect e ot)) where
-  compare x y = runEnvM (ordWithMaskedObjectElectE x y)
+instance (Typeable el, IsZO zone ot) => Ord (WithMaskedObject zone (Elect p el ot)) where
+  compare x y = runEnvM (ordWithMaskedObjectElectEl x y)
 
 instance IsZO zone ot => Ord (WithThis zone Ability ot) where
   compare x y = runEnvM (ordWithThisAbility x y)
 
-instance (IsZO zone ot, Typeable tribal) => Ord (WithThis zone (Elect (CardTypeDef tribal ot)) ot) where
+instance (IsZO zone ot, Typeable tribal) => Ord (WithThis zone (Elect 'Pre (CardTypeDef tribal ot)) ot) where
   compare x y = runEnvM (ordWithThisElectCardTypeDef x y)
 
 instance Ord (WAny ot) where
@@ -252,25 +235,7 @@ instance Ord (WNonCreatureCard ot) where
 instance Ord (WPermanent ot) where
   compare x y = runEnvM (ordWPermanent x y)
 
-instance (IsZone zone) => Ord (ZoneObject zone OT0) where
-  compare x y = runEnvM (ordZoneObject0 x y)
-
-instance (IsZone zone, Inst1 IsObjectType a) => Ord (ZoneObject zone (OT1 a)) where
-  compare x y = runEnvM (ordZoneObject x y)
-
-instance (IsZone zone, Inst2 IsObjectType a b) => Ord (ZoneObject zone (OT2 a b)) where
-  compare x y = runEnvM (ordZoneObject x y)
-
-instance (IsZone zone, Inst3 IsObjectType a b c) => Ord (ZoneObject zone (OT3 a b c)) where
-  compare x y = runEnvM (ordZoneObject x y)
-
-instance (IsZone zone, Inst4 IsObjectType a b c d) => Ord (ZoneObject zone (OT4 a b c d)) where
-  compare x y = runEnvM (ordZoneObject x y)
-
-instance (IsZone zone, Inst5 IsObjectType a b c d e) => Ord (ZoneObject zone (OT5 a b c d e)) where
-  compare x y = runEnvM (ordZoneObject x y)
-
-instance (IsZone zone, Inst6 IsObjectType a b c d e f) => Ord (ZoneObject zone (OT6 a b c d e f)) where
+instance Ord (ZoneObject zone ot) where
   compare x y = runEnvM (ordZoneObject x y)
 
 ----------------------------------------
@@ -355,13 +320,7 @@ compareOT ::
 compareOT = pure $ compare (indexOT @ot1) (indexOT @ot2)
 
 toZone :: forall zone ot. IsZone zone => ObjectN ot -> ZO zone ot
-toZone = case singZone @zone of
-  SZBattlefield -> ZOBattlefield
-  SZExile -> ZOExile
-  SZGraveyard -> ZOGraveyard
-  SZHand -> ZOHand
-  SZLibrary -> ZOLibrary
-  SZStack -> ZOStack
+toZone = ZO (singZone @zone)
 
 ----------------------------------------
 
@@ -369,7 +328,7 @@ ordAbility :: Ability ot -> Ability ot -> EnvM Ordering
 ordAbility x = case x of
   Activated cost1 effect1 -> \case
     Activated cost2 effect2 ->
-      seqM [ordElectE cost1 cost2, ordElectE effect1 effect2]
+      seqM [ordElectEl cost1 cost2, ordElectEl effect1 effect2]
     y -> compareIndexM x y
   Static static1 -> \case
     Static static2 -> ordStaticAbility static1 static2
@@ -434,7 +393,7 @@ ordCardTypeDef x = case x of
     ArtifactDef colors2 cost2 abilities2 ->
       seqM
         [ ordColors colors1 colors2
-        , ordElectE cost1 cost2
+        , ordElectEl cost1 cost2
         , ordAbilities abilities1 abilities2
         ]
     y -> compareIndexM x y
@@ -443,7 +402,7 @@ ordCardTypeDef x = case x of
       ArtifactCreatureDef colors2 cost2 types2 power2 toughness2 artAbils2 creatAbils2 ->
         seqM
           [ ordColors colors1 colors2
-          , ordElectE cost1 cost2
+          , ordElectEl cost1 cost2
           , pure $ compare types1 types2
           , pure $ compare power1 power2
           , pure $ compare toughness1 toughness2
@@ -464,7 +423,7 @@ ordCardTypeDef x = case x of
     CreatureDef colors2 cost2 types2 power2 toughness2 abilities2 ->
       seqM
         [ ordColors colors1 colors2
-        , ordElectE cost1 cost2
+        , ordElectEl cost1 cost2
         , pure $ compare types1 types2
         , pure $ compare power1 power2
         , pure $ compare toughness1 toughness2
@@ -475,7 +434,7 @@ ordCardTypeDef x = case x of
     EnchantmentDef colors2 cost2 types2 abilities2 ->
       seqM
         [ ordColors colors1 colors2
-        , ordElectE cost1 cost2
+        , ordElectEl cost1 cost2
         , ordEnchantmentTypes types1 types2
         , ordAbilities abilities1 abilities2
         ]
@@ -485,7 +444,7 @@ ordCardTypeDef x = case x of
       EnchantmentCreatureDef colors2 cost2 types2 power2 toughness2 creatAbils2 enchAbils2 bothAbils2 ->
         seqM
           [ ordColors colors1 colors2
-          , ordElectE cost1 cost2
+          , ordElectEl cost1 cost2
           , pure $ compare types1 types2
           , pure $ compare power1 power2
           , pure $ compare toughness1 toughness2
@@ -498,9 +457,9 @@ ordCardTypeDef x = case x of
     InstantDef colors2 cost2 abilities2 effect2 ->
       seqM
         [ ordColors colors1 colors2
-        , ordElectE cost1 cost2
+        , ordElectEl cost1 cost2
         , ordAbilities abilities1 abilities2
-        , ordElectE effect1 effect2
+        , ordElectEl effect1 effect2
         ]
     y -> compareIndexM x y
   LandDef types1 abilities1 -> \case
@@ -511,7 +470,7 @@ ordCardTypeDef x = case x of
     PlaneswalkerDef colors2 cost2 loyalty2 abilities2 ->
       seqM
         [ ordColors colors1 colors2
-        , ordElectE cost1 cost2
+        , ordElectEl cost1 cost2
         , pure $ compare loyalty1 loyalty2
         , ordAbilities abilities1 abilities2
         ]
@@ -520,9 +479,9 @@ ordCardTypeDef x = case x of
     SorceryDef colors2 cost2 abilities2 effect2 ->
       seqM
         [ ordColors colors1 colors2
-        , ordElectE cost1 cost2
+        , ordElectEl cost1 cost2
         , ordAbilities abilities1 abilities2
-        , ordElectE effect1 effect2
+        , ordElectEl effect1 effect2
         ]
     y -> compareIndexM x y
   TribalDef types1 witness1 def1 -> \case
@@ -747,7 +706,7 @@ ordEffect x = case x of
               seqM
                 [ ordWCard wCard1 wCard2
                 , ordZoneObject player1 player2
-                , ordWithLinkedObject ordElectE card1 card2
+                , ordWithLinkedObject ordElectEl card1 card2
                 ]
        in go wCard1 wCard2
     y -> compareIndexM x y
@@ -761,23 +720,21 @@ ordEffect x = case x of
     y -> compareIndexM x y
   Until event1 effect1 -> \case
     Until event2 effect2 ->
-      seqM [ordElectE event1 event2, ordEffect effect1 effect2]
+      seqM [ordElectEl event1 event2, ordEffect effect1 effect2]
     y -> compareIndexM x y
 
-ordElectE ::
-  Elect e ot ->
-  Elect e ot ->
-  EnvM Ordering
-ordElectE x = case x of
+ordElectEl :: Elect p el ot -> Elect p el ot -> EnvM Ordering
+ordElectEl x = case x of
   A sel1 player1 with1 -> \case
     A sel2 player2 with2 ->
       let go ::
-            forall el zone1 ot1 zone2 ot2.
+            forall p el zone1 ot1 zone2 ot2.
+            IsPrePost p =>
             Typeable el =>
             IsZO zone1 ot1 =>
             IsZO zone2 ot2 =>
-            WithMaskedObject zone1 (Elect el ot1) ->
-            WithMaskedObject zone2 (Elect el ot2) ->
+            WithMaskedObject zone1 (Elect p el ot1) ->
+            WithMaskedObject zone2 (Elect p el ot2) ->
             EnvM Ordering
           go with1 with2 = case cast with2 of
             Nothing -> compareOT @ot1 @ot2
@@ -785,7 +742,7 @@ ordElectE x = case x of
               seqM
                 [ ordSelection sel1 sel2
                 , ordZoneObject player1 player2
-                , ordWithMaskedObjectElectE with1 with2
+                , ordWithMaskedObjectElectEl with1 with2
                 ]
        in go with1 with2
     y -> compareIndexM x y
@@ -795,10 +752,10 @@ ordElectE x = case x of
       let player = toZone player'
           elect1 = playerToElect1 player
           elect2 = playerToElect2 player
-      ordElectE elect1 elect2
+      ordElectEl elect1 elect2
     y -> compareIndexM x y
   All with1 -> \case
-    All with2 -> ordWithMaskedObjectElectE with1 with2
+    All with2 -> ordWithMaskedObjectElectEl with1 with2
     y -> compareIndexM x y
   CardTypeDef def1 -> \case
     CardTypeDef def2 -> ordCardTypeDef def1 def2
@@ -821,7 +778,7 @@ ordElectE x = case x of
               let player = toZone player'
                   elect1 = playerToElect1 player
                   elect2 = playerToElect2 player
-              seqM [ordZoneObject obj1 obj2, ordElectE elect1 elect2]
+              seqM [ordZoneObject obj1 obj2, ordElectEl elect1 elect2]
        in go obj1 obj2
     y -> compareIndexM x y
   Cost cost1 -> \case
@@ -830,41 +787,47 @@ ordElectE x = case x of
   Effect effects1 -> \case
     Effect effects2 -> listM ordEffect effects1 effects2
     y -> compareIndexM x y
+  Elect elect1 -> \case
+    Elect elect2 -> ordElectEl elect1 elect2
+    y -> compareIndexM x y
   Event event1 -> \case
     Event event2 -> ordEvent event1 event2
     y -> compareIndexM x y
   If cond1 then1 else1 -> \case
     If cond2 then2 else2 ->
       seqM
-        [ordCondition cond1 cond2, ordElectE then1 then2, ordElseE else1 else2]
+        [ordCondition cond1 cond2, ordElectEl then1 then2, ordElseE else1 else2]
     y -> compareIndexM x y
   Listen listener1 -> \case
     Listen listener2 -> ordEventListener listener1 listener2
     y -> compareIndexM x y
   Random with1 -> \case
-    Random with2 -> ordWithMaskedObjectElectE with1 with2
+    Random with2 -> ordWithMaskedObjectElectEl with1 with2
     y -> compareIndexM x y
   VariableFromPower obj1 varToElect1 -> \case
     VariableFromPower obj2 varToElect2 -> do
       var <- newVariable
       let elect1 = varToElect1 var
           elect2 = varToElect2 var
-      seqM [ordZoneObject obj1 obj2, ordElectE elect1 elect2]
+      seqM [ordZoneObject obj1 obj2, ordElectEl elect1 elect2]
     y -> compareIndexM x y
 
-ordElseE :: Else e ot -> Else e ot -> EnvM Ordering
+ordElectPostEl :: Elect 'Post el ot -> Elect 'Post el ot -> EnvM Ordering
+ordElectPostEl = ordElectEl
+
+ordElseE :: Else p e ot -> Else p e ot -> EnvM Ordering
 ordElseE = \case
   ElseCost elect1 -> \case
-    ElseCost elect2 -> ordElectE elect1 elect2
+    ElseCost elect2 -> ordElectEl elect1 elect2
   ElseEffect elect1 -> \case
-    ElseEffect elect2 -> ordElectE elect1 elect2
+    ElseEffect elect2 -> ordElectEl elect1 elect2
   ElseEvent -> \case
     ElseEvent -> pure EQ
 
 ordEnchant :: IsZO zone ot => Enchant zone ot -> Enchant zone ot -> EnvM Ordering
 ordEnchant = \case
   Enchant withObj1 -> \case
-    Enchant withObj2 -> ordWithLinkedObject ordElectE withObj1 withObj2
+    Enchant withObj2 -> ordWithLinkedObject ordElectEl withObj1 withObj2
 
 ordEnchantmentType :: EnchantmentType ot -> EnchantmentType ot -> EnvM Ordering
 ordEnchantmentType = \case
@@ -931,7 +894,7 @@ ordEvent :: Event -> Event -> EnvM Ordering
 ordEvent = ordEventListener' $ \Proxy -> pure $ pure EQ
 
 ordEventListener :: EventListener -> EventListener -> EnvM Ordering
-ordEventListener = ordEventListener' ordElectE
+ordEventListener = ordEventListener' ordElectEl
 
 ordManaCost :: ManaCost -> ManaCost -> EnvM Ordering
 ordManaCost x y = pure $ compare x y
@@ -1095,11 +1058,170 @@ ordObject0 objN1 objN2 = do
       i2 = getObjectId objN2
   pure $ compare i1 i2
 
-ordObjectN :: VisitObjectN ot => ObjectN ot -> ObjectN ot -> EnvM Ordering
-ordObjectN objN1 objN2 = do
+ordObjectN' :: VisitObjectN ot => ObjectN ot -> ObjectN ot -> EnvM Ordering
+ordObjectN' objN1 objN2 = do
   let i1 = visitObjectN' objectToId objN1
       i2 = visitObjectN' objectToId objN2
   pure $ compare i1 i2
+
+ordObjectN :: ObjectN ot -> ObjectN ot -> EnvM Ordering
+ordObjectN objN1 objN2 = case objN1 of
+  O0{} -> ordObject0 objN1 objN2
+  O1{} -> ordObjectN' objN1 objN2
+  O2a{} -> ordObjectN' objN1 objN2
+  O2b{} -> ordObjectN' objN1 objN2
+  ON2b{} -> ordObjectN' objN1 objN2
+  ON2a{} -> ordObjectN' objN1 objN2
+  O3b{} -> ordObjectN' objN1 objN2
+  O3a{} -> ordObjectN' objN1 objN2
+  O3c{} -> ordObjectN' objN1 objN2
+  ON3a{} -> ordObjectN' objN1 objN2
+  ON3b{} -> ordObjectN' objN1 objN2
+  ON3c{} -> ordObjectN' objN1 objN2
+  O4a{} -> ordObjectN' objN1 objN2
+  O4b{} -> ordObjectN' objN1 objN2
+  O4c{} -> ordObjectN' objN1 objN2
+  O4d{} -> ordObjectN' objN1 objN2
+  ON4a{} -> ordObjectN' objN1 objN2
+  ON4b{} -> ordObjectN' objN1 objN2
+  ON4c{} -> ordObjectN' objN1 objN2
+  ON4d{} -> ordObjectN' objN1 objN2
+  O5b{} -> ordObjectN' objN1 objN2
+  O5a{} -> ordObjectN' objN1 objN2
+  O5c{} -> ordObjectN' objN1 objN2
+  O5d{} -> ordObjectN' objN1 objN2
+  O5e{} -> ordObjectN' objN1 objN2
+  ON5a{} -> ordObjectN' objN1 objN2
+  ON5b{} -> ordObjectN' objN1 objN2
+  ON5c{} -> ordObjectN' objN1 objN2
+  ON5d{} -> ordObjectN' objN1 objN2
+  ON5e{} -> ordObjectN' objN1 objN2
+  O6a{} -> ordObjectN' objN1 objN2
+  O6b{} -> ordObjectN' objN1 objN2
+  O6c{} -> ordObjectN' objN1 objN2
+  O6d{} -> ordObjectN' objN1 objN2
+  O6e{} -> ordObjectN' objN1 objN2
+  O6f{} -> ordObjectN' objN1 objN2
+  ON6a{} -> ordObjectN' objN1 objN2
+  ON6b{} -> ordObjectN' objN1 objN2
+  ON6c{} -> ordObjectN' objN1 objN2
+  ON6d{} -> ordObjectN' objN1 objN2
+  ON6e{} -> ordObjectN' objN1 objN2
+  ON6f{} -> ordObjectN' objN1 objN2
+  O7a{} -> ordObjectN' objN1 objN2
+  O7b{} -> ordObjectN' objN1 objN2
+  O7c{} -> ordObjectN' objN1 objN2
+  O7d{} -> ordObjectN' objN1 objN2
+  O7e{} -> ordObjectN' objN1 objN2
+  O7f{} -> ordObjectN' objN1 objN2
+  O7g{} -> ordObjectN' objN1 objN2
+  ON7a{} -> ordObjectN' objN1 objN2
+  ON7b{} -> ordObjectN' objN1 objN2
+  ON7c{} -> ordObjectN' objN1 objN2
+  ON7d{} -> ordObjectN' objN1 objN2
+  ON7e{} -> ordObjectN' objN1 objN2
+  ON7f{} -> ordObjectN' objN1 objN2
+  ON7g{} -> ordObjectN' objN1 objN2
+  O8a{} -> ordObjectN' objN1 objN2
+  O8b{} -> ordObjectN' objN1 objN2
+  O8c{} -> ordObjectN' objN1 objN2
+  O8d{} -> ordObjectN' objN1 objN2
+  O8e{} -> ordObjectN' objN1 objN2
+  O8f{} -> ordObjectN' objN1 objN2
+  O8g{} -> ordObjectN' objN1 objN2
+  O8h{} -> ordObjectN' objN1 objN2
+  ON8a{} -> ordObjectN' objN1 objN2
+  ON8b{} -> ordObjectN' objN1 objN2
+  ON8c{} -> ordObjectN' objN1 objN2
+  ON8d{} -> ordObjectN' objN1 objN2
+  ON8e{} -> ordObjectN' objN1 objN2
+  ON8f{} -> ordObjectN' objN1 objN2
+  ON8g{} -> ordObjectN' objN1 objN2
+  ON8h{} -> ordObjectN' objN1 objN2
+  O9a{} -> ordObjectN' objN1 objN2
+  O9b{} -> ordObjectN' objN1 objN2
+  O9c{} -> ordObjectN' objN1 objN2
+  O9d{} -> ordObjectN' objN1 objN2
+  O9e{} -> ordObjectN' objN1 objN2
+  O9f{} -> ordObjectN' objN1 objN2
+  O9g{} -> ordObjectN' objN1 objN2
+  O9h{} -> ordObjectN' objN1 objN2
+  O9i{} -> ordObjectN' objN1 objN2
+  ON9a{} -> ordObjectN' objN1 objN2
+  ON9b{} -> ordObjectN' objN1 objN2
+  ON9c{} -> ordObjectN' objN1 objN2
+  ON9d{} -> ordObjectN' objN1 objN2
+  ON9e{} -> ordObjectN' objN1 objN2
+  ON9f{} -> ordObjectN' objN1 objN2
+  ON9g{} -> ordObjectN' objN1 objN2
+  ON9h{} -> ordObjectN' objN1 objN2
+  ON9i{} -> ordObjectN' objN1 objN2
+  O10b{} -> ordObjectN' objN1 objN2
+  O10a{} -> ordObjectN' objN1 objN2
+  O10c{} -> ordObjectN' objN1 objN2
+  O10d{} -> ordObjectN' objN1 objN2
+  O10e{} -> ordObjectN' objN1 objN2
+  O10f{} -> ordObjectN' objN1 objN2
+  O10g{} -> ordObjectN' objN1 objN2
+  O10h{} -> ordObjectN' objN1 objN2
+  O10i{} -> ordObjectN' objN1 objN2
+  O10j{} -> ordObjectN' objN1 objN2
+  ON10a{} -> ordObjectN' objN1 objN2
+  ON10b{} -> ordObjectN' objN1 objN2
+  ON10c{} -> ordObjectN' objN1 objN2
+  ON10d{} -> ordObjectN' objN1 objN2
+  ON10e{} -> ordObjectN' objN1 objN2
+  ON10f{} -> ordObjectN' objN1 objN2
+  ON10g{} -> ordObjectN' objN1 objN2
+  ON10h{} -> ordObjectN' objN1 objN2
+  ON10i{} -> ordObjectN' objN1 objN2
+  ON10j{} -> ordObjectN' objN1 objN2
+  O11b{} -> ordObjectN' objN1 objN2
+  O11a{} -> ordObjectN' objN1 objN2
+  O11c{} -> ordObjectN' objN1 objN2
+  O11d{} -> ordObjectN' objN1 objN2
+  O11e{} -> ordObjectN' objN1 objN2
+  O11f{} -> ordObjectN' objN1 objN2
+  O11g{} -> ordObjectN' objN1 objN2
+  O11h{} -> ordObjectN' objN1 objN2
+  O11i{} -> ordObjectN' objN1 objN2
+  O11j{} -> ordObjectN' objN1 objN2
+  O11k{} -> ordObjectN' objN1 objN2
+  ON11a{} -> ordObjectN' objN1 objN2
+  ON11b{} -> ordObjectN' objN1 objN2
+  ON11c{} -> ordObjectN' objN1 objN2
+  ON11d{} -> ordObjectN' objN1 objN2
+  ON11e{} -> ordObjectN' objN1 objN2
+  ON11f{} -> ordObjectN' objN1 objN2
+  ON11g{} -> ordObjectN' objN1 objN2
+  ON11h{} -> ordObjectN' objN1 objN2
+  ON11i{} -> ordObjectN' objN1 objN2
+  ON11j{} -> ordObjectN' objN1 objN2
+  ON11k{} -> ordObjectN' objN1 objN2
+  O12b{} -> ordObjectN' objN1 objN2
+  O12a{} -> ordObjectN' objN1 objN2
+  O12c{} -> ordObjectN' objN1 objN2
+  O12d{} -> ordObjectN' objN1 objN2
+  O12e{} -> ordObjectN' objN1 objN2
+  O12f{} -> ordObjectN' objN1 objN2
+  O12g{} -> ordObjectN' objN1 objN2
+  O12h{} -> ordObjectN' objN1 objN2
+  O12i{} -> ordObjectN' objN1 objN2
+  O12j{} -> ordObjectN' objN1 objN2
+  O12k{} -> ordObjectN' objN1 objN2
+  O12l{} -> ordObjectN' objN1 objN2
+  ON12a{} -> ordObjectN' objN1 objN2
+  ON12b{} -> ordObjectN' objN1 objN2
+  ON12c{} -> ordObjectN' objN1 objN2
+  ON12d{} -> ordObjectN' objN1 objN2
+  ON12e{} -> ordObjectN' objN1 objN2
+  ON12f{} -> ordObjectN' objN1 objN2
+  ON12g{} -> ordObjectN' objN1 objN2
+  ON12h{} -> ordObjectN' objN1 objN2
+  ON12i{} -> ordObjectN' objN1 objN2
+  ON12j{} -> ordObjectN' objN1 objN2
+  ON12k{} -> ordObjectN' objN1 objN2
+  ON12l{} -> ordObjectN' objN1 objN2
 
 ordRequirement :: Requirement zone ot -> Requirement zone ot -> EnvM Ordering
 ordRequirement x = case x of
@@ -1218,10 +1340,10 @@ ordStaticAbility ::
   StaticAbility ot -> StaticAbility ot -> EnvM Ordering
 ordStaticAbility x = case x of
   As electListener1 -> \case
-    As electListener2 -> ordElectE electListener1 electListener2
+    As electListener2 -> ordElectEl electListener1 electListener2
     y -> compareIndexM x y
   Bestow elect1 enchant1 -> \case
-    Bestow elect2 enchant2 -> seqM [ordElectE elect1 elect2, ordEnchant enchant1 enchant2]
+    Bestow elect2 enchant2 -> seqM [ordElectEl elect1 elect2, ordEnchant enchant1 enchant2]
     y -> compareIndexM x y
   FirstStrike -> \case
     FirstStrike -> pure EQ
@@ -1233,11 +1355,11 @@ ordStaticAbility x = case x of
     Haste -> pure EQ
     y -> compareIndexM x y
   StaticContinuous elect1 -> \case
-    StaticContinuous elect2 -> ordElectE elect1 elect2
+    StaticContinuous elect2 -> ordElectEl elect1 elect2
     y -> compareIndexM x y
   Suspend duration1 elect1 -> \case
     Suspend duration2 elect2 ->
-      seqM [pure $ compare duration1 duration2, ordElectE elect1 elect2]
+      seqM [pure $ compare duration1 duration2, ordElectEl elect1 elect2]
     y -> compareIndexM x y
 
 ordTimePoint :: TimePoint p -> TimePoint p -> EnvM Ordering
@@ -1287,7 +1409,7 @@ ordTriggeredAbility ::
   forall ot. TriggeredAbility ot -> TriggeredAbility ot -> EnvM Ordering
 ordTriggeredAbility = \case
   When listener1 -> \case
-    When listener2 -> ordElectE @EventListener @ot listener1 listener2
+    When listener2 -> ordElectPostEl @EventListener @ot listener1 listener2
 
 ordWithLinkedObject ::
   (Typeable x, IsZO zone ot) =>
@@ -1299,6 +1421,7 @@ ordWithLinkedObject ordM x = case x of
   LProxy reqs1 -> \case
     LProxy reqs2 -> ordRequirements reqs1 reqs2
     y -> compareIndexM x y
+  --
   L1 NonProxyElectEffect reqs1 cont1 -> \case
     L1 NonProxyElectEffect reqs2 cont2 ->
       ordO1 ordM reqs1 reqs2 cont1 cont2
@@ -1314,13 +1437,29 @@ ordWithLinkedObject ordM x = case x of
   L5 NonProxyElectEffect reqs1 cont1 -> \case
     L5 NonProxyElectEffect reqs2 cont2 ->
       ordO5 ordM reqs1 reqs2 cont1 cont2
+  --
+  L1 NonProxyElectPrePostEffect reqs1 cont1 -> \case
+    L1 NonProxyElectPrePostEffect reqs2 cont2 ->
+      ordO1 ordM reqs1 reqs2 cont1 cont2
+  L2 NonProxyElectPrePostEffect reqs1 cont1 -> \case
+    L2 NonProxyElectPrePostEffect reqs2 cont2 ->
+      ordO2 ordM reqs1 reqs2 cont1 cont2
+  L3 NonProxyElectPrePostEffect reqs1 cont1 -> \case
+    L3 NonProxyElectPrePostEffect reqs2 cont2 ->
+      ordO3 ordM reqs1 reqs2 cont1 cont2
+  L4 NonProxyElectPrePostEffect reqs1 cont1 -> \case
+    L4 NonProxyElectPrePostEffect reqs2 cont2 ->
+      ordO4 ordM reqs1 reqs2 cont1 cont2
+  L5 NonProxyElectPrePostEffect reqs1 cont1 -> \case
+    L5 NonProxyElectPrePostEffect reqs2 cont2 ->
+      ordO5 ordM reqs1 reqs2 cont1 cont2
 
-ordWithMaskedObjectElectE ::
+ordWithMaskedObjectElectEl ::
   IsZO zone ot =>
-  WithMaskedObject zone (Elect e ot) ->
-  WithMaskedObject zone (Elect e ot) ->
+  WithMaskedObject zone (Elect p el ot) ->
+  WithMaskedObject zone (Elect p el ot) ->
   EnvM Ordering
-ordWithMaskedObjectElectE x = case x of
+ordWithMaskedObjectElectEl x = case x of
   M1 reqs1 cont1 -> \case
     M1 reqs2 cont2 -> ordO1 ordM reqs1 reqs2 cont1 cont2
     y -> pure $ compare (consIndex x) (consIndex y)
@@ -1340,7 +1479,7 @@ ordWithMaskedObjectElectE x = case x of
     M6 reqs2 cont2 -> ordO6 ordM reqs1 reqs2 cont1 cont2
     y -> pure $ compare (consIndex x) (consIndex y)
  where
-  ordM = ordElectE
+  ordM = ordElectEl
 
 ordWithThisAbility ::
   forall zone ot.
@@ -1378,8 +1517,8 @@ ordWithThisElectCardTypeDef ::
   forall tribal zone ot.
   IsZO zone ot =>
   Typeable tribal =>
-  WithThis zone (Elect (CardTypeDef tribal ot)) ot ->
-  WithThis zone (Elect (CardTypeDef tribal ot)) ot ->
+  WithThis zone (Elect 'Pre (CardTypeDef tribal ot)) ot ->
+  WithThis zone (Elect 'Pre (CardTypeDef tribal ot)) ot ->
   EnvM Ordering
 ordWithThisElectCardTypeDef = \case
   T1 cont1 -> \case
@@ -1389,8 +1528,8 @@ ordWithThisElectCardTypeDef = \case
       let go ::
             forall a b.
             (IsOT (OT2 a b), Inst2 IsObjectType a b) =>
-            ((ZO zone (OT1 a), ZO zone (OT1 b)) -> Elect (CardTypeDef tribal (OT2 a b)) (OT2 a b)) ->
-            ((ZO zone (OT1 a), ZO zone (OT1 b)) -> Elect (CardTypeDef tribal (OT2 a b)) (OT2 a b)) ->
+            ((ZO zone (OT1 a), ZO zone (OT1 b)) -> Elect 'Pre (CardTypeDef tribal (OT2 a b)) (OT2 a b)) ->
+            ((ZO zone (OT1 a), ZO zone (OT1 b)) -> Elect 'Pre (CardTypeDef tribal (OT2 a b)) (OT2 a b)) ->
             EnvM Ordering
           go cont1 cont2 = do
             objNa' <- newObjectN @a O1
@@ -1402,7 +1541,7 @@ ordWithThisElectCardTypeDef = \case
             ordM def1 def2
        in go cont1 cont2
  where
-  ordM = ordElectE
+  ordM = ordElectEl
   reqs1 = []
   reqs2 = []
 
@@ -1643,32 +1782,7 @@ ordWSpell = \case
   x@WSpell4 -> \case
     y@WSpell4 -> ordW4 x y
 
-ordZoneObject :: (IndexOT ot, VisitObjectN ot) => ZO zone ot -> ZO zone ot -> EnvM Ordering
+ordZoneObject :: ZO zone ot -> ZO zone ot -> EnvM Ordering
 ordZoneObject x = case x of
-  ZOBattlefield objN1 -> \case
-    ZOBattlefield objN2 -> ordObjectN objN1 objN2
-  ZOExile objN1 -> \case
-    ZOExile objN2 -> ordObjectN objN1 objN2
-  ZOGraveyard objN1 -> \case
-    ZOGraveyard objN2 -> ordObjectN objN1 objN2
-  ZOHand objN1 -> \case
-    ZOHand objN2 -> ordObjectN objN1 objN2
-  ZOLibrary objN1 -> \case
-    ZOLibrary objN2 -> ordObjectN objN1 objN2
-  ZOStack objN1 -> \case
-    ZOStack objN2 -> ordObjectN objN1 objN2
-
-ordZoneObject0 :: ZO zone OT0 -> ZO zone OT0 -> EnvM Ordering
-ordZoneObject0 x = case x of
-  ZOBattlefield objN1 -> \case
-    ZOBattlefield objN2 -> ordObject0 objN1 objN2
-  ZOExile objN1 -> \case
-    ZOExile objN2 -> ordObject0 objN1 objN2
-  ZOGraveyard objN1 -> \case
-    ZOGraveyard objN2 -> ordObject0 objN1 objN2
-  ZOHand objN1 -> \case
-    ZOHand objN2 -> ordObject0 objN1 objN2
-  ZOLibrary objN1 -> \case
-    ZOLibrary objN2 -> ordObject0 objN1 objN2
-  ZOStack objN1 -> \case
-    ZOStack objN2 -> ordObject0 objN1 objN2
+  ZO _ objN1 -> \case
+    ZO _ objN2 -> ordObjectN objN1 objN2

@@ -94,37 +94,27 @@ type ON11 a b c d e f g h i j k = ObjectN (OT11 a b c d e f g h i j k)
 
 type ON12 a b c d e f g h i j k l = ObjectN (OT12 a b c d e f g h i j k l)
 
-data family ObjectN (ot :: Type) :: Type
-
 -- TODO:
 -- The constructors should be private to disallow pattern matching during authoring
 -- Supply factory constructors for authoring
 
-data instance ObjectN OT0 where
+data ObjectN (ot :: Type) :: Type where
   O0 :: ObjectId -> ObjectN OT0
-  deriving (Typeable)
-
-data instance ObjectN (OT1 a) where
+  --
   O1 :: Inst1 IsObjectType a => Object a -> ObjectN (OT1 a)
-  deriving (Typeable)
-
-data instance ObjectN (OT2 a b) where
+  --
   O2a :: Inst2 IsObjectType a b => Object a -> ObjectN (OT2 a b)
   O2b :: Inst2 IsObjectType a b => Object b -> ObjectN (OT2 a b)
   ON2b :: Inst2 IsObjectType a b => ObjectN (OT1 a) -> ObjectN (OT2 a b)
   ON2a :: Inst2 IsObjectType a b => ObjectN (OT1 b) -> ObjectN (OT2 a b)
-  deriving (Typeable)
-
-data instance ObjectN (OT3 a b c) where
+  --
   O3b :: Inst3 IsObjectType a b c => Object b -> ObjectN (OT3 a b c)
   O3a :: Inst3 IsObjectType a b c => Object a -> ObjectN (OT3 a b c)
   O3c :: Inst3 IsObjectType a b c => Object c -> ObjectN (OT3 a b c)
   ON3a :: Inst3 IsObjectType a b c => ObjectN (OT2 b c) -> ObjectN (OT3 a b c)
   ON3b :: Inst3 IsObjectType a b c => ObjectN (OT2 a c) -> ObjectN (OT3 a b c)
   ON3c :: Inst3 IsObjectType a b c => ObjectN (OT2 a b) -> ObjectN (OT3 a b c)
-  deriving (Typeable)
-
-data instance ObjectN (OT4 a b c d) where
+  --
   O4a :: Inst4 IsObjectType a b c d => Object a -> ObjectN (OT4 a b c d)
   O4b :: Inst4 IsObjectType a b c d => Object b -> ObjectN (OT4 a b c d)
   O4c :: Inst4 IsObjectType a b c d => Object c -> ObjectN (OT4 a b c d)
@@ -133,9 +123,7 @@ data instance ObjectN (OT4 a b c d) where
   ON4b :: Inst4 IsObjectType a b c d => ObjectN (OT3 a c d) -> ObjectN (OT4 a b c d)
   ON4c :: Inst4 IsObjectType a b c d => ObjectN (OT3 a b d) -> ObjectN (OT4 a b c d)
   ON4d :: Inst4 IsObjectType a b c d => ObjectN (OT3 a b c) -> ObjectN (OT4 a b c d)
-  deriving (Typeable)
-
-data instance ObjectN (OT5 a b c d e) where
+  --
   O5b :: Inst5 IsObjectType a b c d e => Object b -> ObjectN (OT5 a b c d e)
   O5a :: Inst5 IsObjectType a b c d e => Object a -> ObjectN (OT5 a b c d e)
   O5c :: Inst5 IsObjectType a b c d e => Object c -> ObjectN (OT5 a b c d e)
@@ -146,9 +134,7 @@ data instance ObjectN (OT5 a b c d e) where
   ON5c :: Inst5 IsObjectType a b c d e => ObjectN (OT4 a b d e) -> ObjectN (OT5 a b c d e)
   ON5d :: Inst5 IsObjectType a b c d e => ObjectN (OT4 a b c e) -> ObjectN (OT5 a b c d e)
   ON5e :: Inst5 IsObjectType a b c d e => ObjectN (OT4 a b c d) -> ObjectN (OT5 a b c d e)
-  deriving (Typeable)
-
-data instance ObjectN (OT6 a b c d e f) where
+  --
   O6a :: Inst6 IsObjectType a b c d e f => Object a -> ObjectN (OT6 a b c d e f)
   O6b :: Inst6 IsObjectType a b c d e f => Object b -> ObjectN (OT6 a b c d e f)
   O6c :: Inst6 IsObjectType a b c d e f => Object c -> ObjectN (OT6 a b c d e f)
@@ -161,9 +147,7 @@ data instance ObjectN (OT6 a b c d e f) where
   ON6d :: Inst6 IsObjectType a b c d e f => ObjectN (OT5 a b c e f) -> ObjectN (OT6 a b c d e f)
   ON6e :: Inst6 IsObjectType a b c d e f => ObjectN (OT5 a b c d f) -> ObjectN (OT6 a b c d e f)
   ON6f :: Inst6 IsObjectType a b c d e f => ObjectN (OT5 a b c d e) -> ObjectN (OT6 a b c d e f)
-  deriving (Typeable)
-
-data instance ObjectN (OT7 a b c d e f g) where
+  --
   O7a :: Inst7 IsObjectType a b c d e f g => Object a -> ObjectN (OT7 a b c d e f g)
   O7b :: Inst7 IsObjectType a b c d e f g => Object b -> ObjectN (OT7 a b c d e f g)
   O7c :: Inst7 IsObjectType a b c d e f g => Object c -> ObjectN (OT7 a b c d e f g)
@@ -178,9 +162,7 @@ data instance ObjectN (OT7 a b c d e f g) where
   ON7e :: Inst7 IsObjectType a b c d e f g => ObjectN (OT6 a b c d f g) -> ObjectN (OT7 a b c d e f g)
   ON7f :: Inst7 IsObjectType a b c d e f g => ObjectN (OT6 a b c d e g) -> ObjectN (OT7 a b c d e f g)
   ON7g :: Inst7 IsObjectType a b c d e f g => ObjectN (OT6 a b c d e f) -> ObjectN (OT7 a b c d e f g)
-  deriving (Typeable)
-
-data instance ObjectN (OT8 a b c d e f g h) where
+  --
   O8a :: Inst8 IsObjectType a b c d e f g h => Object a -> ObjectN (OT8 a b c d e f g h)
   O8b :: Inst8 IsObjectType a b c d e f g h => Object b -> ObjectN (OT8 a b c d e f g h)
   O8c :: Inst8 IsObjectType a b c d e f g h => Object c -> ObjectN (OT8 a b c d e f g h)
@@ -197,9 +179,7 @@ data instance ObjectN (OT8 a b c d e f g h) where
   ON8f :: Inst8 IsObjectType a b c d e f g h => ObjectN (OT7 a b c d e g h) -> ObjectN (OT8 a b c d e f g h)
   ON8g :: Inst8 IsObjectType a b c d e f g h => ObjectN (OT7 a b c d e f h) -> ObjectN (OT8 a b c d e f g h)
   ON8h :: Inst8 IsObjectType a b c d e f g h => ObjectN (OT7 a b c d e f g) -> ObjectN (OT8 a b c d e f g h)
-  deriving (Typeable)
-
-data instance ObjectN (OT9 a b c d e f g h i) where
+  --
   O9a :: Inst9 IsObjectType a b c d e f g h i => Object a -> ObjectN (OT9 a b c d e f g h i)
   O9b :: Inst9 IsObjectType a b c d e f g h i => Object b -> ObjectN (OT9 a b c d e f g h i)
   O9c :: Inst9 IsObjectType a b c d e f g h i => Object c -> ObjectN (OT9 a b c d e f g h i)
@@ -218,9 +198,7 @@ data instance ObjectN (OT9 a b c d e f g h i) where
   ON9g :: Inst9 IsObjectType a b c d e f g h i => ObjectN (OT8 a b c d e f h i) -> ObjectN (OT9 a b c d e f g h i)
   ON9h :: Inst9 IsObjectType a b c d e f g h i => ObjectN (OT8 a b c d e f g i) -> ObjectN (OT9 a b c d e f g h i)
   ON9i :: Inst9 IsObjectType a b c d e f g h i => ObjectN (OT8 a b c d e f g h) -> ObjectN (OT9 a b c d e f g h i)
-  deriving (Typeable)
-
-data instance ObjectN (OT10 a b c d e f g h i j) where
+  --
   O10b :: Inst10 IsObjectType a b c d e f g h i j => Object b -> ObjectN (OT10 a b c d e f g h i j)
   O10a :: Inst10 IsObjectType a b c d e f g h i j => Object a -> ObjectN (OT10 a b c d e f g h i j)
   O10c :: Inst10 IsObjectType a b c d e f g h i j => Object c -> ObjectN (OT10 a b c d e f g h i j)
@@ -241,9 +219,7 @@ data instance ObjectN (OT10 a b c d e f g h i j) where
   ON10h :: Inst10 IsObjectType a b c d e f g h i j => ObjectN (OT9 a b c d e f g i j) -> ObjectN (OT10 a b c d e f g h i j)
   ON10i :: Inst10 IsObjectType a b c d e f g h i j => ObjectN (OT9 a b c d e f g h j) -> ObjectN (OT10 a b c d e f g h i j)
   ON10j :: Inst10 IsObjectType a b c d e f g h i j => ObjectN (OT9 a b c d e f g h i) -> ObjectN (OT10 a b c d e f g h i j)
-  deriving (Typeable)
-
-data instance ObjectN (OT11 a b c d e f g h i j k) where
+  --
   O11b :: Inst11 IsObjectType a b c d e f g h i j k => Object b -> ObjectN (OT11 a b c d e f g h i j k)
   O11a :: Inst11 IsObjectType a b c d e f g h i j k => Object a -> ObjectN (OT11 a b c d e f g h i j k)
   O11c :: Inst11 IsObjectType a b c d e f g h i j k => Object c -> ObjectN (OT11 a b c d e f g h i j k)
@@ -266,9 +242,7 @@ data instance ObjectN (OT11 a b c d e f g h i j k) where
   ON11i :: Inst11 IsObjectType a b c d e f g h i j k => ObjectN (OT10 a b c d e f g h j k) -> ObjectN (OT11 a b c d e f g h i j k)
   ON11j :: Inst11 IsObjectType a b c d e f g h i j k => ObjectN (OT10 a b c d e f g h i k) -> ObjectN (OT11 a b c d e f g h i j k)
   ON11k :: Inst11 IsObjectType a b c d e f g h i j k => ObjectN (OT10 a b c d e f g h i j) -> ObjectN (OT11 a b c d e f g h i j k)
-  deriving (Typeable)
-
-data instance ObjectN (OT12 a b c d e f g h i j k l) where
+  --
   O12b :: Inst12 IsObjectType a b c d e f g h i j k l => Object b -> ObjectN (OT12 a b c d e f g h i j k l)
   O12a :: Inst12 IsObjectType a b c d e f g h i j k l => Object a -> ObjectN (OT12 a b c d e f g h i j k l)
   O12c :: Inst12 IsObjectType a b c d e f g h i j k l => Object c -> ObjectN (OT12 a b c d e f g h i j k l)

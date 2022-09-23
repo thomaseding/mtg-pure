@@ -92,7 +92,7 @@ import safe MtgPure.Model.Recursive (
   Condition (COr),
   Cost (AndCosts, DiscardRandomCost, ManaCost, OrCosts, PayLife),
   Effect (CantBeRegenerated, DrawCards, EffectContinuous, StatDelta),
-  Elect (A, ActivePlayer, All, CardTypeDef, Cost, VariableFromPower),
+  Elect (A, ActivePlayer, All, CardTypeDef, Cost, Elect, VariableFromPower),
   Enchant (Enchant),
   EnchantmentType (Aura),
   EventListener' (TimePoint),
@@ -176,9 +176,9 @@ mkFetchLand name ty1 ty2 = mkCard (CardName name) $ \this ->
       { land_subtypes = []
       , land_abilities =
           [ Activated
-              (Cost $ AndCosts [tapCost [is this], PayLife 1, sacrificeCost [is this]])
+              (Elect $ Cost $ AndCosts [tapCost [is this], PayLife 1, sacrificeCost [is this]])
               $ controllerOf this $
-                \you ->
+                \you -> Elect $
                   effect $
                     searchLibrary you $
                       linked
@@ -195,13 +195,14 @@ acceptableLosses = mkCard "Acceptable Losses" $ \this ->
     let cost = Cost $ AndCosts [ManaCost $ toManaCost (3, R), DiscardRandomCost 1]
      in SorceryDef
           { sorcery_colors = toColors R
-          , sorcery_cost = cost
+          , sorcery_cost = Elect cost
           , sorcery_abilities = []
           , sorcery_effect =
               controllerOf this $ \you ->
                 A Target you $
                   masked @OTCreature [] $ \target ->
-                    effect $ dealDamage this target 5
+                    Elect $
+                      effect $ dealDamage this target 5
           }
 
 allIsDust :: Card OTSorcery
@@ -210,9 +211,9 @@ allIsDust = mkCard "All Is Dust" $ \_this ->
     TribalDef [Eldrazi] WNonCreatureSorcery $
       SorceryDef
         { sorcery_colors = toColors ()
-        , sorcery_cost = Cost $ spellCost 7
+        , sorcery_cost = Elect $ Cost $ spellCost 7
         , sorcery_abilities = []
-        , sorcery_effect =
+        , sorcery_effect = Elect $
             All $
               masked [] $
                 \player -> All $
@@ -226,11 +227,13 @@ ancestralVision = mkCard "Ancestral Vision" $ \this ->
   CardTypeDef $
     SorceryDef
       { sorcery_colors = toColors U
-      , sorcery_cost = Cost noCost
-      , sorcery_abilities = [Static $ Suspend 4 $ Cost $ spellCost U]
+      , sorcery_cost = Elect $ Cost noCost
+      , sorcery_abilities = [Static $ Suspend 4 $ Elect $ Cost $ spellCost U]
       , sorcery_effect =
-          controllerOf this $
-            \you -> A Target you $ masked [] $ \target -> effect $ DrawCards target 3
+          controllerOf this $ \you ->
+            A Target you $
+              masked [] $ \target ->
+                Elect $ effect $ DrawCards target 3
       }
 
 backlash :: Card OTInstant
@@ -238,12 +241,12 @@ backlash = mkCard "Backlash" $ \this ->
   CardTypeDef $
     InstantDef
       { instant_colors = toColors (B, R)
-      , instant_cost = Cost $ spellCost (1, B, R)
+      , instant_cost = Elect $ Cost $ spellCost (1, B, R)
       , instant_abilities = []
       , instant_effect =
           controllerOf this $ \you ->
             A Target you $
-              masked [Not tapped] $ \target ->
+              masked [Not tapped] $ \target -> Elect $
                 VariableFromPower target $ \power ->
                   controllerOf target $ \targetController ->
                     effect $ dealDamage target targetController $ VariableDamage power
@@ -257,7 +260,7 @@ birdToken = mkToken "Bird Token" $ \_this ->
   CardTypeDef $
     CreatureDef
       { creature_colors = toColors U
-      , creature_cost = Cost noCost
+      , creature_cost = Elect $ Cost noCost
       , creature_subtypes = [Bird]
       , creature_power = Power 2
       , creature_toughness = Toughness 2
@@ -270,13 +273,14 @@ blaze = mkCard "Blaze" $ \this ->
     VariableDef $ \x ->
       SorceryDef
         { sorcery_colors = toColors R
-        , sorcery_cost = Cost $ spellCost (VariableGenericMana x, R)
+        , sorcery_cost = Elect $ Cost $ spellCost (VariableGenericMana x, R)
         , sorcery_abilities = []
         , sorcery_effect =
             controllerOf this $ \you ->
               A Target you $
                 masked @OTCreaturePlayerPlaneswalker [] $ \target ->
-                  effect $ dealDamage this target x
+                  Elect $
+                    effect $ dealDamage this target x
         }
 
 bloodMoon :: Card OTEnchantment
@@ -284,7 +288,7 @@ bloodMoon = mkCard "Blood Moon" $ \_this ->
   CardTypeDef $
     EnchantmentDef
       { enchantment_colors = toColors R
-      , enchantment_cost = Cost $ spellCost (2, R)
+      , enchantment_cost = Elect $ Cost $ spellCost (2, R)
       , enchantment_subtypes = []
       , enchantment_abilities =
           [ Static $
@@ -308,9 +312,10 @@ cityOfBrass = mkCard "City of Brass" $ \this ->
                     linked [is this] $
                       \_ -> controllerOf this $
                         \you -> effect $ dealDamage this you 1
-          , Activated (Cost $ tapCost [is this]) $
+          , Activated (Elect $ Cost $ tapCost [is this]) $
               controllerOf this $ \you ->
-                effect $ addManaAnyColor you 1
+                Elect $
+                  effect $ addManaAnyColor you 1
           ]
       }
 
@@ -319,9 +324,9 @@ cleanse = mkCard "Cleanse" $ \_this ->
   CardTypeDef $
     SorceryDef
       { sorcery_colors = toColors W
-      , sorcery_cost = Cost $ spellCost (2, W, W)
+      , sorcery_cost = Elect $ Cost $ spellCost (2, W, W)
       , sorcery_abilities = []
-      , sorcery_effect =
+      , sorcery_effect = Elect $
           All $
             masked @OTCreature [ofColors B] $
               \creature -> effect $ destroy creature
@@ -332,7 +337,7 @@ conversion = mkCard "Conversion" $ \this ->
   CardTypeDef $
     EnchantmentDef
       { enchantment_colors = toColors W
-      , enchantment_cost = Cost $ spellCost (2, W, W)
+      , enchantment_cost = Elect $ Cost $ spellCost (2, W, W)
       , enchantment_subtypes = []
       , enchantment_abilities =
           [ Triggered $
@@ -361,9 +366,9 @@ damnation = mkCard "Damnation" $ \_this ->
   CardTypeDef $
     SorceryDef
       { sorcery_colors = toColors B
-      , sorcery_cost = Cost $ spellCost (2, B, B)
+      , sorcery_cost = Elect $ Cost $ spellCost (2, B, B)
       , sorcery_abilities = []
-      , sorcery_effect =
+      , sorcery_effect = Elect $
           All $
             masked @OTCreature [] $ \creature ->
               effect $ destroy creature
@@ -374,17 +379,17 @@ fling = mkCard "Fling" $ \this ->
   controllerOf this $ \you ->
     A Choose you $
       masked [ControlledBy you] $ \sacChoice ->
-        VariableFromPower sacChoice $ \power ->
-          CardTypeDef $
-            InstantDef
-              { instant_colors = toColors R
-              , instant_cost = Cost $ AndCosts [spellCost (1, R), sacrificeCost [is sacChoice]]
-              , instant_abilities = []
-              , instant_effect =
-                  A Target you $
-                    masked @OTCreaturePlayer [] $ \target ->
+        CardTypeDef $
+          InstantDef
+            { instant_colors = toColors R
+            , instant_cost = Elect $ Cost $ AndCosts [spellCost (1, R), sacrificeCost [is sacChoice]]
+            , instant_abilities = []
+            , instant_effect =
+                A Target you $
+                  masked @OTCreaturePlayer [] $ \target -> Elect $
+                    VariableFromPower sacChoice $ \power ->
                       effect $ dealDamage sacChoice target $ VariableDamage power
-              }
+            }
 
 forest :: Card OTLand
 forest = mkBasicLand $ Just Forest
@@ -394,12 +399,12 @@ holyStrength = mkCard "Holy Strength" $ \_this ->
   CardTypeDef $
     EnchantmentDef
       { enchantment_colors = toColors W
-      , enchantment_cost = Cost $ spellCost W
+      , enchantment_cost = Elect $ Cost $ spellCost W
       , enchantment_subtypes =
           [ Aura $
               Enchant $
                 linked [] $
-                  \enchanted -> effect $ StatDelta enchanted (Power 1) (Toughness 2)
+                  \enchanted -> Elect $ effect $ StatDelta enchanted (Power 1) (Toughness 2)
           ]
       , enchantment_abilities = []
       }
@@ -412,13 +417,14 @@ lavaAxe = mkCard "Lava Axe" $ \this ->
   CardTypeDef $
     SorceryDef
       { sorcery_colors = toColors R
-      , sorcery_cost = Cost $ spellCost (4, R)
+      , sorcery_cost = Elect $ Cost $ spellCost (4, R)
       , sorcery_abilities = []
       , sorcery_effect =
           controllerOf this $ \you ->
             A Target you $
               masked @OTPlayerPlaneswalker [] $ \target ->
-                effect $ dealDamage this target 5
+                Elect $
+                  effect $ dealDamage this target 5
       }
 
 manaLeak :: Card OTInstant
@@ -426,15 +432,16 @@ manaLeak = mkCard "Mana Leak" $ \this ->
   CardTypeDef $
     InstantDef
       { instant_colors = toColors U
-      , instant_cost = Cost $ spellCost (1, U)
+      , instant_cost = Elect $ Cost $ spellCost (1, U)
       , instant_abilities = []
       , instant_effect =
           controllerOf this $ \you ->
             A Target you $
               masked @OTSpell [] $ \spell ->
                 controllerOf spell $ \controller ->
-                  ifElse (satisfies controller [playerPays $ toManaCost 3]) $
-                    effect $ counterSpell spell
+                  Elect $
+                    ifElse (satisfies controller [playerPays $ toManaCost 3]) $
+                      effect $ counterSpell spell
       }
 
 mountain :: Card OTLand
@@ -445,7 +452,7 @@ nyxbornRollicker = mkCard "Nyxborn Rollicker" $ \_this ->
   CardTypeDef $
     EnchantmentCreatureDef
       { enchantmentCreature_colors = toColors R
-      , enchantmentCreature_cost = Cost $ spellCost R
+      , enchantmentCreature_cost = Elect $ Cost $ spellCost R
       , enchantmentCreature_creatureTypes = [Satyr]
       , enchantmentCreature_power = Power 1
       , enchantmentCreature_toughness = Toughness 1
@@ -453,10 +460,10 @@ nyxbornRollicker = mkCard "Nyxborn Rollicker" $ \_this ->
       , enchantmentCreature_enchantmentAbilities = []
       , enchantmentCreature_enchantmentCreatureAbilities =
           [ Static $
-              Bestow (Cost $ spellCost (1, R)) $
+              Bestow (Elect $ Cost $ spellCost (1, R)) $
                 Enchant $
                   linked [] $
-                    \enchanted -> effect $ StatDelta enchanted (Power 1) (Toughness 1)
+                    \enchanted -> Elect $ effect $ StatDelta enchanted (Power 1) (Toughness 1)
           ]
       }
 
@@ -465,7 +472,7 @@ ornithopter = mkCard "Ornithopter" $ \_this ->
   CardTypeDef $
     ArtifactCreatureDef
       { artifactCreature_colors = toColors ()
-      , artifactCreature_cost = Cost $ spellCost 0
+      , artifactCreature_cost = Elect $ Cost $ spellCost 0
       , artifactCreature_creatureTypes = []
       , artifactCreature_power = Power 0
       , artifactCreature_toughness = Toughness 2
@@ -481,13 +488,13 @@ plummet = mkCard "Plummet" $ \this ->
   CardTypeDef $
     InstantDef
       { instant_colors = toColors G
-      , instant_cost = Cost $ spellCost (1, G)
+      , instant_cost = Elect $ Cost $ spellCost (1, G)
       , instant_abilities = []
       , instant_effect =
           controllerOf this $ \you ->
             A Target you $
               masked [hasAbility $ \_this -> Static Flying] $ \target ->
-                effect $ destroy target
+                Elect $ effect $ destroy target
       }
 
 pollutedDelta :: Card OTLand
@@ -498,22 +505,23 @@ pradeshGypsies = mkCard "Pradesh Gypsies" $ \this ->
   CardTypeDef $
     CreatureDef
       { creature_colors = toColors G
-      , creature_cost = Cost $ spellCost (2, G)
+      , creature_cost = Elect $ Cost $ spellCost (2, G)
       , creature_subtypes = [Human, Nomad]
       , creature_power = Power 1
       , creature_toughness = Toughness 1
       , creature_abilities =
-          [ Activated (Cost $ AndCosts [tapCost [is this], ManaCost $ toManaCost (1, G)]) $
+          [ Activated (Elect $ Cost $ AndCosts [tapCost [is this], ManaCost $ toManaCost (1, G)]) $
               controllerOf this $
                 \you -> A Target you $
                   masked [] $ \creature ->
-                    effect $
-                      untilEndOfTurn $
-                        gain creature $
-                          Static $
-                            StaticContinuous $
-                              effect $
-                                StatDelta creature (Power (-2)) (Toughness 0)
+                    Elect $
+                      effect $
+                        untilEndOfTurn $
+                          gain creature $
+                            Static $
+                              StaticContinuous $
+                                effect $
+                                  StatDelta creature (Power (-2)) (Toughness 0)
           ]
       }
 
@@ -522,7 +530,7 @@ ragingGoblin = mkCard "Raging Goblin" $ \_this ->
   CardTypeDef $
     CreatureDef
       { creature_colors = toColors R
-      , creature_cost = Cost $ spellCost R
+      , creature_cost = Elect $ Cost $ spellCost R
       , creature_subtypes = [Goblin]
       , creature_power = Power 1
       , creature_toughness = Toughness 1
@@ -534,13 +542,14 @@ shock = mkCard "Shock" $ \this ->
   CardTypeDef $
     InstantDef
       { instant_colors = toColors R
-      , instant_cost = Cost $ spellCost R
+      , instant_cost = Elect $ Cost $ spellCost R
       , instant_abilities = []
       , instant_effect =
           controllerOf this $ \you ->
             A Target you $
               masked @OTCreaturePlayerPlaneswalker [] $ \target ->
-                effect $ dealDamage this target 2
+                Elect $
+                  effect $ dealDamage this target 2
       }
 
 sinkhole :: Card OTSorcery
@@ -548,11 +557,13 @@ sinkhole = mkCard "Sinkhole" $ \this ->
   CardTypeDef $
     SorceryDef
       { sorcery_colors = toColors B
-      , sorcery_cost = Cost $ spellCost (B, B)
+      , sorcery_cost = Elect $ Cost $ spellCost (B, B)
       , sorcery_abilities = []
       , sorcery_effect =
           controllerOf this $ \you ->
-            A Target you $ masked @OTLand [] $ \target -> effect $ destroy target
+            A Target you $
+              masked @OTLand [] $ \target ->
+                Elect $ effect $ destroy target
       }
 
 snuffOut :: Card OTInstant
@@ -560,7 +571,7 @@ snuffOut = mkCard "Snuff Out" $ \this ->
   CardTypeDef $
     InstantDef
       { instant_colors = toColors B
-      , instant_cost =
+      , instant_cost = Elect $
           controllerOf this $
             \you ->
               let cost = ManaCost $ toManaCost (3, B)
@@ -574,10 +585,11 @@ snuffOut = mkCard "Snuff Out" $ \this ->
             A Target you $
               masked [nonBlack] $
                 \target ->
-                  effect
-                    [ destroy target
-                    , EffectContinuous $ CantBeRegenerated target
-                    ]
+                  Elect $
+                    effect
+                      [ destroy target
+                      , EffectContinuous $ CantBeRegenerated target
+                      ]
       }
 
 soldierToken :: Token OTCreature
@@ -585,7 +597,7 @@ soldierToken = mkToken "Soldier Token" $ \_this ->
   CardTypeDef $
     CreatureDef
       { creature_colors = toColors W
-      , creature_cost = Cost noCost
+      , creature_cost = Elect $ Cost noCost
       , creature_subtypes = [Soldier]
       , creature_power = Power 1
       , creature_toughness = Toughness 1
@@ -597,13 +609,14 @@ stifle = mkCard "Stifle" $ \this ->
   CardTypeDef $
     InstantDef
       { instant_colors = toColors U
-      , instant_cost = Cost $ spellCost U
+      , instant_cost = Elect $ Cost $ spellCost U
       , instant_abilities = []
       , instant_effect =
           controllerOf this $ \you ->
             A Target you $
               masked @OTActivatedOrTriggeredAbility [] $ \target ->
-                effect $ counterAbility target
+                Elect $
+                  effect $ counterAbility target
       }
 
 stoneRain :: Card OTSorcery
@@ -611,11 +624,13 @@ stoneRain = mkCard "Stone Rain" $ \this ->
   CardTypeDef $
     SorceryDef
       { sorcery_colors = toColors R
-      , sorcery_cost = Cost $ spellCost (2, R)
+      , sorcery_cost = Elect $ Cost $ spellCost (2, R)
       , sorcery_abilities = []
       , sorcery_effect =
           controllerOf this $ \you ->
-            A Target you $ masked @OTLand [] $ \target -> effect $ destroy target
+            A Target you $
+              masked @OTLand [] $ \target ->
+                Elect $ effect $ destroy target
       }
 
 stoneThrowingDevils :: Card OTCreature
@@ -623,7 +638,7 @@ stoneThrowingDevils = mkCard "Stone-Throwing Devils" $ \_this ->
   CardTypeDef $
     CreatureDef
       { creature_colors = toColors B
-      , creature_cost = Cost $ spellCost B
+      , creature_cost = Elect $ Cost $ spellCost B
       , creature_subtypes = [Devil]
       , creature_power = Power 1
       , creature_toughness = Toughness 1
@@ -638,14 +653,15 @@ swanSong = mkCard "Swan Song" $ \this ->
   CardTypeDef $
     InstantDef
       { instant_colors = toColors U
-      , instant_cost = Cost $ spellCost U
+      , instant_cost = Elect $ Cost $ spellCost U
       , instant_abilities = []
       , instant_effect =
           controllerOf this $ \you ->
             A Target you $
               masked @(OT3 'OTEnchantment 'OTInstant 'OTSorcery) [] $
                 \target -> controllerOf target $ \controller ->
-                  effect [counterSpell target, addToBattlefield controller birdToken]
+                  Elect $
+                    effect [counterSpell target, addToBattlefield controller birdToken]
       }
 
 vindicate :: Card OTSorcery
@@ -653,11 +669,14 @@ vindicate = mkCard "Vindicate" $ \this ->
   CardTypeDef $
     SorceryDef
       { sorcery_colors = toColors (W, B)
-      , sorcery_cost = Cost $ spellCost (1, W, B)
+      , sorcery_cost = Elect $ Cost $ spellCost (1, W, B)
       , sorcery_abilities = []
       , sorcery_effect =
           controllerOf this $ \you ->
-            A Target you $ masked @OTPermanent [] $ \target -> effect $ destroy target
+            A Target you $
+              masked @OTPermanent [] $ \target ->
+                Elect $
+                  effect $ destroy target
       }
 
 wastes :: Card OTLand
@@ -668,9 +687,9 @@ wrathOfGod = mkCard "Wrath of God" $ \_this ->
   CardTypeDef $
     SorceryDef
       { sorcery_colors = toColors W
-      , sorcery_cost = Cost $ spellCost (2, W, W)
+      , sorcery_cost = Elect $ Cost $ spellCost (2, W, W)
       , sorcery_abilities = []
-      , sorcery_effect =
+      , sorcery_effect = Elect $
           All $
             masked @OTCreature [] $ \creature ->
               effect $ destroy creature
