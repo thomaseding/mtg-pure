@@ -4,10 +4,12 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE Safe #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
@@ -25,11 +27,13 @@ import safe MtgPure.Model.Mana (Mana (..), Snow (..))
 import safe MtgPure.Model.ManaCost (ManaCost (..), emptyManaCost)
 import safe MtgPure.Model.ManaSymbol (ManaSymbol (..))
 import safe MtgPure.Model.ToMana (toMana)
+import safe MtgPure.Model.Variable (Var (..))
 
+-- NOTE: This takes `'Var` instead of `var :: Var` to avoid some authoring ambiguities
 class ToManaCost (mana :: Type) where
-  toManaCost :: mana -> ManaCost
+  toManaCost :: mana -> ManaCost 'Var
 
-instance ToManaCost ManaCost where
+instance ToManaCost (ManaCost 'Var) where
   toManaCost = id
 
 instance {-# OVERLAPPABLE #-} (Inst2 ToManaCost a b) => ToManaCost (a, b) where
@@ -69,12 +73,12 @@ instance ToManaCost Integer where
   toManaCost n = toManaCost (fromInteger n :: Int)
 
 instance ToManaCost Int where
-  toManaCost = toManaCost . GenericMana'
+  toManaCost = toManaCost . GenericMana' @ 'Var
 
-instance ToManaCost GenericMana where
+instance ToManaCost (GenericMana 'Var) where
   toManaCost x = emptyManaCost{costGeneric = GenericMana x}
 
-instance ToManaCost (Mana 'NonSnow a) where
+instance ToManaCost (Mana 'Var 'NonSnow a) where
   toManaCost = \case
     x@(WhiteMana _) -> emptyManaCost{costWhite = x}
     x@(BlueMana _) -> emptyManaCost{costBlue = x}

@@ -72,8 +72,8 @@ allCards =
   , toCard bayou
   , toCard blaze
   , toCard bloodMoon
-  , toCard cleanse
   , toCard cityOfBrass
+  , toCard cleanse
   , toCard conversion
   , toCard damnation
   , toCard fling

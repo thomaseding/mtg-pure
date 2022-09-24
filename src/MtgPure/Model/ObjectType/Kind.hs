@@ -44,7 +44,6 @@ module MtgPure.Model.ObjectType.Kind (
   OTPlayerPlaneswalker,
   OTSorcery,
   OTSpell,
-  OTStackObject,
   OTStaticAbility,
   OTToken,
   OTTriggeredAbility,
@@ -229,19 +228,6 @@ type OTSpell =
      , 'OTInstant
      , 'OTPlaneswalker
      , 'OTSorcery
-     )
-
-type OTStackObject =
-  OT
-    '( '()
-     , 'OTActivatedAbility
-     , 'OTArtifact
-     , 'OTCreature
-     , 'OTEnchantment
-     , 'OTInstant
-     , 'OTPlaneswalker
-     , 'OTSorcery
-     , 'OTTriggeredAbility
      )
 
 type OTCard =

@@ -18,6 +18,7 @@
 module MtgPure.ModelCombinators (
   addManaAnyColor,
   addToBattlefield,
+  activated,
   asActivatedOrTriggeredAbility,
   AsActivatedOrTriggeredAbility,
   asAny,
@@ -82,7 +83,14 @@ module MtgPure.ModelCombinators (
   untilEndOfTurn,
 ) where
 
-import safe Data.Inst (Inst1, Inst2, Inst3, Inst4, Inst5, Inst6)
+import safe Data.Inst (
+  Inst1,
+  Inst2,
+  Inst3,
+  Inst4,
+  Inst5,
+  Inst6,
+ )
 import safe Data.Kind (Type)
 import safe Data.Proxy (Proxy (..))
 import safe Data.Typeable (Typeable)
@@ -90,7 +98,7 @@ import safe MtgPure.Model.BasicLandType (BasicLandType)
 import safe MtgPure.Model.CardName (CardName)
 import safe MtgPure.Model.Color (Color (..))
 import safe MtgPure.Model.ColorsLike (ColorsLike (..))
-import safe MtgPure.Model.Damage (Damage (..))
+import safe MtgPure.Model.Damage (Damage, Damage' (..))
 import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.LandType (LandType (BasicLand))
 import safe MtgPure.Model.ManaCost (ManaCost)
@@ -129,13 +137,16 @@ import safe MtgPure.Model.ObjectType.Kind (
 import safe MtgPure.Model.ObjectType.Permanent (IsPermanentType, WPermanent (..))
 import safe MtgPure.Model.PrePost (PrePost (..))
 import safe MtgPure.Model.Recursive (
-  Ability,
+  Ability (..),
+  ActivatedAbility (..),
   Card (..),
   CardTypeDef,
+  Case (..),
   Condition (..),
   Cost (..),
   Effect (..),
   Elect (..),
+  ElectPrePost,
   Else (..),
   Event,
   EventListener,
@@ -163,7 +174,7 @@ import safe MtgPure.Model.ToObjectN.Classes (
  )
 import safe MtgPure.Model.ToObjectN.Instances ()
 import safe MtgPure.Model.Tribal (Tribal (..))
-import safe MtgPure.Model.Variable (Variable)
+import safe MtgPure.Model.Variable (Var (Var), Variable)
 import safe MtgPure.Model.Zone (IsZone, Zone (..))
 import safe MtgPure.Model.ZoneObject (
   IsOT,
@@ -434,7 +445,7 @@ asCreaturePlayerPlaneswalker ::
 asCreaturePlayerPlaneswalker = toZO3
 
 class AsDamage a where
-  asDamage :: a -> Damage
+  asDamage :: a -> Damage 'Var
 
 instance AsDamage Integer where
   asDamage n = asDamage (fromInteger n :: Int)
@@ -442,10 +453,10 @@ instance AsDamage Integer where
 instance AsDamage Int where
   asDamage = Damage
 
-instance AsDamage Damage where
+instance AsDamage (Damage 'Var) where
   asDamage = id
 
-instance AsDamage Variable where
+instance AsDamage (Variable Int) where
   asDamage = VariableDamage
 
 spellCost :: ToManaCost a => a -> Cost ot
@@ -625,7 +636,7 @@ class AsCost c ot where
 instance AsCost (Cost ot) ot where
   asCost = id
 
-instance AsCost ManaCost ot where
+instance AsCost (ManaCost 'Var) ot where
   asCost = ManaCost
 
 playerPays :: (IsZone zone, AsCost c OPlayer) => c -> Requirement zone OTPlayer
@@ -710,37 +721,23 @@ colored = ROr $ map ofColors [minBound :: Color ..]
 colorless :: IsZO zone ot => Requirement zone ot
 colorless = Not colored
 
-addManaAnyColor :: OPlayer -> Int -> Effect 'OneShot
-addManaAnyColor player amount =
-  EOr
-    [ AddMana player $ toManaPool (W, amount)
-    , AddMana player $ toManaPool (U, amount)
-    , AddMana player $ toManaPool (B, amount)
-    , AddMana player $ toManaPool (R, amount)
-    , AddMana player $ toManaPool (G, amount)
-    ]
+addManaAnyColor :: Variable Color -> OPlayer -> Int -> Effect 'OneShot
+addManaAnyColor color player amount =
+  EffectCase $
+    CaseColor
+      { caseColor = color
+      , ofWhite = AddMana player $ toManaPool (W, amount)
+      , ofBlue = AddMana player $ toManaPool (U, amount)
+      , ofBlack = AddMana player $ toManaPool (B, amount)
+      , ofRed = AddMana player $ toManaPool (R, amount)
+      , ofGreen = AddMana player $ toManaPool (G, amount)
+      }
 
 class
   (AsWithThis ot 'ZBattlefield (CardTypeDef tribal) ots) =>
   MkCard tribal ot ots
   where
   mkCard :: CardName -> (ots -> Elect 'Pre (CardTypeDef tribal ot) ot) -> Card ot
-
-instance
-  MkCard
-    'NonTribal
-    OTArtifactCreature
-    (ZO 'ZBattlefield OTArtifact, ZO 'ZBattlefield OTCreature)
-  where
-  mkCard name = Card name coCard . T2
-
-instance
-  MkCard
-    'NonTribal
-    OTEnchantmentCreature
-    (ZO 'ZBattlefield OTCreature, ZO 'ZBattlefield OTEnchantment)
-  where
-  mkCard name = Card name coCard . T2
 
 instance
   (CoCard (OT1 a), IsObjectType a) =>
@@ -754,17 +751,17 @@ instance
   where
   mkCard name = TribalCard name coCard . thisObject
 
--- instance
---   (CoCard (OT2 a b), Inst2 IsObjectType a b) =>
---   MkCard 'NonTribal (OT2 a b) (ZO 'ZBattlefield (OT1 a), ZO 'ZBattlefield (OT1 b))
---   where
---   mkCard name = Card name coCard . thisObject
+instance
+  (CoCard (OT2 a b), Inst2 IsObjectType a b) =>
+  MkCard 'NonTribal (OT2 a b) (ZO 'ZBattlefield (OT1 a), ZO 'ZBattlefield (OT1 b))
+  where
+  mkCard name = Card name coCard . thisObject
 
--- instance
---   (CoCard (OT2 a b), Inst2 IsObjectType a b) =>
---   MkCard 'Tribal (OT2 a b) (ZO 'ZBattlefield (OT1 a), ZO 'ZBattlefield (OT1 b))
---   where
---   mkCard name = TribalCard name coCard . thisObject
+instance
+  (CoCard (OT2 a b), Inst2 IsObjectType a b) =>
+  MkCard 'Tribal (OT2 a b) (ZO 'ZBattlefield (OT1 a), ZO 'ZBattlefield (OT1 b))
+  where
+  mkCard name = TribalCard name coCard . thisObject
 
 mkToken ::
   (CoPermanent ot, MkCard tribal ot ots) =>
@@ -814,3 +811,6 @@ searchLibrary ::
   WithLinkedObject 'ZLibrary (Elect 'Post (Effect 'OneShot)) ot ->
   Effect 'OneShot
 searchLibrary = SearchLibrary coCard
+
+activated :: IsOT ot => ElectPrePost (Cost ot) ot -> ElectPrePost (Effect 'OneShot) ot -> Ability ot
+activated cost = Activated . Ability cost

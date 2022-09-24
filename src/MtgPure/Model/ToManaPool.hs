@@ -27,6 +27,7 @@ import safe MtgPure.Model.ManaPool (CompleteManaPool (..), ManaPool (..))
 import safe MtgPure.Model.ManaSymbol (ManaSymbol (..))
 import safe MtgPure.Model.ManaType (ManaType (..))
 import safe MtgPure.Model.ToMana (toMana)
+import safe MtgPure.Model.Variable (Var (..))
 
 ----------------------------------------
 
@@ -60,27 +61,27 @@ instance {-# OVERLAPPABLE #-} (Inst6 (ToManaPool 'NonSnow) a b c d e f) => ToMan
       <> toManaPool e
       <> toManaPool f
 
-instance ToManaPool 'NonSnow (Mana 'NonSnow 'MTWhite) where
+instance ToManaPool 'NonSnow (Mana 'NoVar 'NonSnow 'MTWhite) where
   toManaPool = \case
     x@(WhiteMana _) -> mempty{poolWhite = x}
 
-instance ToManaPool 'NonSnow (Mana 'NonSnow 'MTBlue) where
+instance ToManaPool 'NonSnow (Mana 'NoVar 'NonSnow 'MTBlue) where
   toManaPool = \case
     x@(BlueMana _) -> mempty{poolBlue = x}
 
-instance ToManaPool 'NonSnow (Mana 'NonSnow 'MTBlack) where
+instance ToManaPool 'NonSnow (Mana 'NoVar 'NonSnow 'MTBlack) where
   toManaPool = \case
     x@(BlackMana _) -> mempty{poolBlack = x}
 
-instance ToManaPool 'NonSnow (Mana 'NonSnow 'MTRed) where
+instance ToManaPool 'NonSnow (Mana 'NoVar 'NonSnow 'MTRed) where
   toManaPool = \case
     x@(RedMana _) -> mempty{poolRed = x}
 
-instance ToManaPool 'NonSnow (Mana 'NonSnow 'MTGreen) where
+instance ToManaPool 'NonSnow (Mana 'NoVar 'NonSnow 'MTGreen) where
   toManaPool = \case
     x@(GreenMana _) -> mempty{poolGreen = x}
 
-instance ToManaPool 'NonSnow (Mana 'NonSnow 'MTColorless) where
+instance ToManaPool 'NonSnow (Mana 'NoVar 'NonSnow 'MTColorless) where
   toManaPool = \case
     x@ColorlessMana{} -> mempty{poolColorless = x}
 
@@ -185,27 +186,27 @@ instance {-# OVERLAPPABLE #-} (Inst6 ToCompleteManaPool a b c d e f) => ToComple
       <> toCompleteManaPool e
       <> toCompleteManaPool f
 
-instance ToCompleteManaPool (Mana 'NonSnow 'MTWhite) where
+instance ToCompleteManaPool (Mana 'NoVar 'NonSnow 'MTWhite) where
   toCompleteManaPool = \case
     x@(WhiteMana _) -> mempty{poolNonSnow = mempty{poolWhite = x}}
 
-instance ToCompleteManaPool (Mana 'NonSnow 'MTBlue) where
+instance ToCompleteManaPool (Mana 'NoVar 'NonSnow 'MTBlue) where
   toCompleteManaPool = \case
     x@(BlueMana _) -> mempty{poolNonSnow = mempty{poolBlue = x}}
 
-instance ToCompleteManaPool (Mana 'NonSnow 'MTBlack) where
+instance ToCompleteManaPool (Mana 'NoVar 'NonSnow 'MTBlack) where
   toCompleteManaPool = \case
     x@(BlackMana _) -> mempty{poolNonSnow = mempty{poolBlack = x}}
 
-instance ToCompleteManaPool (Mana 'NonSnow 'MTRed) where
+instance ToCompleteManaPool (Mana 'NoVar 'NonSnow 'MTRed) where
   toCompleteManaPool = \case
     x@(RedMana _) -> mempty{poolNonSnow = mempty{poolRed = x}}
 
-instance ToCompleteManaPool (Mana 'NonSnow 'MTGreen) where
+instance ToCompleteManaPool (Mana 'NoVar 'NonSnow 'MTGreen) where
   toCompleteManaPool = \case
     x@(GreenMana _) -> mempty{poolNonSnow = mempty{poolGreen = x}}
 
-instance ToCompleteManaPool (Mana 'NonSnow 'MTColorless) where
+instance ToCompleteManaPool (Mana 'NoVar 'NonSnow 'MTColorless) where
   toCompleteManaPool = \case
     x@ColorlessMana{} -> mempty{poolNonSnow = mempty{poolColorless = x}}
 

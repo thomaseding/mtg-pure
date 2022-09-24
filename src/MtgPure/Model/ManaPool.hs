@@ -3,6 +3,8 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE Safe #-}
@@ -19,24 +21,25 @@ module MtgPure.Model.ManaPool (
 ) where
 
 import safe Data.Typeable (Typeable)
-import safe MtgPure.Model.Mana (Mana, Snow (..))
+import safe MtgPure.Model.Mana (IsManaNoVar, IsSnow, Mana, Snow (..))
 import safe MtgPure.Model.ManaType (ManaType (..))
+import safe MtgPure.Model.Variable (ForceVars (..), Var (NoVar))
 
 data ManaPool (snow :: Snow) = ManaPool
-  { poolWhite :: Mana snow 'MTWhite
-  , poolBlue :: Mana snow 'MTBlue
-  , poolBlack :: Mana snow 'MTBlack
-  , poolRed :: Mana snow 'MTRed
-  , poolGreen :: Mana snow 'MTGreen
-  , poolColorless :: Mana snow 'MTColorless
+  { poolWhite :: Mana 'NoVar snow 'MTWhite
+  , poolBlue :: Mana 'NoVar snow 'MTBlue
+  , poolBlack :: Mana 'NoVar snow 'MTBlack
+  , poolRed :: Mana 'NoVar snow 'MTRed
+  , poolGreen :: Mana 'NoVar snow 'MTGreen
+  , poolColorless :: Mana 'NoVar snow 'MTColorless
   }
-  deriving (Eq, Ord, Show, Typeable)
+  deriving (Eq, Ord, Show, Typeable) --  TODO: Make some of these orphans
 
 data CompleteManaPool = CompleteManaPool
   { poolSnow :: ManaPool 'Snow
   , poolNonSnow :: ManaPool 'NonSnow
   }
-  deriving (Eq, Ord, Show, Typeable)
+  deriving (Show, Typeable)
 
 instance Semigroup (ManaPool snow) where
   mp1 <> mp2 =
@@ -99,3 +102,55 @@ instance Monoid CompleteManaPool where
       { poolSnow = mempty
       , poolNonSnow = mempty
       }
+
+mapManaPool ::
+  IsSnow snow =>
+  ( forall color.
+    IsManaNoVar snow color =>
+    Mana 'NoVar snow color ->
+    Mana 'NoVar snow color
+  ) ->
+  ManaPool snow ->
+  ManaPool snow
+mapManaPool f (ManaPool w u b r g c) =
+  ManaPool (f w) (f u) (f b) (f r) (f g) (f c)
+
+mapManaPool2 ::
+  IsSnow snow =>
+  ( forall color.
+    IsManaNoVar snow color =>
+    Mana 'NoVar snow color ->
+    Mana 'NoVar snow color ->
+    Mana 'NoVar snow color
+  ) ->
+  ManaPool snow ->
+  ManaPool snow ->
+  ManaPool snow
+mapManaPool2
+  f
+  (ManaPool w1 u1 b1 r1 g1 c1)
+  (ManaPool w2 u2 b2 r2 g2 c2) =
+    ManaPool
+      (f w1 w2)
+      (f u1 u2)
+      (f b1 b2)
+      (f r1 r2)
+      (f g1 g2)
+      (f c1 c2)
+
+instance IsSnow snow => Num (ManaPool snow) where
+  (+) = mapManaPool2 (+)
+  (-) = mapManaPool2 (-)
+  (*) = mapManaPool2 (*)
+  abs = mapManaPool abs
+  signum = mapManaPool signum
+  negate = mapManaPool negate
+  fromInteger = \case
+    0 -> mempty
+    -- NOTE: I could support a sound `fromInteger` definition, but it prolly isn't worth
+    -- it because it would have to support only Colorless or all the mana types together,
+    -- neither of which is particularly desirable.
+    _ -> error "(fromInteger :: ManaPool snow) only supports n=0"
+
+instance IsSnow snow => ForceVars (ManaPool snow) (ManaPool snow) where
+  forceVars = mapManaPool forceVars

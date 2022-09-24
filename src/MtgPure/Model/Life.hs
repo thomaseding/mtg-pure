@@ -19,5 +19,5 @@ module MtgPure.Model.Life (
 
 import safe Data.Typeable (Typeable)
 
-newtype Life = Life Int
+newtype Life = Life {unLife :: Int}
   deriving (Eq, Ord, Show, Typeable)

@@ -4,9 +4,10 @@
 {-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
@@ -15,6 +16,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
+{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Avoid lambda" #-}
@@ -56,6 +58,7 @@ import safe Data.Kind (Type)
 import safe qualified Data.List as List
 import safe qualified Data.Map.Strict as Map
 import safe Data.Maybe (catMaybes, mapMaybe)
+import Data.Monoid (First (..))
 import safe qualified Data.Stream as Stream
 import safe Data.Typeable (Typeable)
 import safe Data.Void (Void, absurd)
@@ -74,6 +77,8 @@ import safe MtgPure.Engine.Monad (
   runMagicRO,
   runMagicRW,
  )
+import safe MtgPure.Model.Color (Color (..))
+import safe MtgPure.Model.Damage (Damage, Damage' (..))
 import safe MtgPure.Model.Deck (Deck (..))
 import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.Graveyard (Graveyard (..))
@@ -87,7 +92,9 @@ import safe MtgPure.Model.IsCardList (
  )
 import safe MtgPure.Model.Library (Library (..))
 import safe MtgPure.Model.Life (Life (..))
+import safe MtgPure.Model.Mana (IsManaNoVar, IsSnow, Mana, Snow (..))
 import safe MtgPure.Model.ManaCost (ManaCost (..))
+import safe MtgPure.Model.ManaPool (CompleteManaPool (..), ManaPool (..))
 import safe MtgPure.Model.Mulligan (Mulligan)
 import safe MtgPure.Model.Object (
   IsObjectType (..),
@@ -101,11 +108,10 @@ import safe MtgPure.Model.ObjectId (GetObjectId (..), ObjectId (..))
 import safe MtgPure.Model.ObjectN (ObjectN (..))
 import safe MtgPure.Model.ObjectType.Index (IndexOT (..))
 import safe MtgPure.Model.ObjectType.Kind (
-  OTAbility,
+  OTActivatedOrTriggeredAbility,
   OTLand,
   OTSorcery,
   OTSpell,
-  OTStackObject,
  )
 import safe MtgPure.Model.Permanent (
   Permanent (..),
@@ -117,8 +123,10 @@ import safe MtgPure.Model.PhaseStep (PhaseStep (..))
 import safe MtgPure.Model.Player (Player (..))
 import safe MtgPure.Model.PrePost (PrePost (..))
 import safe MtgPure.Model.Recursive (
+  ActivatedAbility,
   Card (..),
   CardTypeDef (..),
+  Case (..),
   Cost (..),
   Effect (..),
   Elect (..),
@@ -132,11 +140,14 @@ import safe MtgPure.Model.Recursive (
  )
 import safe MtgPure.Model.Recursive.Ord ()
 import safe MtgPure.Model.Recursive.Show ()
-import safe MtgPure.Model.Selection (Selection (..))
 import safe MtgPure.Model.Sideboard (Sideboard (..))
-import safe MtgPure.Model.Stack (Stack (..))
+import safe MtgPure.Model.Stack (Stack (..), StackObject (..))
 import safe MtgPure.Model.Step (Step (..))
+import safe MtgPure.Model.ToObjectN.Classes (
+  ToObject6' (..),
+ )
 import safe MtgPure.Model.Tribal (IsTribal, Tribal (..))
+import safe MtgPure.Model.Variable (ForceVars (..), Var (..), readVariable)
 import safe MtgPure.Model.VisitObjectN (VisitObjectN (..))
 import safe MtgPure.Model.Zone (
   IsZone,
@@ -146,6 +157,8 @@ import safe MtgPure.Model.Zone (
  )
 import safe MtgPure.Model.ZoneObject (
   IsZO,
+  OCreaturePlayerPlaneswalker,
+  ODamageSource,
   OPlayer,
   ZO,
   ZoneObject (..),
@@ -156,9 +169,11 @@ import safe MtgPure.Model.ZoneObject (
 
 data InternalLogicError
   = ExpectedCardToBeAPermanentCard
+  | ExpectedStackObjectToExist
   | InvalidPermanent (ZO 'ZBattlefield OT0)
   | InvalidPlayer (Object 'OTPlayer)
   | ImpossibleGameOver
+  | NotSureWhatThisEntails
   deriving (Typeable)
 
 deriving instance Eq InternalLogicError
@@ -185,6 +200,7 @@ data Prompt (m :: Type -> Type) = Prompt
   , exceptionInvalidPlayLand :: OpaqueGameState m -> Object 'OTPlayer -> InvalidPlayLand -> m ()
   , exceptionInvalidShuffle :: CardCount -> [CardIndex] -> m ()
   , exceptionInvalidStartingPlayer :: PlayerCount -> PlayerIndex -> m ()
+  , promptActivateAbility :: OpaqueGameState m -> Object 'OTPlayer -> m (Maybe ActivateAbility)
   , promptCastSpell :: OpaqueGameState m -> Object 'OTPlayer -> m (Maybe CastSpell)
   , promptDebugMessage :: String -> m ()
   , promptGetStartingPlayer :: PlayerCount -> m PlayerIndex
@@ -193,6 +209,9 @@ data Prompt (m :: Type -> Type) = Prompt
   , promptPlayLand :: OpaqueGameState m -> Object 'OTPlayer -> m (Maybe PlayLand)
   , promptShuffle :: CardCount -> Object 'OTPlayer -> m [CardIndex]
   }
+
+data ActivateAbility :: Type where
+  ActivateAbility :: ZO zone ot -> ActivatedAbility zone ot -> ActivateAbility
 
 -- NB (305.9): Lands + other types can never be cast
 -- Unfortuantely OTSpell intersects OTArtifactLand. Such is life.
@@ -205,7 +224,6 @@ data PlayLand :: Type where
   PlayLand :: IsZone zone => ZO zone OTLand -> PlayLand
 
 data SpecialAction :: Type where
-  SA_CastSpell :: CastSpell -> SpecialAction
   SA_PlayLand :: PlayLand -> SpecialAction
 
 data InvalidPlayLand :: Type where
@@ -278,15 +296,19 @@ data GameState (m :: Type -> Type) where
     , magicPlayerOrderAPNAP :: Stream.Stream (Object 'OTPlayer) -- does not contain losers
     , magicPlayerOrderPriority :: [Object 'OTPlayer] -- does not contain losers
     , magicPlayerOrderTurn :: Stream.Stream (Object 'OTPlayer) -- does not contain losers
-    , magicPreElected :: Map.Map (ZO 'ZStack OT0) (AnyElected 'Pre)
     , magicPrompt :: Prompt m
-    , magicStartingPlayer :: Object 'OTPlayer
     , magicStack :: Stack
-    , magicStackItemToTargets :: Map.Map (ZO 'ZStack OT0) [TargetId]
-    , magicTargetProperties :: Map.Map TargetId [AnyRequirement]
+    , magicStackEntries :: Map.Map (ZO 'ZStack OT0) StackEntry
+    , magicStartingPlayer :: Object 'OTPlayer
+    , magicTargetProperties :: Map.Map TargetId AnyRequirement
     } ->
     GameState m
   deriving (Typeable)
+
+data StackEntry = StackEntry
+  { stackEntryTargets :: [TargetId]
+  , stackEntryElected :: AnyElected 'Post 'Pre
+  }
 
 mkGameState :: GameInput m -> Maybe (GameState m)
 mkGameState input = case playerObjects of
@@ -298,7 +320,7 @@ mkGameState input = case playerObjects of
         , magicGraveyardCards = mempty
         , magicHandCards = mempty
         , magicManaBurn = False
-        , magicNextObjectDiscriminant = DefaultObjectDiscriminant + 1
+        , magicNextObjectDiscriminant = (1 +) <$> DefaultObjectDiscriminant
         , magicNextObjectId = ObjectId playerCount
         , magicPermanents = mempty
         , magicPhaseStep = PSBeginningPhase UntapStep
@@ -306,11 +328,10 @@ mkGameState input = case playerObjects of
         , magicPlayerOrderAPNAP = Stream.cycle playerObjects
         , magicPlayerOrderPriority = []
         , magicPlayerOrderTurn = Stream.cycle playerObjects
-        , magicPreElected = mempty
         , magicPrompt = gameInput_prompt input
         , magicStack = Stack []
+        , magicStackEntries = mempty
         , magicStartingPlayer = oPlayer
-        , magicStackItemToTargets = mempty
         , magicTargetProperties = mempty
         }
  where
@@ -375,13 +396,25 @@ untilJust m =
     Just x -> pure x
     Nothing -> untilJust m
 
-andM :: Monad m => [m Bool] -> m Bool
-andM = \case
-  [] -> pure True
-  m : ms ->
-    m >>= \case
-      True -> andM ms
-      False -> pure False
+class AndLike a where
+  andM :: Monad m => [m a] -> m a
+
+instance AndLike () where
+  andM = sequence_
+
+instance AndLike Bool where
+  andM = \case
+    [] -> pure True
+    m : ms ->
+      m >>= \case
+        True -> andM ms
+        False -> pure False
+
+instance AndLike Legality where
+  andM m = do
+    let bs = map (fmap fromLegality) m
+    b <- andM bs
+    pure $ toLegality b
 
 getAlivePlayerCount :: Monad m => Magic 'Public 'RO m PlayerCount
 getAlivePlayerCount = undefined
@@ -430,11 +463,12 @@ startGame :: Monad m => Magic 'Private 'RW m Void
 startGame = do
   determineStartingPlayer -- (103.1)
   withEachPlayer_ shuffleLibrary -- (103.2)
-
-  -- (103.3) See `mkPlayer`
+  pure () -- (103.3) See `mkPlayer`
   drawStartingHands -- (103.4)
-  -- (103.5) TODO: leylines and such
-  -- (103.6) TODO: planechase stuff
+  pure () -- (103.5) TODO: leylines and such
+  pure () -- (103.6) TODO: planechase stuff
+
+  -- NOTE: MagicCont is appropriate in order to nicely support cards like [Stasis] and [Time Stop]
   runMagicCont (either id id) untapStep
 
 setPhaseStep :: PhaseStep -> Monad m => MagicCont 'Private 'RW m Void ()
@@ -572,9 +606,8 @@ askSpecialAction :: Monad m => Object 'OTPlayer -> MagicCont 'Private 'RW m () (
 askSpecialAction oPlayer = do
   askPlayLand oPlayer
 
-performSpecialAction :: Monad m => Object 'OTPlayer -> SpecialAction -> Magic 'Private 'RW m Bool
+performSpecialAction :: Monad m => Object 'OTPlayer -> SpecialAction -> Magic 'Private 'RW m Legality
 performSpecialAction oPlayer = \case
-  SA_CastSpell (CastSpell someCard) -> castSpell oPlayer someCard
   SA_PlayLand (PlayLand oLand) -> playLand oPlayer oLand
 
 data Legality
@@ -594,21 +627,29 @@ rewindIllegal m = do
     Legal -> pure True
     Illegal -> put st >> pure False
 
-castSpell :: forall m. Monad m => Object 'OTPlayer -> SomeCard OTSpell -> Magic 'Private 'RW m Bool
-castSpell oCaster someCard = rewindIllegal $ case someCard of
+activateAbility :: forall m. Monad m => ActivateAbility -> Magic 'Private 'RW m Legality
+activateAbility (ActivateAbility oThis ability) = do
+  undefined oThis ability
+
+castSpell :: forall m. Monad m => Object 'OTPlayer -> CastSpell -> Magic 'Private 'RW m Legality
+castSpell oCaster (CastSpell someCard) = case someCard of
   Some6a (SomeArtifact card) -> undefined card
   Some6b (SomeCreature card) -> undefined card
   Some6c (SomeEnchantment card) -> undefined card
   Some6d (SomeInstant card) -> undefined card
   Some6e (SomePlaneswalker card) -> undefined card
   Some6f (SomeSorcery card@(Card _name _wCard (T1 thisToElectDef))) -> do
-    i <- newObjectId
-    let this = ZO SZBattlefield $ O1 $ idToObject i
+    thisId <- newObjectId
+    spellId <- newObjectId
+    let zoThis = ZO SZBattlefield $ O1 $ idToObject thisId
+        zoSpell = toZO0 @ 'ZStack spellId
 
         goElectDef :: Elect 'Pre (CardTypeDef 'NonTribal OTSorcery) OTSorcery -> Magic 'Private 'RW m Legality
         goElectDef = \case
-          A sel oPlayer thisToElect -> electA goElectDef sel oPlayer thisToElect
           CardTypeDef def -> goDef def
+          Choose oPlayer thisToElect -> electA Choose' zoSpell goElectDef oPlayer thisToElect
+          ElectCase case_ -> performCase goElectDef case_
+          Target oPlayer thisToElect -> electA Target' zoSpell goElectDef oPlayer thisToElect
           _ -> undefined
 
         goDef :: CardTypeDef 'NonTribal OTSorcery -> Magic 'Private 'RW m Legality
@@ -630,20 +671,25 @@ castSpell oCaster someCard = rewindIllegal $ case someCard of
                  in goElectEffect $ sorcery_effect def
            in goElectCost $ sorcery_cost def
 
-    goElectDef $ thisToElectDef this
+    goElectDef $ thisToElectDef zoThis
   Some6f (SomeSorcery TribalCard{}) -> undefined
   Some6ab (SomeArtifactCreature card) -> undefined card
   Some6bc (SomeEnchantmentCreature card) -> undefined card
 
+data Selection
+  = Choose'
+  | Target'
+
 electA ::
   forall zone m el ot.
   (IsZO zone ot, Monad m) =>
-  (Elect 'Pre el ot -> Magic 'Private 'RW m Legality) ->
   Selection ->
+  ZO 'ZStack OT0 ->
+  (Elect 'Pre el ot -> Magic 'Private 'RW m Legality) ->
   OPlayer ->
   WithMaskedObject zone (Elect 'Pre el ot) ->
   Magic 'Private 'RW m Legality
-electA goElect sel oPlayer = \case
+electA sel zoSpell goElect oPlayer = \case
   M1 reqs zoToElect -> go reqs zoToElect
   M2 reqs zoToElect -> go reqs zoToElect
   M3 reqs zoToElect -> go reqs zoToElect
@@ -668,39 +714,49 @@ electA goElect sel oPlayer = \case
               False -> Nothing
               True -> Just zo
         zo' <- case sel of
-          Choose -> pure zo
-          Target -> mkTarget zo $ RAnd reqs
+          Choose' -> pure zo
+          Target' -> newTarget zoSpell zo $ RAnd reqs
         let elect = zoToElect zo'
         goElect elect
 
-mkTarget ::
+newTarget ::
   (Monad m, IsZO zone ot) =>
+  ZO 'ZStack OT0 ->
   ZO zone ot ->
   Requirement zone ot ->
   Magic 'Private 'RW m (ZO zone ot)
-mkTarget zo reqs = do
-  -- TODO: map target object to until the spell resolves/counters/fizzles
-  -- type Target = ObjectN OT0
-  -- magicTargetProperties :: Map.Map Target [([ObjectType] | OT otk | SomeRequirement)]
-  -- magicStackItemToTargets :: Map.Map (ZO 'ZStack OT0) [TargetId]
-  disc <- fromRO $ gets magicNextObjectDiscriminant
-  modify $ \st -> st{magicNextObjectDiscriminant = disc + 1}
-  let (ZO sZone objN) = zo
+newTarget zoSpell zoTargetBase req = do
+  discr <- fromRO $ gets magicNextObjectDiscriminant
+  let (ZO sZone objN) = zoTargetBase
       go :: Object a -> Object a
       go = \case
         Object wit oldDisc i ->
-          assert (oldDisc == DefaultObjectDiscriminant) $ Object wit disc i
+          assert (oldDisc == DefaultObjectDiscriminant) $ Object wit discr i
       objN' = mapObjectN go objN
-      zo' = ZO sZone objN'
-  M.void $ undefined reqs
-  pure zo'
+      zoTarget = ZO sZone objN'
+  modify $ \st ->
+    let targetId = getObjectId zoTarget
+        propMap = magicTargetProperties st
+        propMap' = Map.insert targetId (AnyRequirement req) propMap
+        entry = case Map.lookup zoSpell $ magicStackEntries st of
+          Just x -> x
+          Nothing -> error $ show ExpectedStackObjectToExist
+        entry' = entry{stackEntryTargets = targetId : stackEntryTargets entry}
+        itemMap = magicStackEntries st
+        itemMap' = Map.insert zoSpell entry' itemMap
+     in st
+          { magicNextObjectDiscriminant = (+ 1) <$> discr
+          , magicStackEntries = itemMap'
+          , magicTargetProperties = propMap'
+          }
+  pure zoTarget
 
 electAll ::
-  forall zone m el ot.
-  (IsZO zone ot, Monad m) =>
-  (Elect 'Post el ot -> Magic 'Private 'RW m Legality) ->
+  forall zone m el ot a.
+  (IsZO zone ot, Monad m, AndLike a) =>
+  (Elect 'Post el ot -> Magic 'Private 'RW m a) ->
   WithMaskedObject zone (Elect 'Post el ot) ->
-  Magic 'Private 'RW m Legality
+  Magic 'Private 'RW m a
 electAll goElect = \case
   M1 reqs zoToElect -> go reqs zoToElect
   M2 reqs zoToElect -> go reqs zoToElect
@@ -713,10 +769,10 @@ electAll goElect = \case
     (IsZO zone ot', Eq (ZO zone ot')) =>
     [Requirement zone ot'] ->
     (ZO zone ot' -> Elect 'Post el ot) ->
-    Magic 'Private 'RW m Legality
+    Magic 'Private 'RW m a
   go reqs zoToElect = do
     zos <- fromRO $ findObjectsSatisfying $ RAnd reqs
-    fmap toLegality $ andM $ map (fmap fromLegality . goElect . zoToElect) zos
+    andM $ map (goElect . zoToElect) zos
 
 data PendingReady (p :: PrePost) (el :: Type) (ot :: Type) where
   Pending :: {unPending :: Elect 'Post el ot} -> Pending el ot
@@ -726,24 +782,31 @@ type Pending = PendingReady 'Pre
 
 type Ready = PendingReady 'Post
 
-data Elected (p :: PrePost) (tribal :: Tribal) (ot :: Type) :: Type where
+data Elected (pCost :: PrePost) (pEffect :: PrePost) (tribal :: Tribal) (ot :: Type) :: Type where
   ElectedSorcery ::
     IsTribal tribal =>
     { electedSorcery_controller :: Object 'OTPlayer
     , electedSorcery_card :: Card OTSorcery
     , electedSorcery_def :: CardTypeDef tribal OTSorcery
-    , electedSorcery_cost :: PendingReady p (Cost OTSorcery) OTSorcery
-    , electedSorcery_effect :: PendingReady p (Effect 'OneShot) OTSorcery
+    , electedSorcery_cost :: PendingReady pCost (Cost OTSorcery) OTSorcery
+    , electedSorcery_effect :: PendingReady pEffect (Effect 'OneShot) OTSorcery
     } ->
-    Elected p tribal OTSorcery
+    Elected pCost pEffect tribal OTSorcery
   deriving (Typeable)
 
-data AnyElected (p :: PrePost) :: Type where
-  AnyElectedSorcery :: Elected p tribal OTSorcery -> AnyElected p
+setElectedCost ::
+  Elected pCost pEffect tribal ot ->
+  PendingReady pCost' (Cost ot) ot ->
+  Elected pCost' pEffect tribal ot
+setElectedCost elected cost = case elected of
+  ElectedSorcery{} -> elected{electedSorcery_cost = cost}
+
+data AnyElected (pCost :: PrePost) (pEffect :: PrePost) :: Type where
+  AnyElected :: Elected pCost pEffect tribal ot -> AnyElected pCost pEffect
   deriving (Typeable)
 
 class CastElected (tribal :: Tribal) (ot :: Type) where
-  castElected :: Monad m => Elected 'Pre tribal ot -> Magic 'Private 'RW m Legality
+  castElected :: Monad m => Elected 'Pre 'Pre tribal ot -> Magic 'Private 'RW m Legality
 
 instance CastElected tribal OTSorcery where
   castElected elected =
@@ -758,8 +821,18 @@ instance CastElected tribal OTSorcery where
           payCost (electedSorcery_controller elected) cost >>= \case
             Illegal -> pure Illegal
             Legal -> do
-              pure () -- TODO: make zo stack object
-              pure () -- TODO: map zo to elected
+              stackId <- newObjectId
+              let zoStack = StackSpell $ ZO SZStack $ toObject6' $ idToObject @ 'OTSorcery stackId
+                  entry =
+                    StackEntry
+                      { stackEntryTargets = []
+                      , stackEntryElected = AnyElected $ setElectedCost elected $ Ready cost
+                      }
+              modify $ \st ->
+                st
+                  { magicStack = Stack $ zoStack : unStack (magicStack st)
+                  , magicStackEntries = Map.insert (toZO0 stackId) entry $ magicStackEntries st
+                  }
               pure Legal
      in goElectCost $ unPending $ electedSorcery_cost elected
 
@@ -781,8 +854,51 @@ payCost oPlayer = \case
   TapCost _wPerm reqs -> payTapCost oPlayer $ RAnd reqs
   _ -> undefined
 
-payManaCost :: Object 'OTPlayer -> ManaCost -> Magic 'Private 'RW m Legality
-payManaCost = undefined
+class FindMana manas var | manas -> var where
+  findMana ::
+    manas ->
+    ( forall snow color.
+      (IsSnow snow, IsManaNoVar snow color) =>
+      Mana var snow color ->
+      Maybe x
+    ) ->
+    Maybe x
+
+instance FindMana (ManaCost var) var where
+  findMana (ManaCost' w u b r g c x s) f =
+    getFirst $ mconcat $ map First [f w, f u, f b, f r, f g, f c, f x, f s]
+
+instance IsSnow snow => FindMana (ManaPool snow) 'NoVar where
+  findMana (ManaPool w u b r g c) f =
+    getFirst $ mconcat $ map First [f w, f u, f b, f r, f g, f c]
+
+instance FindMana CompleteManaPool 'NoVar where
+  findMana pool f =
+    getFirst $ mconcat $ map First [poolNonSnow pool `findMana` f, poolSnow pool `findMana` f]
+
+-- TODO: Give this a legit impl.
+-- TODO: Need to prompt for generic mana payments
+payManaCost :: Monad m => Object 'OTPlayer -> ManaCost 'Var -> Magic 'Private 'RW m Legality
+payManaCost oPlayer (forceVars -> cost) =
+  fromRO (findPlayer oPlayer) >>= \case
+    Nothing -> pure Illegal
+    Just player -> do
+      let pool = poolNonSnow $ playerMana player
+          w = poolWhite pool - costWhite cost
+          u = poolBlue pool - costBlue cost
+          b = poolBlack pool - costBlack cost
+          r = poolRed pool - costRed cost
+          g = poolGreen pool - costGreen cost
+          c = poolColorless pool - costColorless cost
+          pool' = ManaPool w u b r g c
+          isBad mana = case mana < 0 of
+            True -> Nothing
+            False -> Just ()
+      case findMana pool' isBad of
+        Just () -> pure Illegal
+        Nothing -> do
+          setPlayer oPlayer player{playerMana = (playerMana player){poolNonSnow = pool'}}
+          pure Legal
 
 payTapCost ::
   (Monad m, IsZO 'ZBattlefield ot) =>
@@ -992,134 +1108,199 @@ askPlayLand oPlayer = do
       case mSpecial of
         Nothing -> pure ()
         Just special -> do
-          isLegal <- lift $ performSpecialAction oPlayer $ SA_PlayLand special
+          isLegal <- lift $ rewindIllegal $ playLand oPlayer special
           throwE $ case isLegal of
             True -> gainPriority oPlayer -- (117.3c)
             False -> runMagicCont (either id id) $ askPlayLand oPlayer
     _ -> pure ()
 
-playLand ::
-  forall zone m.
-  (IsZone zone, Monad m) =>
-  Object 'OTPlayer ->
-  ZO zone OTLand ->
-  Magic 'Private 'RW m Bool
-playLand oPlayer oLand = do
-  st <- internalFromPrivate $ fromRO get
-  reqs <- fromRO $ getPlayLandReqs oPlayer
-  player <- fromRO $ getPlayer oPlayer
-  let opaque = OpaqueGameState st
-      prompt = magicPrompt st
-      hand = playerHand player
-      --
-      invalid :: (ZO zone OTLand -> InvalidPlayLand) -> Magic 'Private 'RW m Bool
-      invalid ex = do
-        lift $ exceptionInvalidPlayLand prompt opaque oPlayer $ ex oLand
-        pure False
-      --
-      success :: Card () -> Magic 'Private 'RW m ()
-      success card = do
-        setPlayer
-          oPlayer
-          player
-            { playerLandsPlayedThisTurn = playerLandsPlayedThisTurn player + 1
-            , playerHand = case removeCard card hand of
-                Nothing -> assert False hand
-                Just hand' -> hand'
-            }
-        i <- newObjectId
-        let oLand' = toZO0 i
-            perm = case cardToPermanent oPlayer card of
-              Nothing -> error $ show ExpectedCardToBeAPermanentCard
-              Just perm' -> perm'
-        setPermanent oLand' perm
-  case reqs of
-    PlayLandReqs{playLandReqs_hasPriority = False} -> invalid PlayLand_NoPriority
-    PlayLandReqs{playLandReqs_isActive = False} -> invalid PlayLand_NotActive
-    PlayLandReqs{playLandReqs_isMainPhase = False} -> invalid PlayLand_NotMainPhase
-    PlayLandReqs{playLandReqs_stackEmpty = False} -> invalid PlayLand_StackNonEmpty
-    PlayLandReqs{playLandReqs_atMaxLands = True} -> invalid PlayLand_AtMaxLands
-    PlayLandReqs
-      { playLandReqs_hasPriority = True
-      , playLandReqs_isActive = True
-      , playLandReqs_isMainPhase = True
-      , playLandReqs_stackEmpty = True
-      , playLandReqs_atMaxLands = False
-      } -> assert (reqs == PlayLandReqs_Satisfied) $ case singZone @zone of
-        SZBattlefield -> invalid PlayLand_CannotPlayFromZone
-        SZExile -> invalid PlayLand_CannotPlayFromZone
-        SZLibrary -> invalid PlayLand_CannotPlayFromZone
-        SZStack -> invalid PlayLand_CannotPlayFromZone
-        SZGraveyard -> invalid PlayLand_CannotPlayFromZone -- TODO: [Crucible of Worlds]
-        SZHand -> do
-          mCard <- fromRO $ gets $ Map.lookup (toZO0 oLand) . magicHandCards
-          case mCard of
-            Nothing -> invalid PlayLand_NotInZone
-            Just card -> do
-              case containsCard card hand of
-                False -> invalid PlayLand_NotOwned
-                True -> case card of
-                  Card _name wCard _def -> case wCard of
-                  TribalCard _name wCard _def -> case wCard of
-                  --
-                  ArtifactCard{} -> invalid PlayLand_NotALand
-                  ArtifactCreatureCard{} -> invalid PlayLand_NotALand
-                  CreatureCard{} -> invalid PlayLand_NotALand
-                  EnchantmentCard{} -> invalid PlayLand_NotALand
-                  EnchantmentCreatureCard{} -> invalid PlayLand_NotALand
-                  InstantCard{} -> invalid PlayLand_NotALand
-                  PlaneswalkerCard{} -> invalid PlayLand_NotALand
-                  SorceryCard{} -> invalid PlayLand_NotALand
-                  --
-                  LandCard{} -> success card >> pure True
+class PlayLand' land where
+  playLand :: Monad m => Object 'OTPlayer -> land -> Magic 'Private 'RW m Legality
+
+instance PlayLand' PlayLand where
+  playLand oPlayer (PlayLand oLand) = playLand oPlayer oLand
+
+instance IsZone zone => PlayLand' (ZO zone OTLand) where
+  playLand :: forall m. Monad m => Object 'OTPlayer -> ZO zone OTLand -> Magic 'Private 'RW m Legality
+  playLand oPlayer oLand = do
+    st <- internalFromPrivate $ fromRO get
+    reqs <- fromRO $ getPlayLandReqs oPlayer
+    player <- fromRO $ getPlayer oPlayer
+    let opaque = OpaqueGameState st
+        prompt = magicPrompt st
+        hand = playerHand player
+        --
+        invalid :: (ZO zone OTLand -> InvalidPlayLand) -> Magic 'Private 'RW m Legality
+        invalid ex = do
+          lift $ exceptionInvalidPlayLand prompt opaque oPlayer $ ex oLand
+          pure Illegal
+        --
+        success :: Card () -> Magic 'Private 'RW m ()
+        success card = do
+          setPlayer
+            oPlayer
+            player
+              { playerLandsPlayedThisTurn = playerLandsPlayedThisTurn player + 1
+              , playerHand = case removeCard card hand of
+                  Nothing -> assert False hand
+                  Just hand' -> hand'
+              }
+          i <- newObjectId
+          let oLand' = toZO0 i
+              perm = case cardToPermanent oPlayer card of
+                Nothing -> error $ show ExpectedCardToBeAPermanentCard
+                Just perm' -> perm'
+          setPermanent oLand' perm
+    case reqs of
+      PlayLandReqs{playLandReqs_hasPriority = False} -> invalid PlayLand_NoPriority
+      PlayLandReqs{playLandReqs_isActive = False} -> invalid PlayLand_NotActive
+      PlayLandReqs{playLandReqs_isMainPhase = False} -> invalid PlayLand_NotMainPhase
+      PlayLandReqs{playLandReqs_stackEmpty = False} -> invalid PlayLand_StackNonEmpty
+      PlayLandReqs{playLandReqs_atMaxLands = True} -> invalid PlayLand_AtMaxLands
+      PlayLandReqs
+        { playLandReqs_hasPriority = True
+        , playLandReqs_isActive = True
+        , playLandReqs_isMainPhase = True
+        , playLandReqs_stackEmpty = True
+        , playLandReqs_atMaxLands = False
+        } -> assert (reqs == PlayLandReqs_Satisfied) $ case singZone @zone of
+          SZBattlefield -> invalid PlayLand_CannotPlayFromZone
+          SZExile -> invalid PlayLand_CannotPlayFromZone
+          SZLibrary -> invalid PlayLand_CannotPlayFromZone
+          SZStack -> invalid PlayLand_CannotPlayFromZone
+          SZGraveyard -> invalid PlayLand_CannotPlayFromZone -- TODO: [Crucible of Worlds]
+          SZHand -> do
+            mCard <- fromRO $ gets $ Map.lookup (toZO0 oLand) . magicHandCards
+            case mCard of
+              Nothing -> invalid PlayLand_NotInZone
+              Just card -> do
+                case containsCard card hand of
+                  False -> invalid PlayLand_NotOwned
+                  True -> case card of
+                    Card _name wCard _def -> case wCard of
+                    TribalCard _name wCard _def -> case wCard of
+                    --
+                    ArtifactCard{} -> invalid PlayLand_NotALand
+                    ArtifactCreatureCard{} -> invalid PlayLand_NotALand
+                    CreatureCard{} -> invalid PlayLand_NotALand
+                    EnchantmentCard{} -> invalid PlayLand_NotALand
+                    EnchantmentCreatureCard{} -> invalid PlayLand_NotALand
+                    InstantCard{} -> invalid PlayLand_NotALand
+                    PlaneswalkerCard{} -> invalid PlayLand_NotALand
+                    SorceryCard{} -> invalid PlayLand_NotALand
+                    --
+                    LandCard{} -> success card >> pure Legal
 
 resolveTopOfStack :: Monad m => Magic 'Private 'RW m ()
 resolveTopOfStack = do
   Stack stack <- fromRO $ gets magicStack
   case stack of -- (117.4) (405.5)
     [] -> pure ()
-    oItem : oItems -> do
-      item <- getStackObject oItem
-      modify $ \st -> st{magicStack = Stack oItems}
+    item : items -> do
+      modify $ \st -> st{magicStack = Stack items}
       case item of
-        Left ability -> resolveAbility ability
-        Right spell -> resolveSpell spell
+        StackAbility ability -> resolveAbility ability
+        StackSpell spell -> resolveSpell spell
       oActive <- fromPublicRO getActivePlayer
       gainPriority oActive
 
--- resolveSpell :: Object 'OTPlayer -> SomeCard OTSpell -> Magic 'Private 'RW m ()
--- resolveSpell oPlayer = \case
---   Some6a (SomeArtifact card) -> undefined
---   Some6b (SomeCreature card) -> respolveCreature oPlayer card
---   Some6c (SomeEnchantment card) -> undefined
---   Some6d (SomeInstant card) -> undefined
---   Some6e (SomePlaneswalker card) -> undefined
---   Some6f (SomeSorcery card) -> undefined
---   Some6ab (SomeArtifactCreature card) -> undefined
---   Some6bc (SomeEnchantmentCreature card) -> undefined
+resolveSpell :: Monad m => ZO 'ZStack OTSpell -> Magic 'Private 'RW m ()
+resolveSpell zoSpell = do
+  st <- fromRO get
+  case Map.lookup (toZO0 zoSpell) $ magicStackEntries st of
+    Nothing -> error $ show NotSureWhatThisEntails
+    Just entry -> case stackEntryElected entry of
+      AnyElected elected -> case elected of
+        ElectedSorcery{} -> undefined
 
-resolveSpell :: ObjectN OTSpell -> Magic 'Private 'RW m ()
-resolveSpell = undefined
+class ResolveElected (tribal :: Tribal) (ot :: Type) where
+  resolveElected :: Monad m => Elected 'Post 'Pre tribal ot -> Magic 'Private 'RW m ()
 
-resolveAbility :: ObjectN OTAbility -> Magic 'Private 'RW m ()
+instance ResolveElected tribal OTSorcery where
+  resolveElected elected = do
+    let goElectEffect :: Monad m => Elect 'Post (Effect 'OneShot) OTSorcery -> Magic 'Private 'RW m ()
+        goElectEffect = \case
+          All masked -> electAll goElectEffect masked
+          Effect effect -> goEffect $ Sequence effect
+          _ -> undefined
+
+        goEffect :: Monad m => Effect 'OneShot -> Magic 'Private 'RW m ()
+        goEffect = performOneShotEffect
+    goElectEffect $ unPending $ electedSorcery_effect elected
+    pure () -- TODO: GC stack stuff
+
+performOneShotEffect :: Monad m => Effect 'OneShot -> Magic 'Private 'RW m ()
+performOneShotEffect = \case
+  AddMana oPlayer mana -> addToManaPool oPlayer mana
+  DealDamage oSource oVictim damage -> dealDamage oSource oVictim damage
+  DrawCards oPlayer amount -> drawCards amount $ zo1ToObject oPlayer
+  EffectCase case_ -> performCase performOneShotEffect case_
+  Sequence effects -> mapM_ performOneShotEffect effects
+  _ -> undefined
+
+addToManaPool :: Monad m => OPlayer -> ManaPool 'NonSnow -> Magic 'Private 'RW m ()
+addToManaPool oPlayer mana =
+  fromRO (findPlayer $ zo1ToObject oPlayer) >>= \case
+    Nothing -> pure ()
+    Just player -> do
+      let mana' = playerMana player <> mempty{poolNonSnow = mana}
+      setPlayer (zo1ToObject oPlayer) player{playerMana = mana'}
+
+performCase :: Monad m => (x -> Magic 'Private 'RW m a) -> Case x -> Magic 'Private 'RW m a
+performCase cont = \case
+  CaseColor (readVariable -> color) w u b r g -> case color of
+    White -> cont w
+    Blue -> cont u
+    Black -> cont b
+    Red -> cont r
+    Green -> cont g
+
+dealDamage ::
+  Monad m =>
+  ODamageSource ->
+  OCreaturePlayerPlaneswalker ->
+  Damage var ->
+  Magic 'Private 'RW m ()
+dealDamage _oSource oVictim (forceVars -> Damage damage) = do
+  fromRO (findPermanent (toZO0 oVictim)) >>= \case
+    Nothing -> pure ()
+    Just perm -> do
+      -- XXX: What happens if damage is dealt to a permanent that is both a creature and a planeswalker?
+      case permanentCreature perm of
+        Nothing -> pure ()
+        Just{} -> do
+          setPermanent
+            (toZO0 oVictim)
+            perm
+              { permanentCreatureDamage = (damage +) <$> permanentCreatureDamage perm
+              }
+      case permanentPlaneswalker perm of
+        Nothing -> pure ()
+        Just () -> undefined
+  oPlayers <- fromPublicRO getPlayers
+  M.forM_ oPlayers $ \oPlayer -> case getObjectId oVictim == getObjectId oPlayer of
+    False -> pure ()
+    True -> do
+      player <- fromRO $ getPlayer oPlayer
+      let life = unLife $ playerLife player
+      setPlayer oPlayer player{playerLife = Life $ life - damage}
+
+resolveAbility :: Monad m => ZO 'ZStack OTActivatedOrTriggeredAbility -> Magic 'Private 'RW m ()
 resolveAbility = undefined
-
-getStackObject :: ZO 'ZStack OTStackObject -> Magic 'Private 'RW m (Either (ObjectN OTAbility) (ObjectN OTSpell))
-getStackObject = undefined
 
 beginningOfCombatStep :: Monad m => MagicCont 'Private 'RW m Void Void
 beginningOfCombatStep = do
   setPhaseStep $ PSCombatPhase BeginningOfCombatStep
-  M.void undefined
+  _ <- undefined
   lift $ do
     oActive <- fromPublicRO getActivePlayer
     gainPriority oActive
-  declareBlockersStep
+  declareAttackersStep
 
-deckareAttackersStep :: Monad m => MagicCont 'Private 'RW m Void Void
-deckareAttackersStep = do
+declareAttackersStep :: Monad m => MagicCont 'Private 'RW m Void Void
+declareAttackersStep = do
   setPhaseStep $ PSCombatPhase DeclareAttackersStep
-  M.void undefined
+  _ <- undefined
   lift $ do
     oActive <- fromPublicRO getActivePlayer
     gainPriority oActive
@@ -1128,7 +1309,7 @@ deckareAttackersStep = do
 declareBlockersStep :: Monad m => MagicCont 'Private 'RW m Void Void
 declareBlockersStep = do
   setPhaseStep $ PSCombatPhase DeclareBlockersStep
-  M.void undefined
+  _ <- undefined
   lift $ do
     oActive <- fromPublicRO getActivePlayer
     gainPriority oActive
@@ -1137,7 +1318,7 @@ declareBlockersStep = do
 combatDamageStep :: Monad m => MagicCont 'Private 'RW m Void Void
 combatDamageStep = do
   setPhaseStep $ PSCombatPhase CombatDamageStep
-  M.void undefined
+  _ <- undefined
   lift $ do
     oActive <- fromPublicRO getActivePlayer
     gainPriority oActive
@@ -1162,7 +1343,7 @@ endStep = do
 cleanupStep :: Monad m => MagicCont 'Private 'RW m Void Void
 cleanupStep = do
   setPhaseStep $ PSEndingPhase CleanupStep
-  M.void undefined
+  _ <- undefined
   untapStep
 
 -- (103.1)

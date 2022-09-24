@@ -25,8 +25,8 @@ module MtgPure.Cards (
   bayou,
   blaze,
   bloodMoon,
-  cleanse,
   cityOfBrass,
+  cleanse,
   conversion,
   damnation,
   fling,
@@ -63,7 +63,7 @@ import safe MtgPure.Model.BasicLandType (BasicLandType (..))
 import safe MtgPure.Model.CardName (CardName (CardName))
 import safe MtgPure.Model.ColorsLike (ColorsLike (toColors))
 import safe MtgPure.Model.CreatureType (CreatureType (..))
-import safe MtgPure.Model.Damage (Damage (..))
+import safe MtgPure.Model.Damage (Damage' (..))
 import safe MtgPure.Model.GenericMana (GenericMana (..))
 import safe MtgPure.Model.LandType (LandType (..))
 import safe MtgPure.Model.ManaSymbol (ManaSymbol (..))
@@ -86,22 +86,55 @@ import safe MtgPure.Model.ObjectType.Kind (
 import safe MtgPure.Model.ObjectType.NonCreatureCard (WNonCreatureCard (..))
 import safe MtgPure.Model.Power (Power (..))
 import safe MtgPure.Model.Recursive (
-  Ability (Activated, Static, Triggered),
+  Ability (Static, Triggered),
   Card,
   CardTypeDef (..),
   Condition (COr),
-  Cost (AndCosts, DiscardRandomCost, ManaCost, OrCosts, PayLife),
-  Effect (CantBeRegenerated, DrawCards, EffectContinuous, StatDelta),
-  Elect (A, ActivePlayer, All, CardTypeDef, Cost, Elect, VariableFromPower),
+  Cost (
+    AndCosts,
+    DiscardRandomCost,
+    ManaCost,
+    OrCosts,
+    PayLife
+  ),
+  Effect (
+    CantBeRegenerated,
+    DrawCards,
+    EffectContinuous,
+    StatDelta
+  ),
+  Elect (
+    ActivePlayer,
+    All,
+    CardTypeDef,
+    Choose,
+    ChooseColor,
+    Cost,
+    Elect,
+    Target,
+    VariableFromPower
+  ),
   Enchant (Enchant),
   EnchantmentType (Aura),
   EventListener' (TimePoint),
-  Requirement (ControlledBy, ControlsA, HasLandType, Not, ROr),
-  StaticAbility (Bestow, FirstStrike, Flying, Haste, StaticContinuous, Suspend),
+  Requirement (
+    ControlledBy,
+    ControlsA,
+    HasLandType,
+    Not,
+    ROr
+  ),
+  StaticAbility (
+    Bestow,
+    FirstStrike,
+    Flying,
+    Haste,
+    StaticContinuous,
+    Suspend
+  ),
   Token,
   TriggeredAbility (When),
  )
-import safe MtgPure.Model.Selection (Selection (..))
 import safe MtgPure.Model.Step (Step (..))
 import safe MtgPure.Model.TimePoint (TimePoint (..))
 import safe MtgPure.Model.ToManaCost (ToManaCost (toManaCost))
@@ -112,6 +145,7 @@ import safe MtgPure.ModelCombinators (
   AsWithMaskedObject (masked),
   ElectEffect (effect),
   HasLandType (hasLandType),
+  activated,
   addManaAnyColor,
   addToBattlefield,
   becomesTapped,
@@ -175,7 +209,7 @@ mkFetchLand name ty1 ty2 = mkCard (CardName name) $ \this ->
     LandDef
       { land_subtypes = []
       , land_abilities =
-          [ Activated
+          [ activated
               (Elect $ Cost $ AndCosts [tapCost [is this], PayLife 1, sacrificeCost [is this]])
               $ controllerOf this $
                 \you -> Elect $
@@ -199,7 +233,7 @@ acceptableLosses = mkCard "Acceptable Losses" $ \this ->
           , sorcery_abilities = []
           , sorcery_effect =
               controllerOf this $ \you ->
-                A Target you $
+                Target you $
                   masked @OTCreature [] $ \target ->
                     Elect $
                       effect $ dealDamage this target 5
@@ -231,7 +265,7 @@ ancestralVision = mkCard "Ancestral Vision" $ \this ->
       , sorcery_abilities = [Static $ Suspend 4 $ Elect $ Cost $ spellCost U]
       , sorcery_effect =
           controllerOf this $ \you ->
-            A Target you $
+            Target you $
               masked [] $ \target ->
                 Elect $ effect $ DrawCards target 3
       }
@@ -245,7 +279,7 @@ backlash = mkCard "Backlash" $ \this ->
       , instant_abilities = []
       , instant_effect =
           controllerOf this $ \you ->
-            A Target you $
+            Target you $
               masked [Not tapped] $ \target -> Elect $
                 VariableFromPower target $ \power ->
                   controllerOf target $ \targetController ->
@@ -277,7 +311,7 @@ blaze = mkCard "Blaze" $ \this ->
         , sorcery_abilities = []
         , sorcery_effect =
             controllerOf this $ \you ->
-              A Target you $
+              Target you $
                 masked @OTCreaturePlayerPlaneswalker [] $ \target ->
                   Elect $
                     effect $ dealDamage this target x
@@ -312,10 +346,11 @@ cityOfBrass = mkCard "City of Brass" $ \this ->
                     linked [is this] $
                       \_ -> controllerOf this $
                         \you -> effect $ dealDamage this you 1
-          , Activated (Elect $ Cost $ tapCost [is this]) $
+          , activated (Elect $ Cost $ tapCost [is this]) $
               controllerOf this $ \you ->
-                Elect $
-                  effect $ addManaAnyColor you 1
+                ChooseColor you [minBound ..] $ \color ->
+                  Elect $
+                    effect $ addManaAnyColor color you 1
           ]
       }
 
@@ -377,7 +412,7 @@ damnation = mkCard "Damnation" $ \_this ->
 fling :: Card OTInstant
 fling = mkCard "Fling" $ \this ->
   controllerOf this $ \you ->
-    A Choose you $
+    Choose you $
       masked [ControlledBy you] $ \sacChoice ->
         CardTypeDef $
           InstantDef
@@ -385,7 +420,7 @@ fling = mkCard "Fling" $ \this ->
             , instant_cost = Elect $ Cost $ AndCosts [spellCost (1, R), sacrificeCost [is sacChoice]]
             , instant_abilities = []
             , instant_effect =
-                A Target you $
+                Target you $
                   masked @OTCreaturePlayer [] $ \target -> Elect $
                     VariableFromPower sacChoice $ \power ->
                       effect $ dealDamage sacChoice target $ VariableDamage power
@@ -421,7 +456,7 @@ lavaAxe = mkCard "Lava Axe" $ \this ->
       , sorcery_abilities = []
       , sorcery_effect =
           controllerOf this $ \you ->
-            A Target you $
+            Target you $
               masked @OTPlayerPlaneswalker [] $ \target ->
                 Elect $
                   effect $ dealDamage this target 5
@@ -436,7 +471,7 @@ manaLeak = mkCard "Mana Leak" $ \this ->
       , instant_abilities = []
       , instant_effect =
           controllerOf this $ \you ->
-            A Target you $
+            Target you $
               masked @OTSpell [] $ \spell ->
                 controllerOf spell $ \controller ->
                   Elect $
@@ -492,7 +527,7 @@ plummet = mkCard "Plummet" $ \this ->
       , instant_abilities = []
       , instant_effect =
           controllerOf this $ \you ->
-            A Target you $
+            Target you $
               masked [hasAbility $ \_this -> Static Flying] $ \target ->
                 Elect $ effect $ destroy target
       }
@@ -510,9 +545,9 @@ pradeshGypsies = mkCard "Pradesh Gypsies" $ \this ->
       , creature_power = Power 1
       , creature_toughness = Toughness 1
       , creature_abilities =
-          [ Activated (Elect $ Cost $ AndCosts [tapCost [is this], ManaCost $ toManaCost (1, G)]) $
+          [ activated (Elect $ Cost $ AndCosts [tapCost [is this], ManaCost $ toManaCost (1, G)]) $
               controllerOf this $
-                \you -> A Target you $
+                \you -> Target you $
                   masked [] $ \creature ->
                     Elect $
                       effect $
@@ -546,7 +581,7 @@ shock = mkCard "Shock" $ \this ->
       , instant_abilities = []
       , instant_effect =
           controllerOf this $ \you ->
-            A Target you $
+            Target you $
               masked @OTCreaturePlayerPlaneswalker [] $ \target ->
                 Elect $
                   effect $ dealDamage this target 2
@@ -561,7 +596,7 @@ sinkhole = mkCard "Sinkhole" $ \this ->
       , sorcery_abilities = []
       , sorcery_effect =
           controllerOf this $ \you ->
-            A Target you $
+            Target you $
               masked @OTLand [] $ \target ->
                 Elect $ effect $ destroy target
       }
@@ -582,7 +617,7 @@ snuffOut = mkCard "Snuff Out" $ \this ->
       , instant_abilities = []
       , instant_effect =
           controllerOf this $ \you ->
-            A Target you $
+            Target you $
               masked [nonBlack] $
                 \target ->
                   Elect $
@@ -613,7 +648,7 @@ stifle = mkCard "Stifle" $ \this ->
       , instant_abilities = []
       , instant_effect =
           controllerOf this $ \you ->
-            A Target you $
+            Target you $
               masked @OTActivatedOrTriggeredAbility [] $ \target ->
                 Elect $
                   effect $ counterAbility target
@@ -628,7 +663,7 @@ stoneRain = mkCard "Stone Rain" $ \this ->
       , sorcery_abilities = []
       , sorcery_effect =
           controllerOf this $ \you ->
-            A Target you $
+            Target you $
               masked @OTLand [] $ \target ->
                 Elect $ effect $ destroy target
       }
@@ -657,7 +692,7 @@ swanSong = mkCard "Swan Song" $ \this ->
       , instant_abilities = []
       , instant_effect =
           controllerOf this $ \you ->
-            A Target you $
+            Target you $
               masked @(OT3 'OTEnchantment 'OTInstant 'OTSorcery) [] $
                 \target -> controllerOf target $ \controller ->
                   Elect $
@@ -673,7 +708,7 @@ vindicate = mkCard "Vindicate" $ \this ->
       , sorcery_abilities = []
       , sorcery_effect =
           controllerOf this $ \you ->
-            A Target you $
+            Target you $
               masked @OTPermanent [] $ \target ->
                 Elect $
                   effect $ destroy target

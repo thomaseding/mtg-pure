@@ -28,3 +28,6 @@ class GetObjectId a where
 
 instance GetObjectId ObjectId where
   getObjectId = id
+
+instance (GetObjectId a, GetObjectId b) => GetObjectId (Either a b) where
+  getObjectId = either getObjectId getObjectId

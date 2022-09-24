@@ -27,7 +27,7 @@ import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.Artifact (Artifact)
 import safe MtgPure.Model.Creature (Creature)
-import safe MtgPure.Model.Damage (Damage (Damage))
+import safe MtgPure.Model.Damage (Damage, Damage' (..))
 import safe MtgPure.Model.Land (Land)
 import safe MtgPure.Model.Object (Object (..), ObjectType (..))
 import safe MtgPure.Model.ObjectType.Kind (OTPermanent)
@@ -38,6 +38,7 @@ import safe MtgPure.Model.Recursive (
   SomeCardOrToken,
   SomeTerm (..),
  )
+import safe MtgPure.Model.Variable (Var (NoVar))
 
 data Tapped = Tapped | Untapped
   deriving (Eq, Ord, Show, Typeable)
@@ -57,12 +58,14 @@ data Permanent :: Type where
     , permanentCard :: SomeCardOrToken OTPermanent
     , permanentController :: Object 'OTPlayer
     , permanentCreature :: Maybe Creature
-    , permanentDamage :: Damage -- 120.6
+    , permanentCreatureDamage :: Damage 'NoVar -- 120.6
+    , permanentEnchantment :: Maybe () -- TODO
     , permanentFace :: Face
     , permanentFlipped :: Flipped
     , permanentLand :: Maybe Land
     , permanentOwner :: Object 'OTPlayer
     , permanentPhased :: Phased
+    , permanentPlaneswalker :: Maybe () -- TODO
     , permanentSummoningSickness :: Bool
     , permanentTapped :: Tapped
     } ->
@@ -90,12 +93,14 @@ cardToPermanent owner opaqueCard = case opaqueCard of
       , permanentCard = Left someCard
       , permanentController = owner
       , permanentCreature = Nothing
-      , permanentDamage = Damage 0
+      , permanentCreatureDamage = Damage 0
+      , permanentEnchantment = Nothing
       , permanentFace = FaceUp
       , permanentFlipped = Unflipped
       , permanentLand = Nothing
       , permanentOwner = owner
       , permanentPhased = PhasedIn
+      , permanentPlaneswalker = Nothing
       , permanentSummoningSickness = True
       , permanentTapped = Untapped
       }

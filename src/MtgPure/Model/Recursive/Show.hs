@@ -55,11 +55,12 @@ import safe Data.String (IsString (..))
 import safe Data.Typeable (TypeRep, Typeable, typeOf, typeRep)
 import safe MtgPure.Model.BasicLandType (BasicLandType)
 import safe MtgPure.Model.CardName (CardName (CardName))
+import safe MtgPure.Model.Color (Color (..))
 import safe MtgPure.Model.ColoredMana (ColoredMana (..))
 import safe MtgPure.Model.ColorlessMana (ColorlessMana (..))
 import safe MtgPure.Model.Colors (Colors (..))
 import safe MtgPure.Model.CreatureType (CreatureType)
-import safe MtgPure.Model.Damage (Damage (..))
+import safe MtgPure.Model.Damage (Damage, Damage' (..))
 import safe MtgPure.Model.EffectType (EffectType (OneShot))
 import safe MtgPure.Model.GenericMana (GenericMana (..))
 import safe MtgPure.Model.LandType (LandType (..))
@@ -118,8 +119,10 @@ import safe MtgPure.Model.Power (Power)
 import safe MtgPure.Model.PrettyType (PrettyType (..))
 import safe MtgPure.Model.Recursive (
   Ability (..),
+  ActivatedAbility (..),
   Card (..),
   CardTypeDef (..),
+  Case (..),
   Condition (..),
   Cost (..),
   Effect (..),
@@ -141,10 +144,14 @@ import safe MtgPure.Model.Recursive (
   WithMaskedObject (..),
   WithThis (..),
  )
-import safe MtgPure.Model.Selection (Selection (..))
 import safe MtgPure.Model.TimePoint (TimePoint (..))
 import safe MtgPure.Model.Toughness (Toughness)
-import safe MtgPure.Model.Variable (Variable (ReifiedVariable))
+import safe MtgPure.Model.Variable (
+  Variable (..),
+  VariableId,
+  VariableId' (..),
+  getVariableId,
+ )
 import safe MtgPure.Model.VisitObjectN (KnownObjectN (..), VisitObjectN (..))
 import safe MtgPure.Model.Zone (IsZone (..))
 import safe MtgPure.Model.ZoneObject (
@@ -192,13 +199,13 @@ instance Show (SetCard ot) where
 instance Show (SetToken ot) where
   show = runEnvM defaultDepthLimit . showSetToken
 
-instance Show (StaticAbility ot) where
+instance Show (StaticAbility zone ot) where
   show = runEnvM defaultDepthLimit . showStaticAbility
 
 instance Show (Token ot) where
   show = runEnvM defaultDepthLimit . showToken
 
-instance Show (TriggeredAbility ot) where
+instance Show (TriggeredAbility zone ot) where
   show = runEnvM defaultDepthLimit . showTriggeredAbility
 
 instance IsZO zone ot => Show (WithMaskedObject zone (Elect p e ot)) where
@@ -212,25 +219,25 @@ instance IsZone zone => Show (ZO zone OT0) where
 class LiteralMana mana where
   literalMana :: mana -> Maybe Int
 
-instance LiteralMana (ColoredMana mt) where
+instance LiteralMana (ColoredMana var mt) where
   literalMana = \case
     ColoredMana' _ x -> Just x
     VariableColoredMana{} -> Nothing
     SumColoredMana{} -> Nothing
 
-instance LiteralMana ColorlessMana where
+instance LiteralMana (ColorlessMana var) where
   literalMana = \case
     ColorlessMana' x -> Just x
     VariableColorlessMana{} -> Nothing
     SumColorlessMana{} -> Nothing
 
-instance LiteralMana GenericMana where
+instance LiteralMana (GenericMana var) where
   literalMana = \case
     GenericMana' x -> Just x
     VariableGenericMana{} -> Nothing
     SumGenericMana{} -> Nothing
 
-instance LiteralMana (Mana snow mt) where
+instance LiteralMana (Mana var snow mt) where
   literalMana = \case
     WhiteMana x -> literalMana x
     BlueMana x -> literalMana x
@@ -280,8 +287,6 @@ yesParens = fmap $ (,) NeedsParen
 
 type CardDepth = Maybe Int
 
-type VariableId = Int
-
 type Generation = Int
 
 data Env = Env
@@ -298,7 +303,7 @@ mkEnv :: CardDepth -> Env
 mkEnv depth =
   Env
     { nextObjectId = ObjectId 1
-    , nextVariableId = 0
+    , nextVariableId = VariableId 0
     , originalObjectRep = mempty
     , currentGeneration = 0
     , objectGenerations = mempty
@@ -324,9 +329,9 @@ runEnvM depth m = concat $ State.evalState strsM $ mkEnv depth
       pure $ case Map.findWithDefault False (i, g) (usedObjects used) of
         False -> "_" ++ name
         True -> name
-    VariableItem i -> do
+    VariableItem vid@(VariableId i) -> do
       let name = varNames !! i
-      pure $ case Map.findWithDefault False i (usedVariables used) of
+      pure $ case Map.findWithDefault False vid (usedVariables used) of
         False -> "_" ++ name
         True -> name
 
@@ -364,9 +369,8 @@ varNames = "x" : "y" : "z" : map f [0 ..]
   f :: Int -> String
   f n = "var" ++ show n
 
-getVarName :: Variable -> Item
-getVarName = \case
-  ReifiedVariable n -> VariableItem n
+getVarName :: Variable a -> Item
+getVarName = VariableItem . getVariableId
 
 getObjectName :: Object a -> EnvM Item
 getObjectName (Object _ _ i) = do
@@ -418,11 +422,6 @@ getObjectNamePrefix :: ObjectId -> EnvM String
 getObjectNamePrefix i =
   State.gets (Map.findWithDefault "impossible" i . objectNames)
 
-selectionMemo :: Selection -> String
-selectionMemo = \case
-  Choose{} -> "choice"
-  Target{} -> "target"
-
 showListM :: (a -> EnvM ParenItems) -> [a] -> EnvM ParenItems
 showListM f xs = noParens $ do
   ss <- mapM (fmap dropParens . f) xs
@@ -435,17 +434,25 @@ toZone = ZO (singZone @zone)
 
 showAbility :: Ability ot -> EnvM ParenItems
 showAbility = \case
-  Activated cost oneShot -> yesParens $ do
-    sCost <- parens <$> showElect cost
-    sOneShot <- dollar <$> showElect oneShot
-    pure $ pure "Activated" <> sCost <> sOneShot
-  Static ability ->
-    yesParens $ (pure "Static" <>) . dollar <$> showStaticAbility ability
-  Triggered ability ->
-    yesParens $ (pure "Triggered" <>) . dollar <$> showTriggeredAbility ability
+  Activated ability -> yesParens $ do
+    sAbility <- dollar <$> showActivatedAbility ability
+    pure $ pure "Activated" <> sAbility
+  Static ability -> yesParens $ do
+    sAbility <- dollar <$> showStaticAbility ability
+    pure $ pure "Static" <> sAbility
+  Triggered ability -> yesParens $ do
+    sAbility <- dollar <$> showTriggeredAbility ability
+    pure $ pure "Triggered" <> sAbility
 
 showAbilities :: [Ability ot] -> EnvM ParenItems
 showAbilities = showListM showAbility
+
+showActivatedAbility :: ActivatedAbility zone ot -> EnvM ParenItems
+showActivatedAbility = \case
+  Ability cost oneShot -> yesParens $ do
+    sCost <- parens <$> showElect cost
+    sOneShot <- dollar <$> showElect oneShot
+    pure $ pure "Ability " <> sCost <> sOneShot
 
 showBasicLandType :: BasicLandType -> EnvM ParenItems
 showBasicLandType = noParens . pure . pure . fromString . show
@@ -626,9 +633,9 @@ showCardTypeDef = \case
         <> sNonCreature
         <> sCardDef
   VariableDef contCardDef -> yesParens $ do
-    i <- State.gets nextVariableId
-    State.modify' $ \st -> st{nextVariableId = i + 1}
-    let var = ReifiedVariable i
+    discr <- State.gets nextVariableId
+    State.modify' $ \st -> st{nextVariableId = (1 +) <$> discr}
+    let var = ReifiedVariable discr 0
         varName = getVarName var
         cardDef = contCardDef var
     sCardDef <- dropParens <$> showCardTypeDef cardDef
@@ -657,21 +664,52 @@ showCardTypeDef = \case
         <> sAbilities
         <> sElect
 
-showColors :: Colors -> EnvM ParenItems
-showColors colors = yesParens $ do
-  pure $ pure "toColors " <> sOpen <> sSyms <> sClose
- where
-  syms = case colors of
-    Colors w u b r g ->
-      List.intercalate "," $
-        catMaybes
-          [show <$> w, show <$> u, show <$> b, show <$> r, show <$> g]
-  sSyms = pure $ fromString syms
-  (sOpen, sClose) = case syms of
-    [_] -> (pure "", pure "")
-    _ -> (pure "(", pure ")")
+showCase :: (x -> EnvM ParenItems) -> Case x -> EnvM ParenItems
+showCase showX = \case
+  CaseColor color w u b r g -> yesParens $ do
+    let sColor = pure $ getVarName color
+    sW <- parens <$> showX w
+    sU <- parens <$> showX u
+    sB <- parens <$> showX b
+    sR <- parens <$> showX r
+    sG <- dollar <$> showX g
+    pure $
+      pure "CaseColor "
+        <> sColor
+        <> pure " "
+        <> sW
+        <> pure " "
+        <> sU
+        <> pure " "
+        <> sB
+        <> pure " "
+        <> sR
+        <> sG
 
-showColorlessMana :: ColorlessMana -> EnvM ParenItems
+showColor :: Color -> EnvM ParenItems
+showColor = noParens . pure . pure . fromString . show
+
+class ShowColors colors where
+  showColors :: colors -> EnvM ParenItems
+
+instance ShowColors [Color] where
+  showColors = showListM showColor
+
+instance ShowColors Colors where
+  showColors colors = yesParens $ do
+    pure $ pure "toColors " <> sOpen <> sSyms <> sClose
+   where
+    syms = case colors of
+      Colors w u b r g ->
+        List.intercalate "," $
+          catMaybes
+            [show <$> w, show <$> u, show <$> b, show <$> r, show <$> g]
+    sSyms = pure $ fromString syms
+    (sOpen, sClose) = case syms of
+      [_] -> (pure "", pure "")
+      _ -> (pure "(", pure ")")
+
+showColorlessMana :: ColorlessMana var -> EnvM ParenItems
 showColorlessMana =
   yesParens . \case
     x@ColorlessMana'{} -> pure $ pure $ fromString $ show x
@@ -683,7 +721,7 @@ showColorlessMana =
       sY <- parens <$> showColorlessMana y
       pure $ pure "SumColorlessMana " <> sX <> pure " " <> sY
 
-showColoredMana :: ColoredMana a -> EnvM ParenItems
+showColoredMana :: ColoredMana var a -> EnvM ParenItems
 showColoredMana =
   yesParens . \case
     x@ColoredMana'{} -> pure $ pure $ fromString $ show x
@@ -749,7 +787,7 @@ showCost = \case
 showCreatureTypes :: [CreatureType] -> EnvM ParenItems
 showCreatureTypes = noParens . pure . pure . fromString . show
 
-showDamage :: Damage -> EnvM ParenItems
+showDamage :: Damage var -> EnvM ParenItems
 showDamage =
   yesParens . \case
     Damage n -> do
@@ -795,15 +833,12 @@ showEffect = \case
     sPlayer <- parens <$> showZoneObject player
     let amount = fromString $ show n
     pure $ pure "DrawCards " <> sPlayer <> pure " " <> pure amount
+  EffectCase case_ -> yesParens $ do
+    sCase <- dollar <$> showCase showEffect case_
+    pure $ pure "EffectCase" <> sCase
   EffectContinuous effect -> yesParens $ do
     sEffect <- dollar <$> showEffect effect
     pure $ pure "EffectContinuous" <> sEffect
-  EAnd effects -> yesParens $ do
-    sEffects <- dollar <$> showEffects effects
-    pure $ pure "EAnd" <> sEffects
-  EOr effects -> yesParens $ do
-    sEffects <- dollar <$> showEffects effects
-    pure $ pure "EOr" <> sEffects
   Gain wAny obj ability -> yesParens $ do
     sWAny <- parens <$> showWAny wAny
     sObj <- parens <$> showZoneObject obj
@@ -829,6 +864,9 @@ showEffect = \case
     sPlayer <- parens <$> showZoneObject player
     sWithCard <- dollar <$> showWithLinkedObject showElect "card" withCard
     pure $ pure "SearchLibrary " <> sWCard <> pure " " <> sPlayer <> sWithCard
+  Sequence effects -> yesParens $ do
+    sEffects <- dollar <$> showEffects effects
+    pure $ pure "Sequence" <> sEffects
   StatDelta creature power toughness -> yesParens $ do
     sCreature <- parens <$> showZoneObject creature
     sPower <- parens <$> showPower power
@@ -844,12 +882,6 @@ showEffects = showListM showEffect
 
 showElect :: Elect p e ot -> EnvM ParenItems
 showElect = \case
-  A sel player withObject -> yesParens $ do
-    sSel <- parens <$> showSelection sel
-    sPlayer <- parens <$> showZoneObject player
-    sWithObject <-
-      dollar <$> showWithMaskedObject showElect (selectionMemo sel) withObject
-    pure $ pure "A " <> sSel <> pure " " <> sPlayer <> sWithObject
   ActivePlayer contElect -> yesParens $ do
     (active', snap) <- newObjectN @ 'OTPlayer O1 "active"
     let active = toZone active'
@@ -864,6 +896,29 @@ showElect = \case
   CardTypeDef def -> yesParens $ do
     sDef <- dollar <$> showCardTypeDef def
     pure $ pure "CardTypeDef" <> sDef
+  Choose player withObject -> yesParens $ do
+    sPlayer <- parens <$> showZoneObject player
+    sWithObject <- dollar <$> showWithMaskedObject showElect "choose" withObject
+    pure $ pure "Choose " <> sPlayer <> sWithObject
+  ChooseColor player colors colorToElect -> yesParens $ do
+    sPlayer <- parens <$> showZoneObject player
+    sColors <- parens <$> showColors colors
+    discr <- State.gets nextVariableId
+    State.modify' $ \st -> st{nextVariableId = (1 +) <$> discr}
+    let go :: forall p el ot. (Variable Color -> Elect p el ot) -> EnvM Items
+        go colorToElect' = do
+          let var = ReifiedVariable discr White
+              varName = getVarName var
+              elect = colorToElect' var
+          sElect <- dropParens <$> showElect elect
+          pure $
+            pure "Choose " <> sPlayer <> pure " "
+              <> sColors
+              <> pure " $ \\"
+              <> pure varName
+              <> pure " -> "
+              <> sElect
+    go colorToElect
   Condition cond -> yesParens $ do
     sCond <- dollar <$> showCondition cond
     pure $ pure "Condition" <> sCond
@@ -900,6 +955,9 @@ showElect = \case
   Elect elect -> yesParens $ do
     sElect <- dollar <$> showElect elect
     pure $ pure "Elect" <> sElect
+  ElectCase case_ -> yesParens $ do
+    sCase <- dollar <$> showCase showElect case_
+    pure $ pure "ElectCase" <> sCase
   Event event -> yesParens $ do
     sEvent <- dollar <$> showEvent event
     pure $ pure "Event" <> sEvent
@@ -914,11 +972,15 @@ showElect = \case
   Random withObject -> yesParens $ do
     sWithObject <- dollar <$> showWithMaskedObject showElect "rand" withObject
     pure $ pure "Random" <> sWithObject
+  Target player withObject -> yesParens $ do
+    sPlayer <- parens <$> showZoneObject player
+    sWithObject <- dollar <$> showWithMaskedObject showElect "target" withObject
+    pure $ pure "Target " <> sPlayer <> sWithObject
   VariableFromPower creature varToElect -> yesParens $ do
     sCreature <- parens <$> showZoneObject creature
-    i <- State.gets nextVariableId
-    State.modify' $ \st -> st{nextVariableId = i + 1}
-    let var = ReifiedVariable i
+    discr <- State.gets nextVariableId
+    State.modify' $ \st -> st{nextVariableId = (1 +) <$> discr}
+    let var = ReifiedVariable discr 0
         varName = getVarName var
         elect = varToElect var
     sElect <- dropParens <$> showElect elect
@@ -983,7 +1045,7 @@ showEventListener' showX = \case
     sOneShot <- dollar <$> showX oneShot
     pure $ pure "TimePoint " <> sTimePoint <> sOneShot
 
-showGenericMana :: GenericMana -> EnvM ParenItems
+showGenericMana :: GenericMana var -> EnvM ParenItems
 showGenericMana =
   yesParens . \case
     x@GenericMana'{} -> pure $ pure $ fromString $ show x
@@ -1014,7 +1076,7 @@ showLandType landType = case landType of
 showLoyalty :: Loyalty -> EnvM ParenItems
 showLoyalty = yesParens . pure . pure . fromString . show
 
-showMana :: Mana snow a -> EnvM ParenItems
+showMana :: Mana var snow a -> EnvM ParenItems
 showMana =
   yesParens . \case
     WhiteMana m -> (pure "WhiteMana" <>) . dollar <$> showColoredMana m
@@ -1025,7 +1087,7 @@ showMana =
     ColorlessMana m -> (pure "ColorlessMana" <>) . dollar <$> showColorlessMana m
     GenericMana m -> (pure "GenericMana" <>) . dollar <$> showGenericMana m
 
-showManaCost :: ManaCost -> EnvM ParenItems
+showManaCost :: ManaCost var -> EnvM ParenItems
 showManaCost cost = yesParens $ do
   let ManaCost'
         { costWhite = w
@@ -1531,13 +1593,6 @@ showRequirement = \case
 showRequirements :: [Requirement zone ot] -> EnvM ParenItems
 showRequirements = showListM showRequirement
 
-showSelection :: Selection -> EnvM ParenItems
-showSelection = \case
-  Choose -> noParens $ do
-    pure $ pure "Choose"
-  Target -> noParens $ do
-    pure $ pure "Target"
-
 showSetCard :: SetCard ot -> EnvM ParenItems
 showSetCard (SetCard set rarity card) = yesParens $ do
   sCard <- dollar <$> showCard card
@@ -1552,7 +1607,7 @@ showSetToken (SetToken set rarity token) = yesParens $ do
     pure (fromString $ "SetToken " ++ show set ++ " " ++ show rarity)
       <> sToken
 
-showStaticAbility :: StaticAbility a -> EnvM ParenItems
+showStaticAbility :: StaticAbility zone ot -> EnvM ParenItems
 showStaticAbility = \case
   As electListener -> yesParens $ do
     sWithObject <- dollar <$> showElect electListener
@@ -1609,7 +1664,7 @@ showToken = \case
 showToughness :: Toughness -> EnvM ParenItems
 showToughness = yesParens . pure . pure . fromString . show
 
-showTriggeredAbility :: TriggeredAbility ot -> EnvM ParenItems
+showTriggeredAbility :: TriggeredAbility zone ot -> EnvM ParenItems
 showTriggeredAbility = \case
   When listener -> go "When" listener
  where

@@ -54,7 +54,6 @@ module MtgPure.Model (
   module MtgPure.Model.PrettyType,
   module MtgPure.Model.Rarity,
   module MtgPure.Model.Recursive,
-  module MtgPure.Model.Selection,
   module MtgPure.Model.Sideboard,
   module MtgPure.Model.Stack,
   module MtgPure.Model.Step,
@@ -131,7 +130,6 @@ import safe MtgPure.Model.Rarity
 import safe MtgPure.Model.Recursive
 import safe MtgPure.Model.Recursive.Ord ()
 import safe MtgPure.Model.Recursive.Show ()
-import safe MtgPure.Model.Selection
 import safe MtgPure.Model.Sideboard
 import safe MtgPure.Model.Stack
 import safe MtgPure.Model.Step

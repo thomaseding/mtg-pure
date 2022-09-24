@@ -3,6 +3,8 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE Safe #-}
@@ -15,6 +17,8 @@
 {-# HLINT ignore "Use const" #-}
 
 module MtgPure.Model.ColoredMana (
+  ColorToManaSymbol,
+  colorToManaSymbol,
   ColoredMana (..),
 ) where
 
@@ -22,62 +26,65 @@ import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.Color (Color (..))
 import safe MtgPure.Model.ColorToManaType (ColorToManaType)
-import safe MtgPure.Model.ManaSymbol (ManaSymbol)
-import safe MtgPure.Model.Variable (Variable)
+import safe MtgPure.Model.ManaSymbol (ManaSymbol (..))
+import safe MtgPure.Model.Variable (ForceVars (..), Var (..), Variable (..))
 
-data ColoredMana :: Color -> Type where
-  ColoredMana' :: ManaSymbol (ColorToManaType c) -> Int -> ColoredMana c
-  VariableColoredMana :: ManaSymbol (ColorToManaType c) -> Variable -> ColoredMana c
-  SumColoredMana :: ManaSymbol (ColorToManaType c) -> ColoredMana c -> ColoredMana c -> ColoredMana c
-  deriving (Typeable)
+class ColorToManaSymbol' (color :: Color) where
+  colorToManaSymbol :: ManaSymbol (ColorToManaType color)
 
-deriving instance Eq (ColoredMana c)
+type ColorToManaSymbol = ColorToManaSymbol'
 
-deriving instance Ord (ColoredMana c)
+instance ColorToManaSymbol' 'White where
+  colorToManaSymbol = W
 
-deriving instance Show (ColoredMana c)
+instance ColorToManaSymbol' 'Blue where
+  colorToManaSymbol = U
 
-instance Semigroup (ColoredMana 'White) where
-  (<>) (ColoredMana' _ x) (ColoredMana' _ y) = ColoredMana' mempty (x + y)
-  (<>) (ColoredMana' _ 0) y = y
-  (<>) x (ColoredMana' _ 0) = x
-  (<>) x y = SumColoredMana mempty x y
+instance ColorToManaSymbol' 'Black where
+  colorToManaSymbol = B
 
-instance Semigroup (ColoredMana 'Blue) where
-  (<>) (ColoredMana' _ x) (ColoredMana' _ y) = ColoredMana' mempty (x + y)
-  (<>) (ColoredMana' _ 0) y = y
-  (<>) x (ColoredMana' _ 0) = x
-  (<>) x y = SumColoredMana mempty x y
+instance ColorToManaSymbol' 'Red where
+  colorToManaSymbol = R
 
-instance Semigroup (ColoredMana 'Black) where
-  (<>) (ColoredMana' _ x) (ColoredMana' _ y) = ColoredMana' mempty (x + y)
-  (<>) (ColoredMana' _ 0) y = y
-  (<>) x (ColoredMana' _ 0) = x
-  (<>) x y = SumColoredMana mempty x y
+instance ColorToManaSymbol' 'Green where
+  colorToManaSymbol = G
 
-instance Semigroup (ColoredMana 'Red) where
-  (<>) (ColoredMana' _ x) (ColoredMana' _ y) = ColoredMana' mempty (x + y)
-  (<>) (ColoredMana' _ 0) y = y
-  (<>) x (ColoredMana' _ 0) = x
-  (<>) x y = SumColoredMana mempty x y
+data ColoredMana (var :: Var) (color :: Color) :: Type where
+  ColoredMana' :: forall v c. ManaSymbol (ColorToManaType c) -> Int -> ColoredMana v c
+  VariableColoredMana :: ManaSymbol (ColorToManaType c) -> Variable Int -> ColoredMana 'Var c
+  SumColoredMana :: ManaSymbol (ColorToManaType c) -> ColoredMana 'Var c -> ColoredMana 'Var c -> ColoredMana 'Var c
+  deriving (Typeable) --  TODO: Make some of these orphans
 
-instance Semigroup (ColoredMana 'Green) where
-  (<>) (ColoredMana' _ x) (ColoredMana' _ y) = ColoredMana' mempty (x + y)
-  (<>) (ColoredMana' _ 0) y = y
-  (<>) x (ColoredMana' _ 0) = x
-  (<>) x y = SumColoredMana mempty x y
+deriving instance Eq (ColoredMana v c)
 
-instance Monoid (ColoredMana 'White) where
-  mempty = ColoredMana' mempty 0
+deriving instance Ord (ColoredMana v c)
 
-instance Monoid (ColoredMana 'Blue) where
-  mempty = ColoredMana' mempty 0
+deriving instance Show (ColoredMana v c)
 
-instance Monoid (ColoredMana 'Black) where
-  mempty = ColoredMana' mempty 0
+instance ColorToManaSymbol color => Semigroup (ColoredMana v color) where
+  (<>) x y = case (x, y) of
+    (ColoredMana' _ a, ColoredMana' _ b) -> ColoredMana' colorToManaSymbol (a + b)
+    (ColoredMana' _ 0, _) -> y
+    (_, ColoredMana' _ 0) -> x
+    (VariableColoredMana{}, _) -> SumColoredMana colorToManaSymbol x y
+    (_, VariableColoredMana{}) -> SumColoredMana colorToManaSymbol x y
+    (SumColoredMana{}, _) -> SumColoredMana colorToManaSymbol x y
+    (_, SumColoredMana{}) -> SumColoredMana colorToManaSymbol x y
 
-instance Monoid (ColoredMana 'Red) where
-  mempty = ColoredMana' mempty 0
+instance ColorToManaSymbol color => Monoid (ColoredMana v color) where
+  mempty = ColoredMana' colorToManaSymbol 0
 
-instance Monoid (ColoredMana 'Green) where
-  mempty = ColoredMana' mempty 0
+instance ColorToManaSymbol color => Num (ColoredMana 'NoVar color) where
+  (+) (ColoredMana' _ x) (ColoredMana' _ y) = ColoredMana' colorToManaSymbol $ x + y
+  (-) (ColoredMana' _ x) (ColoredMana' _ y) = ColoredMana' colorToManaSymbol $ x - y
+  (*) (ColoredMana' _ x) (ColoredMana' _ y) = ColoredMana' colorToManaSymbol $ x * y
+  abs (ColoredMana' _ x) = ColoredMana' colorToManaSymbol $ abs x
+  signum (ColoredMana' _ x) = ColoredMana' colorToManaSymbol $ signum x
+  negate (ColoredMana' _ x) = ColoredMana' colorToManaSymbol $ negate x
+  fromInteger = ColoredMana' colorToManaSymbol . fromInteger
+
+instance ColorToManaSymbol c => ForceVars (ColoredMana v c) (ColoredMana 'NoVar c) where
+  forceVars = \case
+    ColoredMana' _ n -> ColoredMana' colorToManaSymbol n
+    VariableColoredMana _ (ReifiedVariable _ n) -> ColoredMana' colorToManaSymbol n
+    SumColoredMana _ x y -> forceVars x + forceVars y

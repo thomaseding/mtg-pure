@@ -1,6 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -63,6 +64,7 @@ module MtgPure.Model.Object (
   ObjectVisitor (..),
   visitObject',
   LitOT (..),
+  ObjectDiscriminant' (..),
   ObjectDiscriminant,
   pattern DefaultObjectDiscriminant,
   Object (..),
@@ -471,10 +473,13 @@ instance Inst12 IsObjectType a b c d e f g h i j k l => LitOT (OT12 a b c d e f 
   litOT = OT12
   mapOT f = f litOT
 
-type ObjectDiscriminant = Int
+newtype ObjectDiscriminant' a = ObjectDiscriminant a
+  deriving (Eq, Functor, Ord, Show, Typeable)
+
+type ObjectDiscriminant = ObjectDiscriminant' Int
 
 pattern DefaultObjectDiscriminant :: ObjectDiscriminant
-pattern DefaultObjectDiscriminant = 0
+pattern DefaultObjectDiscriminant = ObjectDiscriminant 0
 
 data Object :: ObjectType -> Type where
   Object :: SObjectType a -> ObjectDiscriminant -> ObjectId -> Object a

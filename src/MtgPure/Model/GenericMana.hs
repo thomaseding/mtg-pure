@@ -3,10 +3,13 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE Safe #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
@@ -19,19 +22,44 @@ module MtgPure.Model.GenericMana (
 
 import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
-import safe MtgPure.Model.Variable (Variable)
+import safe MtgPure.Model.Variable (ForceVars (..), Var (..), Variable (..))
 
-data GenericMana :: Type where
-  GenericMana' :: Int -> GenericMana
-  VariableGenericMana :: Variable -> GenericMana
-  SumGenericMana :: GenericMana -> GenericMana -> GenericMana
-  deriving (Eq, Ord, Show, Typeable)
+data GenericMana (v :: Var) :: Type where
+  GenericMana' :: Int -> GenericMana v
+  VariableGenericMana :: Variable Int -> GenericMana 'Var
+  SumGenericMana :: GenericMana 'Var -> GenericMana 'Var -> GenericMana 'Var
+  deriving (Typeable) --  TODO: Make some of these orphans
 
-instance Semigroup GenericMana where
-  (<>) (GenericMana' x) (GenericMana' y) = GenericMana' (x + y)
-  (<>) (GenericMana' 0) y = y
-  (<>) x (GenericMana' 0) = x
-  (<>) x y = SumGenericMana x y
+deriving instance Eq (GenericMana v)
 
-instance Monoid GenericMana where
+deriving instance Ord (GenericMana v)
+
+deriving instance Show (GenericMana v)
+
+instance Semigroup (GenericMana v) where
+  (<>) x y = case (x, y) of
+    (GenericMana' a, GenericMana' b) -> GenericMana' (a + b)
+    (GenericMana' 0, _) -> y
+    (_, GenericMana' 0) -> x
+    (VariableGenericMana{}, _) -> SumGenericMana x y
+    (_, VariableGenericMana{}) -> SumGenericMana x y
+    (SumGenericMana{}, _) -> SumGenericMana x y
+    (_, SumGenericMana{}) -> SumGenericMana x y
+
+instance Monoid (GenericMana v) where
   mempty = GenericMana' 0
+
+instance Num (GenericMana 'NoVar) where
+  (+) (GenericMana' x) (GenericMana' y) = GenericMana' $ x + y
+  (-) (GenericMana' x) (GenericMana' y) = GenericMana' $ x - y
+  (*) (GenericMana' x) (GenericMana' y) = GenericMana' $ x * y
+  abs (GenericMana' x) = GenericMana' $ abs x
+  signum (GenericMana' x) = GenericMana' $ signum x
+  negate (GenericMana' x) = GenericMana' $ negate x
+  fromInteger = GenericMana' . fromInteger
+
+instance ForceVars (GenericMana v) (GenericMana 'NoVar) where
+  forceVars = \case
+    GenericMana' n -> GenericMana' n
+    VariableGenericMana (ReifiedVariable _ n) -> GenericMana' n
+    SumGenericMana x y -> forceVars x + forceVars y
