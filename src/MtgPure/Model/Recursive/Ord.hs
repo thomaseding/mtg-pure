@@ -531,7 +531,6 @@ ordCardTypeDef x = case x of
         , ordWNonCreatureCard witness1 witness2
         , ordCardTypeDef def1 def2
         ]
-    y -> compareIndexM x y
   VariableDef varToDef1 -> \case
     VariableDef varToDef2 -> do
       discr <- newVariableId

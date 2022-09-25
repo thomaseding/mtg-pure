@@ -68,7 +68,7 @@ import safe MtgPure.Model.Loyalty (Loyalty)
 import safe MtgPure.Model.Mana (Snow (..))
 import safe MtgPure.Model.ManaCost (ManaCost)
 import safe MtgPure.Model.ManaPool (ManaPool)
-import safe MtgPure.Model.Object (IsObjectType, OT1, OT2, OT3, OT4, OT5, OT6)
+import safe MtgPure.Model.Object (IsObjectType, OT, OT1, OT2, OT3, OT4, OT5, OT6)
 import safe MtgPure.Model.ObjectType.Any (WAny)
 import safe MtgPure.Model.ObjectType.Card (WCard)
 import safe MtgPure.Model.ObjectType.Kind (
@@ -163,8 +163,8 @@ data Card (ot :: Type) :: Type where
   -- If it's on the stack, it's `ZStack` as expected.
   -- If I need references to `this` from other zones, add an appropriate constructor that has a `WithThis theZone`,
   -- such something like `SomethingThatNeedsGraveyardThis :: WithThis 'ZGraveyard (Elect (Cost ot)) ot :: Ability ot`
-  Card :: IsOT ot => CardName -> WCard ot -> WithThis 'ZBattlefield (Elect 'Pre (CardTypeDef 'NonTribal ot)) ot -> Card ot
-  TribalCard :: IsOT ot => CardName -> WCard ot -> WithThis 'ZBattlefield (Elect 'Pre (CardTypeDef 'Tribal ot)) ot -> Card ot
+  Card :: (ot ~ OT otk, IsOT ot) => CardName -> WCard ot -> WithThis 'ZBattlefield (Elect 'Pre (CardTypeDef 'NonTribal ot)) ot -> Card (OT otk)
+  TribalCard :: (ot ~ OT otk, IsOT ot) => CardName -> WCard ot -> WithThis 'ZBattlefield (Elect 'Pre (CardTypeDef 'Tribal ot)) ot -> Card (OT otk)
   --
   ArtifactCard :: Card OTArtifact -> Card ()
   ArtifactCreatureCard :: Card OTArtifactCreature -> Card ()
@@ -281,8 +281,8 @@ data CardTypeDef (tribal :: Tribal) (ot :: Type) :: Type where
     } ->
     CardTypeDef 'Tribal ot
   VariableDef ::
-    (Variable Int -> CardTypeDef tribal ot) ->
-    CardTypeDef tribal ot
+    (Variable Int -> CardTypeDef 'NonTribal ot) ->
+    CardTypeDef 'NonTribal ot
   deriving (Typeable)
 
 instance ConsIndex (CardTypeDef tribe ot) where

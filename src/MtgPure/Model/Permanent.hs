@@ -1,6 +1,5 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -74,8 +73,6 @@ data Permanent :: Type where
 
 cardToPermanent :: Object 'OTPlayer -> Card () -> Maybe Permanent
 cardToPermanent owner opaqueCard = case opaqueCard of
-  Card _name wCard _def -> case wCard of
-  TribalCard _name wCard _def -> case wCard of
   InstantCard _card -> Nothing
   SorceryCard _card -> Nothing
   ArtifactCard card -> Just $ go $ Some5a $ SomeArtifact card

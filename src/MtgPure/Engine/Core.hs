@@ -1,7 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
@@ -98,7 +97,9 @@ import safe MtgPure.Model.ManaPool (CompleteManaPool (..), ManaPool (..))
 import safe MtgPure.Model.Mulligan (Mulligan)
 import safe MtgPure.Model.Object (
   IsObjectType (..),
+  OT (..),
   OT0,
+  OT1,
   Object (..),
   ObjectDiscriminant,
   ObjectType (..),
@@ -106,9 +107,10 @@ import safe MtgPure.Model.Object (
  )
 import safe MtgPure.Model.ObjectId (GetObjectId (..), ObjectId (..))
 import safe MtgPure.Model.ObjectN (ObjectN (..))
+import safe MtgPure.Model.ObjectType.Card (WCard (..))
 import safe MtgPure.Model.ObjectType.Index (IndexOT (..))
 import safe MtgPure.Model.ObjectType.Kind (
-  OTActivatedOrTriggeredAbility,
+  OTInstant,
   OTLand,
   OTSorcery,
   OTSpell,
@@ -123,7 +125,7 @@ import safe MtgPure.Model.PhaseStep (PhaseStep (..))
 import safe MtgPure.Model.Player (Player (..))
 import safe MtgPure.Model.PrePost (PrePost (..))
 import safe MtgPure.Model.Recursive (
-  ActivatedAbility,
+  ActivatedAbility (..),
   Card (..),
   CardTypeDef (..),
   Case (..),
@@ -144,10 +146,11 @@ import safe MtgPure.Model.Sideboard (Sideboard (..))
 import safe MtgPure.Model.Stack (Stack (..), StackObject (..))
 import safe MtgPure.Model.Step (Step (..))
 import safe MtgPure.Model.ToObjectN.Classes (
+  ToObject2' (..),
   ToObject6' (..),
  )
-import safe MtgPure.Model.Tribal (IsTribal, Tribal (..))
-import safe MtgPure.Model.Variable (ForceVars (..), Var (..), readVariable)
+import safe MtgPure.Model.Tribal (IsTribal (..), STribal (..), Tribal (..))
+import safe MtgPure.Model.Variable (ForceVars (..), Var (..), Variable (..), readVariable)
 import safe MtgPure.Model.VisitObjectN (VisitObjectN (..))
 import safe MtgPure.Model.Zone (
   IsZone,
@@ -298,16 +301,18 @@ data GameState (m :: Type -> Type) where
     , magicPlayerOrderTurn :: Stream.Stream (Object 'OTPlayer) -- does not contain losers
     , magicPrompt :: Prompt m
     , magicStack :: Stack
-    , magicStackEntries :: Map.Map (ZO 'ZStack OT0) StackEntry
+    , magicStackEntryAbilityMap :: Map.Map (ZO 'ZStack OT0) (StackEntry 'Nothing)
+    , magicStackEntryNonTribalMap :: Map.Map (ZO 'ZStack OT0) (StackEntry ( 'Just 'NonTribal))
+    , magicStackEntryTribalMap :: Map.Map (ZO 'ZStack OT0) (StackEntry ( 'Just 'Tribal))
     , magicStartingPlayer :: Object 'OTPlayer
     , magicTargetProperties :: Map.Map TargetId AnyRequirement
     } ->
     GameState m
   deriving (Typeable)
 
-data StackEntry = StackEntry
+data StackEntry (mTribal :: Maybe Tribal) = StackEntry
   { stackEntryTargets :: [TargetId]
-  , stackEntryElected :: AnyElected 'Post 'Pre
+  , stackEntryElected :: AnyElected 'Post 'Pre mTribal
   }
 
 mkGameState :: GameInput m -> Maybe (GameState m)
@@ -330,7 +335,9 @@ mkGameState input = case playerObjects of
         , magicPlayerOrderTurn = Stream.cycle playerObjects
         , magicPrompt = gameInput_prompt input
         , magicStack = Stack []
-        , magicStackEntries = mempty
+        , magicStackEntryAbilityMap = mempty
+        , magicStackEntryNonTribalMap = mempty
+        , magicStackEntryTribalMap = mempty
         , magicStartingPlayer = oPlayer
         , magicTargetProperties = mempty
         }
@@ -397,12 +404,18 @@ untilJust m =
     Nothing -> untilJust m
 
 class AndLike a where
+  trueM :: Monad m => m a
+  falseM :: Monad m => m a
   andM :: Monad m => [m a] -> m a
 
 instance AndLike () where
+  trueM = pure ()
+  falseM = pure ()
   andM = sequence_
 
 instance AndLike Bool where
+  trueM = pure True
+  falseM = pure False
   andM = \case
     [] -> pure True
     m : ms ->
@@ -411,10 +424,24 @@ instance AndLike Bool where
         False -> pure False
 
 instance AndLike Legality where
+  trueM = pure Legal
+  falseM = pure Illegal
   andM m = do
     let bs = map (fmap fromLegality) m
     b <- andM bs
     pure $ toLegality b
+
+instance AndLike a => AndLike (Maybe a) where
+  trueM = Just <$> trueM
+  falseM = pure Nothing
+  andM = \case
+    [] -> trueM
+    m : ms ->
+      m >>= \case
+        Just x -> case ms of
+          [] -> pure $ Just x
+          _ -> andM ms
+        Nothing -> pure Nothing
 
 getAlivePlayerCount :: Monad m => Magic 'Public 'RO m PlayerCount
 getAlivePlayerCount = undefined
@@ -627,69 +654,249 @@ rewindIllegal m = do
     Legal -> pure True
     Illegal -> put st >> pure False
 
-activateAbility :: forall m. Monad m => ActivateAbility -> Magic 'Private 'RW m Legality
-activateAbility (ActivateAbility oThis ability) = do
-  undefined oThis ability
+activateAbility :: forall m. Monad m => Object 'OTPlayer -> ActivateAbility -> Magic 'Private 'RW m Legality
+activateAbility oPlayer = \case
+  ActivateAbility oThis ability -> go oThis ability
+ where
+  go :: forall zone ot. ZO zone ot -> ActivatedAbility zone ot -> Magic 'Private 'RW m Legality
+  go oThis = \case
+    Ability inCost inEffect -> do
+      let isThisInCorrectZone = True -- TODO
+          isController = True -- TODO
+      case (isThisInCorrectZone, isController) of
+        (False, _) -> pure Illegal -- TODO prompt complaint
+        (_, False) -> pure Illegal -- TODO prompt complaint
+        (True, True) -> do
+          abilityId <- newObjectId
+          let zoAbility = toZO0 @ 'ZStack abilityId
+
+              toMaybe = \case
+                Legal -> Just ()
+                Illegal -> Nothing
+
+              cont cost effect =
+                fmap toMaybe $
+                  payElectedAndPutOnStack @ 'SKAbility $
+                    ElectedActivatedAbility oPlayer oThis cost effect
+
+          playPendingStackItem @ 'Nothing zoAbility inCost inEffect cont <&> \case
+            Nothing -> Illegal
+            Just{} -> Legal
+
+playPendingStackItem ::
+  forall mTribal m ot x.
+  (IsMaybeTribal mTribal, AndLike x) =>
+  Monad m =>
+  ZO 'ZStack OT0 ->
+  ElectPrePost (Cost ot) ot ->
+  ElectPrePost (Effect 'OneShot) ot ->
+  (Pending (Cost ot) ot -> Pending (Effect 'OneShot) ot -> Magic 'Private 'RW m (Maybe x)) ->
+  Magic 'Private 'RW m (Maybe x)
+playPendingStackItem zoStack inCost inEffect goCont = performElections @mTribal zoStack (goCost . Pending) inCost
+ where
+  goCost :: Pending (Cost ot) ot -> Magic 'Private 'RW m (Maybe x)
+  goCost cost =
+    let goElectEffect :: ElectPrePost (Effect 'OneShot) ot -> Magic 'Private 'RW m (Maybe x)
+        goElectEffect = \case
+          Elect effect -> goEffect $ Pending effect
+          _ -> undefined
+
+        goEffect :: Pending (Effect 'OneShot) ot -> Magic 'Private 'RW m (Maybe x)
+        goEffect = goCont cost
+     in goElectEffect inEffect
+
+performElections ::
+  forall mTribal ot m p el x.
+  (IsMaybeTribal mTribal, Monad m, AndLike x) =>
+  ZO 'ZStack OT0 ->
+  (el -> Magic 'Private 'RW m (Maybe x)) ->
+  Elect p el ot ->
+  Magic 'Private 'RW m (Maybe x)
+performElections zoStack goTerm = \case
+  All masked -> electAll goRec masked
+  CardTypeDef def -> goTerm def
+  Choose oPlayer thisToElect -> electA @mTribal Choose' zoStack goRec oPlayer thisToElect
+  ElectCase case_ -> performCase goRec case_
+  Target oPlayer thisToElect -> electA @mTribal Target' zoStack goRec oPlayer thisToElect
+  _ -> undefined
+ where
+  goRec = performElections @mTribal zoStack goTerm
+
+data CastEnv (tribal :: Tribal) (ot :: Type) :: Type where
+  CastEnv ::
+    { castEnv_ElectedTribal ::
+        Object 'OTPlayer ->
+        Card ot ->
+        CardTypeDef 'Tribal ot ->
+        PendingReady 'Pre (Cost ot) ot ->
+        PendingReady 'Pre (Effect 'OneShot) ot ->
+        Elected 'Pre 'Pre ( 'Just 'Tribal) ot
+    , castEnv_ElectedNonTribal ::
+        Object 'OTPlayer ->
+        Card ot ->
+        CardTypeDef 'NonTribal ot ->
+        PendingReady 'Pre (Cost ot) ot ->
+        PendingReady 'Pre (Effect 'OneShot) ot ->
+        Elected 'Pre 'Pre ( 'Just 'NonTribal) ot
+    , castEnv_effect :: CardTypeDef 'NonTribal ot -> ElectPrePost (Effect 'OneShot) ot
+    , castEnv_cost :: CardTypeDef 'NonTribal ot -> ElectPrePost (Cost ot) ot
+    } ->
+    CastEnv tribal ot
 
 castSpell :: forall m. Monad m => Object 'OTPlayer -> CastSpell -> Magic 'Private 'RW m Legality
 castSpell oCaster (CastSpell someCard) = case someCard of
   Some6a (SomeArtifact card) -> undefined card
   Some6b (SomeCreature card) -> undefined card
   Some6c (SomeEnchantment card) -> undefined card
-  Some6d (SomeInstant card) -> undefined card
+  Some6d (SomeInstant card@Card{}) ->
+    castSpell' @ 'NonTribal oCaster card $
+      CastEnv
+        { castEnv_ElectedTribal = ElectedInstant
+        , castEnv_ElectedNonTribal = ElectedInstant
+        , castEnv_effect = instant_effect
+        , castEnv_cost = instant_cost
+        }
+  Some6d (SomeInstant card@TribalCard{}) ->
+    castSpell' @ 'Tribal oCaster card $
+      CastEnv
+        { castEnv_ElectedTribal = ElectedInstant
+        , castEnv_ElectedNonTribal = ElectedInstant
+        , castEnv_effect = instant_effect
+        , castEnv_cost = instant_cost
+        }
   Some6e (SomePlaneswalker card) -> undefined card
-  Some6f (SomeSorcery card@(Card _name _wCard (T1 thisToElectDef))) -> do
-    thisId <- newObjectId
-    spellId <- newObjectId
-    let zoThis = ZO SZBattlefield $ O1 $ idToObject thisId
-        zoSpell = toZO0 @ 'ZStack spellId
-
-        goElectDef :: Elect 'Pre (CardTypeDef 'NonTribal OTSorcery) OTSorcery -> Magic 'Private 'RW m Legality
-        goElectDef = \case
-          CardTypeDef def -> goDef def
-          Choose oPlayer thisToElect -> electA Choose' zoSpell goElectDef oPlayer thisToElect
-          ElectCase case_ -> performCase goElectDef case_
-          Target oPlayer thisToElect -> electA Target' zoSpell goElectDef oPlayer thisToElect
-          _ -> undefined
-
-        goDef :: CardTypeDef 'NonTribal OTSorcery -> Magic 'Private 'RW m Legality
-        goDef def =
-          let goElectCost :: ElectPrePost (Cost OTSorcery) OTSorcery -> Magic 'Private 'RW m Legality
-              goElectCost = \case
-                Elect cost -> goCost $ Pending cost
-                _ -> undefined
-
-              goCost :: Pending (Cost OTSorcery) OTSorcery -> Magic 'Private 'RW m Legality
-              goCost cost =
-                let goElectEffect :: ElectPrePost (Effect 'OneShot) OTSorcery -> Magic 'Private 'RW m Legality
-                    goElectEffect = \case
-                      Elect effect -> goEffect $ Pending effect
-                      _ -> undefined
-
-                    goEffect :: Pending (Effect 'OneShot) OTSorcery -> Magic 'Private 'RW m Legality
-                    goEffect effect = castElected $ ElectedSorcery oCaster card def cost effect
-                 in goElectEffect $ sorcery_effect def
-           in goElectCost $ sorcery_cost def
-
-    goElectDef $ thisToElectDef zoThis
-  Some6f (SomeSorcery TribalCard{}) -> undefined
+  Some6f (SomeSorcery card@Card{}) ->
+    castSpell' @ 'NonTribal oCaster card $
+      CastEnv
+        { castEnv_ElectedTribal = ElectedSorcery
+        , castEnv_ElectedNonTribal = ElectedSorcery
+        , castEnv_effect = sorcery_effect
+        , castEnv_cost = sorcery_cost
+        }
+  Some6f (SomeSorcery card@TribalCard{}) ->
+    castSpell' @ 'Tribal oCaster card $
+      CastEnv
+        { castEnv_ElectedTribal = ElectedSorcery
+        , castEnv_ElectedNonTribal = ElectedSorcery
+        , castEnv_effect = sorcery_effect
+        , castEnv_cost = sorcery_cost
+        }
   Some6ab (SomeArtifactCreature card) -> undefined card
   Some6bc (SomeEnchantmentCreature card) -> undefined card
+
+castSpell' ::
+  forall tribal otk ot m.
+  (ot ~ OT otk, Monad m) =>
+  IsTribal tribal =>
+  Object 'OTPlayer ->
+  Card (OT otk) ->
+  CastEnv tribal ot ->
+  Magic 'Private 'RW m Legality
+castSpell' oCaster card env = case card of
+  Card _name wCard (T1 thisToElectDef) -> do
+    thisId <- newObjectId
+    goLegality wCard thisToElectDef (viewThis thisId)
+  Card _name wCard (T2 thisToElectDef) -> do
+    thisId <- newObjectId
+    goLegality wCard thisToElectDef (viewThis thisId, viewThis thisId)
+  TribalCard _name wCard (T1 thisToElectDef) -> do
+    thisId <- newObjectId
+    goLegality wCard thisToElectDef (viewThis thisId)
+  TribalCard _name wCard (T2 thisToElectDef) -> do
+    thisId <- newObjectId
+    goLegality wCard thisToElectDef (viewThis thisId, viewThis thisId)
+ where
+  viewThis :: (IsZone zone, IsObjectType a) => ObjectId -> ZO zone (OT1 a)
+  viewThis = ZO singZone . O1 . idToObject
+
+  goLegality ::
+    forall ret tribal' this.
+    IsTribal tribal' =>
+    ret ~ Maybe (Elected 'Pre 'Pre ( 'Just tribal') ot) =>
+    WCard ot ->
+    (this -> Elect 'Pre (CardTypeDef tribal' ot) ot) ->
+    this ->
+    Magic 'Private 'RW m Legality
+  goLegality wCard thisToElectDef zoThis = do
+    mElected <- goMaybe wCard thisToElectDef zoThis
+    pure $ case mElected of
+      Nothing -> Illegal
+      Just () -> Legal
+
+  goMaybe ::
+    forall ret tribal' this.
+    IsTribal tribal' =>
+    ret ~ Maybe () =>
+    WCard ot ->
+    (this -> Elect 'Pre (CardTypeDef tribal' ot) ot) ->
+    this ->
+    Magic 'Private 'RW m ret
+  goMaybe wCard thisToElectDef zoThis = do
+    spellId <- newObjectId
+    let zoSpell = toZO0 @ 'ZStack spellId
+
+        goElectDef :: Elect 'Pre (CardTypeDef tribal' ot) ot -> Magic 'Private 'RW m ret
+        goElectDef = performElections @( 'Just tribal) zoSpell goDef
+
+        goDef :: CardTypeDef tribal' ot -> Magic 'Private 'RW m ret
+        goDef def = goDef' def def
+         where
+          goDef' topDef bottomDef = case bottomDef of
+            ArtifactLandDef{} -> undefined -- TODO: Not a spell
+            LandDef{} -> undefined -- TODO: Not a spell
+            --
+            ArtifactDef{} -> goDefNonTribal topDef bottomDef
+            ArtifactCreatureDef{} -> goDefNonTribal topDef bottomDef
+            CreatureDef{} -> goDefNonTribal topDef bottomDef
+            EnchantmentDef{} -> goDefNonTribal topDef bottomDef
+            EnchantmentCreatureDef{} -> goDefNonTribal topDef bottomDef
+            PlaneswalkerDef{} -> goDefNonTribal topDef bottomDef
+            --
+            InstantDef{} -> goDefNonTribal topDef bottomDef
+            SorceryDef{} -> goDefNonTribal topDef bottomDef
+            --
+            TribalDef{} -> goDefTribal topDef bottomDef
+            --
+            VariableDef varToDef -> do
+              let var = ReifiedVariable undefined undefined
+              goDef' topDef $ varToDef var
+
+        goDefNonTribal :: CardTypeDef 'NonTribal ot -> CardTypeDef 'NonTribal ot -> Magic 'Private 'RW m ret
+        goDefNonTribal topDef def = playPendingStackItem @( 'Just 'NonTribal) zoSpell (castEnv_cost env def) (castEnv_effect env def) $ \cost effect -> do
+          case wCard of
+            WCardSorcery -> do
+              legality <- payElectedAndPutOnStack @ 'SKSpell $ castEnv_ElectedNonTribal env oCaster card topDef cost effect
+              pure $ case legality of
+                Illegal -> Nothing
+                Legal -> Just ()
+            _ -> undefined
+
+        goDefTribal :: CardTypeDef 'Tribal ot -> CardTypeDef 'Tribal ot -> Magic 'Private 'RW m ret
+        goDefTribal topDef (TribalDef _ _ def) = playPendingStackItem @( 'Just 'Tribal) zoSpell (castEnv_cost env def) (castEnv_effect env def) $ \cost effect -> do
+          case wCard of
+            WCardSorcery -> do
+              legality <- payElectedAndPutOnStack @ 'SKSpell $ castEnv_ElectedTribal env oCaster card topDef cost effect
+              pure $ case legality of
+                Illegal -> Nothing
+                Legal -> Just ()
+            _ -> undefined
+
+    goElectDef $ thisToElectDef zoThis
 
 data Selection
   = Choose'
   | Target'
 
 electA ::
-  forall zone m el ot.
-  (IsZO zone ot, Monad m) =>
+  forall mTribal p zone m el ot x.
+  (IsMaybeTribal mTribal, IsZO zone ot, Monad m) =>
   Selection ->
   ZO 'ZStack OT0 ->
-  (Elect 'Pre el ot -> Magic 'Private 'RW m Legality) ->
+  (Elect p el ot -> Magic 'Private 'RW m (Maybe x)) ->
   OPlayer ->
-  WithMaskedObject zone (Elect 'Pre el ot) ->
-  Magic 'Private 'RW m Legality
-electA sel zoSpell goElect oPlayer = \case
+  WithMaskedObject zone (Elect p el ot) ->
+  Magic 'Private 'RW m (Maybe x)
+electA sel zoStack goElect oPlayer = \case
   M1 reqs zoToElect -> go reqs zoToElect
   M2 reqs zoToElect -> go reqs zoToElect
   M3 reqs zoToElect -> go reqs zoToElect
@@ -700,12 +907,12 @@ electA sel zoSpell goElect oPlayer = \case
   go ::
     (IsZO zone ot', Eq (ZO zone ot')) =>
     [Requirement zone ot'] ->
-    (ZO zone ot' -> Elect 'Pre el ot) ->
-    Magic 'Private 'RW m Legality
+    (ZO zone ot' -> Elect p el ot) ->
+    Magic 'Private 'RW m (Maybe x)
   go reqs zoToElect = do
     prompt <- fromRO $ gets magicPrompt
     fromRO (findObjectsSatisfying (RAnd reqs)) >>= \case
-      [] -> pure Illegal
+      [] -> pure Nothing
       zos -> do
         zo <- lift $
           untilJust $ do
@@ -715,17 +922,18 @@ electA sel zoSpell goElect oPlayer = \case
               True -> Just zo
         zo' <- case sel of
           Choose' -> pure zo
-          Target' -> newTarget zoSpell zo $ RAnd reqs
+          Target' -> newTarget @mTribal zoStack zo $ RAnd reqs
         let elect = zoToElect zo'
         goElect elect
 
 newTarget ::
-  (Monad m, IsZO zone ot) =>
+  forall mTribal zone ot m.
+  (IsMaybeTribal mTribal, Monad m, IsZO zone ot) =>
   ZO 'ZStack OT0 ->
   ZO zone ot ->
   Requirement zone ot ->
   Magic 'Private 'RW m (ZO zone ot)
-newTarget zoSpell zoTargetBase req = do
+newTarget zoStack zoTargetBase req = do
   discr <- fromRO $ gets magicNextObjectDiscriminant
   let (ZO sZone objN) = zoTargetBase
       go :: Object a -> Object a
@@ -738,17 +946,43 @@ newTarget zoSpell zoTargetBase req = do
     let targetId = getObjectId zoTarget
         propMap = magicTargetProperties st
         propMap' = Map.insert targetId (AnyRequirement req) propMap
-        entry = case Map.lookup zoSpell $ magicStackEntries st of
-          Just x -> x
-          Nothing -> error $ show ExpectedStackObjectToExist
-        entry' = entry{stackEntryTargets = targetId : stackEntryTargets entry}
-        itemMap = magicStackEntries st
-        itemMap' = Map.insert zoSpell entry' itemMap
-     in st
-          { magicNextObjectDiscriminant = (+ 1) <$> discr
-          , magicStackEntries = itemMap'
-          , magicTargetProperties = propMap'
-          }
+     in case singMaybeTribal @mTribal of
+          SNothingTribal ->
+            let entry = case Map.lookup zoStack $ magicStackEntryAbilityMap st of
+                  Just x -> x
+                  Nothing -> error $ show ExpectedStackObjectToExist
+                entry' = entry{stackEntryTargets = targetId : stackEntryTargets entry}
+                itemMap = magicStackEntryAbilityMap st
+                itemMap' = Map.insert zoStack entry' itemMap
+             in st
+                  { magicNextObjectDiscriminant = (+ 1) <$> discr
+                  , magicStackEntryAbilityMap = itemMap'
+                  , magicTargetProperties = propMap'
+                  }
+          SJustTribal ->
+            let entry = case Map.lookup zoStack $ magicStackEntryTribalMap st of
+                  Just x -> x
+                  Nothing -> error $ show ExpectedStackObjectToExist
+                entry' = entry{stackEntryTargets = targetId : stackEntryTargets entry}
+                itemMap = magicStackEntryTribalMap st
+                itemMap' = Map.insert zoStack entry' itemMap
+             in st
+                  { magicNextObjectDiscriminant = (+ 1) <$> discr
+                  , magicStackEntryTribalMap = itemMap'
+                  , magicTargetProperties = propMap'
+                  }
+          SJustNonTribal ->
+            let entry = case Map.lookup zoStack $ magicStackEntryNonTribalMap st of
+                  Just x -> x
+                  Nothing -> error $ show ExpectedStackObjectToExist
+                entry' = entry{stackEntryTargets = targetId : stackEntryTargets entry}
+                itemMap = magicStackEntryNonTribalMap st
+                itemMap' = Map.insert zoStack entry' itemMap
+             in st
+                  { magicNextObjectDiscriminant = (+ 1) <$> discr
+                  , magicStackEntryNonTribalMap = itemMap'
+                  , magicTargetProperties = propMap'
+                  }
   pure zoTarget
 
 electAll ::
@@ -782,7 +1016,24 @@ type Pending = PendingReady 'Pre
 
 type Ready = PendingReady 'Post
 
-data Elected (pCost :: PrePost) (pEffect :: PrePost) (tribal :: Tribal) (ot :: Type) :: Type where
+data Elected (pCost :: PrePost) (pEffect :: PrePost) (mTribal :: Maybe Tribal) (ot :: Type) :: Type where
+  ElectedActivatedAbility ::
+    IsZO zone ot =>
+    { electedActivatedAbility_controller :: Object 'OTPlayer
+    , electedActivatedAbility_this :: ZO zone ot
+    , electedActivatedAbility_cost :: PendingReady pCost (Cost ot) ot
+    , electedActivatedAbility_effect :: PendingReady pEffect (Effect 'OneShot) ot
+    } ->
+    Elected pCost pEffect 'Nothing ot
+  ElectedInstant ::
+    IsTribal tribal =>
+    { electedInstant_controller :: Object 'OTPlayer
+    , electedInstant_card :: Card OTInstant
+    , electedInstant_def :: CardTypeDef tribal OTInstant
+    , electedInstant_cost :: PendingReady pCost (Cost OTInstant) OTInstant
+    , electedInstant_effect :: PendingReady pEffect (Effect 'OneShot) OTInstant
+    } ->
+    Elected pCost pEffect ( 'Just tribal) OTInstant
   ElectedSorcery ::
     IsTribal tribal =>
     { electedSorcery_controller :: Object 'OTPlayer
@@ -791,50 +1042,108 @@ data Elected (pCost :: PrePost) (pEffect :: PrePost) (tribal :: Tribal) (ot :: T
     , electedSorcery_cost :: PendingReady pCost (Cost OTSorcery) OTSorcery
     , electedSorcery_effect :: PendingReady pEffect (Effect 'OneShot) OTSorcery
     } ->
-    Elected pCost pEffect tribal OTSorcery
+    Elected pCost pEffect ( 'Just tribal) OTSorcery
   deriving (Typeable)
+
+electedObject_controller :: Elected pCost pEffect tribal ot -> Object 'OTPlayer
+electedObject_controller elected = ($ elected) $ case elected of
+  ElectedActivatedAbility{} -> electedActivatedAbility_controller
+  ElectedInstant{} -> electedInstant_controller
+  ElectedSorcery{} -> electedSorcery_controller
+
+electedObject_cost :: Elected pCost pEffect tribal ot -> PendingReady pCost (Cost ot) ot
+electedObject_cost elected = ($ elected) $ case elected of
+  ElectedActivatedAbility{} -> electedActivatedAbility_cost
+  ElectedInstant{} -> electedInstant_cost
+  ElectedSorcery{} -> electedSorcery_cost
+
+setElectedObject_def ::
+  IsTribal tribal' =>
+  CardTypeDef tribal' ot ->
+  Elected pCost pEffect ( 'Just tribal) ot ->
+  Elected pCost pEffect ( 'Just tribal') ot
+setElectedObject_def def = \case
+  ElectedInstant controller card _def cost effect -> ElectedInstant controller card def cost effect
+  ElectedSorcery controller card _def cost effect -> ElectedSorcery controller card def cost effect
 
 setElectedCost ::
   Elected pCost pEffect tribal ot ->
   PendingReady pCost' (Cost ot) ot ->
   Elected pCost' pEffect tribal ot
 setElectedCost elected cost = case elected of
+  ElectedActivatedAbility{} -> elected{electedActivatedAbility_cost = cost}
+  ElectedInstant{} -> elected{electedInstant_cost = cost}
   ElectedSorcery{} -> elected{electedSorcery_cost = cost}
 
-data AnyElected (pCost :: PrePost) (pEffect :: PrePost) :: Type where
-  AnyElected :: Elected pCost pEffect tribal ot -> AnyElected pCost pEffect
+data AnyElected (pCost :: PrePost) (pEffect :: PrePost) (mTribal :: Maybe Tribal) :: Type where
+  AnyElected :: Elected pCost pEffect mTribal ot -> AnyElected pCost pEffect mTribal
   deriving (Typeable)
 
-class CastElected (tribal :: Tribal) (ot :: Type) where
-  castElected :: Monad m => Elected 'Pre 'Pre tribal ot -> Magic 'Private 'RW m Legality
+data StackKind
+  = SKAbility
+  | SKSpell
 
-instance CastElected tribal OTSorcery where
-  castElected elected =
-    let goElectCost :: Monad m => Elect 'Post (Cost OTSorcery) OTSorcery -> Magic 'Private 'RW m Legality
-        goElectCost = \case
-          All masked -> electAll goElectCost masked
-          Cost cost -> goCost cost
-          _ -> undefined
+class PayElected (sk :: StackKind) (ot :: Type) where
+  payElectedAndPutOnStack :: (IsMaybeTribal mTribal, Monad m) => Elected 'Pre 'Pre mTribal ot -> Magic 'Private 'RW m Legality
 
-        goCost :: Monad m => Cost OTSorcery -> Magic 'Private 'RW m Legality
-        goCost cost =
-          payCost (electedSorcery_controller elected) cost >>= \case
-            Illegal -> pure Illegal
-            Legal -> do
-              stackId <- newObjectId
-              let zoStack = StackSpell $ ZO SZStack $ toObject6' $ idToObject @ 'OTSorcery stackId
-                  entry =
-                    StackEntry
-                      { stackEntryTargets = []
-                      , stackEntryElected = AnyElected $ setElectedCost elected $ Ready cost
-                      }
-              modify $ \st ->
-                st
-                  { magicStack = Stack $ zoStack : unStack (magicStack st)
-                  , magicStackEntries = Map.insert (toZO0 stackId) entry $ magicStackEntries st
-                  }
-              pure Legal
-     in goElectCost $ unPending $ electedSorcery_cost elected
+instance PayElected 'SKAbility ot where
+  payElectedAndPutOnStack = payElectedAndPutOnStack' $ StackAbility . ZO SZStack . toObject2' . idToObject @ 'OTActivatedAbility
+
+instance PayElected 'SKSpell OTInstant where
+  payElectedAndPutOnStack = payElectedAndPutOnStack' $ StackSpell . ZO SZStack . toObject6' . idToObject @ 'OTInstant
+
+instance PayElected 'SKSpell OTSorcery where
+  payElectedAndPutOnStack = payElectedAndPutOnStack' $ StackSpell . ZO SZStack . toObject6' . idToObject @ 'OTSorcery
+
+data SMaybeTribal (mTribal :: Maybe Tribal) :: Type where
+  SNothingTribal :: SMaybeTribal 'Nothing
+  SJustTribal :: SMaybeTribal ( 'Just 'Tribal)
+  SJustNonTribal :: SMaybeTribal ( 'Just 'NonTribal)
+  deriving (Typeable)
+
+class IsMaybeTribal (mTribal :: Maybe Tribal) where
+  singMaybeTribal :: SMaybeTribal mTribal
+
+instance IsMaybeTribal 'Nothing where
+  singMaybeTribal = SNothingTribal
+
+instance IsTribal tribal => IsMaybeTribal ( 'Just tribal) where
+  singMaybeTribal = case singTribal @tribal of
+    STribal -> SJustTribal
+    SNonTribal -> SJustNonTribal
+
+payElectedAndPutOnStack' ::
+  forall mTribal ot m.
+  (IsMaybeTribal mTribal, Monad m) =>
+  (ObjectId -> StackObject) ->
+  Elected 'Pre 'Pre mTribal ot ->
+  Magic 'Private 'RW m Legality
+payElectedAndPutOnStack' idToStackObject elected =
+  let goElectCost :: Monad m => Elect 'Post (Cost ot) ot -> Magic 'Private 'RW m Legality
+      goElectCost = \case
+        All masked -> electAll goElectCost masked
+        Cost cost -> goCost cost
+        _ -> undefined
+
+      goCost :: Monad m => Cost ot -> Magic 'Private 'RW m Legality
+      goCost cost =
+        payCost (electedObject_controller elected) cost >>= \case
+          Illegal -> pure Illegal
+          Legal -> do
+            stackId <- newObjectId
+            let zoStack = idToStackObject stackId
+                entry =
+                  StackEntry
+                    { stackEntryTargets = []
+                    , stackEntryElected = AnyElected $ setElectedCost elected $ Ready cost
+                    }
+            modify $ \st -> st{magicStack = Stack $ zoStack : unStack (magicStack st)}
+            modify $ \st -> case singMaybeTribal @mTribal of
+              SNothingTribal -> st{magicStackEntryAbilityMap = Map.insert (toZO0 stackId) entry $ magicStackEntryAbilityMap st}
+              SJustNonTribal -> st{magicStackEntryNonTribalMap = Map.insert (toZO0 stackId) entry $ magicStackEntryNonTribalMap st}
+              SJustTribal -> st{magicStackEntryTribalMap = Map.insert (toZO0 stackId) entry $ magicStackEntryTribalMap st}
+            pure Legal
+   in goElectCost $ unPending $ electedObject_cost elected
 
 toLegality :: Bool -> Legality
 toLegality = \case
@@ -1177,9 +1486,6 @@ instance IsZone zone => PlayLand' (ZO zone OTLand) where
                 case containsCard card hand of
                   False -> invalid PlayLand_NotOwned
                   True -> case card of
-                    Card _name wCard _def -> case wCard of
-                    TribalCard _name wCard _def -> case wCard of
-                    --
                     ArtifactCard{} -> invalid PlayLand_NotALand
                     ArtifactCreatureCard{} -> invalid PlayLand_NotALand
                     CreatureCard{} -> invalid PlayLand_NotALand
@@ -1198,25 +1504,36 @@ resolveTopOfStack = do
     [] -> pure ()
     item : items -> do
       modify $ \st -> st{magicStack = Stack items}
-      case item of
-        StackAbility ability -> resolveAbility ability
-        StackSpell spell -> resolveSpell spell
+      resolveStackObject item
       oActive <- fromPublicRO getActivePlayer
       gainPriority oActive
 
-resolveSpell :: Monad m => ZO 'ZStack OTSpell -> Magic 'Private 'RW m ()
-resolveSpell zoSpell = do
-  st <- fromRO get
-  case Map.lookup (toZO0 zoSpell) $ magicStackEntries st of
-    Nothing -> error $ show NotSureWhatThisEntails
-    Just entry -> case stackEntryElected entry of
-      AnyElected elected -> case elected of
-        ElectedSorcery{} -> undefined
+resolveStackObject :: forall m. Monad m => StackObject -> Magic 'Private 'RW m ()
+resolveStackObject = \case
+  StackAbility zoAbility -> resolveAbility zoAbility
+  StackSpell zoSpell -> resolveSpell zoSpell
+ where
+  resolveAbility = undefined
 
-class ResolveElected (tribal :: Tribal) (ot :: Type) where
-  resolveElected :: Monad m => Elected 'Post 'Pre tribal ot -> Magic 'Private 'RW m ()
+  resolveSpell :: ZO 'ZStack OTSpell -> Magic 'Private 'RW m ()
+  resolveSpell zoSpell = do
+    st <- fromRO get
 
-instance ResolveElected tribal OTSorcery where
+    let go :: AnyElected 'Post 'Pre ( 'Just tribal) -> Magic 'Private 'RW m ()
+        go (AnyElected elected) = case elected of
+          ElectedInstant{} -> undefined
+          ElectedSorcery{} -> undefined
+
+    case Map.lookup (toZO0 zoSpell) $ magicStackEntryNonTribalMap st of
+      Nothing -> case Map.lookup (toZO0 zoSpell) $ magicStackEntryTribalMap st of
+        Nothing -> error $ show NotSureWhatThisEntails
+        Just entry -> go $ stackEntryElected entry
+      Just entry -> go $ stackEntryElected entry
+
+class ResolveElected (mTribal :: Maybe Tribal) (ot :: Type) where
+  resolveElected :: Monad m => Elected 'Post 'Pre mTribal ot -> Magic 'Private 'RW m ()
+
+instance ResolveElected ( 'Just tribal') OTSorcery where
   resolveElected elected = do
     let goElectEffect :: Monad m => Elect 'Post (Effect 'OneShot) OTSorcery -> Magic 'Private 'RW m ()
         goElectEffect = \case
@@ -1284,9 +1601,6 @@ dealDamage _oSource oVictim (forceVars -> Damage damage) = do
       player <- fromRO $ getPlayer oPlayer
       let life = unLife $ playerLife player
       setPlayer oPlayer player{playerLife = Life $ life - damage}
-
-resolveAbility :: Monad m => ZO 'ZStack OTActivatedOrTriggeredAbility -> Magic 'Private 'RW m ()
-resolveAbility = undefined
 
 beginningOfCombatStep :: Monad m => MagicCont 'Private 'RW m Void Void
 beginningOfCombatStep = do
