@@ -23,7 +23,7 @@ module MtgPure.Model.ManaPool (
 import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.Mana (IsManaNoVar, IsSnow, Mana, Snow (..))
 import safe MtgPure.Model.ManaType (ManaType (..))
-import safe MtgPure.Model.Variable (ForceVars (..), Var (NoVar))
+import safe MtgPure.Model.Variable (Var (NoVar))
 
 data ManaPool (snow :: Snow) = ManaPool
   { poolWhite :: Mana 'NoVar snow 'MTWhite
@@ -152,5 +152,40 @@ instance IsSnow snow => Num (ManaPool snow) where
     -- neither of which is particularly desirable.
     _ -> error "(fromInteger :: ManaPool snow) only supports n=0"
 
-instance IsSnow snow => ForceVars (ManaPool snow) (ManaPool snow) where
-  forceVars = mapManaPool forceVars
+mapCompleteManaPool ::
+  ( forall snow.
+    IsSnow snow =>
+    ManaPool snow ->
+    ManaPool snow
+  ) ->
+  CompleteManaPool ->
+  CompleteManaPool
+mapCompleteManaPool f (CompleteManaPool snow nonSnow) =
+  CompleteManaPool (f snow) (f nonSnow)
+
+mapCompleteManaPool2 ::
+  ( forall snow.
+    IsSnow snow =>
+    ManaPool snow ->
+    ManaPool snow ->
+    ManaPool snow
+  ) ->
+  CompleteManaPool ->
+  CompleteManaPool ->
+  CompleteManaPool
+mapCompleteManaPool2
+  f
+  (CompleteManaPool snow1 nonSnow1)
+  (CompleteManaPool snow2 nonSnow2) =
+    CompleteManaPool
+      (f snow1 snow2)
+      (f nonSnow1 nonSnow2)
+
+instance Num CompleteManaPool where
+  (+) = mapCompleteManaPool2 (+)
+  (-) = mapCompleteManaPool2 (-)
+  (*) = mapCompleteManaPool2 (*)
+  abs = mapCompleteManaPool abs
+  signum = mapCompleteManaPool signum
+  negate = mapCompleteManaPool negate
+  fromInteger n = mempty{poolNonSnow = fromInteger n}
