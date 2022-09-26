@@ -20,6 +20,7 @@ module MtgPure.Model.ObjectType.Permanent (
   IsPermanentType (..),
   PermanentVisitor (..),
   visitPermanent',
+  CoPermanent (..),
 ) where
 
 import safe Data.Inst (Inst2, Inst3, Inst4)
@@ -42,7 +43,7 @@ import safe MtgPure.Model.ObjectType.Kind (
   OTPermanent,
   OTPlaneswalker,
  )
-import safe MtgPure.Model.ZoneObject (ZO)
+import safe MtgPure.Model.ZoneObject (IsOT, ZO)
 
 data PermanentType
   = PTArtifact
@@ -113,3 +114,33 @@ instance IsPermanentType 'OTPlaneswalker where
   singPermanentType _ = PTPlaneswalker
   singPermanent _ = WPermanentPlaneswalker
   visitPermanent v _ = visitPPlaneswalker v
+
+class IsOT ot => CoPermanent ot where
+  coPermanent :: WPermanent ot
+
+instance CoPermanent OTArtifact where
+  coPermanent = WPermanentArtifact
+
+instance CoPermanent OTCreature where
+  coPermanent = WPermanentCreature
+
+instance CoPermanent OTEnchantment where
+  coPermanent = WPermanentEnchantment
+
+instance CoPermanent OTLand where
+  coPermanent = WPermanentLand
+
+instance CoPermanent OTPlaneswalker where
+  coPermanent = WPermanentPlaneswalker
+
+instance CoPermanent OTPermanent where
+  coPermanent = WPermanent
+
+instance Inst2 IsPermanentType a b => CoPermanent (OT2 a b) where
+  coPermanent = WPermanent2 :: WPermanent (OT2 a b)
+
+instance Inst3 IsPermanentType a b c => CoPermanent (OT3 a b c) where
+  coPermanent = WPermanent3 :: WPermanent (OT3 a b c)
+
+instance Inst4 IsPermanentType a b c d => CoPermanent (OT4 a b c d) where
+  coPermanent = WPermanent4 :: WPermanent (OT4 a b c d)

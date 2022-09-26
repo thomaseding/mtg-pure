@@ -58,6 +58,7 @@ module MtgPure.ModelCombinators (
   ifThenElse,
   is,
   isBasic,
+  isTapped,
   lose,
   mkCard,
   mkToken,
@@ -74,7 +75,6 @@ module MtgPure.ModelCombinators (
   searchLibrary,
   spellCost,
   tapCost,
-  tapped,
   ToCard (..),
   ToSetCard (..),
   ToSetToken (..),
@@ -113,14 +113,13 @@ import safe MtgPure.Model.Object (
   OT6,
   ObjectType (..),
  )
-import safe MtgPure.Model.ObjectType.Any (WAny (..))
-import safe MtgPure.Model.ObjectType.Card (IsCardType, WCard (..))
+import safe MtgPure.Model.ObjectType.Any (CoAny (..))
+import safe MtgPure.Model.ObjectType.Card (CoCard (..))
 import safe MtgPure.Model.ObjectType.Kind (
   OTActivatedOrTriggeredAbility,
   OTAny,
   OTArtifact,
   OTArtifactCreature,
-  OTCard,
   OTCreature,
   OTCreaturePlayerPlaneswalker,
   OTDamageSource,
@@ -128,13 +127,12 @@ import safe MtgPure.Model.ObjectType.Kind (
   OTEnchantmentCreature,
   OTInstant,
   OTLand,
-  OTPermanent,
   OTPlaneswalker,
   OTPlayer,
   OTSorcery,
   OTSpell,
  )
-import safe MtgPure.Model.ObjectType.Permanent (IsPermanentType, WPermanent (..))
+import safe MtgPure.Model.ObjectType.Permanent (CoPermanent (..))
 import safe MtgPure.Model.PrePost (PrePost (..))
 import safe MtgPure.Model.Recursive (
   Ability (..),
@@ -168,7 +166,6 @@ import safe MtgPure.Model.ToObjectN.Classes (
   ToObject12,
   ToObject2,
   ToObject3,
-  ToObject5,
   ToObject6,
   ToObject8,
  )
@@ -181,10 +178,13 @@ import safe MtgPure.Model.ZoneObject (
   IsZO,
   OPlayer,
   ZO,
+ )
+import safe MtgPure.Model.ZoneObject.Convert (
+  AsPermanent,
+  asPermanent,
   toZO12,
   toZO2,
   toZO3,
-  toZO5,
   toZO6,
   toZO8,
  )
@@ -410,18 +410,6 @@ asDamageSource ::
   AsDamageSource ot => ZO 'ZBattlefield ot -> ZO 'ZBattlefield OTDamageSource
 asDamageSource = toZO8
 
-type AsPermanent ot =
-  ToObject5
-    ot
-    'OTArtifact
-    'OTCreature
-    'OTEnchantment
-    'OTLand
-    'OTPlaneswalker
-
-asPermanent :: AsPermanent ot => ZO zone ot -> ZO zone OTPermanent
-asPermanent = toZO5
-
 type AsSpell ot =
   ToObject6
     ot
@@ -506,108 +494,6 @@ counterAbility = CounterAbility . asActivatedOrTriggeredAbility
 counterSpell :: AsSpell ot => ZO 'ZStack ot -> Effect 'OneShot
 counterSpell = CounterSpell . asSpell
 
-class IsOT ot => CoCard ot where
-  coCard :: WCard ot
-
-instance CoCard OTArtifact where
-  coCard = WCardArtifact
-
-instance CoCard OTCreature where
-  coCard = WCardCreature
-
-instance CoCard OTEnchantment where
-  coCard = WCardEnchantment
-
-instance CoCard OTInstant where
-  coCard = WCardInstant
-
-instance CoCard OTLand where
-  coCard = WCardLand
-
-instance CoCard OTPlaneswalker where
-  coCard = WCardPlaneswalker
-
-instance CoCard OTSorcery where
-  coCard = WCardSorcery
-
-instance CoCard OTCard where
-  coCard = WCard
-
-instance Inst2 IsCardType a b => CoCard (OT2 a b) where
-  coCard = WCard2 :: WCard (OT2 a b)
-
-instance Inst3 IsCardType a b c => CoCard (OT3 a b c) where
-  coCard = WCard3 :: WCard (OT3 a b c)
-
-class IsOT ot => CoPermanent ot where
-  coPermanent :: WPermanent ot
-
-instance CoPermanent OTArtifact where
-  coPermanent = WPermanentArtifact
-
-instance CoPermanent OTCreature where
-  coPermanent = WPermanentCreature
-
-instance CoPermanent OTEnchantment where
-  coPermanent = WPermanentEnchantment
-
-instance CoPermanent OTLand where
-  coPermanent = WPermanentLand
-
-instance CoPermanent OTPlaneswalker where
-  coPermanent = WPermanentPlaneswalker
-
-instance CoPermanent OTPermanent where
-  coPermanent = WPermanent
-
-instance Inst2 IsPermanentType a b => CoPermanent (OT2 a b) where
-  coPermanent = WPermanent2 :: WPermanent (OT2 a b)
-
-instance Inst3 IsPermanentType a b c => CoPermanent (OT3 a b c) where
-  coPermanent = WPermanent3 :: WPermanent (OT3 a b c)
-
-instance Inst4 IsPermanentType a b c d => CoPermanent (OT4 a b c d) where
-  coPermanent = WPermanent4 :: WPermanent (OT4 a b c d)
-
-class IsOT ot => CoAny ot where
-  coAny :: WAny ot
-
-instance CoAny OTInstant where
-  coAny = WAnyInstant
-
-instance CoAny OTSorcery where
-  coAny = WAnySorcery
-
-instance CoAny OTPlayer where
-  coAny = WAnyPlayer
-
-instance CoAny OTArtifact where
-  coAny = WAnyArtifact
-
-instance CoAny OTCreature where
-  coAny = WAnyCreature
-
-instance CoAny OTEnchantment where
-  coAny = WAnyEnchantment
-
-instance CoAny OTLand where
-  coAny = WAnyLand
-
-instance CoAny OTPlaneswalker where
-  coAny = WAnyPlaneswalker
-
-instance Inst2 IsPermanentType a b => CoAny (OT2 a b) where
-  coAny = WAny2
-
-instance Inst3 IsPermanentType a b c => CoAny (OT3 a b c) where
-  coAny = WAny3
-
-instance Inst4 IsPermanentType a b c d => CoAny (OT4 a b c d) where
-  coAny = WAny4
-
-instance Inst5 IsPermanentType a b c d e => CoAny (OT5 a b c d e) where
-  coAny = WAny5
-
 is :: (IsZone zone, CoAny ot) => ZO zone ot -> Requirement zone ot
 is = Is coAny
 
@@ -619,10 +505,10 @@ sacrificeCost :: CoPermanent ot' => [Requirement 'ZBattlefield ot'] -> Cost ot
 sacrificeCost = SacrificeCost coPermanent
 
 tapCost :: CoPermanent ot' => [Requirement 'ZBattlefield ot'] -> Cost ot
-tapCost = TapCost coPermanent
+tapCost = TapCost
 
-tapped :: CoPermanent ot => Requirement 'ZBattlefield ot
-tapped = IsTapped coPermanent
+isTapped :: CoPermanent ot => Requirement 'ZBattlefield ot
+isTapped = IsTapped coPermanent
 
 addToBattlefield :: CoPermanent ot => OPlayer -> Token ot -> Effect 'OneShot
 addToBattlefield = AddToBattlefield coPermanent

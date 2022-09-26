@@ -162,6 +162,7 @@ import safe MtgPure.ModelCombinators (
   ifElse,
   ifThenElse,
   is,
+  isTapped,
   mkCard,
   mkToken,
   noCost,
@@ -176,7 +177,6 @@ import safe MtgPure.ModelCombinators (
   searchLibrary,
   spellCost,
   tapCost,
-  tapped,
   untilEndOfTurn,
  )
 
@@ -280,7 +280,7 @@ backlash = mkCard "Backlash" $ \this ->
       , instant_effect =
           controllerOf this $ \you ->
             Target you $
-              masked [Not tapped] $ \target -> Elect $
+              masked [Not isTapped] $ \target -> Elect $
                 VariableFromPower target $ \power ->
                   controllerOf target $ \targetController ->
                     effect $ dealDamage target targetController $ VariableDamage power

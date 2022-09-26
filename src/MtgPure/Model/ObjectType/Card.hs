@@ -20,6 +20,7 @@ module MtgPure.Model.ObjectType.Card (
   IsCardType (..),
   CardVisitor (..),
   visitCard',
+  CoCard (..),
 ) where
 
 import safe Data.Inst (Inst2, Inst3)
@@ -44,7 +45,7 @@ import safe MtgPure.Model.ObjectType.Kind (
   OTPlaneswalker,
   OTSorcery,
  )
-import safe MtgPure.Model.ZoneObject (ZO)
+import safe MtgPure.Model.ZoneObject (IsOT, ZO)
 
 -- Witness type
 data WCard :: Type -> Type where
@@ -120,3 +121,36 @@ instance IsCardType 'OTSorcery where
   singCardType _ = CTSorcery
   singCard _ = WCardSorcery
   visitCard v _ = visitCSorcery v
+
+class IsOT ot => CoCard ot where
+  coCard :: WCard ot
+
+instance CoCard OTArtifact where
+  coCard = WCardArtifact
+
+instance CoCard OTCreature where
+  coCard = WCardCreature
+
+instance CoCard OTEnchantment where
+  coCard = WCardEnchantment
+
+instance CoCard OTInstant where
+  coCard = WCardInstant
+
+instance CoCard OTLand where
+  coCard = WCardLand
+
+instance CoCard OTPlaneswalker where
+  coCard = WCardPlaneswalker
+
+instance CoCard OTSorcery where
+  coCard = WCardSorcery
+
+instance CoCard OTCard where
+  coCard = WCard
+
+instance Inst2 IsCardType a b => CoCard (OT2 a b) where
+  coCard = WCard2 :: WCard (OT2 a b)
+
+instance Inst3 IsCardType a b c => CoCard (OT3 a b c) where
+  coCard = WCard3 :: WCard (OT3 a b c)

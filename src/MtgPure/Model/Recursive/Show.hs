@@ -34,6 +34,7 @@ module MtgPure.Model.Recursive.Show (
 import safe qualified Control.Monad.State.Strict as State
 import safe qualified Data.DList as DList
 import safe Data.Inst (
+  Inst1,
   Inst10,
   Inst11,
   Inst12,
@@ -213,6 +214,21 @@ instance IsZO zone ot => Show (WithMaskedObject zone (Elect p e ot)) where
 
 instance IsZone zone => Show (ZO zone OT0) where
   show = runEnvM defaultDepthLimit . showZoneObject0
+
+instance (IsZone zone, Inst1 IsObjectType a) => Show (ZO zone (OT1 a)) where
+  show = runEnvM defaultDepthLimit . showZoneObject
+
+instance (IsZone zone, Inst2 IsObjectType a b) => Show (ZO zone (OT2 a b)) where
+  show = runEnvM defaultDepthLimit . showZoneObject
+
+instance (IsZone zone, Inst3 IsObjectType a b c) => Show (ZO zone (OT3 a b c)) where
+  show = runEnvM defaultDepthLimit . showZoneObject
+
+instance (IsZone zone, Inst4 IsObjectType a b c d) => Show (ZO zone (OT4 a b c d)) where
+  show = runEnvM defaultDepthLimit . showZoneObject
+
+instance (IsZone zone, Inst5 IsObjectType a b c d e) => Show (ZO zone (OT5 a b c d e)) where
+  show = runEnvM defaultDepthLimit . showZoneObject
 
 ----------------------------------------
 
@@ -779,10 +795,9 @@ showCost = \case
     sPerm <- parens <$> showWPermanent perm
     sReqs <- dollar <$> showRequirements reqs
     pure $ pure "SacrificeCost " <> sPerm <> sReqs
-  TapCost perm reqs -> yesParens $ do
-    sPerm <- parens <$> showWPermanent perm
+  TapCost reqs -> yesParens $ do
     sReqs <- dollar <$> showRequirements reqs
-    pure $ pure "TapCost " <> sPerm <> sReqs
+    pure $ pure "TapCost" <> sReqs
 
 showCreatureTypes :: [CreatureType] -> EnvM ParenItems
 showCreatureTypes = noParens . pure . pure . fromString . show
@@ -867,11 +882,20 @@ showEffect = \case
   Sequence effects -> yesParens $ do
     sEffects <- dollar <$> showEffects effects
     pure $ pure "Sequence" <> sEffects
+  ShuffleLibrary player -> yesParens $ do
+    sPlayer <- dollar <$> showZoneObject player
+    pure $ pure "ShuffleLibrary" <> sPlayer
   StatDelta creature power toughness -> yesParens $ do
     sCreature <- parens <$> showZoneObject creature
     sPower <- parens <$> showPower power
     sToughness <- dollar <$> showToughness toughness
     pure $ pure "StatDelta " <> sCreature <> pure " " <> sPower <> sToughness
+  Tap obj -> yesParens $ do
+    sObj <- dollar <$> showZoneObject obj
+    pure $ pure "Tap" <> sObj
+  Untap obj -> yesParens $ do
+    sObj <- dollar <$> showZoneObject obj
+    pure $ pure "Untap" <> sObj
   Until electEvent effect -> yesParens $ do
     sElectEvent <- parens <$> showElect electEvent
     sEffect <- dollar <$> showEffect effect

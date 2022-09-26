@@ -18,8 +18,12 @@
 
 module MtgPure.Engine.Monad (
   Magic',
+  MagicEx',
+  MagicCont',
   runMagicRO,
   runMagicRW,
+  runMagicEx,
+  runMagicCont,
   magicThrow,
   magicCatch,
   modify,
@@ -36,6 +40,7 @@ module MtgPure.Engine.Monad (
   internalFromRW,
 ) where
 
+import safe qualified Control.Monad as M
 import safe Control.Monad.Access (
   AccessM (runAccessM),
   IsReadWrite (..),
@@ -95,6 +100,10 @@ instance (IsReadWrite rw) => MonadTrans (Magic' ex st v rw) where
     SRO -> MagicRO . lift . lift
     SRW -> MagicRW . lift . lift . lift
 
+type MagicEx' ex st ex' v rw m = ExceptT ex' (Magic' ex st v rw m)
+
+type MagicCont' ex st v rw m a = MagicEx' ex st (Magic' ex st v rw m a) v rw m
+
 magicThrow :: Monad m => ex -> Magic' ex st 'Private 'RW m b
 magicThrow ex = MagicRW $ throwE ex
 
@@ -117,6 +126,16 @@ runMagicRW st (MagicRW exceptM) =
       stateM = runAccessM accessM
       m = State.evalStateT stateM st
    in m
+
+runMagicEx :: (IsReadWrite rw, Monad m) => (Either ex' a -> b) -> MagicEx' ex st ex' v rw m a -> Magic' ex st v rw m b
+runMagicEx f = fmap f . runExceptT
+
+runMagicCont :: (IsReadWrite rw, Monad m) => (Either a b -> c) -> MagicCont' ex st v rw m a b -> Magic' ex st v rw m c
+runMagicCont f = M.join . runMagicEx g
+ where
+  g = \case
+    Left cont -> f . Left <$> cont
+    Right b -> pure $ f $ Right b
 
 -- XXX: Don't export this to keep Visbility and ReadWrite honest.
 liftState :: forall ex st v rw m a. (IsReadWrite rw, Monad m) => State.StateT st m a -> Magic' ex st v rw m a

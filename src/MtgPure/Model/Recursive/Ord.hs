@@ -633,8 +633,8 @@ ordCost x = case x of
             Just (perm2, reqs2) -> seqM [ordWPermanent perm1 perm2, ordRequirements reqs1 reqs2]
        in go reqs1 reqs2
     y -> compareIndexM x y
-  TapCost perm1 reqs1 -> \case
-    TapCost perm2 reqs2 ->
+  TapCost reqs1 -> \case
+    TapCost reqs2 ->
       let go ::
             forall zone1 zone2 ot1 ot2.
             IsZO zone1 ot1 =>
@@ -642,9 +642,9 @@ ordCost x = case x of
             [Requirement zone1 ot1] ->
             [Requirement zone2 ot2] ->
             EnvM Ordering
-          go _ _ = case cast (perm2, reqs2) of
+          go _ _ = case cast reqs2 of
             Nothing -> compareZoneOT @zone1 @zone2 @ot1 @ot2
-            Just (perm2, reqs2) -> seqM [ordWPermanent perm1 perm2, ordRequirements reqs1 reqs2]
+            Just reqs2 -> ordRequirements reqs1 reqs2
        in go reqs1 reqs2
     y -> compareIndexM x y
 
@@ -832,6 +832,9 @@ ordEffect x = case x of
   Sequence effects1 -> \case
     Sequence effects2 -> listM ordEffect effects1 effects2
     y -> compareIndexM x y
+  ShuffleLibrary player1 -> \case
+    ShuffleLibrary player2 -> ordZoneObject player1 player2
+    y -> compareIndexM x y
   StatDelta creature1 power1 toughness1 -> \case
     StatDelta creature2 power2 toughness2 ->
       seqM
@@ -839,6 +842,12 @@ ordEffect x = case x of
         , pure $ compare power1 power2
         , pure $ compare toughness1 toughness2
         ]
+    y -> compareIndexM x y
+  Tap victim1 -> \case
+    Tap victim2 -> ordZoneObject victim1 victim2
+    y -> compareIndexM x y
+  Untap victim1 -> \case
+    Untap victim2 -> ordZoneObject victim1 victim2
     y -> compareIndexM x y
   Until event1 effect1 -> \case
     Until event2 effect2 ->

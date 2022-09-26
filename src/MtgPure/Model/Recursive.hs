@@ -82,13 +82,14 @@ import safe MtgPure.Model.ObjectType.Kind (
   OTEnchantmentCreature,
   OTInstant,
   OTLand,
+  OTPermanent,
   OTPlaneswalker,
   OTPlayer,
   OTSorcery,
   OTSpell,
  )
 import safe MtgPure.Model.ObjectType.NonCreatureCard (WNonCreatureCard)
-import safe MtgPure.Model.ObjectType.Permanent (WPermanent)
+import safe MtgPure.Model.ObjectType.Permanent (CoPermanent, WPermanent)
 import safe MtgPure.Model.ObjectType.Spell (WSpell (..))
 import safe MtgPure.Model.Power (Power)
 import safe MtgPure.Model.PrePost (IsPrePost, PrePost (..))
@@ -351,7 +352,7 @@ data Cost (ot :: Type) :: Type where
   OrCosts :: [Cost ot] -> Cost ot
   PayLife :: Int -> Cost ot -- TODO: PositiveInt
   SacrificeCost :: IsZO 'ZBattlefield ot' => WPermanent ot' -> [Requirement 'ZBattlefield ot'] -> Cost ot
-  TapCost :: IsZO 'ZBattlefield ot' => WPermanent ot' -> [Requirement 'ZBattlefield ot'] -> Cost ot
+  TapCost :: (CoPermanent ot', IsZO 'ZBattlefield ot') => [Requirement 'ZBattlefield ot'] -> Cost ot
   deriving (Typeable)
 
 instance ConsIndex (Cost ot) where
@@ -385,7 +386,10 @@ data Effect (ef :: EffectType) :: Type where
   Sacrifice :: IsOT ot => WPermanent ot -> OPlayer -> [Requirement 'ZBattlefield ot] -> Effect 'OneShot
   SearchLibrary :: IsOT ot => WCard ot -> OPlayer -> WithLinkedObject 'ZLibrary (Elect 'Post (Effect 'OneShot)) ot -> Effect 'OneShot
   Sequence :: [Effect ef] -> Effect ef
+  ShuffleLibrary :: OPlayer -> Effect 'OneShot
   StatDelta :: OCreature -> Power -> Toughness -> Effect 'Continuous
+  Tap :: ZO 'ZBattlefield OTPermanent -> Effect 'OneShot
+  Untap :: ZO 'ZBattlefield OTPermanent -> Effect 'OneShot
   Until :: Elect 'Post Event OTPlayer -> Effect 'Continuous -> Effect 'Continuous
   deriving (Typeable)
 
@@ -408,8 +412,11 @@ instance ConsIndex (Effect ef) where
     Sacrifice{} -> 15
     SearchLibrary{} -> 16
     Sequence{} -> 17
-    StatDelta{} -> 18
-    Until{} -> 19
+    ShuffleLibrary{} -> 18
+    StatDelta{} -> 19
+    Tap{} -> 20
+    Untap{} -> 21
+    Until{} -> 22
 
 ----------------------------------------
 

@@ -13,7 +13,7 @@ module MtgPure (
 
 import safe MtgPure.AllCards
 import safe MtgPure.Cards
-import safe MtgPure.Engine hiding (dealDamage)
+import safe MtgPure.Engine hiding (satisfies)
 import safe MtgPure.Model
 import safe MtgPure.Model.ToObjectN.CodeGen (codeGenToObjectN)
 import safe MtgPure.ModelCombinators
