@@ -19,10 +19,10 @@ module MtgPure.Model.Battlefield (
 
 import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
-import safe MtgPure.Model.Recursive (Card)
+import safe MtgPure.Model.Recursive (AnyCard)
 import safe MtgPure.Model.Zone (Zone (..))
 import safe MtgPure.Model.ZoneObject (ZO)
 
 newtype Battlefield :: Type where
-  Battlefield :: [ZO 'ZBattlefield (Card ())] -> Battlefield
+  Battlefield :: [ZO 'ZBattlefield AnyCard] -> Battlefield
   deriving (Typeable)

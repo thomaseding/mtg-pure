@@ -23,10 +23,10 @@ import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.EffectType (EffectType (..))
 
 data AbilityType :: EffectType -> Type where
-  ActivatedAbility :: AbilityType 'OneShot
-  ManaAbility :: AbilityType 'OneShot
-  StaticAbility :: AbilityType 'Continuous
-  TriggeredAbility :: AbilityType 'OneShot
+  ATActivatedAbility :: AbilityType 'OneShot
+  ATManaAbility :: AbilityType 'OneShot
+  ATStaticAbility :: AbilityType 'Continuous
+  ATTriggeredAbility :: AbilityType 'OneShot
   deriving (Typeable)
 
 deriving instance Eq (AbilityType e)

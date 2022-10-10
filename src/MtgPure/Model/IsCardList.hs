@@ -24,30 +24,30 @@ module MtgPure.Model.IsCardList (
 ) where
 
 import safe qualified Data.List as List
-import safe MtgPure.Model.Recursive (Card)
+import safe MtgPure.Model.Recursive (AnyCard)
 import safe MtgPure.Model.Recursive.Ord ()
 
 class IsCardList cards where
-  toCardList :: [Card ()] -> cards
-  fromCardList :: cards -> [Card ()]
+  toCardList :: [AnyCard] -> cards
+  fromCardList :: cards -> [AnyCard]
 
-pushCard :: IsCardList cards => Card () -> cards -> cards
+pushCard :: IsCardList cards => AnyCard -> cards -> cards
 pushCard card cards = toCardList $ card : fromCardList cards
 
-popCard :: IsCardList cards => cards -> Maybe (Card (), cards)
+popCard :: IsCardList cards => cards -> Maybe (AnyCard, cards)
 popCard cards = case fromCardList cards of
   card : cards' -> Just (card, toCardList cards')
   [] -> Nothing
 
-containsCard :: IsCardList cards => Card () -> cards -> Bool
+containsCard :: IsCardList cards => AnyCard -> cards -> Bool
 containsCard card cards = card `elem` fromCardList cards
 
-removeCard :: IsCardList cards => Card () -> cards -> Maybe cards
+removeCard :: IsCardList cards => AnyCard -> cards -> Maybe cards
 removeCard card cards = case containsCard card cards of
   True -> Just $ toCardList $ List.delete card $ fromCardList cards
   False -> Nothing
 
-cardAtIndex :: IsCardList cards => cards -> Int -> Maybe (Card ())
+cardAtIndex :: IsCardList cards => cards -> Int -> Maybe AnyCard
 cardAtIndex cards i = case i < length cards' of
   True -> Just $ cards' !! i
   False -> Nothing

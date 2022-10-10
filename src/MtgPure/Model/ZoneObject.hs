@@ -23,31 +23,30 @@ module MtgPure.Model.ZoneObject (
   IsZO,
   ZO,
   ZoneObject (..),
-  OAbility,
-  OActivatedAbility,
-  OActivatedOrTriggeredAbility,
-  OAny,
-  OArtifact,
-  OArtifactCreature,
-  OCard,
-  OCreature,
-  OCreaturePlaneswalker,
-  OCreaturePlayer,
-  OCreaturePlayerPlaneswalker,
-  ODamageSource,
-  OEmblem,
-  OEnchantment,
-  OInstant,
-  OLand,
-  ONonCreature,
-  OPermanent,
-  OPlaneswalker,
-  OPlayer,
-  OPlayerPlaneswalker,
-  OSorcery,
-  OSpell,
-  OStaticAbility,
-  OTriggeredAbility,
+  ZOAbility,
+  ZOActivatedAbility,
+  ZOActivatedOrTriggeredAbility,
+  ZOAny,
+  ZOArtifact,
+  ZOArtifactCreature,
+  ZOCard,
+  ZOCreature,
+  ZOCreaturePlaneswalker,
+  ZOCreaturePlayer,
+  ZOCreaturePlayerPlaneswalker,
+  ZOEmblem,
+  ZOEnchantment,
+  ZOInstant,
+  ZOLand,
+  ZONonCreature,
+  ZOPermanent,
+  ZOPlaneswalker,
+  ZOPlayer,
+  ZOPlayerPlaneswalker,
+  ZOSorcery,
+  ZOSpell,
+  ZOStaticAbility,
+  ZOTriggeredAbility,
   zoToObjectN,
 ) where
 
@@ -70,7 +69,6 @@ import safe MtgPure.Model.ObjectType.Kind (
   OTCreaturePlaneswalker,
   OTCreaturePlayer,
   OTCreaturePlayerPlaneswalker,
-  OTDamageSource,
   OTEmblem,
   OTEnchantment,
   OTInstant,
@@ -133,54 +131,52 @@ type IsZO (zone :: Zone) (ot :: Type) =
   --, Show (ZO zone ot)
   )
 
-type OAny = ZO 'ZBattlefield OTAny
+type ZOAny = ZO 'ZBattlefield OTAny
 
-type OAbility = ZO 'ZBattlefield OTAbility
+type ZOAbility = ZO 'ZBattlefield OTAbility
 
-type OActivatedAbility = ZO 'ZBattlefield OTActivatedAbility
+type ZOActivatedAbility = ZO 'ZBattlefield OTActivatedAbility
 
-type OActivatedOrTriggeredAbility =
+type ZOActivatedOrTriggeredAbility =
   ZO 'ZBattlefield OTActivatedOrTriggeredAbility
 
-type OArtifact = ZO 'ZBattlefield OTArtifact
+type ZOArtifact = ZO 'ZBattlefield OTArtifact
 
-type OArtifactCreature = ZO 'ZBattlefield OTArtifactCreature
+type ZOArtifactCreature = ZO 'ZBattlefield OTArtifactCreature
 
-type OCard = ZO 'ZBattlefield OTCard
+type ZOCard = ZO 'ZBattlefield OTCard
 
-type OCreature = ZO 'ZBattlefield OTCreature
+type ZOCreature = ZO 'ZBattlefield OTCreature
 
-type OCreaturePlaneswalker = ZO 'ZBattlefield OTCreaturePlaneswalker
+type ZOCreaturePlaneswalker = ZO 'ZBattlefield OTCreaturePlaneswalker
 
-type OCreaturePlayer = ZO 'ZBattlefield OTCreaturePlayer
+type ZOCreaturePlayer = ZO 'ZBattlefield OTCreaturePlayer
 
-type OCreaturePlayerPlaneswalker =
+type ZOCreaturePlayerPlaneswalker =
   ZO 'ZBattlefield OTCreaturePlayerPlaneswalker
 
-type ODamageSource = ZO 'ZBattlefield OTDamageSource
+type ZOEmblem = ZO 'ZBattlefield OTEmblem
 
-type OEmblem = ZO 'ZBattlefield OTEmblem
+type ZOEnchantment = ZO 'ZBattlefield OTEnchantment
 
-type OEnchantment = ZO 'ZBattlefield OTEnchantment
+type ZOInstant = ZO 'ZBattlefield OTInstant
 
-type OInstant = ZO 'ZBattlefield OTInstant
+type ZOLand = ZO 'ZBattlefield OTLand
 
-type OLand = ZO 'ZBattlefield OTLand
+type ZONonCreature = ZO 'ZBattlefield OTNonCreature
 
-type ONonCreature = ZO 'ZBattlefield OTNonCreature
+type ZOPermanent = ZO 'ZBattlefield OTPermanent
 
-type OPermanent = ZO 'ZBattlefield OTPermanent
+type ZOPlaneswalker = ZO 'ZBattlefield OTPlaneswalker
 
-type OPlaneswalker = ZO 'ZBattlefield OTPlaneswalker
+type ZOPlayer = ZO 'ZBattlefield OTPlayer
 
-type OPlayer = ZO 'ZBattlefield OTPlayer
+type ZOPlayerPlaneswalker = ZO 'ZBattlefield OTPlayerPlaneswalker
 
-type OPlayerPlaneswalker = ZO 'ZBattlefield OTPlayerPlaneswalker
+type ZOSorcery = ZO 'ZBattlefield OTSorcery
 
-type OSorcery = ZO 'ZBattlefield OTSorcery
+type ZOSpell = ZO 'ZBattlefield OTSpell
 
-type OSpell = ZO 'ZBattlefield OTSpell
+type ZOStaticAbility = ZO 'ZBattlefield OTStaticAbility
 
-type OStaticAbility = ZO 'ZBattlefield OTStaticAbility
-
-type OTriggeredAbility = ZO 'ZBattlefield OTTriggeredAbility
+type ZOTriggeredAbility = ZO 'ZBattlefield OTTriggeredAbility

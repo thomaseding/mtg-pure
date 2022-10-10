@@ -37,7 +37,7 @@ import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.Object (Object, ObjectType (..))
 import safe MtgPure.Model.ObjectType.Card (WCard)
 import safe MtgPure.Model.ObjectType.Kind (OTLand, OTPermanent, OTSpell)
-import safe MtgPure.Model.Recursive (ActivatedAbility, Card, SomeCard)
+import safe MtgPure.Model.Recursive (AnyCard, SomeCard, WithThisActivated)
 import safe MtgPure.Model.Recursive.Ord ()
 import safe MtgPure.Model.Recursive.Show ()
 import safe MtgPure.Model.Zone (IsZone, Zone (..))
@@ -80,14 +80,14 @@ data Prompt' (opaqueGameState :: (Type -> Type) -> Type) (m :: Type -> Type) = P
   , promptCastSpell :: opaqueGameState m -> Object 'OTPlayer -> m (Maybe CastSpell)
   , promptDebugMessage :: String -> m ()
   , promptGetStartingPlayer :: PlayerCount -> m PlayerIndex
-  , promptPerformMulligan :: Object 'OTPlayer -> [Card ()] -> m Bool -- TODO: Encode limited game state about players' mulligan states and [Serum Powder].
+  , promptPerformMulligan :: Object 'OTPlayer -> [AnyCard] -> m Bool -- TODO: Encode limited game state about players' mulligan states and [Serum Powder].
   , promptPickZO :: forall zone ot. IsZO zone ot => Object 'OTPlayer -> [ZO zone ot] -> m (ZO zone ot)
   , promptPlayLand :: opaqueGameState m -> Object 'OTPlayer -> m (Maybe PlayLand)
   , promptShuffle :: CardCount -> Object 'OTPlayer -> m [CardIndex]
   }
 
 data ActivateAbility :: Type where
-  ActivateAbility :: WCard ot -> ZO zone ot -> ActivatedAbility zone ot -> ActivateAbility
+  ActivateAbility :: IsZO zone ot => WCard ot -> ZO zone ot -> WithThisActivated zone ot -> ActivateAbility
 
 -- NB (305.9): Lands + other types can never be cast
 -- Unfortuantely OTSpell intersects OTArtifactLand. Such is life.

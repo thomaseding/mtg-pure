@@ -81,11 +81,10 @@ import safe MtgPure.Model.Permanent (Permanent)
 import safe MtgPure.Model.PhaseStep (PhaseStep (..))
 import safe MtgPure.Model.Player (Player (..))
 import safe MtgPure.Model.PrePost (PrePost (..))
-import safe MtgPure.Model.Recursive (Card, CardTypeDef, Cost, Effect, Elect, Requirement)
+import safe MtgPure.Model.Recursive (AnyCard, Card, CardFacet, Cost, Effect, Elect, Requirement)
 import safe MtgPure.Model.Sideboard (Sideboard)
 import safe MtgPure.Model.Stack (Stack (..))
 import safe MtgPure.Model.Step (Step (..))
-import safe MtgPure.Model.Tribal (IsTribal, Tribal (..))
 import safe MtgPure.Model.Zone (Zone (..))
 import safe MtgPure.Model.ZoneObject (IsZO, ZO)
 
@@ -106,68 +105,66 @@ type Pending = PendingReady 'Pre
 
 type Ready = PendingReady 'Post
 
-data Elected (pCost :: PrePost) (pEffect :: PrePost) (mTribal :: Maybe Tribal) (ot :: Type) :: Type where
+data Elected (pEffect :: PrePost) (ot :: Type) :: Type where
   ElectedActivatedAbility ::
     IsZO zone ot =>
     { electedActivatedAbility_controller :: Object 'OTPlayer
     , electedActivatedAbility_this :: ZO zone ot
-    , electedActivatedAbility_cost :: PendingReady pCost (Cost ot) ot
+    , electedActivatedAbility_cost :: Cost ot
     , electedActivatedAbility_effect :: PendingReady pEffect (Effect 'OneShot) ot
     } ->
-    Elected pCost pEffect 'Nothing ot
+    Elected pEffect ot
   ElectedInstant ::
-    IsTribal tribal =>
     { electedInstant_controller :: Object 'OTPlayer
     , electedInstant_card :: Card OTInstant
-    , electedInstant_def :: CardTypeDef tribal OTInstant
-    , electedInstant_cost :: PendingReady pCost (Cost OTInstant) OTInstant
+    , electedInstant_facet :: CardFacet OTInstant
+    , electedInstant_cost :: Cost OTInstant
     , electedInstant_effect :: PendingReady pEffect (Effect 'OneShot) OTInstant
     } ->
-    Elected pCost pEffect ( 'Just tribal) OTInstant
+    Elected pEffect OTInstant
   ElectedSorcery ::
-    IsTribal tribal =>
     { electedSorcery_controller :: Object 'OTPlayer
     , electedSorcery_card :: Card OTSorcery
-    , electedSorcery_def :: CardTypeDef tribal OTSorcery
-    , electedSorcery_cost :: PendingReady pCost (Cost OTSorcery) OTSorcery
+    , electedSorcery_facet :: CardFacet OTSorcery
+    , electedSorcery_cost :: Cost OTSorcery
     , electedSorcery_effect :: PendingReady pEffect (Effect 'OneShot) OTSorcery
     } ->
-    Elected pCost pEffect ( 'Just tribal) OTSorcery
+    Elected pEffect OTSorcery
   deriving (Typeable)
 
-electedObject_controller :: Elected pCost pEffect tribal ot -> Object 'OTPlayer
+electedObject_controller :: Elected pEffect ot -> Object 'OTPlayer
 electedObject_controller elected = ($ elected) $ case elected of
   ElectedActivatedAbility{} -> electedActivatedAbility_controller
   ElectedInstant{} -> electedInstant_controller
   ElectedSorcery{} -> electedSorcery_controller
 
-electedObject_cost :: Elected pCost pEffect tribal ot -> PendingReady pCost (Cost ot) ot
+electedObject_cost :: Elected pEffect ot -> Cost ot
 electedObject_cost elected = ($ elected) $ case elected of
   ElectedActivatedAbility{} -> electedActivatedAbility_cost
   ElectedInstant{} -> electedInstant_cost
   ElectedSorcery{} -> electedSorcery_cost
 
-electedObject_effect :: Elected pCost pEffect mTribal ot -> PendingReady pEffect (Effect 'OneShot) ot
+electedObject_effect :: Elected pEffect ot -> PendingReady pEffect (Effect 'OneShot) ot
 electedObject_effect elected = ($ elected) $ case elected of
   ElectedActivatedAbility{} -> electedActivatedAbility_effect
   ElectedInstant{} -> electedInstant_effect
   ElectedSorcery{} -> electedSorcery_effect
 
-data AnyElected (pCost :: PrePost) (pEffect :: PrePost) (mTribal :: Maybe Tribal) :: Type where
-  AnyElected :: Elected pCost pEffect mTribal ot -> AnyElected pCost pEffect mTribal
+data AnyElected (pEffect :: PrePost) :: Type where
+  AnyElected :: Elected pEffect ot -> AnyElected pEffect
   deriving (Typeable)
 
-data StackEntry (mTribal :: Maybe Tribal) = StackEntry
+data StackEntry = StackEntry
   { stackEntryTargets :: [TargetId]
-  , stackEntryElected :: AnyElected 'Post 'Pre mTribal
+  , stackEntryElected :: AnyElected 'Pre
   }
 
 data GameState (m :: Type -> Type) where
   GameState ::
     { magicCurrentTurn :: Int
     , magicFwd :: Fwd m
-    , magicGraveyardCards :: Map.Map (ZO 'ZGraveyard OT0) (Card ())
-    , magicHandCards :: Map.Map (ZO 'ZHand OT0) (Card ())
+    , magicGraveyardCards :: Map.Map (ZO 'ZGraveyard OT0) AnyCard
+    , magicHandCards :: Map.Map (ZO 'ZHand OT0) AnyCard
     , magicManaBurn :: Bool
     , magicNextObjectDiscriminant :: ObjectDiscriminant
     , magicNextObjectId :: ObjectId
@@ -179,9 +176,7 @@ data GameState (m :: Type -> Type) where
     , magicPlayerOrderTurn :: Stream.Stream (Object 'OTPlayer) -- does not contain losers
     , magicPrompt :: Prompt m
     , magicStack :: Stack
-    , magicStackEntryAbilityMap :: Map.Map (ZO 'ZStack OT0) (StackEntry 'Nothing)
-    , magicStackEntryNonTribalMap :: Map.Map (ZO 'ZStack OT0) (StackEntry ( 'Just 'NonTribal))
-    , magicStackEntryTribalMap :: Map.Map (ZO 'ZStack OT0) (StackEntry ( 'Just 'Tribal))
+    , magicStackEntryMap :: Map.Map (ZO 'ZStack OT0) StackEntry
     , magicStartingPlayer :: Object 'OTPlayer
     , magicTargetProperties :: Map.Map TargetId AnyRequirement
     } ->
@@ -265,9 +260,7 @@ mkGameState fwd input = case playerObjects of
         , magicPlayerOrderTurn = Stream.cycle playerObjects
         , magicPrompt = gameInput_prompt input
         , magicStack = Stack []
-        , magicStackEntryAbilityMap = mempty
-        , magicStackEntryNonTribalMap = mempty
-        , magicStackEntryTribalMap = mempty
+        , magicStackEntryMap = mempty
         , magicStartingPlayer = oPlayer
         , magicTargetProperties = mempty
         }

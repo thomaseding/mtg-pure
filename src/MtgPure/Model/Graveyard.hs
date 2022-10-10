@@ -19,10 +19,10 @@ module MtgPure.Model.Graveyard (
 
 import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
-import safe MtgPure.Model.Recursive (Card)
+import safe MtgPure.Model.Recursive (AnyCard)
 import safe MtgPure.Model.Zone (Zone (..))
 import safe MtgPure.Model.ZoneObject (ZO)
 
 newtype Graveyard :: Type where
-  Graveyard :: [ZO 'ZGraveyard (Card ())] -> Graveyard
+  Graveyard :: [ZO 'ZGraveyard AnyCard] -> Graveyard
   deriving (Typeable)

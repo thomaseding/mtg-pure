@@ -53,13 +53,13 @@ import safe MtgPure.Model.Mana (Snow (..))
 import safe MtgPure.Model.ManaPool (CompleteManaPool (..), ManaPool (..))
 import safe MtgPure.Model.Object (Object, ObjectType (..))
 import safe MtgPure.Model.ObjectId (GetObjectId (..))
-import safe MtgPure.Model.ObjectType.Kind (OTPermanent)
+import safe MtgPure.Model.ObjectType.Kind (OTDamageSource, OTPermanent)
 import safe MtgPure.Model.Permanent (Permanent (..), Tapped (..))
 import safe MtgPure.Model.Player (Player (..))
 import safe MtgPure.Model.Recursive (Effect (..))
 import safe MtgPure.Model.Variable (forceVars)
 import safe MtgPure.Model.Zone (Zone (..))
-import safe MtgPure.Model.ZoneObject (OCreaturePlayerPlaneswalker, ODamageSource, OPlayer, ZO)
+import safe MtgPure.Model.ZoneObject (ZO, ZOCreaturePlayerPlaneswalker, ZOPlayer)
 import safe MtgPure.Model.ZoneObject.Convert (toZO0, zo0ToPermanent, zo1ToO)
 
 enactImpl :: Monad m => Effect 'OneShot -> Magic 'Private 'RW m ()
@@ -74,7 +74,7 @@ enactImpl = \case
   Untap oPerm -> M.void $ untap' oPerm
   _ -> undefined
 
-addMana' :: Monad m => OPlayer -> ManaPool 'NonSnow -> Magic 'Private 'RW m ()
+addMana' :: Monad m => ZOPlayer -> ManaPool 'NonSnow -> Magic 'Private 'RW m ()
 addMana' oPlayer mana =
   fromRO (findPlayer $ zo1ToO oPlayer) >>= \case
     Nothing -> pure ()
@@ -84,8 +84,8 @@ addMana' oPlayer mana =
 
 dealDamage' ::
   Monad m =>
-  ODamageSource ->
-  OCreaturePlayerPlaneswalker ->
+  ZO zone OTDamageSource ->
+  ZOCreaturePlayerPlaneswalker ->
   Damage var ->
   Magic 'Private 'RW m ()
 dealDamage' _oSource oVictim (forceVars -> Damage damage) = do

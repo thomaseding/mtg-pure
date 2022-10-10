@@ -60,10 +60,10 @@ import safe MtgPure.Cards (
   wastes,
   wrathOfGod,
  )
-import safe MtgPure.Model.Recursive (Card, Token)
+import safe MtgPure.Model.Recursive (AnyCard, AnyToken)
 import safe MtgPure.ModelCombinators (ToCard (..), ToToken (..))
 
-allCards :: [Card ()]
+allCards :: [AnyCard]
 allCards =
   [ toCard acceptableLosses
   , toCard allIsDust
@@ -103,5 +103,5 @@ allCards =
   , toCard wrathOfGod
   ]
 
-allTokens :: [Token ()]
+allTokens :: [AnyToken]
 allTokens = [toToken birdToken, toToken soldierToken]

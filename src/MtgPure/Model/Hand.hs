@@ -21,12 +21,12 @@ module MtgPure.Model.Hand (
 import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.IsCardList (IsCardList (..))
-import safe MtgPure.Model.Recursive (Card)
+import safe MtgPure.Model.Recursive (AnyCard)
 
 newtype Hand :: Type where
   -- NB: No need for ZO/ObjectN/Object ID here since cards in this zone are guaranteed to be stateless.
   Hand ::
-    { unHand :: [Card ()]
+    { unHand :: [AnyCard]
     } ->
     Hand
   deriving (Typeable)

@@ -24,6 +24,8 @@ module MtgPure.Engine.Legality (
   Legality (..),
   toLegality,
   fromLegality,
+  maybeToLegality,
+  legalityToMaybe,
 ) where
 
 import safe Data.Typeable (Typeable)
@@ -42,3 +44,13 @@ fromLegality :: Legality -> Bool
 fromLegality = \case
   Legal -> True
   Illegal -> False
+
+maybeToLegality :: Maybe () -> Legality
+maybeToLegality = \case
+  Nothing -> Illegal
+  Just () -> Legal
+
+legalityToMaybe :: Legality -> Maybe ()
+legalityToMaybe = \case
+  Illegal -> Nothing
+  Legal -> Just ()

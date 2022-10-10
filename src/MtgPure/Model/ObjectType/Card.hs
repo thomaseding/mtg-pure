@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -25,9 +26,8 @@ module MtgPure.Model.ObjectType.Card (
 
 import safe Data.Inst (Inst2, Inst3)
 import safe Data.Kind (Type)
-import safe Data.Proxy (Proxy)
 import safe Data.Typeable (Typeable)
-import safe MtgPure.Model.CardType (CardType (..))
+import safe MtgPure.Model.CardType (CardType (..), ObjectTypeToCardType, SCardType (..))
 import safe MtgPure.Model.Object (
   IsObjectType,
   OT1,
@@ -75,8 +75,9 @@ data CardVisitor zone z = CardVisitor
   deriving (Typeable)
 
 class IsObjectType a => IsCardType a where
-  singCardType :: Proxy a -> CardType
-  singCard :: Proxy a -> WCard (OT1 a)
+  litCardType :: CardType
+  singCardType :: SCardType (ObjectTypeToCardType a)
+  singCard :: WCard (OT1 a)
   visitCard :: CardVisitor zone z -> WCard (OT1 a) -> ZO zone (OT1 a) -> z
 
 visitCard' ::
@@ -88,38 +89,45 @@ visitCard' ::
 visitCard' f = visitCard $ CardVisitor f f f f f f f
 
 instance IsCardType 'OTArtifact where
-  singCardType _ = CTArtifact
-  singCard _ = WCardArtifact
+  litCardType = CTArtifact
+  singCardType = SCTArtifact
+  singCard = WCardArtifact
   visitCard v _ = visitCArtifact v
 
 instance IsCardType 'OTCreature where
-  singCardType _ = CTEnchantment
-  singCard _ = WCardCreature
+  litCardType = CTCreature
+  singCardType = SCTCreature
+  singCard = WCardCreature
   visitCard v _ = visitCCreature v
 
 instance IsCardType 'OTEnchantment where
-  singCardType _ = CTEnchantment
-  singCard _ = WCardEnchantment
+  litCardType = CTEnchantment
+  singCardType = SCTEnchantment
+  singCard = WCardEnchantment
   visitCard v _ = visitCEnchantment v
 
 instance IsCardType 'OTInstant where
-  singCardType _ = CTInstant
-  singCard _ = WCardInstant
+  litCardType = CTInstant
+  singCardType = SCTInstant
+  singCard = WCardInstant
   visitCard v _ = visitCInstant v
 
 instance IsCardType 'OTLand where
-  singCardType _ = CTLand
-  singCard _ = WCardLand
+  litCardType = CTLand
+  singCardType = SCTLand
+  singCard = WCardLand
   visitCard v _ = visitCLand v
 
 instance IsCardType 'OTPlaneswalker where
-  singCardType _ = CTPlaneswalker
-  singCard _ = WCardPlaneswalker
+  litCardType = CTPlaneswalker
+  singCardType = SCTPlaneswalker
+  singCard = WCardPlaneswalker
   visitCard v _ = visitCPlaneswalker v
 
 instance IsCardType 'OTSorcery where
-  singCardType _ = CTSorcery
-  singCard _ = WCardSorcery
+  litCardType = CTSorcery
+  singCardType = SCTSorcery
+  singCard = WCardSorcery
   visitCard v _ = visitCSorcery v
 
 class IsOT ot => CoCard ot where

@@ -69,7 +69,7 @@ import safe MtgPure.Model.ObjectType.Kind (OTLand)
 import safe MtgPure.Model.Permanent (cardToPermanent)
 import safe MtgPure.Model.PhaseStep (PhaseStep (..))
 import safe MtgPure.Model.Player (Player (..))
-import safe MtgPure.Model.Recursive (Card (..))
+import safe MtgPure.Model.Recursive (AnyCard (..), Card (..), IsSpecificCard (singSpecificCard), SpecificCard (..))
 import safe MtgPure.Model.Stack (Stack (..))
 import safe MtgPure.Model.Zone (IsZone (..), SZone (..))
 import safe MtgPure.Model.ZoneObject (ZO)
@@ -154,7 +154,7 @@ playLandZO oPlayer oLand = do
         lift $ exceptionInvalidPlayLand prompt opaque oPlayer $ ex oLand
         pure Illegal
       --
-      success :: Card () -> Magic 'Private 'RW m ()
+      success :: AnyCard -> Magic 'Private 'RW m ()
       success card = do
         setPlayer
           oPlayer
@@ -166,10 +166,30 @@ playLandZO oPlayer oLand = do
             }
         i <- newObjectId
         let oLand' = zo0ToPermanent $ toZO0 i
-            perm = case cardToPermanent oPlayer card of
+            perm = case cardToPermanent oPlayer (undefined card) undefined of -- FIXME
               Nothing -> error $ show ExpectedCardToBeAPermanentCard
               Just perm' -> perm'
         setPermanent oLand' perm
+
+      goCard :: forall ot. IsSpecificCard ot => Card ot -> Magic 'Private 'RW m Legality
+      goCard card = case singSpecificCard @ot of
+        ArtifactCard{} -> invalid PlayLand_NotALand
+        ArtifactCreatureCard{} -> invalid PlayLand_NotALand
+        CreatureCard{} -> invalid PlayLand_NotALand
+        EnchantmentCard{} -> invalid PlayLand_NotALand
+        EnchantmentCreatureCard{} -> invalid PlayLand_NotALand
+        InstantCard{} -> invalid PlayLand_NotALand
+        PlaneswalkerCard{} -> invalid PlayLand_NotALand
+        SorceryCard{} -> invalid PlayLand_NotALand
+        --
+        LandCard{} -> goLand card
+        ArtifactLandCard{} -> goLand card
+
+      goLand :: forall ot. IsSpecificCard ot => Card ot -> Magic 'Private 'RW m Legality
+      goLand card = do
+        success $ AnyCard card
+        pure Legal
+
   case reqs of
     PlayLandReqs{playLandReqs_hasPriority = False} -> invalid PlayLand_NoPriority
     PlayLandReqs{playLandReqs_isActive = False} -> invalid PlayLand_NotActive
@@ -192,17 +212,9 @@ playLandZO oPlayer oLand = do
           mCard <- fromRO $ gets $ Map.lookup (toZO0 oLand) . magicHandCards
           case mCard of
             Nothing -> invalid PlayLand_NotInZone
-            Just card -> do
-              case containsCard card hand of
+            Just anyCard -> do
+              case containsCard anyCard hand of
                 False -> invalid PlayLand_NotOwned
-                True -> case card of
-                  ArtifactCard{} -> invalid PlayLand_NotALand
-                  ArtifactCreatureCard{} -> invalid PlayLand_NotALand
-                  CreatureCard{} -> invalid PlayLand_NotALand
-                  EnchantmentCard{} -> invalid PlayLand_NotALand
-                  EnchantmentCreatureCard{} -> invalid PlayLand_NotALand
-                  InstantCard{} -> invalid PlayLand_NotALand
-                  PlaneswalkerCard{} -> invalid PlayLand_NotALand
-                  SorceryCard{} -> invalid PlayLand_NotALand
-                  --
-                  LandCard{} -> success card >> pure Legal
+                True -> case anyCard of
+                  AnyCard card -> case card of
+                    Card{} -> goCard card

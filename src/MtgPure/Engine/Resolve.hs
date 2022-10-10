@@ -9,7 +9,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE Safe #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
@@ -43,13 +42,12 @@ import safe MtgPure.Engine.State (
   electedObject_effect,
  )
 import safe MtgPure.Model.EffectType (EffectType (..))
-import safe MtgPure.Model.ObjectType.Kind (OTActivatedOrTriggeredAbility, OTSpell)
+import safe MtgPure.Model.Object (OT0)
 import safe MtgPure.Model.PrePost (PrePost (..))
 import safe MtgPure.Model.Recursive (Effect (..), Elect (..))
 import safe MtgPure.Model.Stack (Stack (..), StackObject (..))
-import safe MtgPure.Model.Tribal (IsMaybeTribal, IsTribal, MaybeTribalToOT)
 import safe MtgPure.Model.Zone (Zone (..))
-import safe MtgPure.Model.ZoneObject (IsOT, ZO)
+import safe MtgPure.Model.ZoneObject (ZO)
 import safe MtgPure.Model.ZoneObject.Convert (toZO0)
 
 resolveTopOfStackImpl :: Monad m => Magic 'Private 'RW m ()
@@ -65,40 +63,29 @@ resolveTopOfStackImpl = do
 
 resolveStackObject :: forall m. Monad m => StackObject -> Magic 'Private 'RW m ()
 resolveStackObject = \case
-  StackAbility zoAbility -> resolveAbility zoAbility
-  StackSpell zoSpell -> resolveSpell zoSpell
+  StackAbility zoAbility -> resolve $ toZO0 zoAbility
+  StackSpell zoSpell -> resolve $ toZO0 zoSpell
  where
-  resolveAbility :: ZO 'ZStack OTActivatedOrTriggeredAbility -> Magic 'Private 'RW m ()
-  resolveAbility zoAbility = do
-    let go :: AnyElected 'Post 'Pre 'Nothing -> Magic 'Private 'RW m ()
-        go (AnyElected elected) = resolveElected zoAbility elected
+  resolve :: ZO 'ZStack OT0 -> Magic 'Private 'RW m ()
+  resolve zoStack = do
+    let go :: AnyElected 'Pre -> Magic 'Private 'RW m ()
+        go (AnyElected elected) = resolveElected zoStack elected
     st <- fromRO get
-    case Map.lookup (toZO0 zoAbility) $ magicStackEntryAbilityMap st of
+    case Map.lookup zoStack $ magicStackEntryMap st of
       Nothing -> error $ show NotSureWhatThisEntails
       Just entry -> go $ stackEntryElected entry
 
-  resolveSpell :: ZO 'ZStack OTSpell -> Magic 'Private 'RW m ()
-  resolveSpell zoSpell = do
-    let go :: IsTribal tribal => AnyElected 'Post 'Pre ( 'Just tribal) -> Magic 'Private 'RW m ()
-        go (AnyElected elected) = resolveElected zoSpell elected
-    st <- fromRO get
-    case Map.lookup (toZO0 zoSpell) $ magicStackEntryNonTribalMap st of
-      Nothing -> case Map.lookup (toZO0 zoSpell) $ magicStackEntryTribalMap st of
-        Nothing -> error $ show NotSureWhatThisEntails
-        Just entry -> go $ stackEntryElected entry
-      Just entry -> go $ stackEntryElected entry
-
 resolveElected ::
-  forall mTribal ot m.
-  (Monad m, IsMaybeTribal mTribal, IsOT (MaybeTribalToOT mTribal)) =>
-  ZO 'ZStack (MaybeTribalToOT mTribal) ->
-  Elected 'Post 'Pre mTribal ot ->
+  forall ot m.
+  Monad m =>
+  ZO 'ZStack OT0 ->
+  Elected 'Pre ot ->
   Magic 'Private 'RW m ()
 resolveElected zoStack elected = do
-  let goElectEffect :: Monad m => Elect 'Post (Effect 'OneShot) ot -> Magic 'Private 'RW m ()
-      goElectEffect = M.void . performElections @mTribal andM (toZO0 zoStack) goEffect
+  let goElectEffect :: Elect 'Post (Effect 'OneShot) ot -> Magic 'Private 'RW m ()
+      goElectEffect = M.void . performElections andM zoStack goEffect
 
-      goEffect :: Monad m => Effect 'OneShot -> Magic 'Private 'RW m (Maybe Void)
+      goEffect :: Effect 'OneShot -> Magic 'Private 'RW m (Maybe Void)
       goEffect = fmap (const Nothing) . enact
   goElectEffect $ unPending $ electedObject_effect elected
   pure () -- TODO: GC stack stuff

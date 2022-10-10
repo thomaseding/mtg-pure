@@ -120,7 +120,6 @@ payTapCost oPlayer req =
           pure $ case zo `elem` zos of
             False -> Nothing
             True -> Just zo
-      --tap' (zo0ToPermanent $ toZO0 zo) <&> toLegality
       let oPerm = zo0ToPermanent $ toZO0 zo
       enact $ Tap oPerm
       fromRO $ satisfies oPerm isTapped <&> toLegality

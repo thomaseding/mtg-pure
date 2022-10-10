@@ -37,7 +37,6 @@ import safe MtgPure.Model.ObjectType.Kind (OTPermanent)
 import safe MtgPure.Model.Permanent (Permanent)
 import safe MtgPure.Model.Player (Player)
 import safe MtgPure.Model.Recursive (Case, Cost, Effect, Elect, Requirement)
-import safe MtgPure.Model.Tribal (IsMaybeTribal, SMaybeTribal)
 import safe MtgPure.Model.Zone (Zone (..))
 import safe MtgPure.Model.ZoneObject (IsZO, ZO)
 
@@ -65,9 +64,8 @@ data Fwd' ex st m where
     , fwd_newObjectId :: Magic' ex st 'Private 'RW m ObjectId
     , fwd_pay :: forall ot. Object 'OTPlayer -> Cost ot -> Magic' ex st 'Private 'RW m Legality
     , fwd_performElections ::
-        forall mTribal ot p el x.
-        (IsMaybeTribal mTribal, AndLike (Maybe x)) =>
-        SMaybeTribal mTribal ->
+        forall ot p el x.
+        AndLike (Maybe x) =>
         ([Magic' ex st 'Private 'RW m (Maybe x)] -> Magic' ex st 'Private 'RW m (Maybe x)) ->
         ZO 'ZStack OT0 ->
         (el -> Magic' ex st 'Private 'RW m (Maybe x)) ->

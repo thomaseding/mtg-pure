@@ -8,7 +8,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE Safe #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
@@ -84,7 +83,6 @@ import safe MtgPure.Model.Recursive (
   Elect,
   Requirement,
  )
-import safe MtgPure.Model.Tribal (IsMaybeTribal (singMaybeTribal))
 import safe MtgPure.Model.Zone (Zone (..))
 import safe MtgPure.Model.ZoneObject (IsZO, ZO)
 
@@ -105,6 +103,11 @@ fwd2 :: (IsReadWrite rw, Monad m) => (Fwd m -> (a -> b -> Magic v rw m z)) -> a 
 fwd2 go a b = do
   fwd <- getFwd
   go fwd a b
+
+fwd4 :: (IsReadWrite rw, Monad m) => (Fwd m -> (a -> b -> c -> d -> Magic v rw m z)) -> a -> b -> c -> d -> Magic v rw m z
+fwd4 go a b c d = do
+  fwd <- getFwd
+  go fwd a b c d
 
 activateAbility :: forall m. Monad m => Object 'OTPlayer -> ActivateAbility -> Magic 'Private 'RW m Legality
 activateAbility = fwd2 fwd_activateAbility
@@ -163,16 +166,14 @@ pay :: Monad m => Object 'OTPlayer -> Cost ot -> Magic 'Private 'RW m Legality
 pay = fwd2 fwd_pay
 
 performElections ::
-  forall mTribal ot m p el x.
-  (IsMaybeTribal mTribal, Monad m, AndLike (Maybe x)) =>
+  forall ot m p el x.
+  (Monad m, AndLike (Maybe x)) =>
   ([Magic 'Private 'RW m (Maybe x)] -> Magic 'Private 'RW m (Maybe x)) ->
   ZO 'ZStack OT0 ->
   (el -> Magic 'Private 'RW m (Maybe x)) ->
   Elect p el ot ->
   Magic 'Private 'RW m (Maybe x)
-performElections seqM zoStack goTerm elect = do
-  fwd <- getFwd
-  fwd_performElections fwd (singMaybeTribal @mTribal) seqM zoStack goTerm elect
+performElections = fwd4 fwd_performElections
 
 playLand :: Monad m => Object 'OTPlayer -> PlayLand -> Magic 'Private 'RW m Legality
 playLand = fwd2 fwd_playLand

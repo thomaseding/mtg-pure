@@ -10,7 +10,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE Safe #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
@@ -41,43 +40,51 @@ import safe MtgPure.Model.Object (
   pattern DefaultObjectDiscriminant,
  )
 import safe MtgPure.Model.ObjectId (GetObjectId (..))
-import safe MtgPure.Model.PrePost (PrePost (..))
-import safe MtgPure.Model.Recursive (Effect (..), Elect (..), Requirement (..), WithMaskedObject (..))
-import safe MtgPure.Model.Tribal (IsMaybeTribal (..), SMaybeTribal (..))
+import safe MtgPure.Model.Recursive (
+  Effect (..),
+  Elect (..),
+  List (List),
+  Requirement (..),
+  WithMaskedObject (..),
+  WithMaskedObjects (..),
+ )
+import safe MtgPure.Model.Variable (Variable (..))
 import safe MtgPure.Model.VisitObjectN (VisitObjectN (..))
 import safe MtgPure.Model.Zone (Zone (..))
-import safe MtgPure.Model.ZoneObject (IsZO, OPlayer, ZO, ZoneObject (ZO))
+import safe MtgPure.Model.ZoneObject (IsZO, ZO, ZOPlayer, ZoneObject (ZO))
 import safe MtgPure.Model.ZoneObject.Convert (zo1ToO)
 
 performElectionsImpl ::
-  forall mTribal ot m p el x.
-  (IsMaybeTribal mTribal, Monad m, AndLike (Maybe x)) =>
-  SMaybeTribal mTribal ->
+  forall ot m p el x.
+  (Monad m, AndLike (Maybe x)) =>
   ([Magic 'Private 'RW m (Maybe x)] -> Magic 'Private 'RW m (Maybe x)) ->
   ZO 'ZStack OT0 ->
   (el -> Magic 'Private 'RW m (Maybe x)) ->
   Elect p el ot ->
   Magic 'Private 'RW m (Maybe x)
-performElectionsImpl wit seqM zoStack goTerm = \case
-  All masked -> electAll seqM goRec masked
-  CardTypeDef def -> goTerm def
-  Choose oPlayer thisToElect -> electA @mTribal Choose' zoStack goRec oPlayer thisToElect
+performElectionsImpl seqM zoStack goTerm = \case
+  All masked -> electAll goRec masked
+  Choose oPlayer thisToElect -> electA Choose' zoStack goRec oPlayer thisToElect
   Cost cost -> goTerm cost
+  ElectCard facet -> goTerm facet
   ElectCase case_ -> caseOf goRec case_
   Effect effect -> goTerm $ Sequence effect
   Elect elect -> goTerm elect
-  Target oPlayer thisToElect -> electA @mTribal Target' zoStack goRec oPlayer thisToElect
+  Target oPlayer thisToElect -> electA Target' zoStack goRec oPlayer thisToElect
+  VariableInt cont -> do
+    let var = ReifiedVariable undefined undefined
+    goRec $ cont var
   _ -> undefined
  where
-  goRec = performElectionsImpl wit seqM zoStack goTerm
+  goRec = performElectionsImpl seqM zoStack goTerm
 
 data Selection
   = Choose'
   | Target'
 
 newTarget ::
-  forall mTribal zone ot m.
-  (IsMaybeTribal mTribal, Monad m, IsZO zone ot) =>
+  forall zone ot m.
+  (Monad m, IsZO zone ot) =>
   ZO 'ZStack OT0 ->
   ZO zone ot ->
   Requirement zone ot ->
@@ -95,52 +102,26 @@ newTarget zoStack zoTargetBase req = do
     let targetId = getObjectId zoTarget
         propMap = magicTargetProperties st
         propMap' = Map.insert targetId (AnyRequirement req) propMap
-     in case singMaybeTribal @mTribal of
-          SNothingTribal ->
-            let entry = case Map.lookup zoStack $ magicStackEntryAbilityMap st of
-                  Just x -> x
-                  Nothing -> error $ show ExpectedStackObjectToExist
-                entry' = entry{stackEntryTargets = targetId : stackEntryTargets entry}
-                itemMap = magicStackEntryAbilityMap st
-                itemMap' = Map.insert zoStack entry' itemMap
-             in st
-                  { magicNextObjectDiscriminant = (+ 1) <$> discr
-                  , magicStackEntryAbilityMap = itemMap'
-                  , magicTargetProperties = propMap'
-                  }
-          SJustTribal ->
-            let entry = case Map.lookup zoStack $ magicStackEntryTribalMap st of
-                  Just x -> x
-                  Nothing -> error $ show ExpectedStackObjectToExist
-                entry' = entry{stackEntryTargets = targetId : stackEntryTargets entry}
-                itemMap = magicStackEntryTribalMap st
-                itemMap' = Map.insert zoStack entry' itemMap
-             in st
-                  { magicNextObjectDiscriminant = (+ 1) <$> discr
-                  , magicStackEntryTribalMap = itemMap'
-                  , magicTargetProperties = propMap'
-                  }
-          SJustNonTribal ->
-            let entry = case Map.lookup zoStack $ magicStackEntryNonTribalMap st of
-                  Just x -> x
-                  Nothing -> error $ show ExpectedStackObjectToExist
-                entry' = entry{stackEntryTargets = targetId : stackEntryTargets entry}
-                itemMap = magicStackEntryNonTribalMap st
-                itemMap' = Map.insert zoStack entry' itemMap
-             in st
-                  { magicNextObjectDiscriminant = (+ 1) <$> discr
-                  , magicStackEntryNonTribalMap = itemMap'
-                  , magicTargetProperties = propMap'
-                  }
+        entry = case Map.lookup zoStack $ magicStackEntryMap st of
+          Just x -> x
+          Nothing -> error $ show ExpectedStackObjectToExist
+        entry' = entry{stackEntryTargets = targetId : stackEntryTargets entry}
+        itemMap = magicStackEntryMap st
+        itemMap' = Map.insert zoStack entry' itemMap
+     in st
+          { magicNextObjectDiscriminant = (+ 1) <$> discr
+          , magicStackEntryMap = itemMap'
+          , magicTargetProperties = propMap'
+          }
   pure zoTarget
 
 electA ::
-  forall mTribal p zone m el ot x.
-  (IsMaybeTribal mTribal, IsZO zone ot, Monad m) =>
+  forall p zone m el ot x.
+  (IsZO zone ot, Monad m) =>
   Selection ->
   ZO 'ZStack OT0 ->
   (Elect p el ot -> Magic 'Private 'RW m (Maybe x)) ->
-  OPlayer ->
+  ZOPlayer ->
   WithMaskedObject zone (Elect p el ot) ->
   Magic 'Private 'RW m (Maybe x)
 electA sel zoStack goElect oPlayer = \case
@@ -169,30 +150,29 @@ electA sel zoStack goElect oPlayer = \case
               True -> Just zo
         zo' <- case sel of
           Choose' -> pure zo
-          Target' -> newTarget @mTribal zoStack zo $ RAnd reqs
+          Target' -> newTarget zoStack zo $ RAnd reqs
         let elect = zoToElect zo'
         goElect elect
 
 electAll ::
-  forall zone m el ot x.
+  forall zone m p el ot x.
   (IsZO zone ot, Monad m, AndLike x) =>
-  ([Magic 'Private 'RW m x] -> Magic 'Private 'RW m x) ->
-  (Elect 'Post el ot -> Magic 'Private 'RW m x) ->
-  WithMaskedObject zone (Elect 'Post el ot) ->
+  (Elect p el ot -> Magic 'Private 'RW m x) ->
+  WithMaskedObjects zone (Elect p el ot) ->
   Magic 'Private 'RW m x
-electAll seqM goElect = \case
-  M1 reqs zoToElect -> go reqs zoToElect
-  M2 reqs zoToElect -> go reqs zoToElect
-  M3 reqs zoToElect -> go reqs zoToElect
-  M4 reqs zoToElect -> go reqs zoToElect
-  M5 reqs zoToElect -> go reqs zoToElect
+electAll goElect = \case
+  M1s reqs zosToElect -> go reqs zosToElect
+  M2s reqs zosToElect -> go reqs zosToElect
+  M3s reqs zosToElect -> go reqs zosToElect
+  M4s reqs zosToElect -> go reqs zosToElect
+  M5s reqs zosToElect -> go reqs zosToElect
   _ -> undefined
  where
   go ::
     (IsZO zone ot', Eq (ZO zone ot')) =>
     [Requirement zone ot'] ->
-    (ZO zone ot' -> Elect 'Post el ot) ->
+    (List (ZO zone ot') -> Elect p el ot) ->
     Magic 'Private 'RW m x
-  go reqs zoToElect = do
+  go reqs zosToElect = do
     zos <- fromRO $ zosSatisfying $ RAnd reqs
-    seqM $ map (goElect . zoToElect) zos
+    goElect $ zosToElect $ List zos

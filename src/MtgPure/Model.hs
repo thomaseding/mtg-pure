@@ -63,7 +63,6 @@ module MtgPure.Model (
   module MtgPure.Model.ToManaPool,
   module MtgPure.Model.ToObjectN,
   module MtgPure.Model.Toughness,
-  module MtgPure.Model.Tribal,
   module MtgPure.Model.Variable,
   module MtgPure.Model.VisitObjectN,
   module MtgPure.Model.Zone,
@@ -139,7 +138,6 @@ import safe MtgPure.Model.ToManaCost
 import safe MtgPure.Model.ToManaPool
 import safe MtgPure.Model.ToObjectN
 import safe MtgPure.Model.Toughness
-import safe MtgPure.Model.Tribal
 import safe MtgPure.Model.Variable
 import safe MtgPure.Model.VisitObjectN
 import safe MtgPure.Model.Zone
