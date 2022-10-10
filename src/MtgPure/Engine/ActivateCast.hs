@@ -66,13 +66,13 @@ import safe MtgPure.Model.Recursive (
   SpecificCard (..),
   WithThis (..),
   WithThisActivated,
-  WithThisCard,
+  WithThisOneShot,
  )
 import safe MtgPure.Model.Stack (Stack (..), StackObject (..))
 import safe MtgPure.Model.ToObjectN.Classes (ToObject2' (..), ToObject6' (..))
 import safe MtgPure.Model.Zone (IsZone (..), SZone (..), Zone (..))
 import safe MtgPure.Model.ZoneObject (IsZO, ZO, ZoneObject (..))
-import safe MtgPure.Model.ZoneObject.Convert (toZO0)
+import safe MtgPure.Model.ZoneObject.Convert (oToZO1, toZO0)
 
 type Legality' = Maybe ()
 
@@ -85,7 +85,7 @@ data CastMeta (ot :: Type) :: Type where
         Cost ot ->
         PendingReady 'Pre (Effect 'OneShot) ot ->
         Elected 'Pre ot
-    , castMeta_effect :: CardFacet ot -> Elect 'Post (Effect 'OneShot) ot
+    , castMeta_effect :: CardFacet ot -> WithThisOneShot ot
     , castMeta_cost :: CardFacet ot -> Cost ot
     } ->
     CastMeta ot
@@ -128,24 +128,8 @@ castSpellImpl' ::
   CastMeta ot ->
   Magic 'Private 'RW m Legality
 castSpellImpl' oCaster card meta = case card of
-  Card _name withThis -> goWithThis withThis
- where
-  goWithThis :: IsSpecificCard ot => WithThisCard ot -> Magic 'Private 'RW m Legality
-  goWithThis = \case
-    T1 thisToElectFacet -> do
-      thisId <- newObjectId
-      goLegality thisToElectFacet (lensedThis thisId)
-    T2 thisToElectFacet -> do
-      thisId <- newObjectId
-      goLegality thisToElectFacet (lensedThis thisId, lensedThis thisId)
-
-  goLegality ::
-    forall this.
-    IsSpecificCard ot =>
-    (this -> Elect 'Pre (CardFacet ot) ot) ->
-    this ->
-    Magic 'Private 'RW m Legality
-  goLegality thisToElectFacet this = do
+  Card _name casterToElectFacet -> do
+    let electFacet = casterToElectFacet $ oToZO1 oCaster
     spellId <- newObjectId
     let zoSpell = toZO0 @ 'ZStack spellId
 
@@ -168,14 +152,18 @@ castSpellImpl' oCaster card meta = case card of
           SorceryFacet{} -> goFacet' facet
 
         goFacet' :: CardFacet ot -> Magic 'Private 'RW m Legality'
-        goFacet' facet = playPendingStackItem zoSpell (castMeta_cost meta facet) (castMeta_effect meta facet) $ \cost effect -> do
-          case singSpecificCard @ot of
-            SorceryCard ->
-              legalityToMaybe <$> do
-                payElectedAndPutOnStack @ 'Cast $ castMeta_Elected meta oCaster card facet cost effect
-            _ -> undefined
+        goFacet' facet = playPendingSpell
+          zoSpell
+          (castMeta_cost meta facet)
+          (castMeta_effect meta facet)
+          $ \cost effect -> do
+            case singSpecificCard @ot of
+              SorceryCard ->
+                legalityToMaybe <$> do
+                  payElectedAndPutOnStack @ 'Cast $ castMeta_Elected meta oCaster card facet cost effect
+              _ -> undefined
 
-    goElectFacet $ thisToElectFacet this
+    goElectFacet electFacet
 
 -- TODO: Generalize for TriggeredAbility as well. Prolly make an AbilityMeta type that is analogous to CastMeta.
 activateAbilityImpl :: forall m. Monad m => Object 'OTPlayer -> ActivateAbility -> Magic 'Private 'RW m Legality
@@ -211,16 +199,41 @@ activateAbilityImpl oPlayer = \case
               case (isThisInCorrectZone, isController) of
                 (False, _) -> pure Illegal -- TODO prompt complaint
                 (_, False) -> pure Illegal -- TODO prompt complaint
-                (True, True) -> do
-                  fmap maybeToLegality $
-                    playPendingStackItem zoAbility (activated_cost activated) (activated_effect activated) $ \cost effect ->
-                      fmap legalityToMaybe $
-                        payElectedAndPutOnStack @ 'Activate $
-                          ElectedActivatedAbility oPlayer zoThis cost effect
+                (True, True) ->
+                  maybeToLegality <$> do
+                    playPendingAbility
+                      zoAbility
+                      (activated_cost activated)
+                      (activated_effect activated)
+                      $ \cost effect ->
+                        legalityToMaybe <$> do
+                          payElectedAndPutOnStack @ 'Activate $
+                            ElectedActivatedAbility oPlayer zoThis cost effect
 
       goElectActivated $ thisToElectAbility this
 
-playPendingStackItem ::
+playPendingSpell ::
+  forall m ot x.
+  (AndLike x, AndLike (Maybe x)) =>
+  Monad m =>
+  ZO 'ZStack OT0 ->
+  Cost ot ->
+  WithThisOneShot ot ->
+  (Cost ot -> Pending (Effect 'OneShot) ot -> Magic 'Private 'RW m (Maybe x)) ->
+  Magic 'Private 'RW m (Maybe x)
+playPendingSpell _zoStack cost withThisElectEffect cont = goWithThis withThisElectEffect
+ where
+  goWithThis = \case
+    T1 thisToElectEffect -> do
+      thisId <- newObjectId
+      goElectEffect $ thisToElectEffect (lensedThis thisId)
+    T2 thisToElectEffect -> do
+      thisId <- newObjectId
+      goElectEffect $ thisToElectEffect (lensedThis thisId, lensedThis thisId)
+
+  goElectEffect = cont cost . Pending
+
+playPendingAbility ::
   forall m ot x.
   (AndLike x, AndLike (Maybe x)) =>
   Monad m =>
@@ -229,7 +242,7 @@ playPendingStackItem ::
   Elect 'Post (Effect 'OneShot) ot ->
   (Cost ot -> Pending (Effect 'OneShot) ot -> Magic 'Private 'RW m (Maybe x)) ->
   Magic 'Private 'RW m (Maybe x)
-playPendingStackItem _zoStack cost electEffect cont = do
+playPendingAbility _zoStack cost electEffect cont = do
   cont cost $ Pending electEffect
 
 setElectedObject_cost ::

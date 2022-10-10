@@ -84,7 +84,6 @@ import safe MtgPure.Model.Recursive (
   WithMaskedObjects (..),
   WithThis (..),
   WithThisActivated,
-  WithThisCard',
   WithThisTriggered,
  )
 import safe MtgPure.Model.TimePoint (TimePoint (..))
@@ -97,12 +96,7 @@ import safe MtgPure.Model.Variable (
  )
 import safe MtgPure.Model.VisitObjectN (VisitObjectN (..))
 import safe MtgPure.Model.Zone (IsZone (..), Zone (..))
-import safe MtgPure.Model.ZoneObject (
-  IsOT,
-  IsZO,
-  ZO,
-  ZoneObject (..),
- )
+import safe MtgPure.Model.ZoneObject (IsOT, IsZO, ZO, ZoneObject (..), toZone)
 
 ----------------------------------------
 
@@ -165,9 +159,6 @@ instance (Typeable el, Typeable p, IsZO zone ot) => Eq (WithMaskedObject zone (E
 
 instance IsZO zone ot => Eq (WithThis zone Ability ot) where
   (==) x y = runEnvM (ordWithThis ordAbility x y) == EQ
-
-instance IsZO zone ot => Eq (WithThisCard' zone ot) where
-  (==) x y = runEnvM (ordWithThis ordElectEl x y) == EQ
 
 instance Eq (WAny ot) where
   (==) x y = runEnvM (ordWAny x y) == EQ
@@ -242,9 +233,6 @@ instance (Typeable el, Typeable p, IsZO zone ot) => Ord (WithMaskedObject zone (
 
 instance IsZO zone ot => Ord (WithThis zone Ability ot) where
   compare x y = runEnvM (ordWithThis ordAbility x y)
-
-instance IsZO zone ot => Ord (WithThisCard' zone ot) where
-  compare x y = runEnvM (ordWithThis ordElectEl x y)
 
 instance Ord (WAny ot) where
   compare x y = runEnvM (ordWAny x y)
@@ -343,9 +331,6 @@ compareZone = pure $ compare (litZone @zone1) (litZone @zone2)
 compareZoneOT :: forall zone1 zone2 ot1 ot2. (IsZO zone1 ot1, IsZO zone2 ot2) => EnvM Ordering
 compareZoneOT = pure $ compare (litZone @zone1, indexOT @ot1) (litZone @zone2, indexOT @ot2)
 
-toZone :: forall zone ot. IsZone zone => ObjectN ot -> ZO zone ot
-toZone = ZO (singZone @zone)
-
 ----------------------------------------
 
 ordAbility :: Ability ot -> Ability ot -> EnvM Ordering
@@ -423,11 +408,15 @@ ordAnyToken = \case
 
 ordCard :: Card ot -> Card ot -> EnvM Ordering
 ordCard x = case x of
-  Card name1 pre1 -> \case
-    Card name2 pre2 ->
+  Card name1 ownerToElectFacet1 -> \case
+    Card name2 ownerToElectFacet2 -> do
+      owner' <- newObjectN @ 'OTPlayer toObject1'
+      let owner = toZone owner'
+          elect1 = ownerToElectFacet1 owner
+          elect2 = ownerToElectFacet2 owner
       seqM
         [ pure $ compare name1 name2
-        , ordWithThis ordElectEl pre1 pre2
+        , ordElectEl elect1 elect2
         ]
 
 ordCardFacet :: CardFacet ot -> CardFacet ot -> EnvM Ordering
@@ -503,7 +492,7 @@ ordCardFacet = \case
         , ordCost cost1 cost2
         , pure $ compare creatTypes1 creatTypes2
         , ordAbilities abilities1 abilities2
-        , ordElectEl effect1 effect2
+        , ordWithThis ordElectEl effect1 effect2
         ]
   LandFacet creatTypes1 landTypes1 abilities1 -> \case
     LandFacet creatTypes2 landTypes2 abilities2 ->
@@ -527,7 +516,7 @@ ordCardFacet = \case
         , ordCost cost1 cost2
         , pure $ compare creatTypes1 creatTypes2
         , ordAbilities abilities1 abilities2
-        , ordElectEl effect1 effect2
+        , ordWithThis ordElectEl effect1 effect2
         ]
 
 ordCase :: Typeable x => (x -> x -> EnvM Ordering) -> Case x -> Case x -> EnvM Ordering

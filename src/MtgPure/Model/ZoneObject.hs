@@ -48,6 +48,7 @@ module MtgPure.Model.ZoneObject (
   ZOStaticAbility,
   ZOTriggeredAbility,
   zoToObjectN,
+  toZone,
 ) where
 
 import safe Data.ConsIndex (ConsIndex (..))
@@ -180,3 +181,6 @@ type ZOSpell = ZO 'ZBattlefield OTSpell
 type ZOStaticAbility = ZO 'ZBattlefield OTStaticAbility
 
 type ZOTriggeredAbility = ZO 'ZBattlefield OTTriggeredAbility
+
+toZone :: forall zone ot. IsZone zone => ObjectN ot -> ZO zone ot
+toZone = ZO (singZone @zone)

@@ -64,7 +64,6 @@ import safe MtgPure.Model.ColorlessMana (ColorlessMana (..))
 import safe MtgPure.Model.Colors (Colors (..))
 import safe MtgPure.Model.CreatureType (CreatureType)
 import safe MtgPure.Model.Damage (Damage, Damage' (..))
-import safe MtgPure.Model.EffectType (EffectType (OneShot))
 import safe MtgPure.Model.GenericMana (GenericMana (..))
 import safe MtgPure.Model.LandType (LandType (..))
 import safe MtgPure.Model.Loyalty (Loyalty)
@@ -116,7 +115,6 @@ import safe MtgPure.Model.ObjectType.Kind (
 import safe MtgPure.Model.ObjectType.Permanent (WPermanent (..))
 import safe MtgPure.Model.ObjectType.Spell (WSpell (..))
 import safe MtgPure.Model.Power (Power)
-import safe MtgPure.Model.PrePost (PrePost (..))
 import safe MtgPure.Model.PrettyType (PrettyType (..))
 import safe MtgPure.Model.Recursive (
   Ability (..),
@@ -146,6 +144,7 @@ import safe MtgPure.Model.Recursive (
   WithMaskedObject (..),
   WithMaskedObjects (..),
   WithThis (..),
+  WithThisOneShot,
  )
 import safe MtgPure.Model.TimePoint (TimePoint (..))
 import safe MtgPure.Model.Toughness (Toughness)
@@ -162,6 +161,7 @@ import safe MtgPure.Model.ZoneObject (
   IsZO,
   ZO,
   ZoneObject (..),
+  toZone,
  )
 
 ----------------------------------------
@@ -454,9 +454,6 @@ showListM f xs = noParens $ do
   ss <- mapM (fmap dropParens . f) xs
   pure $ pure "[" <> DList.intercalate (pure ", ") ss <> pure "]"
 
-toZone :: forall zone ot. IsZone zone => ObjectN ot -> ZO zone ot
-toZone = ZO (singZone @zone)
-
 ----------------------------------------
 
 showAbility :: Ability ot -> EnvM ParenItems
@@ -500,18 +497,26 @@ showBasicLandType = noParens . pure . pure . fromString . show
 
 showCard :: Card ot -> EnvM ParenItems
 showCard = \case
-  Card (CardName name) withThisCard -> yesParens $ do
+  Card (CardName name) ownerToElectFacet -> yesParens $ do
     depth <- State.gets cardDepth
     State.modify' $ \st -> st{cardDepth = subtract 1 <$> depth}
     let sName = pure (fromString $ show name)
     case depth of
       Just 0 -> pure $ pure "Card " <> sName <> pure " ..."
       _ -> do
-        sCardPre <- dollar <$> showWithThis showElect "this" withThisCard
+        (owner', snap) <- newObjectN @ 'OTPlayer O1 "you"
+        let owner = toZone owner'
+            electFacet = ownerToElectFacet owner
+        sOwner <- parens <$> showZoneObject owner
+        sElectFacet <- dollar <$> showElect electFacet
+        restoreObject snap
         pure $
           pure "Card "
             <> sName
-            <> sCardPre
+            <> pure " $ \\"
+            <> sOwner
+            <> pure " -> "
+            <> sElectFacet
 
 showCardFacet :: CardFacet ot -> EnvM ParenItems
 showCardFacet = \case
@@ -659,21 +664,22 @@ showCardFacet = \case
     showOneShot "SorceryFacet " colors cost creatTypes abilities oneShot
  where
   showOneShot ::
-    forall a.
+    forall a ot.
     IsObjectType a =>
+    ot ~ OT1 a =>
     Item ->
     Colors ->
-    Cost (OT1 a) ->
+    Cost ot ->
     [CreatureType] ->
-    [Ability (OT1 a)] ->
-    Elect 'Post (Effect 'OneShot) (OT1 a) ->
+    [Ability ot] ->
+    WithThisOneShot ot ->
     EnvM ParenItems
   showOneShot def colors cost creatTypes abilities oneShot = yesParens $ do
     sColors <- parens <$> showColors colors
     sCost <- parens <$> showCost cost
     sCreatTypes <- parens <$> showCreatureTypes creatTypes
     sAbilities <- parens <$> showAbilities abilities
-    sOneShot <- dollar <$> showElect oneShot
+    sOneShot <- dollar <$> showWithThis showElect "this" oneShot
     pure $
       pure def
         <> sColors
@@ -925,8 +931,8 @@ showElect = \case
   ActivePlayer contElect -> yesParens $ do
     (active', snap) <- newObjectN @ 'OTPlayer O1 "active"
     let active = toZone active'
+        elect = contElect active
     sActive <- parens <$> showZoneObject active
-    let elect = contElect active
     sElect <- dropParens <$> showElect elect
     restoreObject snap
     pure $ pure "ActivePlayer $ \\" <> sActive <> pure " -> " <> sElect

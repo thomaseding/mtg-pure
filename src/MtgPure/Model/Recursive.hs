@@ -59,8 +59,7 @@ module MtgPure.Model.Recursive (
   WithMaskedObjects (..),
   WithThis (..),
   WithThisActivated,
-  WithThisCard,
-  WithThisCard',
+  WithThisOneShot,
   WithThisTriggered,
   pattern CFalse,
   pattern CTrue,
@@ -261,7 +260,7 @@ instance ConsIndex AnyToken where
 ----------------------------------------
 
 data Card (ot :: Type) :: Type where
-  Card :: IsSpecificCard ot => CardName -> WithThisCard ot -> Card ot
+  Card :: IsSpecificCard ot => CardName -> (ZOPlayer -> Elect 'Pre (CardFacet ot) ot) -> Card ot
   --DoubleSidedCard
   --SplitCard
   deriving (Typeable)
@@ -336,7 +335,7 @@ data CardFacet (ot :: Type) :: Type where
     , instant_cost :: Cost OTInstant
     , instant_creatureTypes :: [CreatureType]
     , instant_abilities :: [Ability OTInstant]
-    , instant_effect :: Elect 'Post (Effect 'OneShot) OTInstant
+    , instant_effect :: WithThisOneShot OTInstant
     } ->
     CardFacet OTInstant
   LandFacet ::
@@ -357,7 +356,7 @@ data CardFacet (ot :: Type) :: Type where
     , sorcery_cost :: Cost OTSorcery
     , sorcery_creatureTypes :: [CreatureType]
     , sorcery_abilities :: [Ability OTSorcery]
-    , sorcery_effect :: Elect 'Post (Effect 'OneShot) OTSorcery
+    , sorcery_effect :: WithThisOneShot OTSorcery
     } ->
     CardFacet OTSorcery
   deriving (Typeable)
@@ -1022,10 +1021,6 @@ instance ConsIndex (WithThis zone liftOT ot) where
 
 type WithThisActivated zone ot = WithThis zone (Elect 'Pre (ActivatedAbility zone ot)) ot
 
-type WithThisCard' zone ot = WithThis zone (Elect 'Pre (CardFacet ot)) ot
-
--- NB: Using ZStack for everything (including lands) instead of ZHand because some cards can be played
--- from other zones or allow others to do so [Misthollow Griffin] [Crucible of Worlds] [Gravecrawler].
-type WithThisCard ot = WithThisCard' 'ZStack ot
+type WithThisOneShot = WithThis 'ZStack (Elect 'Post (Effect 'OneShot))
 
 type WithThisTriggered zone ot = WithThis zone (TriggeredAbility zone) ot

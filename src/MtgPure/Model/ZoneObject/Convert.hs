@@ -91,7 +91,7 @@ import safe MtgPure.Model.ToObjectN.Classes (
  )
 import safe MtgPure.Model.VisitObjectN (VisitObjectN (..))
 import safe MtgPure.Model.Zone (IsZone (..), SZone (..), Zone (..))
-import safe MtgPure.Model.ZoneObject (IsZO, ZO, ZoneObject (..), zoToObjectN)
+import safe MtgPure.Model.ZoneObject (IsZO, ZO, ZoneObject (..), toZone, zoToObjectN)
 
 zo1ToO :: (IsObjectType a, IsZone zone) => ZO zone (OT1 a) -> Object a
 zo1ToO zo = case zoToObjectN zo of
@@ -101,7 +101,7 @@ class ToZO0 (zone :: Zone) (object :: Type) where
   toZO0 :: object -> ZO zone OT0
 
 instance IsZone zone => ToZO0 zone ObjectId where
-  toZO0 = ZO (singZone @zone) . O0
+  toZO0 = toZone . O0
 
 instance IsZone zone => ToZO0 zone (Object a) where
   toZO0 = toZO0 . getObjectId
@@ -178,10 +178,10 @@ toZO12 = \case
 newtype MaybeObjectN (ot :: Type) = MaybeObjectN {unMaybeObjectN :: Maybe (ObjectN ot)}
 
 oToZO1 :: (IsZone zone, IsObjectType a) => Object a -> ZO zone (OT1 a)
-oToZO1 = ZO singZone . O1
+oToZO1 = toZone . O1
 
 castOToZO :: forall z zone ot. (IsObjectType z, IsZO zone ot) => Object z -> Maybe (ZO zone ot)
-castOToZO o = ZO (singZone @zone) <$> objN
+castOToZO o = toZone <$> objN
  where
   objN :: Maybe (ObjectN ot)
   objN = unMaybeObjectN $
