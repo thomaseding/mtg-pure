@@ -14,6 +14,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
+{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
@@ -134,6 +135,8 @@ import safe MtgPure.Model.Recursive (
   Event,
   EventListener,
   EventListener' (..),
+  IsUser (..),
+  List (..),
   Requirement (..),
   SetCard (SetCard),
   SetToken (SetToken),
@@ -141,6 +144,7 @@ import safe MtgPure.Model.Recursive (
   Token (..),
   TriggeredAbility (..),
   WithLinkedObject (..),
+  WithList (..),
   WithMaskedObject (..),
   WithMaskedObjects (..),
   WithThis (..),
@@ -163,6 +167,7 @@ import safe MtgPure.Model.ZoneObject (
   ZoneObject (..),
   toZone,
  )
+import Prelude hiding (showList)
 
 ----------------------------------------
 
@@ -445,6 +450,13 @@ restoreObject :: ObjectIdState -> EnvM ()
 --restoreObject (ObjectIdState i) = State.modify' $ \st -> st {nextObjectId = i}
 restoreObject _ = pure ()
 
+data Plurality = Singular | Plural
+
+lenseList :: List x -> x
+lenseList = \case
+  List [x] -> x
+  _ -> error "logic error: should not happen by construction"
+
 getObjectNamePrefix :: ObjectId -> EnvM String
 getObjectNamePrefix i =
   State.gets (Map.findWithDefault "impossible" i . objectNames)
@@ -693,25 +705,6 @@ showCardFacet = \case
 
 showCase :: (x -> EnvM ParenItems) -> Case x -> EnvM ParenItems
 showCase showX = \case
-  CaseColor color w u b r g -> yesParens $ do
-    let sColor = pure $ getVarName color
-    sW <- parens <$> showX w
-    sU <- parens <$> showX u
-    sB <- parens <$> showX b
-    sR <- parens <$> showX r
-    sG <- dollar <$> showX g
-    pure $
-      pure "CaseColor "
-        <> sColor
-        <> pure " "
-        <> sW
-        <> pure " "
-        <> sU
-        <> pure " "
-        <> sB
-        <> pure " "
-        <> sR
-        <> sG
   CaseFin fin natList -> yesParens $ do
     let sFin = pure $ getVarName fin
     sNatList <- dollar <$> showNatList showX natList
@@ -921,7 +914,7 @@ showEffect = \case
     sElectEvent <- parens <$> showElect electEvent
     sEffect <- dollar <$> showEffect effect
     pure $ pure "Until " <> sElectEvent <> sEffect
-  WithList{} -> undefined
+  WithList withList -> showWithList showEffect withList
 
 showEffects :: [Effect e] -> EnvM ParenItems
 showEffects = showListM showEffect
@@ -937,28 +930,12 @@ showElect = \case
     restoreObject snap
     pure $ pure "ActivePlayer $ \\" <> sActive <> pure " -> " <> sElect
   All withObjects -> yesParens $ do
-    sWithObjects <- dollar <$> showWithMaskedObjects showElect "all" withObjects
+    sWithObjects <- dollar <$> showWithMaskedObjects showElect "obj" withObjects
     pure $ pure "All" <> sWithObjects
   Choose player withObject -> yesParens $ do
     sPlayer <- parens <$> showZoneObject player
     sWithObject <- dollar <$> showWithMaskedObject showElect "choose" withObject
     pure $ pure "Choose " <> sPlayer <> sWithObject
-  ChooseColor player colors colorToElect -> yesParens $ do
-    sPlayer <- parens <$> showZoneObject player
-    sColors <- parens <$> showColors colors
-    discr <- State.gets nextVariableId
-    State.modify' $ \st -> st{nextVariableId = (1 +) <$> discr}
-    let var = ReifiedVariable discr White
-        varName = getVarName var
-        elect = colorToElect var
-    sElect <- dropParens <$> showElect elect
-    pure $
-      pure "Choose " <> sPlayer <> pure " "
-        <> sColors
-        <> pure " $ \\"
-        <> pure varName
-        <> pure " -> "
-        <> sElect
   ChooseOption player natList varToElect -> yesParens $ do
     sPlayer <- parens <$> showZoneObject player
     sNatList <- parens <$> showNatList showCondition natList
@@ -1287,11 +1264,18 @@ showManaPool pool = yesParens $ do
           <> pure " "
           <> sC
 
-showNatList :: (x -> EnvM ParenItems) -> NatList n x -> EnvM ParenItems
+showNatList :: forall u n x. IsUser u => (x -> EnvM ParenItems) -> NatList u n x -> EnvM ParenItems
 showNatList showX = \case
   LZ x -> yesParens $ do
+    sType <-
+      parens <$> do
+        let u = showUserType @u
+            grouping = case words u of
+              [_] -> noParens
+              _ -> yesParens
+        grouping $ pure $ pure (fromString u)
     sX <- dollar <$> showX x
-    pure $ pure "LZ" <> sX
+    pure $ pure "LZ @" <> sType <> sX
   LS x xs -> yesParens $ do
     sX <- parens <$> showX x
     sXs <- dollar <$> showNatList showX xs
@@ -1306,6 +1290,7 @@ showO1 ::
   forall zone a z.
   (IsZone zone, IsObjectType a) =>
   IsOT (OT1 a) =>
+  Plurality ->
   (z -> EnvM ParenItems) ->
   String ->
   (ON1 a -> z) ->
@@ -1315,6 +1300,7 @@ showO1 = showONImpl @zone O1
 showO2 ::
   forall zone a b z.
   (IsZone zone, Inst2 IsObjectType a b) =>
+  Plurality ->
   (z -> EnvM ParenItems) ->
   String ->
   (ON2 a b -> z) ->
@@ -1324,6 +1310,7 @@ showO2 = showONImpl @zone O2a
 showO3 ::
   forall zone a b c z.
   (IsZone zone, Inst3 IsObjectType a b c) =>
+  Plurality ->
   (z -> EnvM ParenItems) ->
   String ->
   (ON3 a b c -> z) ->
@@ -1333,6 +1320,7 @@ showO3 = showONImpl @zone O3a
 showO4 ::
   forall zone a b c d z.
   (IsZone zone, Inst4 IsObjectType a b c d) =>
+  Plurality ->
   (z -> EnvM ParenItems) ->
   String ->
   (ON4 a b c d -> z) ->
@@ -1342,6 +1330,7 @@ showO4 = showONImpl @zone O4a
 showO5 ::
   forall zone a b c d e z.
   (IsZone zone, Inst5 IsObjectType a b c d e) =>
+  Plurality ->
   (z -> EnvM ParenItems) ->
   String ->
   (ON5 a b c d e -> z) ->
@@ -1351,6 +1340,7 @@ showO5 = showONImpl @zone O5a
 showO6 ::
   forall zone a b c d e f z.
   (IsZone zone, Inst6 IsObjectType a b c d e f) =>
+  Plurality ->
   (z -> EnvM ParenItems) ->
   String ->
   (ON6 a b c d e f -> z) ->
@@ -1361,13 +1351,19 @@ showONImpl ::
   forall zone z a ot.
   (IsZone zone, IsOT ot, IsObjectType a) =>
   (Object a -> ObjectN ot) ->
+  Plurality ->
   (z -> EnvM ParenItems) ->
   String ->
   (ObjectN ot -> z) ->
   EnvM ParenItems
-showONImpl fromObject showM memo cont = yesParens $ do
+showONImpl fromObject plurality showM memo cont = yesParens $ do
   (objN, snap) <- newObjectN @a fromObject memo
-  objName <- parens <$> showObjectN @zone objN
+  objName <-
+    parens <$> do
+      let m = showObjectN @zone objN
+      case plurality of
+        Singular -> m
+        Plural -> pluralize m
   let elect = cont objN
   sElect <- dropParens <$> showM elect
   restoreObject snap
@@ -1756,20 +1752,22 @@ showWithLinkedObject showM memo = \case
     pure $ pure "LProxy" <> sReqs
   L1 nonProxy reqs cont ->
     let ty = getType reqs
-     in go ty nonProxy reqs $ showO1 @zone showM memo (cont . toZone)
+     in go ty nonProxy reqs $ showO1 @zone p showM memo (cont . toZone)
   L2 nonProxy reqs cont ->
     let ty = getType reqs
-     in go ty nonProxy reqs $ showO2 @zone showM memo (cont . toZone)
+     in go ty nonProxy reqs $ showO2 @zone p showM memo (cont . toZone)
   L3 nonProxy reqs cont ->
     let ty = getType reqs
-     in go ty nonProxy reqs $ showO3 @zone showM memo (cont . toZone)
+     in go ty nonProxy reqs $ showO3 @zone p showM memo (cont . toZone)
   L4 nonProxy reqs cont ->
     let ty = getType reqs
-     in go ty nonProxy reqs $ showO4 @zone showM memo (cont . toZone)
+     in go ty nonProxy reqs $ showO4 @zone p showM memo (cont . toZone)
   L5 nonProxy reqs cont ->
     let ty = getType reqs
-     in go ty nonProxy reqs $ showO5 @zone showM memo (cont . toZone)
+     in go ty nonProxy reqs $ showO5 @zone p showM memo (cont . toZone)
  where
+  p = Singular
+
   getType :: [Requirement zone ot] -> Proxy ot
   getType _ = Proxy
 
@@ -1778,6 +1776,29 @@ showWithLinkedObject showM memo = \case
     sReqs <- parens <$> showRequirements reqs
     sCont' <- dollar <$> sCont
     pure $ pure "linked @" <> sTy <> pure " " <> sReqs <> sCont'
+
+showWithList :: (ret -> EnvM ParenItems) -> WithList ret zone ot -> EnvM ParenItems
+showWithList showRet = \case
+  CountOf zos cont -> yesParens $ do
+    sZos <- parens <$> showZoneObjects zos
+    discr <- State.gets nextVariableId
+    State.modify' $ \st -> st{nextVariableId = (1 +) <$> discr}
+    let var = ReifiedVariable discr 0
+        varName = getVarName var
+        ret = cont var
+    sRet <- dropParens <$> showRet ret
+    pure $ pure "CountOf " <> sZos <> pure " $ \\" <> pure varName <> pure " -> " <> sRet
+  Each zos cont -> yesParens $ do
+    sZos <- parens <$> showZoneObjects zos
+    let zo = lenseList zos
+        ret = cont zo
+    sZo <- parens <$> showZoneObject zo
+    sRet <- dropParens <$> showRet ret
+    pure $ pure "Each " <> sZos <> pure " $ \\" <> sZo <> pure " -> " <> sRet
+  SuchThat reqs withList -> yesParens $ do
+    sReqs <- parens <$> showRequirements reqs
+    sWithList <- dollar <$> showWithList showRet withList
+    pure $ pure "SuchThat " <> sReqs <> sWithList
 
 showWithMaskedObject ::
   forall zone z.
@@ -1788,18 +1809,20 @@ showWithMaskedObject ::
   EnvM ParenItems
 showWithMaskedObject showM memo = \case
   M1 reqs cont ->
-    let ty = getType reqs in go ty reqs $ showO1 @zone showM memo (cont . toZone)
+    let ty = getType reqs in go ty reqs $ showO1 @zone p showM memo (cont . toZone)
   M2 reqs cont ->
-    let ty = getType reqs in go ty reqs $ showO2 @zone showM memo (cont . toZone)
+    let ty = getType reqs in go ty reqs $ showO2 @zone p showM memo (cont . toZone)
   M3 reqs cont ->
-    let ty = getType reqs in go ty reqs $ showO3 @zone showM memo (cont . toZone)
+    let ty = getType reqs in go ty reqs $ showO3 @zone p showM memo (cont . toZone)
   M4 reqs cont ->
-    let ty = getType reqs in go ty reqs $ showO4 @zone showM memo (cont . toZone)
+    let ty = getType reqs in go ty reqs $ showO4 @zone p showM memo (cont . toZone)
   M5 reqs cont ->
-    let ty = getType reqs in go ty reqs $ showO5 @zone showM memo (cont . toZone)
+    let ty = getType reqs in go ty reqs $ showO5 @zone p showM memo (cont . toZone)
   M6 reqs cont ->
-    let ty = getType reqs in go ty reqs $ showO6 @zone showM memo (cont . toZone)
+    let ty = getType reqs in go ty reqs $ showO6 @zone p showM memo (cont . toZone)
  where
+  p = Singular
+
   getType :: [Requirement zone ot] -> Proxy ot
   getType _ = Proxy
 
@@ -1818,18 +1841,20 @@ showWithMaskedObjects ::
   EnvM ParenItems
 showWithMaskedObjects showM memo = \case
   M1s reqs cont ->
-    let ty = getType reqs in go ty reqs $ showO1 @zone showM memo (cont . pure . toZone)
+    let ty = getType reqs in go ty reqs $ showO1 @zone p showM memo (cont . pure . toZone)
   M2s reqs cont ->
-    let ty = getType reqs in go ty reqs $ showO2 @zone showM memo (cont . pure . toZone)
+    let ty = getType reqs in go ty reqs $ showO2 @zone p showM memo (cont . pure . toZone)
   M3s reqs cont ->
-    let ty = getType reqs in go ty reqs $ showO3 @zone showM memo (cont . pure . toZone)
+    let ty = getType reqs in go ty reqs $ showO3 @zone p showM memo (cont . pure . toZone)
   M4s reqs cont ->
-    let ty = getType reqs in go ty reqs $ showO4 @zone showM memo (cont . pure . toZone)
+    let ty = getType reqs in go ty reqs $ showO4 @zone p showM memo (cont . pure . toZone)
   M5s reqs cont ->
-    let ty = getType reqs in go ty reqs $ showO5 @zone showM memo (cont . pure . toZone)
+    let ty = getType reqs in go ty reqs $ showO5 @zone p showM memo (cont . pure . toZone)
   M6s reqs cont ->
-    let ty = getType reqs in go ty reqs $ showO6 @zone showM memo (cont . pure . toZone)
+    let ty = getType reqs in go ty reqs $ showO6 @zone p showM memo (cont . pure . toZone)
  where
+  p = Plural
+
   getType :: [Requirement zone ot] -> Proxy ot
   getType _ = Proxy
 
@@ -1851,7 +1876,7 @@ showWithThis showM memo = \case
   T1 cont ->
     let go = yesParens $ do
           sTy <- parens <$> showTypeOf (Proxy @ot)
-          sCont <- dollar <$> showO1 @zone showM memo (cont . toZone)
+          sCont <- dollar <$> showO1 @zone Singular showM memo (cont . toZone)
           pure $ pure "thisObject @" <> sTy <> sCont
      in go
   T2 cont ->
@@ -2004,3 +2029,11 @@ showZoneObject = \case
 showZoneObject0 :: forall zone. IsZone zone => ZO zone OT0 -> EnvM ParenItems
 showZoneObject0 = \case
   ZO _ objN -> showObject0 @zone objN
+
+showZoneObjects :: forall zone ot. IsZO zone ot => List (ZO zone ot) -> EnvM ParenItems
+showZoneObjects (lenseList -> zo) = pluralize $ showZoneObject zo
+
+pluralize :: EnvM ParenItems -> EnvM ParenItems
+pluralize m = do
+  (p, items) <- m
+  pure (p, items <> pure "s")

@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveFunctor #-}
@@ -11,6 +12,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE Safe #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
@@ -39,6 +41,7 @@ module MtgPure.Model.Recursive (
   EventListener,
   EventListener' (..),
   IsSpecificCard (..),
+  IsUser (..),
   List (..),
   NonProxy (..),
   Requirement (..),
@@ -70,7 +73,7 @@ import safe Data.Inst (Inst1, Inst2, Inst3, Inst4, Inst5, Inst6)
 import safe Data.Kind (Type)
 import safe Data.Nat (Fin, IsNat, NatList)
 import safe Data.Proxy (Proxy (..))
-import safe Data.Typeable (Typeable)
+import safe Data.Typeable (Typeable, typeRep)
 import safe MtgPure.Model.ArtifactType (ArtifactType)
 import safe MtgPure.Model.CardName (CardName)
 import safe MtgPure.Model.CardSet (CardSet)
@@ -178,6 +181,19 @@ instance ConsIndex (ActivatedAbility zone ot) where
 ----------------------------------------
 
 -- TODO: Move out of Recursive.hs
+class Typeable (u :: Type) => IsUser u where
+  showUserType :: String
+  showUserType = show (typeRep (Proxy @u))
+
+instance IsUser () where
+  showUserType = "()"
+
+instance IsUser Color
+
+-- TODO: Move out of Recursive.hs
+-- TODO: EnchantmentLand [Urza's Saga]
+-- TODO: EnchantmentArtifactCreature [Hammer of Purphoros]
+-- TODO: LandCreature [Dryad Arbor]
 data SpecificCard (ot :: Type) :: Type where
   ArtifactCard :: OTArtifact ~ ot => SpecificCard ot
   ArtifactCreatureCard :: OTArtifactCreature ~ ot => SpecificCard ot
@@ -377,27 +393,17 @@ instance ConsIndex (CardFacet ot) where
 ----------------------------------------
 
 data Case (x :: Type) where
-  CaseColor ::
-    { caseColor :: Variable Color
-    , ofWhite :: x
-    , ofBlue :: x
-    , ofBlack :: x
-    , ofRed :: x
-    , ofGreen :: x
-    } ->
-    Case x
   CaseFin ::
-    IsNat n =>
-    { caseFin :: Variable (Fin n)
-    , ofFin :: NatList n x
+    (IsUser u, IsNat n) =>
+    { caseFin :: Variable (Fin u n)
+    , ofFin :: NatList u n x
     } ->
     Case x
   deriving (Typeable)
 
 instance ConsIndex (Case x) where
   consIndex = \case
-    CaseColor{} -> 1
-    CaseFin{} -> 2
+    CaseFin{} -> 1
 
 ----------------------------------------
 
@@ -479,7 +485,7 @@ data Effect (ef :: EffectType) :: Type where
   Tap :: ZO 'ZBattlefield OTPermanent -> Effect 'OneShot
   Untap :: ZO 'ZBattlefield OTPermanent -> Effect 'OneShot
   Until :: Elect 'Post Event OTPlayer -> Effect 'Continuous -> Effect 'Continuous
-  WithList :: IsZO zone ot => WithList (ZO zone ot) (Effect ef) -> Effect ef
+  WithList :: IsZO zone ot => WithList (Effect ef) zone ot -> Effect ef
   deriving (Typeable)
 
 instance ConsIndex (Effect ef) where
@@ -520,13 +526,7 @@ data Elect (p :: PrePost) (el :: Type) (ot :: Type) :: Type where
     ZOPlayer ->
     WithMaskedObject zone (Elect p el ot) ->
     Elect p el ot
-  ChooseColor :: -- XXX: This is superceded by `ChooseOption`
-    (IsPrePost p, Typeable el, IsOT ot) =>
-    ZOPlayer ->
-    [Color] ->
-    (Variable Color -> Elect p el ot) ->
-    Elect p el ot -- TODO: Non-empty list
-  ChooseOption :: IsNat n => ZOPlayer -> NatList n Condition -> (Variable (Fin n) -> Elect p el ot) -> Elect p el ot
+  ChooseOption :: (IsUser u, IsNat n) => ZOPlayer -> NatList u n Condition -> (Variable (Fin u n) -> Elect p el ot) -> Elect p el ot
   Condition :: Condition -> Elect p Condition ot
   ControllerOf :: IsZO zone OTAny => ZO zone OTAny -> (ZOPlayer -> Elect p el ot) -> Elect p el ot
   Cost :: Cost ot -> Elect 'Pre (Cost ot) ot -- XXX: can this constructor be removed?
@@ -565,23 +565,22 @@ instance ConsIndex (Elect p el ot) where
     ActivePlayer{} -> 1
     All{} -> 2
     Choose{} -> 3
-    ChooseColor{} -> 4
-    ChooseOption{} -> 5
-    Condition{} -> 6
-    ControllerOf{} -> 7
-    Cost{} -> 8
-    Effect{} -> 9
-    Elect{} -> 10
-    ElectActivated{} -> 11
-    ElectCard{} -> 12
-    ElectCase{} -> 13
-    Event{} -> 14
-    If{} -> 15
-    Listen{} -> 16
-    Random{} -> 17
-    Target{} -> 18
-    VariableFromPower{} -> 19
-    VariableInt{} -> 20
+    ChooseOption{} -> 4
+    Condition{} -> 5
+    ControllerOf{} -> 6
+    Cost{} -> 7
+    Effect{} -> 8
+    Elect{} -> 9
+    ElectActivated{} -> 10
+    ElectCard{} -> 11
+    ElectCase{} -> 12
+    Event{} -> 13
+    If{} -> 14
+    Listen{} -> 15
+    Random{} -> 16
+    Target{} -> 17
+    VariableFromPower{} -> 18
+    VariableInt{} -> 19
 
 type ElectPrePost el ot = Elect 'Pre (Elect 'Post el ot) ot
 
@@ -899,12 +898,12 @@ instance ConsIndex (WithLinkedObject zone liftOT ot) where
 
 ----------------------------------------
 
-data WithList (elem :: Type) (ret :: Type) where
-  CountOf :: List elem -> (Variable Int -> ret) -> WithList elem ret
-  Each :: List elem -> (elem -> ret) -> WithList elem ret
-  SuchThat :: IsZO zone ot => [Requirement zone ot] -> WithList (ZO zone ot) ret -> WithList (ZO zone ot) ret
+data WithList (ret :: Type) (zone :: Zone) (ot :: Type) where
+  CountOf :: (IsZO zone ot, Typeable ret) => List (ZO zone ot) -> (Variable Int -> ret) -> WithList ret zone ot
+  Each :: (IsZO zone ot, Typeable ret) => List (ZO zone ot) -> (ZO zone ot -> ret) -> WithList ret zone ot
+  SuchThat :: (IsZO zone ot, Typeable ret) => [Requirement zone ot] -> WithList ret zone ot -> WithList ret zone ot
 
-instance ConsIndex (WithList elem ret) where
+instance ConsIndex (WithList ret zone ot) where
   consIndex = \case
     CountOf{} -> 1
     Each{} -> 2

@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE Safe #-}
@@ -38,6 +39,7 @@ module MtgPure.ModelCombinators (
   AsWithThis (..),
   becomesTapped,
   changeTo,
+  chooseAnyColor,
   CoAny (..),
   colored,
   colorless,
@@ -90,6 +92,7 @@ import safe Data.Inst (
   Inst6,
  )
 import safe Data.Kind (Type)
+import Data.Nat (Fin, NatList (..), ToNat)
 import safe Data.Proxy (Proxy (..))
 import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.BasicLandType (BasicLandType)
@@ -98,6 +101,7 @@ import safe MtgPure.Model.ColorsLike (ColorsLike (..))
 import safe MtgPure.Model.Damage (Damage, Damage' (..))
 import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.LandType (LandType (BasicLand))
+import MtgPure.Model.Mana (Snow (..))
 import safe MtgPure.Model.ManaCost (ManaCost)
 import safe MtgPure.Model.ManaSymbol (ManaSymbol (..))
 import safe MtgPure.Model.Object (
@@ -146,6 +150,7 @@ import safe MtgPure.Model.Recursive (
   WithMaskedObject (..),
   WithMaskedObjects (..),
   WithThis (..),
+  pattern CTrue,
  )
 import safe MtgPure.Model.Step (Step (..))
 import safe MtgPure.Model.TimePoint (TimePoint (..))
@@ -511,17 +516,23 @@ colored = ROr $ map ofColors [minBound :: Color ..]
 colorless :: IsZO zone ot => Requirement zone ot
 colorless = Not colored
 
-addManaAnyColor :: Variable Color -> ZOPlayer -> Int -> Effect 'OneShot
+type FinColor = Fin Color (ToNat 4)
+
+chooseAnyColor :: ZOPlayer -> (Variable FinColor -> Elect p el ot) -> Elect p el ot
+chooseAnyColor player = ChooseOption player list
+ where
+  list = LS CTrue $ LS CTrue $ LS CTrue $ LS CTrue $ LZ CTrue
+
+addManaAnyColor :: Variable FinColor -> ZOPlayer -> Int -> Effect 'OneShot
 addManaAnyColor color player amount =
-  EffectCase $
-    CaseColor
-      { caseColor = color
-      , ofWhite = AddMana player $ toManaPool (W, amount)
-      , ofBlue = AddMana player $ toManaPool (U, amount)
-      , ofBlack = AddMana player $ toManaPool (B, amount)
-      , ofRed = AddMana player $ toManaPool (R, amount)
-      , ofGreen = AddMana player $ toManaPool (G, amount)
+  EffectCase
+    CaseFin
+      { caseFin = color
+      , ofFin = LS (go W) $ LS (go U) $ LS (go B) $ LS (go R) $ LZ (go G)
       }
+ where
+  go :: ToManaPool 'NonSnow (ManaSymbol mt, Int) => ManaSymbol mt -> Effect 'OneShot
+  go sym = AddMana player $ toManaPool (sym, amount)
 
 -- class
 --   (AsWithThis ot 'ZBattlefield (CardTypeDef tribal) ots) =>

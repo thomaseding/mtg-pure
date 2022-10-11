@@ -111,7 +111,6 @@ import safe MtgPure.Model.Recursive (
     ActivePlayer,
     All,
     Choose,
-    ChooseColor,
     ChooseOption,
     Cost,
     ElectActivated,
@@ -161,6 +160,7 @@ import safe MtgPure.ModelCombinators (
   addToBattlefield,
   becomesTapped,
   changeTo,
+  chooseAnyColor,
   colored,
   controllerOf,
   counterAbility,
@@ -383,7 +383,7 @@ cityOfBrass = Card "City of Brass" $ \_you ->
           , Activated @ 'ZBattlefield $
               thisObject $ \this ->
                 controllerOf this $ \you ->
-                  ChooseColor you [minBound ..] $ \color ->
+                  chooseAnyColor you $ \color ->
                     ElectActivated $
                       Ability
                         { activated_cost = tapCost [is this]
@@ -685,7 +685,7 @@ snuffOut = Card "Snuff Out" $ \you ->
                       { caseFin = option
                       , ofFin =
                           LS (spellCost (3, B)) $
-                            LZ $ PayLife 4
+                            LZ @() $ PayLife 4
                       }
               , instant_creatureTypes = []
               , instant_abilities = []

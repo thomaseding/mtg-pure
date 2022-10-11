@@ -28,20 +28,13 @@ module MtgPure.Engine.CaseOf (
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
 import safe Data.Nat (Fin (..), NatList (..))
 import safe MtgPure.Engine.State (Magic)
-import safe MtgPure.Model.Color (Color (..))
 import safe MtgPure.Model.Recursive (Case (..))
 import safe MtgPure.Model.Variable (readVariable)
 
 caseOfImpl :: forall m x a. Monad m => (x -> Magic 'Private 'RW m a) -> Case x -> Magic 'Private 'RW m a
 caseOfImpl cont = \case
-  CaseColor (readVariable -> color) w u b r g -> case color of
-    White -> cont w
-    Blue -> cont u
-    Black -> cont b
-    Red -> cont r
-    Green -> cont g
   CaseFin (readVariable -> fin) xs ->
-    let go :: Fin n -> NatList n x -> Magic 'Private 'RW m a
+    let go :: Fin u n -> NatList u n x -> Magic 'Private 'RW m a
         go fin' xs' = case (fin', xs') of
           (FZ, LZ x) -> cont x
           (FZ, LS x _) -> cont x

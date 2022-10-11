@@ -11,6 +11,7 @@
 {-# LANGUAGE Safe #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
@@ -26,7 +27,7 @@ import safe Data.ConsIndex (ConsIndex (consIndex))
 import safe Data.Inst (Inst1, Inst2, Inst3, Inst4, Inst5, Inst6)
 import safe Data.Nat (Fin (..), IsNat (..), NatList (..))
 import safe Data.Proxy (Proxy (Proxy))
-import safe Data.Typeable (Typeable, cast)
+import safe Data.Typeable (Typeable, cast, typeRep)
 import safe MtgPure.Model.Color (Color (..))
 import safe MtgPure.Model.Colors (Colors)
 import safe MtgPure.Model.Damage (Damage)
@@ -72,6 +73,8 @@ import safe MtgPure.Model.Recursive (
   Event,
   EventListener,
   EventListener' (..),
+  IsUser,
+  List (..),
   NonProxy (..),
   Requirement (..),
   SetCard (..),
@@ -80,6 +83,7 @@ import safe MtgPure.Model.Recursive (
   Token (..),
   TriggeredAbility (..),
   WithLinkedObject (..),
+  WithList (..),
   WithMaskedObject (..),
   WithMaskedObjects (..),
   WithThis (..),
@@ -331,6 +335,11 @@ compareZone = pure $ compare (litZone @zone1) (litZone @zone2)
 compareZoneOT :: forall zone1 zone2 ot1 ot2. (IsZO zone1 ot1, IsZO zone2 ot2) => EnvM Ordering
 compareZoneOT = pure $ compare (litZone @zone1, indexOT @ot1) (litZone @zone2, indexOT @ot2)
 
+lenseList :: List x -> x
+lenseList = \case
+  List [x] -> x
+  _ -> error "logic error: should not happen by construction"
+
 ----------------------------------------
 
 ordAbility :: Ability ot -> Ability ot -> EnvM Ordering
@@ -521,29 +530,28 @@ ordCardFacet = \case
 
 ordCase :: Typeable x => (x -> x -> EnvM Ordering) -> Case x -> Case x -> EnvM Ordering
 ordCase ordX x = case x of
-  CaseColor color1 w1 u1 b1 r1 g1 -> \case
-    CaseColor color2 w2 u2 b2 r2 g2 ->
-      seqM
-        [ ordVariable color1 color2
-        , ordX w1 w2
-        , ordX u1 u2
-        , ordX b1 b2
-        , ordX r1 r2
-        , ordX g1 g2
-        ]
-    y -> compareIndexM x y
   CaseFin varFin1 natList1 -> \case
     CaseFin varFin2 natList2 ->
-      let go :: forall n1 n2. (IsNat n1, IsNat n2) => Variable (Fin n1) -> Variable (Fin n2) -> EnvM Ordering
+      let go ::
+            forall u1 u2 n1 n2.
+            IsUser u1 =>
+            IsUser u2 =>
+            (IsNat n1, IsNat n2) =>
+            Variable (Fin u1 n1) ->
+            Variable (Fin u2 n2) ->
+            EnvM Ordering
           go _ _ = case cast (varFin2, natList2) of
-            Nothing -> pure $ compare (litNat @n1) (litNat @n2)
+            Nothing ->
+              seqM
+                [ pure $ compare (litNat @n1) (litNat @n2)
+                , pure $ compare (typeRep (Proxy @u1)) (typeRep (Proxy @u2))
+                ]
             Just (varFin2, natList2) ->
               seqM
                 [ ordVariable varFin1 varFin2
                 , ordNatList ordX natList1 natList2
                 ]
        in go varFin1 varFin2
-    y -> compareIndexM x y
 
 ordColor :: Color -> Color -> EnvM Ordering
 ordColor c1 c2 = pure $ compare c1 c2
@@ -649,7 +657,7 @@ ordCosts = listM ordCost
 ordDamage :: Damage var -> Damage var -> EnvM Ordering
 ordDamage x y = pure $ compare x y
 
-ordEffect :: Typeable ef => Effect ef -> Effect ef -> EnvM Ordering
+ordEffect :: forall ef. Typeable ef => Effect ef -> Effect ef -> EnvM Ordering
 ordEffect x = case x of
   AddMana player1 mana1 -> \case
     AddMana player2 mana2 ->
@@ -859,9 +867,27 @@ ordEffect x = case x of
     Until event2 effect2 ->
       seqM [ordElectEl event1 event2, ordEffect effect1 effect2]
     y -> compareIndexM x y
-  WithList{} -> undefined
+  WithList withList1 -> \case
+    WithList withList2 ->
+      let go ::
+            forall zone1 zone2 ot1 ot2.
+            IsZO zone1 ot1 =>
+            IsZO zone2 ot2 =>
+            WithList (Effect ef) zone1 ot1 ->
+            WithList (Effect ef) zone2 ot2 ->
+            EnvM Ordering
+          go _ _ = case cast withList2 of
+            Nothing -> compareZoneOT @zone1 @zone2 @ot1 @ot2
+            Just withList2 -> ordWithList ordEffect withList1 withList2
+       in go withList1 withList2
+    y -> compareIndexM x y
 
-ordElectEl :: forall p el ot. (IndexOT ot, Typeable el, Typeable p) => Elect p el ot -> Elect p el ot -> EnvM Ordering
+ordElectEl ::
+  forall p el ot.
+  (IndexOT ot, Typeable el, Typeable p) =>
+  Elect p el ot ->
+  Elect p el ot ->
+  EnvM Ordering
 ordElectEl x = case x of
   ActivePlayer playerToElect1 -> \case
     ActivePlayer playerToElect2 -> do
@@ -894,21 +920,23 @@ ordElectEl x = case x of
                 ]
        in go with1 with2
     y -> compareIndexM x y
-  ChooseColor player1 choices1 cont1 -> \case
-    ChooseColor player2 choices2 cont2 -> do
-      discr <- newVariableId
-      let var = ReifiedVariable discr White
-      seqM
-        [ ordZoneObject player1 player2
-        , ordColors choices1 choices2
-        , ordElectEl (cont1 var) (cont2 var)
-        ]
-    y -> compareIndexM x y
   ChooseOption player1 natList1 varToElect1 -> \case
     ChooseOption player2 natList2 varToElect2 ->
-      let go :: forall n1 n2. (IsNat n1, IsNat n2) => NatList n1 Condition -> NatList n2 Condition -> EnvM Ordering
+      let go ::
+            forall u1 u2 n1 n2.
+            IsUser u1 =>
+            IsUser u2 =>
+            IsNat n1 =>
+            IsNat n2 =>
+            NatList u1 n1 Condition ->
+            NatList u2 n2 Condition ->
+            EnvM Ordering
           go _ _ = case cast (natList2, varToElect2) of
-            Nothing -> pure $ compare (litNat @n1) (litNat @n2)
+            Nothing ->
+              seqM
+                [ pure $ compare (litNat @n1) (litNat @n2)
+                , pure $ compare (typeRep (Proxy @u1)) (typeRep (Proxy @u2))
+                ]
             Just (natList2, varToElect2) -> do
               discr <- newVariableId
               let var = ReifiedVariable discr FZ
@@ -1124,7 +1152,7 @@ ordManaCost x y = pure $ compare x y
 ordManaPool :: ManaPool snow -> ManaPool snow -> EnvM Ordering
 ordManaPool x y = pure $ compare x y
 
-ordNatList :: (x -> x -> EnvM Ordering) -> NatList n x -> NatList n x -> EnvM Ordering
+ordNatList :: IsUser u => (x -> x -> EnvM Ordering) -> NatList u n x -> NatList u n x -> EnvM Ordering
 ordNatList ordX = \case
   LZ x1 -> \case
     LZ x2 -> ordX x1 x2
@@ -1665,6 +1693,32 @@ ordWithLinkedObject ordM x = case x of
   L5 NonProxyElectPrePostEffect reqs1 cont1 -> \case
     L5 NonProxyElectPrePostEffect reqs2 cont2 ->
       ordO5 ordM reqs1 reqs2 cont1 cont2
+
+ordWithList :: (ret -> ret -> EnvM Ordering) -> WithList ret zone ot -> WithList ret zone ot -> EnvM Ordering
+ordWithList ordRet x = case x of
+  CountOf (lenseList -> z1) cont1 -> \case
+    CountOf (lenseList -> z2) cont2 -> do
+      discr <- newVariableId
+      let var = ReifiedVariable discr 0
+      seqM
+        [ ordZoneObject z1 z2
+        , ordRet (cont1 var) (cont2 var)
+        ]
+    y -> compareIndexM x y
+  Each (lenseList -> z1) cont1 -> \case
+    Each (lenseList -> z2) cont2 ->
+      seqM
+        [ ordZoneObject z1 z2
+        , ordRet (cont1 z1) (cont2 z2)
+        ]
+    y -> compareIndexM x y
+  SuchThat reqs1 withList1 -> \case
+    SuchThat reqs2 withList2 ->
+      seqM
+        [ ordRequirements reqs1 reqs2
+        , ordWithList ordRet withList1 withList2
+        ]
+    y -> compareIndexM x y
 
 ordWithMaskedObjectElectEl ::
   Typeable p =>
