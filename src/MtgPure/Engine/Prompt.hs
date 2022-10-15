@@ -30,6 +30,8 @@ module MtgPure.Engine.Prompt (
   SpecialAction (..),
   InvalidPlayLand (..),
   InvalidCastSpell (..),
+  CallFrameId,
+  CallFrameInfo (..),
 ) where
 
 import safe Data.Kind (Type)
@@ -44,12 +46,15 @@ import safe MtgPure.Model.Zone (IsZone, Zone (..))
 import safe MtgPure.Model.ZoneObject (IsZO, ZO)
 
 data InternalLogicError
-  = ExpectedCardToBeAPermanentCard
+  = CantHappenByConstruction
+  | CorruptCallStackLogging
+  | ExpectedCardToBeAPermanentCard
   | ExpectedStackObjectToExist
+  | ImpossibleGameOver
   | InvalidPermanent (ZO 'ZBattlefield OTPermanent)
   | InvalidPlayer (Object 'OTPlayer)
-  | ImpossibleGameOver
   | NotSureWhatThisEntails
+  | ObjectIdExistsAndAlsoDoesNotExist
   deriving (Typeable)
 
 deriving instance Eq InternalLogicError
@@ -70,6 +75,13 @@ newtype CardCount = CardCount {unCardCount :: Int}
 newtype CardIndex = CardIndex {unCardIndex :: Int}
   deriving (Eq, Ord, Show)
 
+type CallFrameId = Int
+
+data CallFrameInfo = CallFrameInfo
+  { callFrameId :: CallFrameId
+  , callFrameName :: String
+  }
+
 data Prompt' (opaqueGameState :: (Type -> Type) -> Type) (m :: Type -> Type) = Prompt
   { exceptionCantBeginGameWithoutPlayers :: m ()
   , exceptionInvalidCastSpell :: opaqueGameState m -> Object 'OTPlayer -> InvalidCastSpell -> m ()
@@ -80,6 +92,9 @@ data Prompt' (opaqueGameState :: (Type -> Type) -> Type) (m :: Type -> Type) = P
   , promptCastSpell :: opaqueGameState m -> Object 'OTPlayer -> m (Maybe CastSpell)
   , promptDebugMessage :: String -> m ()
   , promptGetStartingPlayer :: PlayerCount -> m PlayerIndex
+  , promptLogCallPop :: m Bool
+  , promptLogCallPush :: String -> m CallFrameId
+  , promptLogCallTop :: m (Maybe CallFrameInfo)
   , promptPerformMulligan :: Object 'OTPlayer -> [AnyCard] -> m Bool -- TODO: Encode limited game state about players' mulligan states and [Serum Powder].
   , promptPickZO :: forall zone ot. IsZO zone ot => Object 'OTPlayer -> [ZO zone ot] -> m (ZO zone ot)
   , promptPlayLand :: opaqueGameState m -> Object 'OTPlayer -> m (Maybe PlayLand)

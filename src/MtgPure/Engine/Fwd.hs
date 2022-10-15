@@ -29,14 +29,19 @@ import safe qualified Data.Stream as Stream
 import safe Data.Void (Void)
 import safe MtgPure.Engine.Legality (Legality)
 import safe MtgPure.Engine.Monad (Magic', MagicCont')
-import safe MtgPure.Engine.Prompt (ActivateAbility, CastSpell, PlayLand, PlayerCount (..))
+import safe MtgPure.Engine.Prompt (
+  ActivateAbility,
+  CastSpell,
+  PlayLand,
+  PlayerCount (..),
+ )
 import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.Object (OT0, Object, ObjectType (..))
 import safe MtgPure.Model.ObjectId (ObjectId)
-import safe MtgPure.Model.ObjectType.Kind (OTPermanent)
+import safe MtgPure.Model.ObjectType.Kind (OTCard, OTPermanent)
 import safe MtgPure.Model.Permanent (Permanent)
 import safe MtgPure.Model.Player (Player)
-import safe MtgPure.Model.Recursive (Case, Cost, Effect, Elect, Requirement)
+import safe MtgPure.Model.Recursive (AnyCard, Case, Cost, Effect, Elect, Requirement)
 import safe MtgPure.Model.Zone (Zone (..))
 import safe MtgPure.Model.ZoneObject (IsZO, ZO)
 
@@ -49,6 +54,8 @@ data Fwd' ex st m where
     , fwd_caseOf :: forall x a. (x -> Magic' ex st 'Private 'RW m a) -> Case x -> Magic' ex st 'Private 'RW m a
     , fwd_castSpell :: Object 'OTPlayer -> CastSpell -> Magic' ex st 'Private 'RW m Legality
     , fwd_enact :: Effect 'OneShot -> Magic' ex st 'Private 'RW m ()
+    , fwd_findHandCard :: Object 'OTPlayer -> ZO 'ZHand OTCard -> Magic' ex st 'Private 'RW m (Maybe AnyCard)
+    , fwd_findLibraryCard :: Object 'OTPlayer -> ZO 'ZLibrary OTCard -> Magic' ex st 'Private 'RW m (Maybe AnyCard)
     , fwd_findPermanent :: ZO 'ZBattlefield OTPermanent -> Magic' ex st 'Private 'RO m (Maybe Permanent)
     , fwd_findPlayer :: Object 'OTPlayer -> Magic' ex st 'Private 'RO m (Maybe Player)
     , fwd_gainPriority :: Object 'OTPlayer -> Magic' ex st 'Private 'RW m ()
@@ -72,10 +79,14 @@ data Fwd' ex st m where
         Elect p el ot ->
         Magic' ex st 'Private 'RW m (Maybe x)
     , fwd_playLand :: Object 'OTPlayer -> PlayLand -> Magic' ex st 'Private 'RW m Legality
+    , fwd_pushHandCard :: Object 'OTPlayer -> AnyCard -> Magic' ex st 'Private 'RW m (ZO 'ZHand OTCard)
+    , fwd_pushLibraryCard :: Object 'OTPlayer -> AnyCard -> Magic' ex st 'Private 'RW m (ZO 'ZLibrary OTCard)
+    , fwd_removeHandCard :: Object 'OTPlayer -> ZO 'ZHand OTCard -> Magic' ex st 'Private 'RW m (Maybe AnyCard)
+    , fwd_removeLibraryCard :: Object 'OTPlayer -> ZO 'ZLibrary OTCard -> Magic' ex st 'Private 'RW m (Maybe AnyCard)
     , fwd_resolveTopOfStack :: Magic' ex st 'Private 'RW m ()
     , fwd_rewindIllegal :: Magic' ex st 'Private 'RW m Legality -> Magic' ex st 'Private 'RW m Bool
     , fwd_satisfies :: forall zone ot. IsZO zone ot => ZO zone ot -> Requirement zone ot -> Magic' ex st 'Private 'RO m Bool
-    , fwd_setPermanent :: ZO 'ZBattlefield OTPermanent -> Permanent -> Magic' ex st 'Private 'RW m ()
+    , fwd_setPermanent :: ZO 'ZBattlefield OTPermanent -> Maybe Permanent -> Magic' ex st 'Private 'RW m ()
     , fwd_setPlayer :: Object 'OTPlayer -> Player -> Magic' ex st 'Private 'RW m ()
     , fwd_startGame :: Magic' ex st 'Private 'RW m Void
     , fwd_withEachControlledPermanent_ :: forall v rw. IsReadWrite rw => Object 'OTPlayer -> (ZO 'ZBattlefield OTPermanent -> Magic' ex st v rw m ()) -> Magic' ex st v rw m ()

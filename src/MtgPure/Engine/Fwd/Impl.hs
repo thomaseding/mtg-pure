@@ -27,6 +27,8 @@ import safe MtgPure.Engine.ActivateCast (activateAbilityImpl, castSpellImpl)
 import safe MtgPure.Engine.CaseOf (caseOfImpl)
 import safe MtgPure.Engine.Core (
   allZOsImpl,
+  findHandCardImpl,
+  findLibraryCardImpl,
   findPermanentImpl,
   findPlayerImpl,
   getAPNAPImpl,
@@ -37,6 +39,10 @@ import safe MtgPure.Engine.Core (
   getPlayerImpl,
   getPlayersImpl,
   newObjectIdImpl,
+  pushHandCardImpl,
+  pushLibraryCardImpl,
+  removeHandCardImpl,
+  removeLibraryCardImpl,
   rewindIllegalImpl,
   setPermanentImpl,
   setPlayerImpl,
@@ -70,6 +76,8 @@ fwdImpl =
     , fwd_caseOf = caseOfImpl
     , fwd_castSpell = castSpellImpl
     , fwd_enact = enactImpl
+    , fwd_findHandCard = findHandCardImpl
+    , fwd_findLibraryCard = findLibraryCardImpl
     , fwd_findPermanent = findPermanentImpl
     , fwd_findPlayer = findPlayerImpl
     , fwd_gainPriority = gainPriorityImpl
@@ -86,6 +94,10 @@ fwdImpl =
     , fwd_pay = payImpl
     , fwd_performElections = performElectionsImpl
     , fwd_playLand = playLandImpl
+    , fwd_pushHandCard = pushHandCardImpl
+    , fwd_pushLibraryCard = pushLibraryCardImpl
+    , fwd_removeHandCard = removeHandCardImpl
+    , fwd_removeLibraryCard = removeLibraryCardImpl
     , fwd_resolveTopOfStack = resolveTopOfStackImpl
     , fwd_rewindIllegal = rewindIllegalImpl
     , fwd_satisfies = satisfiesImpl

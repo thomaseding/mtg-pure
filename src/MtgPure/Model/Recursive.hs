@@ -64,6 +64,7 @@ module MtgPure.Model.Recursive (
   WithThisActivated,
   WithThisOneShot,
   WithThisTriggered,
+  YourCard (..),
   pattern CFalse,
   pattern CTrue,
 ) where
@@ -276,7 +277,7 @@ instance ConsIndex AnyToken where
 ----------------------------------------
 
 data Card (ot :: Type) :: Type where
-  Card :: IsSpecificCard ot => CardName -> (ZOPlayer -> Elect 'Pre (CardFacet ot) ot) -> Card ot
+  Card :: IsSpecificCard ot => CardName -> YourCard ot -> Card ot
   --DoubleSidedCard
   --SplitCard
   deriving (Typeable)
@@ -1023,3 +1024,30 @@ type WithThisActivated zone ot = WithThis zone (Elect 'Pre (ActivatedAbility zon
 type WithThisOneShot = WithThis 'ZStack (Elect 'Post (Effect 'OneShot))
 
 type WithThisTriggered zone ot = WithThis zone (TriggeredAbility zone) ot
+
+----------------------------------------
+
+data YourCard (ot :: Type) :: Type where
+  YourArtifact :: OTArtifact ~ ot => (ZOPlayer -> CardFacet ot) -> YourCard ot
+  YourArtifactCreature :: OTArtifactCreature ~ ot => (ZOPlayer -> CardFacet ot) -> YourCard ot
+  YourArtifactLand :: OTArtifactLand ~ ot => (ZOPlayer -> CardFacet ot) -> YourCard ot
+  YourCreature :: OTCreature ~ ot => (ZOPlayer -> CardFacet ot) -> YourCard ot
+  YourEnchantment :: OTEnchantment ~ ot => (ZOPlayer -> CardFacet ot) -> YourCard ot
+  YourEnchantmentCreature :: OTEnchantmentCreature ~ ot => (ZOPlayer -> CardFacet ot) -> YourCard ot
+  YourInstant :: OTInstant ~ ot => (ZOPlayer -> Elect 'Pre (CardFacet ot) ot) -> YourCard ot
+  YourLand :: OTLand ~ ot => (ZOPlayer -> CardFacet ot) -> YourCard ot
+  YourPlaneswalker :: OTPlaneswalker ~ ot => (ZOPlayer -> CardFacet ot) -> YourCard ot
+  YourSorcery :: OTSorcery ~ ot => (ZOPlayer -> Elect 'Pre (CardFacet ot) ot) -> YourCard ot
+
+instance ConsIndex (YourCard ot) where
+  consIndex = \case
+    YourArtifact{} -> 1
+    YourArtifactCreature{} -> 2
+    YourArtifactLand{} -> 3
+    YourCreature{} -> 4
+    YourEnchantment{} -> 5
+    YourEnchantmentCreature{} -> 6
+    YourInstant{} -> 7
+    YourLand{} -> 8
+    YourPlaneswalker{} -> 9
+    YourSorcery{} -> 10

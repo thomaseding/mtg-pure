@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE Safe #-}
@@ -21,16 +22,17 @@ module MtgPure.Model.Hand (
 import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.IsCardList (IsCardList (..))
-import safe MtgPure.Model.Recursive (AnyCard)
+import safe MtgPure.Model.ObjectType.Kind (OTCard)
+import safe MtgPure.Model.Zone (Zone (..))
+import safe MtgPure.Model.ZoneObject (ZO)
 
 newtype Hand :: Type where
-  -- NB: No need for ZO/ObjectN/Object ID here since cards in this zone are guaranteed to be stateless.
   Hand ::
-    { unHand :: [AnyCard]
+    { unHand :: [ZO 'ZHand OTCard]
     } ->
     Hand
   deriving (Typeable)
 
-instance IsCardList Hand where
+instance IsCardList Hand (ZO 'ZHand OTCard) where
   toCardList = Hand
   fromCardList = unHand

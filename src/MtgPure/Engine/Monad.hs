@@ -15,15 +15,17 @@
 
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
+{-# HLINT ignore "Use if" #-}
 
 module MtgPure.Engine.Monad (
   Magic',
   MagicEx',
   MagicCont',
+  EnvLogCall (..),
   runMagicRO,
   runMagicRW,
-  runMagicEx,
-  runMagicCont,
+  runMagicEx',
+  runMagicCont',
   magicThrow,
   magicCatch,
   modify,
@@ -52,9 +54,11 @@ import safe qualified Control.Monad.Access as Access
 import safe qualified Control.Monad.State.Strict as State
 import safe Control.Monad.Trans (MonadTrans (..))
 import safe Control.Monad.Trans.Except (ExceptT (ExceptT), catchE, runExceptT, throwE)
+import safe Data.Function (on)
 import safe Data.Functor ((<&>))
 import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
+import safe MtgPure.Engine.Prompt (CallFrameId, CallFrameInfo (callFrameId))
 
 type Inner st v rw m = AccessM v rw (State.StateT st m)
 
@@ -127,11 +131,38 @@ runMagicRW st (MagicRW exceptM) =
       m = State.evalStateT stateM st
    in m
 
-runMagicEx :: (IsReadWrite rw, Monad m) => (Either ex' a -> b) -> MagicEx' ex st ex' v rw m a -> Magic' ex st v rw m b
-runMagicEx f = fmap f . runExceptT
+data EnvLogCall ex st v rw m = EnvLogCall
+  { envLogCallTop :: Magic' ex st v rw m (Maybe CallFrameInfo)
+  , envLogCallUnwind :: Maybe CallFrameId -> Magic' ex st v rw m ()
+  , envLogCallCorruptCallStackLogging :: Magic' ex st v rw m ()
+  }
 
-runMagicCont :: (IsReadWrite rw, Monad m) => (Either a b -> c) -> MagicCont' ex st v rw m a b -> Magic' ex st v rw m c
-runMagicCont f = M.join . runMagicEx g
+runMagicEx' ::
+  (IsReadWrite rw, Monad m) =>
+  EnvLogCall ex st v rw m ->
+  (Either ex' a -> b) ->
+  MagicEx' ex st ex' v rw m a ->
+  Magic' ex st v rw m b
+runMagicEx' env f action = do
+  top <- envLogCallTop env
+  eitherR <- runExceptT action
+  case eitherR of
+    Left{} -> do
+      envLogCallUnwind env $ fmap callFrameId top
+    Right{} -> do
+      top' <- envLogCallTop env
+      case on (==) (fmap callFrameId) top top' of
+        True -> pure ()
+        False -> envLogCallCorruptCallStackLogging env
+  pure $ f eitherR
+
+runMagicCont' ::
+  (IsReadWrite rw, Monad m) =>
+  EnvLogCall ex st v rw m ->
+  (Either a b -> c) ->
+  MagicCont' ex st v rw m a b ->
+  Magic' ex st v rw m c
+runMagicCont' env f = M.join . runMagicEx' env g
  where
   g = \case
     Left cont -> f . Left <$> cont

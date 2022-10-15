@@ -10,6 +10,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE Safe #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskellQuotes #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
@@ -30,7 +31,7 @@ import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
 import safe Control.Monad.Trans (lift)
 import safe Control.Monad.Util (AndLike, untilJust)
 import safe qualified Data.Map.Strict as Map
-import safe MtgPure.Engine.Fwd.Wrap (caseOf, zosSatisfying)
+import safe MtgPure.Engine.Fwd.Wrap (caseOf, logCall, zosSatisfying)
 import safe MtgPure.Engine.Monad (fromRO, gets, modify)
 import safe MtgPure.Engine.Prompt (InternalLogicError (..), Prompt' (..))
 import safe MtgPure.Engine.State (AnyRequirement (..), GameState (..), Magic, StackEntry (..))
@@ -62,7 +63,7 @@ performElectionsImpl ::
   (el -> Magic 'Private 'RW m (Maybe x)) ->
   Elect p el ot ->
   Magic 'Private 'RW m (Maybe x)
-performElectionsImpl seqM zoStack goTerm = \case
+performElectionsImpl seqM zoStack goTerm = logCall 'performElectionsImpl $ \case
   All masked -> electAll goRec masked
   Choose oPlayer thisToElect -> electA Choose' zoStack goRec oPlayer thisToElect
   Cost cost -> goTerm cost
@@ -89,7 +90,7 @@ newTarget ::
   ZO zone ot ->
   Requirement zone ot ->
   Magic 'Private 'RW m (ZO zone ot)
-newTarget zoStack zoTargetBase req = do
+newTarget zoStack zoTargetBase req = logCall 'newTarget $ do
   discr <- fromRO $ gets magicNextObjectDiscriminant
   let (ZO sZone objN) = zoTargetBase
       go :: Object a -> Object a
@@ -124,7 +125,7 @@ electA ::
   ZOPlayer ->
   WithMaskedObject zone (Elect p el ot) ->
   Magic 'Private 'RW m (Maybe x)
-electA sel zoStack goElect oPlayer = \case
+electA sel zoStack goElect oPlayer = logCall 'electA $ \case
   M1 reqs zoToElect -> go reqs zoToElect
   M2 reqs zoToElect -> go reqs zoToElect
   M3 reqs zoToElect -> go reqs zoToElect
@@ -160,7 +161,7 @@ electAll ::
   (Elect p el ot -> Magic 'Private 'RW m x) ->
   WithMaskedObjects zone (Elect p el ot) ->
   Magic 'Private 'RW m x
-electAll goElect = \case
+electAll goElect = logCall 'electAll $ \case
   M1s reqs zosToElect -> go reqs zosToElect
   M2s reqs zosToElect -> go reqs zosToElect
   M3s reqs zosToElect -> go reqs zosToElect

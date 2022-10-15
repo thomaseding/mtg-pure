@@ -9,6 +9,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE Safe #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskellQuotes #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
@@ -29,7 +30,13 @@ import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
 import safe Control.Monad.Util (AndLike (..))
 import safe qualified Data.Map.Strict as Map
 import safe Data.Void (Void)
-import safe MtgPure.Engine.Fwd.Wrap (enact, gainPriority, getActivePlayer, performElections)
+import safe MtgPure.Engine.Fwd.Wrap (
+  enact,
+  gainPriority,
+  getActivePlayer,
+  logCall,
+  performElections,
+ )
 import safe MtgPure.Engine.Monad (fromPublicRO, fromRO, get, gets, modify)
 import safe MtgPure.Engine.Prompt (InternalLogicError (..))
 import safe MtgPure.Engine.State (
@@ -51,7 +58,7 @@ import safe MtgPure.Model.ZoneObject (ZO)
 import safe MtgPure.Model.ZoneObject.Convert (toZO0)
 
 resolveTopOfStackImpl :: Monad m => Magic 'Private 'RW m ()
-resolveTopOfStackImpl = do
+resolveTopOfStackImpl = logCall 'resolveTopOfStackImpl $ do
   Stack stack <- fromRO $ gets magicStack
   case stack of -- (117.4) (405.5)
     [] -> pure ()
@@ -62,7 +69,7 @@ resolveTopOfStackImpl = do
       gainPriority oActive
 
 resolveStackObject :: forall m. Monad m => StackObject -> Magic 'Private 'RW m ()
-resolveStackObject = \case
+resolveStackObject = logCall 'resolveStackObject $ \case
   StackAbility zoAbility -> resolve $ toZO0 zoAbility
   StackSpell zoSpell -> resolve $ toZO0 zoSpell
  where
@@ -81,7 +88,7 @@ resolveElected ::
   ZO 'ZStack OT0 ->
   Elected 'Pre ot ->
   Magic 'Private 'RW m ()
-resolveElected zoStack elected = do
+resolveElected zoStack elected = logCall 'resolveElected $ do
   let goElectEffect :: Elect 'Post (Effect 'OneShot) ot -> Magic 'Private 'RW m ()
       goElectEffect = M.void . performElections andM zoStack goEffect
 

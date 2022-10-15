@@ -36,9 +36,12 @@ module MtgPure.Model.ZoneObject.Convert (
   toZO12,
   castOToZO,
   oToZO1,
+  AsCard,
   AsPermanent,
+  asCard,
   asPermanent,
   zo0ToPermanent,
+  zo0ToCard,
 ) where
 
 import safe Data.Inst (
@@ -73,7 +76,7 @@ import safe MtgPure.Model.Object (
  )
 import safe MtgPure.Model.ObjectId (GetObjectId (..), ObjectId (..))
 import safe MtgPure.Model.ObjectN (ObjectN (..))
-import safe MtgPure.Model.ObjectType.Kind (OTPermanent)
+import safe MtgPure.Model.ObjectType.Kind (OTCard, OTPermanent)
 import safe MtgPure.Model.Recursive.Ord ()
 import safe MtgPure.Model.ToObjectN.Classes (
   ToObject1 (..),
@@ -232,8 +235,25 @@ type AsPermanent ot =
     'OTLand
     'OTPlaneswalker
 
+type AsCard ot =
+  ToObject7
+    ot
+    'OTArtifact
+    'OTCreature
+    'OTEnchantment
+    'OTInstant
+    'OTLand
+    'OTPlaneswalker
+    'OTSorcery
+
 asPermanent :: AsPermanent ot => ZO zone ot -> ZO zone OTPermanent
 asPermanent = toZO5
 
+asCard :: AsCard ot => ZO zone ot -> ZO zone OTCard
+asCard = toZO7
+
 zo0ToPermanent :: ZO 'ZBattlefield OT0 -> ZO 'ZBattlefield OTPermanent
 zo0ToPermanent = asPermanent . ZO SZBattlefield . O1 . Object SLand DefaultObjectDiscriminant . getObjectId
+
+zo0ToCard :: forall zone. IsZone zone => ZO zone OT0 -> ZO zone OTCard
+zo0ToCard = asCard . ZO (singZone @zone) . O1 . Object SLand DefaultObjectDiscriminant . getObjectId

@@ -9,6 +9,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE Safe #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskellQuotes #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
@@ -30,7 +31,6 @@ import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
 import safe Control.Monad.Trans (lift)
 import safe Control.Monad.Util (untilJust)
 import safe qualified Data.List as List
-import safe qualified Data.Map.Strict as Map
 import safe MtgPure.Engine.Fwd.Wrap (
   caseOf,
   findPermanent,
@@ -38,16 +38,18 @@ import safe MtgPure.Engine.Fwd.Wrap (
   getPermanent,
   getPlayer,
   getPlayers,
-  newObjectId,
+  logCall,
+  pushHandCard,
+  removeLibraryCard,
   setPermanent,
   setPlayer,
  )
-import safe MtgPure.Engine.Monad (fromPublicRO, fromRO, gets, modify)
-import safe MtgPure.Engine.Prompt (CardCount (..), CardIndex (..), Prompt' (..))
+import safe MtgPure.Engine.Monad (fromPublicRO, fromRO, gets)
+import safe MtgPure.Engine.Prompt (CardCount (..), CardIndex (..), InternalLogicError (..), Prompt' (..))
 import safe MtgPure.Engine.State (GameState (..), Magic)
 import safe MtgPure.Model.Damage (Damage, Damage' (..))
 import safe MtgPure.Model.EffectType (EffectType (..))
-import safe MtgPure.Model.IsCardList (IsCardList (..), popCard, pushCard)
+import safe MtgPure.Model.IsCardList (IsCardList (..), popCard)
 import safe MtgPure.Model.Life (Life (..))
 import safe MtgPure.Model.Mana (Snow (..))
 import safe MtgPure.Model.ManaPool (CompleteManaPool (..), ManaPool (..))
@@ -63,7 +65,7 @@ import safe MtgPure.Model.ZoneObject (ZO, ZOCreaturePlayerPlaneswalker, ZOPlayer
 import safe MtgPure.Model.ZoneObject.Convert (toZO0, zo0ToPermanent, zo1ToO)
 
 enactImpl :: Monad m => Effect 'OneShot -> Magic 'Private 'RW m ()
-enactImpl = \case
+enactImpl = logCall 'enactImpl $ \case
   AddMana oPlayer mana -> addMana' oPlayer mana
   DealDamage oSource oVictim damage -> dealDamage' oSource oVictim damage
   DrawCards oPlayer amount -> drawCards' amount $ zo1ToO oPlayer
@@ -75,7 +77,7 @@ enactImpl = \case
   _ -> undefined
 
 addMana' :: Monad m => ZOPlayer -> ManaPool 'NonSnow -> Magic 'Private 'RW m ()
-addMana' oPlayer mana =
+addMana' oPlayer mana = logCall 'addMana' $ do
   fromRO (findPlayer $ zo1ToO oPlayer) >>= \case
     Nothing -> pure ()
     Just player -> do
@@ -88,7 +90,7 @@ dealDamage' ::
   ZOCreaturePlayerPlaneswalker ->
   Damage var ->
   Magic 'Private 'RW m ()
-dealDamage' _oSource oVictim (forceVars -> Damage damage) = do
+dealDamage' _oSource oVictim (forceVars -> Damage damage) = logCall 'dealDamage' $ do
   fromRO (findPermanent $ zo0ToPermanent $ toZO0 oVictim) >>= \case
     Nothing -> pure ()
     Just perm -> do
@@ -98,9 +100,10 @@ dealDamage' _oSource oVictim (forceVars -> Damage damage) = do
         Just{} -> do
           setPermanent
             (zo0ToPermanent $ toZO0 oVictim)
-            perm
-              { permanentCreatureDamage = (damage +) <$> permanentCreatureDamage perm
-              }
+            $ Just
+              perm
+                { permanentCreatureDamage = (damage +) <$> permanentCreatureDamage perm
+                }
       case permanentPlaneswalker perm of
         Nothing -> pure ()
         Just () -> undefined
@@ -113,7 +116,7 @@ dealDamage' _oSource oVictim (forceVars -> Damage damage) = do
       setPlayer oPlayer player{playerLife = Life $ life - damage}
 
 shuffleLibrary' :: Monad m => Object 'OTPlayer -> Magic 'Private 'RW m ()
-shuffleLibrary' oPlayer = do
+shuffleLibrary' oPlayer = logCall 'shuffleLibrary' $ do
   prompt <- fromRO $ gets magicPrompt
   player <- fromRO $ getPlayer oPlayer
   let library = fromCardList $ playerLibrary player
@@ -131,33 +134,29 @@ shuffleLibrary' oPlayer = do
   setPlayer oPlayer $ player{playerLibrary = toCardList library'}
 
 drawCard' :: Monad m => Object 'OTPlayer -> Magic 'Private 'RW m ()
-drawCard' oPlayer = do
+drawCard' oPlayer = logCall 'drawCard' $ do
   player <- fromRO $ getPlayer oPlayer
   let library = playerLibrary player
   case popCard library of
     Nothing -> setPlayer oPlayer player{playerDrewFromEmptyLibrary = True}
-    Just (card, library') -> do
-      setPlayer
-        oPlayer
-        player
-          { playerHand = pushCard card $ playerHand player
-          , playerLibrary = library'
-          }
-      i <- newObjectId
-      let zo = toZO0 i
-      modify $ \st -> st{magicHandCards = Map.insert zo card $ magicHandCards st}
+    Just (libCard, _) -> do
+      mCard <- removeLibraryCard oPlayer libCard
+      let card = case mCard of
+            Nothing -> error $ show ObjectIdExistsAndAlsoDoesNotExist
+            Just c -> c
+      M.void $ pushHandCard oPlayer card
 
 drawCards' :: Monad m => Int -> Object 'OTPlayer -> Magic 'Private 'RW m ()
-drawCards' n = M.replicateM_ n . drawCard'
+drawCards' n = logCall 'drawCards' $ M.replicateM_ n . drawCard'
 
 untap' :: Monad m => ZO 'ZBattlefield OTPermanent -> Magic 'Private 'RW m Bool
-untap' oPerm = do
+untap' oPerm = logCall 'untap' $ do
   perm <- fromRO $ getPermanent oPerm
-  setPermanent oPerm perm{permanentTapped = Untapped}
+  setPermanent oPerm $ Just perm{permanentTapped = Untapped}
   pure $ permanentTapped perm /= Untapped
 
 tap' :: Monad m => ZO 'ZBattlefield OTPermanent -> Magic 'Private 'RW m Bool
-tap' oPerm = do
+tap' oPerm = logCall 'tap' $ do
   perm <- fromRO $ getPermanent oPerm
-  setPermanent oPerm perm{permanentTapped = Tapped}
+  setPermanent oPerm $ Just perm{permanentTapped = Tapped}
   pure $ permanentTapped perm /= Tapped

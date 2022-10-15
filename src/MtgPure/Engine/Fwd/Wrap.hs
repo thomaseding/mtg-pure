@@ -20,12 +20,17 @@
 {-# HLINT ignore "Redundant pure" #-}
 
 module MtgPure.Engine.Fwd.Wrap (
+  runMagicEx,
+  runMagicCont,
+  --
   allZOs,
   activateAbility,
   askPlayLand,
   caseOf,
   castSpell,
   enact,
+  findHandCard,
+  findLibraryCard,
   findPermanent,
   findPlayer,
   gainPriority,
@@ -38,10 +43,15 @@ module MtgPure.Engine.Fwd.Wrap (
   getPlayer,
   getPlayers,
   getPlayerWithPriority,
+  logCall,
   newObjectId,
   pay,
   performElections,
   playLand,
+  pushHandCard,
+  pushLibraryCard,
+  removeHandCard,
+  removeLibraryCard,
   resolveTopOfStack,
   rewindIllegal,
   satisfies,
@@ -60,23 +70,44 @@ import safe Control.Monad.Trans (lift)
 import safe Control.Monad.Util (AndLike)
 import safe qualified Data.Stream as Stream
 import safe Data.Void (Void)
+import safe Language.Haskell.TH.Syntax (Name)
 import safe MtgPure.Engine.Fwd (Fwd' (..))
 import safe MtgPure.Engine.Legality (Legality)
-import safe MtgPure.Engine.Monad (fromRO, gets, internalFromPrivate)
+import safe MtgPure.Engine.Monad (
+  EnvLogCall (..),
+  fromRO,
+  gets,
+  internalFromPrivate,
+  runMagicCont',
+  runMagicEx',
+ )
 import safe MtgPure.Engine.Prompt (
   ActivateAbility,
   CastSpell,
+  InternalLogicError (..),
   PlayLand,
   PlayerCount (..),
  )
-import safe MtgPure.Engine.State (Fwd, GameState (..), Magic, MagicCont)
+import safe MtgPure.Engine.State (
+  Fwd,
+  GameResult,
+  GameState (..),
+  Magic,
+  MagicCont,
+  MagicEx,
+  logCallPop,
+  logCallPush,
+  logCallTop,
+  logCallUnwind,
+ )
 import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.Object (OT0, Object, ObjectType (..))
 import safe MtgPure.Model.ObjectId (ObjectId)
-import safe MtgPure.Model.ObjectType.Kind (OTPermanent)
+import safe MtgPure.Model.ObjectType.Kind (OTCard, OTPermanent)
 import safe MtgPure.Model.Permanent (Permanent)
 import safe MtgPure.Model.Player (Player)
 import safe MtgPure.Model.Recursive (
+  AnyCard,
   Case,
   Cost,
   Effect,
@@ -85,6 +116,28 @@ import safe MtgPure.Model.Recursive (
  )
 import safe MtgPure.Model.Zone (Zone (..))
 import safe MtgPure.Model.ZoneObject (IsZO, ZO)
+
+runMagicEx ::
+  (IsReadWrite rw, Monad m) =>
+  (Either ex a -> b) ->
+  MagicEx ex v rw m a ->
+  Magic v rw m b
+runMagicEx = runMagicEx' envLogCall
+
+runMagicCont ::
+  (IsReadWrite rw, Monad m) =>
+  (Either a b -> c) ->
+  MagicCont v rw m a b ->
+  Magic v rw m c
+runMagicCont = runMagicCont' envLogCall
+
+envLogCall :: (IsReadWrite rw, Monad m) => EnvLogCall (GameResult m) (GameState m) v rw m
+envLogCall =
+  EnvLogCall
+    { envLogCallTop = logCallTop
+    , envLogCallUnwind = logCallUnwind
+    , envLogCallCorruptCallStackLogging = error $ show CorruptCallStackLogging
+    }
 
 getFwd :: (Monad m, IsReadWrite rw) => Magic v rw m (Fwd m)
 getFwd = internalFromPrivate $ fromRO $ gets magicFwd
@@ -129,6 +182,12 @@ castSpell = fwd2 fwd_castSpell
 enact :: Monad m => Effect 'OneShot -> Magic 'Private 'RW m ()
 enact = fwd1 fwd_enact
 
+findHandCard :: Monad m => Object 'OTPlayer -> ZO 'ZHand OTCard -> Magic 'Private 'RW m (Maybe AnyCard)
+findHandCard = fwd2 fwd_findHandCard
+
+findLibraryCard :: Monad m => Object 'OTPlayer -> ZO 'ZLibrary OTCard -> Magic 'Private 'RW m (Maybe AnyCard)
+findLibraryCard = fwd2 fwd_findLibraryCard
+
 findPermanent :: Monad m => ZO 'ZBattlefield OTPermanent -> Magic 'Private 'RO m (Maybe Permanent)
 findPermanent = fwd1 fwd_findPermanent
 
@@ -150,6 +209,12 @@ getAPNAP = fwd0 fwd_getAPNAP
 getHasPriority :: Monad m => Object 'OTPlayer -> Magic 'Public 'RO m Bool
 getHasPriority = fwd1 fwd_getHasPriority
 
+getPermanent :: Monad m => ZO 'ZBattlefield OTPermanent -> Magic 'Private 'RO m Permanent
+getPermanent = fwd1 fwd_getPermanent
+
+getPermanents :: Monad m => Magic 'Public 'RO m [ZO 'ZBattlefield OTPermanent]
+getPermanents = fwd0 fwd_getPermanents
+
 getPlayer :: Monad m => Object 'OTPlayer -> Magic 'Private 'RO m Player
 getPlayer = fwd1 fwd_getPlayer
 
@@ -158,6 +223,51 @@ getPlayers = fwd0 fwd_getPlayers
 
 getPlayerWithPriority :: Monad m => Magic 'Public 'RO m (Maybe (Object 'OTPlayer))
 getPlayerWithPriority = fwd0 fwd_getPlayerWithPriority
+
+class LogCall x where
+  logCall :: Name -> x -> x
+
+instance (IsReadWrite rw, Monad m) => LogCall (Magic p rw m z) where
+  logCall name action = do
+    _ <- logCallPush $ show name
+    result <- action
+    _ <- logCallPop
+    pure result
+
+instance (IsReadWrite rw, Monad m) => LogCall (a -> Magic p rw m z) where
+  logCall name action a = do
+    _ <- logCallPush $ show name
+    result <- action a
+    _ <- logCallPop
+    pure result
+
+instance (IsReadWrite rw, Monad m) => LogCall (a -> b -> Magic p rw m z) where
+  logCall name action a b = do
+    _ <- logCallPush $ show name
+    result <- action a b
+    _ <- logCallPop
+    pure result
+
+instance (IsReadWrite rw, Monad m) => LogCall (MagicCont p rw m y z) where
+  logCall name action = do
+    _ <- lift $ logCallPush $ show name
+    result <- action
+    _ <- lift logCallPop
+    pure result
+
+instance (IsReadWrite rw, Monad m) => LogCall (a -> MagicCont p rw m y z) where
+  logCall name action a = do
+    _ <- lift $ logCallPush $ show name
+    result <- action a
+    _ <- lift logCallPop
+    pure result
+
+instance (IsReadWrite rw, Monad m) => LogCall (a -> b -> MagicCont p rw m y z) where
+  logCall name action a b = do
+    _ <- lift $ logCallPush $ show name
+    result <- action a b
+    _ <- lift logCallPop
+    pure result
 
 newObjectId :: Monad m => Magic 'Private 'RW m ObjectId
 newObjectId = fwd0 fwd_newObjectId
@@ -178,6 +288,18 @@ performElections = fwd4 fwd_performElections
 playLand :: Monad m => Object 'OTPlayer -> PlayLand -> Magic 'Private 'RW m Legality
 playLand = fwd2 fwd_playLand
 
+pushHandCard :: Monad m => Object 'OTPlayer -> AnyCard -> Magic 'Private 'RW m (ZO 'ZHand OTCard)
+pushHandCard = fwd2 fwd_pushHandCard
+
+pushLibraryCard :: Monad m => Object 'OTPlayer -> AnyCard -> Magic 'Private 'RW m (ZO 'ZLibrary OTCard)
+pushLibraryCard = fwd2 fwd_pushLibraryCard
+
+removeHandCard :: Monad m => Object 'OTPlayer -> ZO 'ZHand OTCard -> Magic 'Private 'RW m (Maybe AnyCard)
+removeHandCard = fwd2 fwd_removeHandCard
+
+removeLibraryCard :: Monad m => Object 'OTPlayer -> ZO 'ZLibrary OTCard -> Magic 'Private 'RW m (Maybe AnyCard)
+removeLibraryCard = fwd2 fwd_removeLibraryCard
+
 resolveTopOfStack :: Monad m => Magic 'Private 'RW m ()
 resolveTopOfStack = fwd0 fwd_resolveTopOfStack
 
@@ -187,13 +309,7 @@ rewindIllegal = fwd1 fwd_rewindIllegal
 satisfies :: (Monad m, IsZO zone ot) => ZO zone ot -> Requirement zone ot -> Magic 'Private 'RO m Bool
 satisfies = fwd2 fwd_satisfies
 
-getPermanent :: Monad m => ZO 'ZBattlefield OTPermanent -> Magic 'Private 'RO m Permanent
-getPermanent = fwd1 fwd_getPermanent
-
-getPermanents :: Monad m => Magic 'Public 'RO m [ZO 'ZBattlefield OTPermanent]
-getPermanents = fwd0 fwd_getPermanents
-
-setPermanent :: Monad m => ZO 'ZBattlefield OTPermanent -> Permanent -> Magic 'Private 'RW m ()
+setPermanent :: Monad m => ZO 'ZBattlefield OTPermanent -> Maybe Permanent -> Magic 'Private 'RW m ()
 setPermanent = fwd2 fwd_setPermanent
 
 setPlayer :: Monad m => Object 'OTPlayer -> Player -> Magic 'Private 'RW m ()

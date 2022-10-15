@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE Safe #-}
@@ -20,16 +21,17 @@ module MtgPure.Model.Library (
 import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.IsCardList (IsCardList (..))
-import safe MtgPure.Model.Recursive (AnyCard)
+import safe MtgPure.Model.ObjectType.Kind (OTCard)
+import safe MtgPure.Model.Zone (Zone (..))
+import safe MtgPure.Model.ZoneObject (ZO)
 
 newtype Library :: Type where
-  -- NB: No need for ZO/ObjectN/Object ID here since cards in this zone are guaranteed to be stateless.
   Library ::
-    { unLibrary :: [AnyCard]
+    { unLibrary :: [ZO 'ZLibrary OTCard]
     } ->
     Library
   deriving (Typeable)
 
-instance IsCardList Library where
+instance IsCardList Library (ZO 'ZLibrary OTCard) where
   toCardList = Library
   fromCardList = unLibrary

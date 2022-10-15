@@ -4,7 +4,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE Safe #-}
@@ -27,8 +26,6 @@ module MtgPure.Engine.State (
   MagicCont,
   queryMagic,
   --
-  mkGameState,
-  --
   mkOpaqueGameState,
   OpaqueGameState,
   GameState (..),
@@ -47,30 +44,31 @@ module MtgPure.Engine.State (
   electedObject_effect,
   AnyElected (..),
   StackEntry (..),
+  --
+  logCallPop,
+  logCallPush,
+  logCallTop,
+  logCallUnwind,
 ) where
 
-import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
+import safe Control.Monad.Access (IsReadWrite, ReadWrite (..), Visibility (..))
+import safe Control.Monad.Trans (lift)
+import safe Control.Monad.Util (untilJust)
 import safe Data.Kind (Type)
 import safe qualified Data.Map.Strict as Map
 import safe qualified Data.Stream as Stream
 import safe Data.Typeable (Typeable)
 import safe MtgPure.Engine.Fwd (Fwd')
-import safe MtgPure.Engine.Monad (Magic', MagicCont', MagicEx', runMagicRO)
-import safe MtgPure.Engine.Prompt (PlayerIndex, Prompt')
+import safe MtgPure.Engine.Monad (Magic', MagicCont', MagicEx', fromRO, gets, internalFromPrivate, runMagicRO)
+import safe MtgPure.Engine.Prompt (CallFrameId, CallFrameInfo (..), InternalLogicError (..), PlayerIndex, Prompt' (..))
 import safe MtgPure.Model.Deck (Deck (..))
 import safe MtgPure.Model.EffectType (EffectType (..))
-import safe MtgPure.Model.Graveyard (Graveyard (..))
-import safe MtgPure.Model.Hand (Hand (..))
-import safe MtgPure.Model.Library (Library (..))
-import safe MtgPure.Model.Life (Life (..))
 import safe MtgPure.Model.Mulligan (Mulligan)
 import safe MtgPure.Model.Object (
-  IsObjectType (..),
   OT0,
   Object,
   ObjectDiscriminant,
   ObjectType (..),
-  pattern DefaultObjectDiscriminant,
  )
 import safe MtgPure.Model.ObjectId (ObjectId (..))
 import safe MtgPure.Model.ObjectType.Kind (
@@ -84,11 +82,13 @@ import safe MtgPure.Model.PrePost (PrePost (..))
 import safe MtgPure.Model.Recursive (AnyCard, Card, CardFacet, Cost, Effect, Elect, Requirement)
 import safe MtgPure.Model.Sideboard (Sideboard)
 import safe MtgPure.Model.Stack (Stack (..))
-import safe MtgPure.Model.Step (Step (..))
 import safe MtgPure.Model.Zone (Zone (..))
 import safe MtgPure.Model.ZoneObject (IsZO, ZO)
 
 type Fwd m = Fwd' (GameResult m) (GameState m) m
+
+instance Show (Fwd m) where
+  show _ = "MtgPure.Engine.State.Fwd"
 
 type Prompt = Prompt' OpaqueGameState
 
@@ -165,6 +165,7 @@ data GameState (m :: Type -> Type) where
     , magicFwd :: Fwd m
     , magicGraveyardCards :: Map.Map (ZO 'ZGraveyard OT0) AnyCard
     , magicHandCards :: Map.Map (ZO 'ZHand OT0) AnyCard
+    , magicLibraryCards :: Map.Map (ZO 'ZLibrary OT0) AnyCard
     , magicManaBurn :: Bool
     , magicNextObjectDiscriminant :: ObjectDiscriminant
     , magicNextObjectId :: ObjectId
@@ -183,7 +184,13 @@ data GameState (m :: Type -> Type) where
     GameState m
   deriving (Typeable)
 
+instance Show (GameState m) where
+  show _ = "MtgPure.Engine.State.GameState"
+
 newtype OpaqueGameState m = OpaqueGameState (GameState m)
+
+instance Show (OpaqueGameState m) where
+  show _ = "MtgPure.Engine.State.OpaqueGameState"
 
 data GameFormat
   = Vintage
@@ -201,7 +208,7 @@ data GameResult m = GameResult
   , gameWinners :: [PlayerIndex] -- 🏆🥇🏆
   , gameLosers :: [PlayerIndex] -- 👎👎👎
   }
-  deriving (Typeable)
+  deriving (Show, Typeable)
 
 type Magic v rw m = Magic' (GameResult m) (GameState m) v rw m
 
@@ -215,58 +222,29 @@ mkOpaqueGameState = OpaqueGameState
 queryMagic :: Monad m => OpaqueGameState m -> Magic 'Public 'RO m a -> m a
 queryMagic (OpaqueGameState st) = runMagicRO st
 
-mkPlayer :: GameFormat -> Deck -> Sideboard -> Player
-mkPlayer format deck sideboard =
-  Player
-    { playerDrewFromEmptyLibrary = False
-    , playerGraveyard = Graveyard []
-    , playerHand = Hand []
-    , playerLandsPlayedThisTurn = 0
-    , playerLibrary = mkLibrary deck
-    , playerLife = life
-    , playerLost = False
-    , playerMana = mempty
-    , playerStartingDeck = deck
-    , playerStartingHandSize = 7
-    , playerStartingLife = life
-    , playerStartingSideboard = sideboard
-    }
- where
-  -- 103.3
-  life = Life $ case format of
-    Vintage -> 20
+logCallPop :: (IsReadWrite rw, Monad m) => Magic v rw m Bool
+logCallPop = do
+  prompt <- internalFromPrivate $ fromRO $ gets magicPrompt
+  lift $ promptLogCallPop prompt
 
-mkLibrary :: Deck -> Library
-mkLibrary (Deck cards) = Library cards
+logCallPush :: (IsReadWrite rw, Monad m) => String -> Magic v rw m CallFrameId
+logCallPush name = do
+  prompt <- internalFromPrivate $ fromRO $ gets magicPrompt
+  lift $ promptLogCallPush prompt name
 
-mkGameState :: Fwd m -> GameInput m -> Maybe (GameState m)
-mkGameState fwd input = case playerObjects of
-  [] -> Nothing
-  oPlayer : _ ->
-    Just
-      GameState
-        { magicCurrentTurn = 0
-        , magicFwd = fwd
-        , magicGraveyardCards = mempty
-        , magicHandCards = mempty
-        , magicManaBurn = False
-        , magicNextObjectDiscriminant = (1 +) <$> DefaultObjectDiscriminant
-        , magicNextObjectId = ObjectId playerCount
-        , magicPermanents = mempty
-        , magicPhaseStep = PSBeginningPhase UntapStep
-        , magicPlayers = playerMap
-        , magicPlayerOrderAPNAP = Stream.cycle playerObjects
-        , magicPlayerOrderPriority = []
-        , magicPlayerOrderTurn = Stream.cycle playerObjects
-        , magicPrompt = gameInput_prompt input
-        , magicStack = Stack []
-        , magicStackEntryMap = mempty
-        , magicStartingPlayer = oPlayer
-        , magicTargetProperties = mempty
-        }
- where
-  format = gameInput_gameFormat input
-  players = map (uncurry $ mkPlayer format) $ gameInput_decks input
-  playerCount = length players
-  playerObjects = map (idToObject . ObjectId) [0 .. playerCount - 1]
-  playerMap = Map.fromList $ zip playerObjects players
+logCallTop :: (IsReadWrite rw, Monad m) => Magic v rw m (Maybe CallFrameInfo)
+logCallTop = do
+  prompt <- internalFromPrivate $ fromRO $ gets magicPrompt
+  lift $ promptLogCallTop prompt
+
+logCallUnwind :: (IsReadWrite rw, Monad m) => Maybe CallFrameId -> Magic v rw m ()
+logCallUnwind top =
+  untilJust $ do
+    top' <- logCallTop
+    case top == fmap callFrameId top' of
+      True -> pure $ Just ()
+      False -> do
+        success <- logCallPop
+        case success of
+          False -> error $ show CorruptCallStackLogging
+          True -> pure Nothing

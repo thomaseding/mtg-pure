@@ -149,6 +149,7 @@ import safe MtgPure.Model.Recursive (
   WithMaskedObjects (..),
   WithThis (..),
   WithThisOneShot,
+  YourCard (..),
  )
 import safe MtgPure.Model.TimePoint (TimePoint (..))
 import safe MtgPure.Model.Toughness (Toughness)
@@ -452,6 +453,11 @@ restoreObject _ = pure ()
 
 data Plurality = Singular | Plural
 
+pluralize :: EnvM ParenItems -> EnvM ParenItems
+pluralize m = do
+  (p, items) <- m
+  pure (p, items <> pure "s")
+
 lenseList :: List x -> x
 lenseList = \case
   List [x] -> x
@@ -509,26 +515,18 @@ showBasicLandType = noParens . pure . pure . fromString . show
 
 showCard :: Card ot -> EnvM ParenItems
 showCard = \case
-  Card (CardName name) ownerToElectFacet -> yesParens $ do
+  Card (CardName name) yourCard -> yesParens $ do
     depth <- State.gets cardDepth
     State.modify' $ \st -> st{cardDepth = subtract 1 <$> depth}
     let sName = pure (fromString $ show name)
     case depth of
       Just 0 -> pure $ pure "Card " <> sName <> pure " ..."
       _ -> do
-        (owner', snap) <- newObjectN @ 'OTPlayer O1 "you"
-        let owner = toZone owner'
-            electFacet = ownerToElectFacet owner
-        sOwner <- parens <$> showZoneObject owner
-        sElectFacet <- dollar <$> showElect electFacet
-        restoreObject snap
+        sYourCard <- dollar <$> showYourCard yourCard
         pure $
           pure "Card "
             <> sName
-            <> pure " $ \\"
-            <> sOwner
-            <> pure " -> "
-            <> sElectFacet
+            <> sYourCard
 
 showCardFacet :: CardFacet ot -> EnvM ParenItems
 showCardFacet = \case
@@ -2022,6 +2020,37 @@ showWSpell wit = case wit of
   sWit :: EnvM Items
   sWit = pure $ pure $ fromString $ show wit
 
+showYourCard :: YourCard ot -> EnvM ParenItems
+showYourCard = \case
+  YourArtifact cont -> goPerm cont "YourArtifact"
+  YourArtifactCreature cont -> goPerm cont "YourArtifactCreature"
+  YourArtifactLand cont -> goPerm cont "YourArtifactLand"
+  YourCreature cont -> goPerm cont "YourCreature"
+  YourEnchantment cont -> goPerm cont "YourEnchantment"
+  YourEnchantmentCreature cont -> goPerm cont "YourEnchantmentCreature"
+  YourLand cont -> goPerm cont "YourLand"
+  YourPlaneswalker cont -> goPerm cont "YourPlaneswalker"
+  --
+  YourInstant cont -> goSpell cont "YourInstant"
+  YourSorcery cont -> goSpell cont "YourSorcery"
+ where
+  withYou action = do
+    (you', snap) <- newObjectN @ 'OTPlayer O1 "you"
+    let you = toZone you'
+    x <- action you
+    restoreObject snap
+    pure x
+  goPerm cont consName = withYou $ \you -> yesParens $ do
+    sYou <- parens <$> showZoneObject you
+    let facet = cont you
+    sFacet <- dollar <$> showCardFacet facet
+    pure $ pure consName <> pure " $ \\" <> sYou <> pure " -> " <> sFacet
+  goSpell cont consName = withYou $ \you -> yesParens $ do
+    sYou <- parens <$> showZoneObject you
+    let electFacet = cont you
+    sFacet <- dollar <$> showElect electFacet
+    pure $ pure consName <> pure " $ \\" <> sYou <> pure " -> " <> sFacet
+
 showZoneObject :: forall zone ot. IsZO zone ot => ZO zone ot -> EnvM ParenItems
 showZoneObject = \case
   ZO _ objN -> showObjectN @zone objN
@@ -2032,8 +2061,3 @@ showZoneObject0 = \case
 
 showZoneObjects :: forall zone ot. IsZO zone ot => List (ZO zone ot) -> EnvM ParenItems
 showZoneObjects (lenseList -> zo) = pluralize $ showZoneObject zo
-
-pluralize :: EnvM ParenItems -> EnvM ParenItems
-pluralize m = do
-  (p, items) <- m
-  pure (p, items <> pure "s")

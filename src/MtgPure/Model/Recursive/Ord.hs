@@ -89,6 +89,7 @@ import safe MtgPure.Model.Recursive (
   WithThis (..),
   WithThisActivated,
   WithThisTriggered,
+  YourCard (..),
  )
 import safe MtgPure.Model.TimePoint (TimePoint (..))
 import safe MtgPure.Model.ToObjectN.Classes (ToObject1' (toObject1'))
@@ -417,15 +418,11 @@ ordAnyToken = \case
 
 ordCard :: Card ot -> Card ot -> EnvM Ordering
 ordCard x = case x of
-  Card name1 ownerToElectFacet1 -> \case
-    Card name2 ownerToElectFacet2 -> do
-      owner' <- newObjectN @ 'OTPlayer toObject1'
-      let owner = toZone owner'
-          elect1 = ownerToElectFacet1 owner
-          elect2 = ownerToElectFacet2 owner
+  Card name1 yourCard1 -> \case
+    Card name2 yourCard2 -> do
       seqM
         [ pure $ compare name1 name2
-        , ordElectEl elect1 elect2
+        , ordYourCard yourCard1 yourCard2
         ]
 
 ordCardFacet :: CardFacet ot -> CardFacet ot -> EnvM Ordering
@@ -2016,6 +2013,39 @@ ordWSpell = \case
     y@WSpell3 -> ordW3 x y
   x@WSpell4 -> \case
     y@WSpell4 -> ordW4 x y
+
+ordYourCard :: YourCard ot -> YourCard ot -> EnvM Ordering
+ordYourCard = \case
+  YourArtifact cont1 -> \case
+    YourArtifact cont2 -> goPerm cont1 cont2
+  YourArtifactCreature cont1 -> \case
+    YourArtifactCreature cont2 -> goPerm cont1 cont2
+  YourArtifactLand cont1 -> \case
+    YourArtifactLand cont2 -> goPerm cont1 cont2
+  YourCreature cont1 -> \case
+    YourCreature cont2 -> goPerm cont1 cont2
+  YourEnchantment cont1 -> \case
+    YourEnchantment cont2 -> goPerm cont1 cont2
+  YourEnchantmentCreature cont1 -> \case
+    YourEnchantmentCreature cont2 -> goPerm cont1 cont2
+  YourLand cont1 -> \case
+    YourLand cont2 -> goPerm cont1 cont2
+  YourPlaneswalker cont1 -> \case
+    YourPlaneswalker cont2 -> goPerm cont1 cont2
+  --
+  YourInstant cont1 -> \case
+    YourInstant cont2 -> goSpell cont1 cont2
+  YourSorcery cont1 -> \case
+    YourSorcery cont2 -> goSpell cont1 cont2
+ where
+  withYou action = do
+    you' <- newObjectN @ 'OTPlayer toObject1'
+    let you = toZone you'
+    action you
+  goPerm cont1 cont2 = withYou $ \you -> do
+    ordCardFacet (cont1 you) (cont2 you)
+  goSpell cont1 cont2 = withYou $ \you -> do
+    ordElectEl (cont1 you) (cont2 you)
 
 ordZoneObject :: ZO zone ot -> ZO zone ot -> EnvM Ordering
 ordZoneObject x = case x of
