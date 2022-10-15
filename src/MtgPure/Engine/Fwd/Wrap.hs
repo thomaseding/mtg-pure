@@ -8,6 +8,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE Safe #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskellQuotes #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
@@ -20,6 +21,7 @@
 {-# HLINT ignore "Redundant pure" #-}
 
 module MtgPure.Engine.Fwd.Wrap (
+  queryMagic,
   runMagicEx,
   runMagicCont,
   --
@@ -95,10 +97,12 @@ import safe MtgPure.Engine.State (
   Magic,
   MagicCont,
   MagicEx,
+  OpaqueGameState,
   logCallPop,
   logCallPush,
   logCallTop,
   logCallUnwind,
+  queryMagic',
  )
 import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.Object (OT0, Object, ObjectType (..))
@@ -116,6 +120,9 @@ import safe MtgPure.Model.Recursive (
  )
 import safe MtgPure.Model.Zone (Zone (..))
 import safe MtgPure.Model.ZoneObject (IsZO, ZO)
+
+queryMagic :: Monad m => OpaqueGameState m -> Magic 'Public 'RO m a -> m a
+queryMagic opaque = queryMagic' opaque . logCall 'queryMagic
 
 runMagicEx ::
   (IsReadWrite rw, Monad m) =>

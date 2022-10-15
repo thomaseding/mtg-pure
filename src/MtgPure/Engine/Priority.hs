@@ -47,10 +47,12 @@ import safe MtgPure.Engine.Fwd.Wrap (
   runMagicCont,
  )
 import safe MtgPure.Engine.Legality (Legality)
-import safe MtgPure.Engine.Monad (fromPublicRO, fromRO, gets, internalFromPrivate, modify)
+import safe MtgPure.Engine.Monad (fromPublicRO, fromRO, get, gets, internalFromPrivate, modify)
 import safe MtgPure.Engine.Prompt (PlayLand (..), PlayerCount (..), SpecialAction (..))
 import safe MtgPure.Engine.State (GameState (..), Magic, MagicCont)
 import safe MtgPure.Model.Object (Object, ObjectType (..))
+import MtgPure.Model.PhaseStep (isMainPhase)
+import MtgPure.Model.Stack (Stack (..))
 
 gainPriorityImpl :: Monad m => Object 'OTPlayer -> Magic 'Private 'RW m ()
 gainPriorityImpl oPlayer = do
@@ -108,7 +110,13 @@ askActivateAbility oPlayer = logCall 'askActivateAbility $ do
 -- (117.1c)
 askSpecialAction :: Monad m => Object 'OTPlayer -> MagicCont 'Private 'RW m () ()
 askSpecialAction oPlayer = logCall 'askSpecialAction $ do
-  askPlayLand oPlayer
+  st <- lift $ fromRO get
+  case unStack $ magicStack st of
+    [] -> case isMainPhase $ magicPhaseStep st of
+      True -> do
+        askPlayLand oPlayer
+      False -> pure ()
+    _ -> pure ()
 
 performSpecialAction :: Monad m => Object 'OTPlayer -> SpecialAction -> Magic 'Private 'RW m Legality
 performSpecialAction oPlayer = logCall 'performSpecialAction $ \case

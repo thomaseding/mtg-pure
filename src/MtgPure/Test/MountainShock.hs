@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE Safe #-}
@@ -25,16 +26,15 @@ module MtgPure.Test.MountainShock (
   mainMountainShock,
 ) where
 
+import Control.Exception (assert)
 import safe Control.Monad.Trans (MonadIO (..))
 import safe qualified Control.Monad.Trans.State.Strict as State
-import safe Data.Maybe (listToMaybe)
 import safe qualified Data.Set as Set
 import safe MtgPure.Cards (mountain, shock)
-import safe MtgPure.Engine.Fwd.Wrap (getPlayer, withEachPlayer_)
+import safe MtgPure.Engine.Fwd.Wrap (getPlayer, queryMagic, withEachPlayer_)
 import safe MtgPure.Engine.Monad (internalFromPrivate)
 import safe MtgPure.Engine.PlayGame (playGame)
 import safe MtgPure.Engine.Prompt (
-  CallFrameId,
   CallFrameInfo (..),
   CardCount (..),
   CardIndex (..),
@@ -43,7 +43,7 @@ import safe MtgPure.Engine.Prompt (
   Prompt' (..),
   ShowZO (ShowZO),
  )
-import safe MtgPure.Engine.State (GameFormat (..), GameInput (..), OpaqueGameState, queryMagic)
+import safe MtgPure.Engine.State (GameFormat (..), GameInput (..), OpaqueGameState)
 import safe MtgPure.Model.Deck (Deck (..))
 import safe MtgPure.Model.Hand (Hand (..))
 import safe MtgPure.Model.Library (Library (..))
@@ -78,8 +78,8 @@ side =
       ]
 
 data DemoState = DemoState
-  { demo_logDepth :: !Int
-  , demo_logFrames :: ![CallFrameInfo]
+  { demo_ :: ()
+  , demo_logDisabled :: !Bool
   }
 
 type Demo = State.StateT DemoState IO
@@ -90,15 +90,12 @@ runDemo demo = do
     State.runStateT
       demo
       DemoState
-        { demo_logDepth = 0
-        , demo_logFrames = []
+        { demo_ = ()
+        , demo_logDisabled = False
         }
-  case demo_logDepth st of
-    0 -> pure ()
-    _ -> error $ show CorruptCallStackLogging
-  case demo_logFrames st of
-    [] -> pure ()
-    _ -> error $ show CorruptCallStackLogging
+  case demo_logDisabled st of
+    False -> pure ()
+    True -> error $ show CorruptCallStackLogging
   pure x
 
 input :: GameInput Demo
@@ -120,7 +117,6 @@ input =
           , promptGetStartingPlayer = \_count -> pure $ PlayerIndex 0
           , promptLogCallPop = demoLogCallPop
           , promptLogCallPush = demoLogCallPush
-          , promptLogCallTop = demoLogCallTop
           , promptPerformMulligan = \_p _hand -> pure False
           , promptPickZO = \_p zos -> pure $ case zos of
               [] -> error "should be non-empty"
@@ -130,52 +126,38 @@ input =
           }
     }
 
--- TODO: Move the call stack maintenance logic inside State and only keep the printing as a Prompt.
--- Needs its own StateT layer so that `put` and `modify` won't trample this data.
-demoLogCallPush :: OpaqueGameState Demo -> String -> Demo CallFrameId
-demoLogCallPush opaque name = do
-  i <- State.gets demo_logDepth
-  let frame =
-        CallFrameInfo
-          { callFrameId = i
-          , callFrameName = name
-          }
-  State.modify' $ \st ->
-    st
-      { demo_logDepth = i + 1
-      , demo_logFrames = frame : demo_logFrames st
-      }
-  case Set.member name demoLogIgnore of
-    True -> pure ()
-    False -> do
-      let indent = replicate i ' '
-      liftIO $ putStrLn $ indent ++ "+" ++ name ++ ": " ++ show i
-      case Set.member name demoLogDetailed of
-        False -> pure ()
-        True -> demoPrintGameState opaque
-  pure i
-
-demoLogCallPop :: OpaqueGameState Demo -> Demo Bool
-demoLogCallPop _opaque = do
-  frames <- State.gets demo_logFrames
-  case frames of
-    [] -> pure False
-    frame : frames' -> do
-      State.modify' $ \st ->
-        st
-          { demo_logDepth = demo_logDepth st - 1
-          , demo_logFrames = frames'
-          }
-      n <- State.gets demo_logDepth
-      case n == callFrameId frame of
+demoLogCallPush :: OpaqueGameState Demo -> CallFrameInfo -> Demo ()
+demoLogCallPush opaque frame = case name == "MtgPure.Engine.Fwd.Wrap.queryMagic" of
+  True -> State.modify' $ \st -> assert (not $ demo_logDisabled st) st{demo_logDisabled = True}
+  False ->
+    State.gets demo_logDisabled >>= \case
+      True -> pure ()
+      False -> case Set.member name demoLogIgnore of
         True -> pure ()
-        False -> error $ show CorruptCallStackLogging
-      let indent = replicate n ' '
-      liftIO $ putStrLn $ indent ++ "-" ++ callFrameName frame ++ ": " ++ show n
-      pure True
+        False -> do
+          let indent = replicate i ' '
+          liftIO $ putStrLn $ indent ++ "+" ++ name ++ ": " ++ show i
+          case Set.member name demoLogDetailed of
+            False -> pure ()
+            True -> demoPrintGameState opaque
+ where
+  name = callFrameName frame
+  i = callFrameId frame
 
-demoLogCallTop :: Demo (Maybe CallFrameInfo)
-demoLogCallTop = State.gets $ listToMaybe . demo_logFrames
+demoLogCallPop :: OpaqueGameState Demo -> CallFrameInfo -> Demo ()
+demoLogCallPop _opaque frame = case name == "MtgPure.Engine.Fwd.Wrap.queryMagic" of
+  True -> State.modify' $ \st -> assert (demo_logDisabled st) st{demo_logDisabled = False}
+  False ->
+    State.gets demo_logDisabled >>= \case
+      True -> pure ()
+      False -> case Set.member name demoLogIgnore of
+        True -> pure ()
+        False -> do
+          let indent = replicate i ' '
+          liftIO $ putStrLn $ indent ++ "-" ++ name ++ ": " ++ show i
+ where
+  name = callFrameName frame
+  i = callFrameId frame
 
 getPlayerName :: Object 'OTPlayer -> String
 getPlayerName o = case getObjectId o of

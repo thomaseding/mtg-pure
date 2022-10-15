@@ -95,6 +95,7 @@ data CallFrameInfo = CallFrameInfo
   { callFrameId :: CallFrameId
   , callFrameName :: String
   }
+  deriving (Eq, Ord, Show)
 
 data Prompt' (opaqueGameState :: (Type -> Type) -> Type) (m :: Type -> Type) = Prompt
   { exceptionCantBeginGameWithoutPlayers :: m ()
@@ -106,9 +107,8 @@ data Prompt' (opaqueGameState :: (Type -> Type) -> Type) (m :: Type -> Type) = P
   , promptCastSpell :: opaqueGameState m -> Object 'OTPlayer -> m (Maybe CastSpell)
   , promptDebugMessage :: String -> m ()
   , promptGetStartingPlayer :: PlayerCount -> m PlayerIndex
-  , promptLogCallPop :: opaqueGameState m -> m Bool
-  , promptLogCallPush :: opaqueGameState m -> String -> m CallFrameId
-  , promptLogCallTop :: m (Maybe CallFrameInfo)
+  , promptLogCallPop :: opaqueGameState m -> CallFrameInfo -> m ()
+  , promptLogCallPush :: opaqueGameState m -> CallFrameInfo -> m ()
   , promptPerformMulligan :: Object 'OTPlayer -> [AnyCard] -> m Bool -- TODO: Encode limited game state about players' mulligan states and [Serum Powder].
   , promptPickZO :: forall zone ot. IsZO zone ot => Object 'OTPlayer -> [ZO zone ot] -> m (ZO zone ot)
   , promptPlayLand :: opaqueGameState m -> Object 'OTPlayer -> m (Maybe PlayLand)

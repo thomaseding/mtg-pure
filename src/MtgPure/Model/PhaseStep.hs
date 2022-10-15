@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE Safe #-}
@@ -15,6 +16,7 @@
 
 module MtgPure.Model.PhaseStep (
   PhaseStep (..),
+  isMainPhase,
 ) where
 
 import safe Data.Kind (Type)
@@ -29,3 +31,9 @@ data PhaseStep :: Type where
   PSPostCombatMainPhase :: PhaseStep
   PSEndingPhase :: Step 'EndingPhase -> PhaseStep
   deriving (Eq, Ord, Typeable)
+
+isMainPhase :: PhaseStep -> Bool
+isMainPhase = \case
+  PSPreCombatMainPhase -> True
+  PSPostCombatMainPhase -> True
+  _ -> False

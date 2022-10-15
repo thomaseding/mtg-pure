@@ -40,6 +40,8 @@ module MtgPure.Engine.Monad (
   fromRO,
   internalFromPrivate,
   internalFromRW,
+  internalLiftCallStackState,
+  LogCallState (..),
 ) where
 
 import safe qualified Control.Monad as M
@@ -60,7 +62,22 @@ import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
 import safe MtgPure.Engine.Prompt (CallFrameId, CallFrameInfo (callFrameId))
 
-type Inner st v rw m = AccessM v rw (State.StateT st m)
+data LogCallState = LogCallState
+  { logCallDepth :: !Int
+  , logCallFrames :: ![CallFrameInfo]
+  }
+  deriving (Eq, Ord, Show)
+
+emptyLogCallState :: LogCallState
+emptyLogCallState =
+  LogCallState
+    { logCallDepth = 0
+    , logCallFrames = []
+    }
+
+type LogCallT = State.StateT LogCallState
+
+type Inner st v rw m = AccessM v rw (State.StateT st (LogCallT m))
 
 data
   Magic'
@@ -101,13 +118,13 @@ instance (IsReadWrite rw, Monad m) => Monad (Magic' ex st v rw m) where
 
 instance (IsReadWrite rw) => MonadTrans (Magic' ex st v rw) where
   lift = case singReadWrite @rw of
-    SRO -> MagicRO . lift . lift
-    SRW -> MagicRW . lift . lift . lift
+    SRO -> MagicRO . lift . lift . lift
+    SRW -> MagicRW . lift . lift . lift . lift
 
 instance (IsReadWrite rw, MonadIO m) => MonadIO (Magic' ex st v rw m) where
   liftIO = case singReadWrite @rw of
-    SRO -> MagicRO . lift . liftIO
-    SRW -> MagicRW . lift . lift . liftIO
+    SRO -> MagicRO . lift . lift . liftIO
+    SRW -> MagicRW . lift . lift . lift . liftIO
 
 type MagicEx' ex st ex' v rw m = ExceptT ex' (Magic' ex st v rw m)
 
@@ -126,15 +143,22 @@ magicCatch (MagicRW m) f = MagicRW $ catchE m $ unMagicRW . f
 runMagicRO :: Monad m => st -> Magic' ex st v 'RO m a -> m a
 runMagicRO st (MagicRO accessM) =
   let stateM = runAccessM accessM
-      m = State.evalStateT stateM st
-   in m
+      callM = State.evalStateT stateM st
+      m = State.runStateT callM emptyLogCallState
+   in sanityCheckCallStackState <$> m
 
 runMagicRW :: Monad m => st -> Magic' ex st v 'RW m a -> m (Either ex a)
 runMagicRW st (MagicRW exceptM) =
   let accessM = runExceptT exceptM
       stateM = runAccessM accessM
-      m = State.evalStateT stateM st
-   in m
+      callM = State.evalStateT stateM st
+      m = State.runStateT callM emptyLogCallState
+   in sanityCheckCallStackState <$> m
+
+sanityCheckCallStackState :: (a, LogCallState) -> a
+sanityCheckCallStackState (a, st) = case st == emptyLogCallState of
+  True -> a
+  False -> error "corrupt call stack"
 
 data EnvLogCall ex st v rw m = EnvLogCall
   { envLogCallTop :: Magic' ex st v rw m (Maybe CallFrameInfo)
@@ -173,8 +197,21 @@ runMagicCont' env f = M.join . runMagicEx' env g
     Left cont -> f . Left <$> cont
     Right b -> pure $ f $ Right b
 
+internalLiftCallStackState ::
+  forall ex st v rw m a.
+  (IsReadWrite rw, Monad m) =>
+  LogCallT m a ->
+  Magic' ex st v rw m a
+internalLiftCallStackState = case singReadWrite @rw of
+  SRO -> MagicRO . lift . lift
+  SRW -> MagicRW . lift . lift . lift
+
 -- XXX: Don't export this to keep Visbility and ReadWrite honest.
-liftState :: forall ex st v rw m a. (IsReadWrite rw, Monad m) => State.StateT st m a -> Magic' ex st v rw m a
+liftState ::
+  forall ex st v rw m a.
+  (IsReadWrite rw, Monad m) =>
+  State.StateT st (LogCallT m) a ->
+  Magic' ex st v rw m a
 liftState = case singReadWrite @rw of
   SRO -> MagicRO . lift
   SRW -> MagicRW . lift . lift

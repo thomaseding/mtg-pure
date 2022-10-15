@@ -499,9 +499,9 @@ instance ConsIndex (Effect ef) where
     CounterSpell{} -> 6
     DealDamage{} -> 7
     Destroy{} -> 8
-    EffectCase{} -> 9
-    EffectContinuous{} -> 10
-    DrawCards{} -> 11
+    DrawCards{} -> 9
+    EffectCase{} -> 10
+    EffectContinuous{} -> 11
     Gain{} -> 12
     Lose{} -> 13
     PutOntoBattlefield{} -> 14
@@ -720,8 +720,8 @@ data Requirement (zone :: Zone) (ot :: Type) :: Type where
 
 instance ConsIndex (Requirement zone ot) where
   consIndex = \case
-    ControlsA{} -> 1
-    ControlledBy{} -> 2
+    ControlledBy{} -> 1
+    ControlsA{} -> 2
     HasAbility{} -> 3
     HasLandType{} -> 4
     Is{} -> 5

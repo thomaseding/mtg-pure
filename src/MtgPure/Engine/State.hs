@@ -24,7 +24,7 @@ module MtgPure.Engine.State (
   Magic,
   MagicEx,
   MagicCont,
-  queryMagic,
+  queryMagic',
   --
   mkOpaqueGameState,
   OpaqueGameState,
@@ -52,15 +52,33 @@ module MtgPure.Engine.State (
 ) where
 
 import safe Control.Monad.Access (IsReadWrite, ReadWrite (..), Visibility (..))
+import safe qualified Control.Monad.State.Strict as State
 import safe Control.Monad.Trans (lift)
 import safe Control.Monad.Util (untilJust)
 import safe Data.Kind (Type)
 import safe qualified Data.Map.Strict as Map
+import safe Data.Maybe (listToMaybe)
 import safe qualified Data.Stream as Stream
 import safe Data.Typeable (Typeable)
 import safe MtgPure.Engine.Fwd (Fwd')
-import safe MtgPure.Engine.Monad (Magic', MagicCont', MagicEx', fromRO, get, gets, internalFromPrivate, runMagicRO)
-import safe MtgPure.Engine.Prompt (CallFrameId, CallFrameInfo (..), InternalLogicError (..), PlayerIndex, Prompt' (..))
+import safe MtgPure.Engine.Monad (
+  LogCallState (..),
+  Magic',
+  MagicCont',
+  MagicEx',
+  fromRO,
+  get,
+  internalFromPrivate,
+  internalLiftCallStackState,
+  runMagicRO,
+ )
+import safe MtgPure.Engine.Prompt (
+  CallFrameId,
+  CallFrameInfo (..),
+  InternalLogicError (..),
+  PlayerIndex,
+  Prompt' (..),
+ )
 import safe MtgPure.Model.Deck (Deck (..))
 import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.Mulligan (Mulligan)
@@ -219,25 +237,8 @@ type MagicCont v rw m a = MagicCont' (GameResult m) (GameState m) v rw m a
 mkOpaqueGameState :: GameState m -> OpaqueGameState m
 mkOpaqueGameState = OpaqueGameState
 
-queryMagic :: Monad m => OpaqueGameState m -> Magic 'Public 'RO m a -> m a
-queryMagic (OpaqueGameState st) = runMagicRO st
-
-logCallPop :: (IsReadWrite rw, Monad m) => Magic v rw m Bool
-logCallPop = do
-  st <- internalFromPrivate $ fromRO get
-  let prompt = magicPrompt st
-  lift $ promptLogCallPop prompt $ OpaqueGameState st
-
-logCallPush :: (IsReadWrite rw, Monad m) => String -> Magic v rw m CallFrameId
-logCallPush name = do
-  st <- internalFromPrivate $ fromRO get
-  let prompt = magicPrompt st
-  lift $ promptLogCallPush prompt (OpaqueGameState st) name
-
-logCallTop :: (IsReadWrite rw, Monad m) => Magic v rw m (Maybe CallFrameInfo)
-logCallTop = do
-  prompt <- internalFromPrivate $ fromRO $ gets magicPrompt
-  lift $ promptLogCallTop prompt
+queryMagic' :: Monad m => OpaqueGameState m -> Magic 'Public 'RO m a -> m a
+queryMagic' (OpaqueGameState st) = runMagicRO st
 
 logCallUnwind :: (IsReadWrite rw, Monad m) => Maybe CallFrameId -> Magic v rw m ()
 logCallUnwind top =
@@ -250,3 +251,46 @@ logCallUnwind top =
         case success of
           False -> error $ show CorruptCallStackLogging
           True -> pure Nothing
+
+logCallPush :: (IsReadWrite rw, Monad m) => String -> Magic v rw m CallFrameId
+logCallPush name = do
+  i <- internalLiftCallStackState $ State.gets logCallDepth
+  let frame =
+        CallFrameInfo
+          { callFrameId = i
+          , callFrameName = name
+          }
+  internalLiftCallStackState $
+    State.modify' $ \st ->
+      st
+        { logCallDepth = i + 1
+        , logCallFrames = frame : logCallFrames st
+        }
+  st <- internalFromPrivate $ fromRO get
+  let prompt = magicPrompt st
+  lift $ promptLogCallPush prompt (OpaqueGameState st) frame
+  pure i
+
+logCallPop :: (IsReadWrite rw, Monad m) => Magic v rw m Bool
+logCallPop = do
+  frames <- internalLiftCallStackState $ State.gets logCallFrames
+  case frames of
+    [] -> pure False
+    frame : frames' -> do
+      internalLiftCallStackState $
+        State.modify' $ \st ->
+          st
+            { logCallDepth = logCallDepth st - 1
+            , logCallFrames = frames'
+            }
+      n <- internalLiftCallStackState $ State.gets logCallDepth
+      case n == callFrameId frame of
+        True -> pure ()
+        False -> error $ show CorruptCallStackLogging
+      st <- internalFromPrivate $ fromRO get
+      let prompt = magicPrompt st
+      lift $ promptLogCallPop prompt (OpaqueGameState st) frame
+      pure True
+
+logCallTop :: (IsReadWrite rw, Monad m) => Magic v rw m (Maybe CallFrameInfo)
+logCallTop = internalLiftCallStackState $ State.gets $ listToMaybe . logCallFrames
