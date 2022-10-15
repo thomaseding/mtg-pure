@@ -30,6 +30,7 @@ module MtgPure.Engine.Prompt (
   SpecialAction (..),
   InvalidPlayLand (..),
   InvalidCastSpell (..),
+  ShowZO (..),
   CallFrameId,
   CallFrameInfo (..),
 ) where
@@ -37,6 +38,8 @@ module MtgPure.Engine.Prompt (
 import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.Object (Object, ObjectType (..))
+import safe MtgPure.Model.ObjectId (GetObjectId (..), ObjectId (..))
+import safe MtgPure.Model.ObjectN (ObjectN)
 import safe MtgPure.Model.ObjectType.Card (WCard)
 import safe MtgPure.Model.ObjectType.Kind (OTLand, OTPermanent, OTSpell)
 import safe MtgPure.Model.Recursive (AnyCard, SomeCard, WithThisActivated)
@@ -45,13 +48,24 @@ import safe MtgPure.Model.Recursive.Show ()
 import safe MtgPure.Model.Zone (IsZone, Zone (..))
 import safe MtgPure.Model.ZoneObject (IsZO, ZO)
 
+newtype ShowZO zone ot = ShowZO (ZO zone ot)
+  deriving (Eq, Ord)
+
+instance GetObjectId (ObjectN ot) => GetObjectId (ShowZO zone ot) where
+  getObjectId (ShowZO zo) = getObjectId zo
+
+instance GetObjectId (ObjectN ot) => Show (ShowZO zone ot) where
+  show zo = "ZO=" ++ show n
+   where
+    ObjectId n = getObjectId zo
+
 data InternalLogicError
   = CantHappenByConstruction
   | CorruptCallStackLogging
   | ExpectedCardToBeAPermanentCard
   | ExpectedStackObjectToExist
   | ImpossibleGameOver
-  | InvalidPermanent (ZO 'ZBattlefield OTPermanent)
+  | InvalidPermanent (ShowZO 'ZBattlefield OTPermanent)
   | InvalidPlayer (Object 'OTPlayer)
   | NotSureWhatThisEntails
   | ObjectIdExistsAndAlsoDoesNotExist
@@ -92,8 +106,8 @@ data Prompt' (opaqueGameState :: (Type -> Type) -> Type) (m :: Type -> Type) = P
   , promptCastSpell :: opaqueGameState m -> Object 'OTPlayer -> m (Maybe CastSpell)
   , promptDebugMessage :: String -> m ()
   , promptGetStartingPlayer :: PlayerCount -> m PlayerIndex
-  , promptLogCallPop :: m Bool
-  , promptLogCallPush :: String -> m CallFrameId
+  , promptLogCallPop :: opaqueGameState m -> m Bool
+  , promptLogCallPush :: opaqueGameState m -> String -> m CallFrameId
   , promptLogCallTop :: m (Maybe CallFrameInfo)
   , promptPerformMulligan :: Object 'OTPlayer -> [AnyCard] -> m Bool -- TODO: Encode limited game state about players' mulligan states and [Serum Powder].
   , promptPickZO :: forall zone ot. IsZO zone ot => Object 'OTPlayer -> [ZO zone ot] -> m (ZO zone ot)

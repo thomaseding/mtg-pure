@@ -12,6 +12,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE Safe #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -35,7 +36,6 @@ module MtgPure.Model.Recursive.Show (
 import safe qualified Control.Monad.State.Strict as State
 import safe qualified Data.DList as DList
 import safe Data.Inst (
-  Inst1,
   Inst10,
   Inst11,
   Inst12,
@@ -65,6 +65,7 @@ import safe MtgPure.Model.ColorlessMana (ColorlessMana (..))
 import safe MtgPure.Model.Colors (Colors (..))
 import safe MtgPure.Model.CreatureType (CreatureType)
 import safe MtgPure.Model.Damage (Damage, Damage' (..))
+import safe MtgPure.Model.Deck (Deck (..))
 import safe MtgPure.Model.GenericMana (GenericMana (..))
 import safe MtgPure.Model.LandType (LandType (..))
 import safe MtgPure.Model.Loyalty (Loyalty)
@@ -74,7 +75,6 @@ import safe MtgPure.Model.ManaPool (ManaPool (..))
 import safe MtgPure.Model.ManaSymbol (ManaSymbol (..))
 import safe MtgPure.Model.Object (
   IsObjectType (..),
-  OT0,
   OT1,
   OT2,
   OT3,
@@ -84,9 +84,8 @@ import safe MtgPure.Model.Object (
   Object (..),
   ObjectType (..),
  )
-import safe MtgPure.Model.ObjectId (GetObjectId (..), ObjectId (ObjectId))
+import safe MtgPure.Model.ObjectId (ObjectId (ObjectId))
 import safe MtgPure.Model.ObjectN (
-  ON0,
   ON1,
   ON10,
   ON11,
@@ -151,6 +150,7 @@ import safe MtgPure.Model.Recursive (
   WithThisOneShot,
   YourCard (..),
  )
+import safe MtgPure.Model.Sideboard (Sideboard (Sideboard))
 import safe MtgPure.Model.TimePoint (TimePoint (..))
 import safe MtgPure.Model.Toughness (Toughness)
 import safe MtgPure.Model.Variable (
@@ -229,23 +229,9 @@ instance Show (TriggeredAbility zone ot) where
 instance IsZO zone ot => Show (WithMaskedObject zone (Elect p e ot)) where
   show = runEnvM defaultDepthLimit . showWithMaskedObject showElect "obj"
 
-instance IsZone zone => Show (ZO zone OT0) where
-  show = runEnvM defaultDepthLimit . showZoneObject0
+deriving instance Show Deck
 
-instance (IsZone zone, Inst1 IsObjectType a) => Show (ZO zone (OT1 a)) where
-  show = runEnvM defaultDepthLimit . showZoneObject
-
-instance (IsZone zone, Inst2 IsObjectType a b) => Show (ZO zone (OT2 a b)) where
-  show = runEnvM defaultDepthLimit . showZoneObject
-
-instance (IsZone zone, Inst3 IsObjectType a b c) => Show (ZO zone (OT3 a b c)) where
-  show = runEnvM defaultDepthLimit . showZoneObject
-
-instance (IsZone zone, Inst4 IsObjectType a b c d) => Show (ZO zone (OT4 a b c d)) where
-  show = runEnvM defaultDepthLimit . showZoneObject
-
-instance (IsZone zone, Inst5 IsObjectType a b c d e) => Show (ZO zone (OT5 a b c d e)) where
-  show = runEnvM defaultDepthLimit . showZoneObject
+deriving instance Show Sideboard
 
 ----------------------------------------
 
@@ -1381,15 +1367,15 @@ showObjectNImpl objNRef prefix obj = do
       False -> yesParens $ pure $ pure prefix <> pure " " <> sObj
       True -> noParens $ pure sObj
 
-showObject0 ::
-  forall zone.
-  (IsZone zone) =>
-  ON0 ->
-  EnvM ParenItems
-showObject0 objN = yesParens $ do
-  pure $ pure $ fromString $ "toZO0 " ++ show i
- where
-  i = getObjectId objN
+-- showObject0 ::
+--   forall zone.
+--   (IsZone zone) =>
+--   ON0 ->
+--   EnvM ParenItems
+-- showObject0 objN = yesParens $ do
+--   pure $ pure $ fromString $ "toZO0 " ++ show i
+--  where
+--   i = getObjectId objN
 
 showObject1 ::
   forall zone a.
@@ -2055,9 +2041,9 @@ showZoneObject :: forall zone ot. IsZO zone ot => ZO zone ot -> EnvM ParenItems
 showZoneObject = \case
   ZO _ objN -> showObjectN @zone objN
 
-showZoneObject0 :: forall zone. IsZone zone => ZO zone OT0 -> EnvM ParenItems
-showZoneObject0 = \case
-  ZO _ objN -> showObject0 @zone objN
+-- showZoneObject0 :: forall zone. IsZone zone => ZO zone OT0 -> EnvM ParenItems
+-- showZoneObject0 = \case
+--   ZO _ objN -> showObject0 @zone objN
 
 showZoneObjects :: forall zone ot. IsZO zone ot => List (ZO zone ot) -> EnvM ParenItems
 showZoneObjects (lenseList -> zo) = pluralize $ showZoneObject zo

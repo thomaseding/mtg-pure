@@ -19,10 +19,10 @@ module MtgPure.Model.Exile (
 
 import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
-import safe MtgPure.Model.Recursive (AnyCard)
+import safe MtgPure.Model.ObjectType.Kind (OTCard)
 import safe MtgPure.Model.Zone (Zone (..))
 import safe MtgPure.Model.ZoneObject (ZO)
 
 newtype Exile :: Type where
-  Exile :: [ZO 'ZExile AnyCard] -> Exile
+  Exile :: [ZO 'ZExile OTCard] -> Exile
   deriving (Typeable)

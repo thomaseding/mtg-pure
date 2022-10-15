@@ -59,7 +59,7 @@ import safe qualified Data.Map.Strict as Map
 import safe qualified Data.Stream as Stream
 import safe Data.Typeable (Typeable)
 import safe MtgPure.Engine.Fwd (Fwd')
-import safe MtgPure.Engine.Monad (Magic', MagicCont', MagicEx', fromRO, gets, internalFromPrivate, runMagicRO)
+import safe MtgPure.Engine.Monad (Magic', MagicCont', MagicEx', fromRO, get, gets, internalFromPrivate, runMagicRO)
 import safe MtgPure.Engine.Prompt (CallFrameId, CallFrameInfo (..), InternalLogicError (..), PlayerIndex, Prompt' (..))
 import safe MtgPure.Model.Deck (Deck (..))
 import safe MtgPure.Model.EffectType (EffectType (..))
@@ -224,13 +224,15 @@ queryMagic (OpaqueGameState st) = runMagicRO st
 
 logCallPop :: (IsReadWrite rw, Monad m) => Magic v rw m Bool
 logCallPop = do
-  prompt <- internalFromPrivate $ fromRO $ gets magicPrompt
-  lift $ promptLogCallPop prompt
+  st <- internalFromPrivate $ fromRO get
+  let prompt = magicPrompt st
+  lift $ promptLogCallPop prompt $ OpaqueGameState st
 
 logCallPush :: (IsReadWrite rw, Monad m) => String -> Magic v rw m CallFrameId
 logCallPush name = do
-  prompt <- internalFromPrivate $ fromRO $ gets magicPrompt
-  lift $ promptLogCallPush prompt name
+  st <- internalFromPrivate $ fromRO get
+  let prompt = magicPrompt st
+  lift $ promptLogCallPush prompt (OpaqueGameState st) name
 
 logCallTop :: (IsReadWrite rw, Monad m) => Magic v rw m (Maybe CallFrameInfo)
 logCallTop = do

@@ -87,6 +87,7 @@ import safe MtgPure.Engine.Monad (
 import safe MtgPure.Engine.Prompt (
   InternalLogicError (..),
   PlayerCount (..),
+  ShowZO (..),
  )
 import safe MtgPure.Engine.State (
   GameResult (..),
@@ -276,7 +277,7 @@ findPermanentImpl oPerm = logCall 'findPermanentImpl $ gets $ Map.lookup (toZO0 
 getPermanentImpl :: Monad m => ZO 'ZBattlefield OTPermanent -> Magic 'Private 'RO m Permanent
 getPermanentImpl oPerm = logCall 'getPermanentImpl $ do
   findPermanentImpl oPerm <&> \case
-    Nothing -> error $ show $ InvalidPermanent oPerm
+    Nothing -> error $ show $ InvalidPermanent $ ShowZO oPerm
     Just perm -> perm
 
 setPermanentImpl :: Monad m => ZO 'ZBattlefield OTPermanent -> Maybe Permanent -> Magic 'Private 'RW m ()

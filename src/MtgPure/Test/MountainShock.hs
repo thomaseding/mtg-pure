@@ -4,7 +4,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE Safe #-}
@@ -28,9 +27,11 @@ module MtgPure.Test.MountainShock (
 
 import safe Control.Monad.Trans (MonadIO (..))
 import safe qualified Control.Monad.Trans.State.Strict as State
-import Data.Maybe (listToMaybe)
+import safe Data.Maybe (listToMaybe)
 import safe qualified Data.Set as Set
 import safe MtgPure.Cards (mountain, shock)
+import safe MtgPure.Engine.Fwd.Wrap (getPlayer, withEachPlayer_)
+import safe MtgPure.Engine.Monad (internalFromPrivate)
 import safe MtgPure.Engine.PlayGame (playGame)
 import safe MtgPure.Engine.Prompt (
   CallFrameId,
@@ -40,10 +41,16 @@ import safe MtgPure.Engine.Prompt (
   InternalLogicError (CorruptCallStackLogging),
   PlayerIndex (PlayerIndex),
   Prompt' (..),
+  ShowZO (ShowZO),
  )
-import safe MtgPure.Engine.State (GameFormat (..), GameInput (..))
+import safe MtgPure.Engine.State (GameFormat (..), GameInput (..), OpaqueGameState, queryMagic)
 import safe MtgPure.Model.Deck (Deck (..))
+import safe MtgPure.Model.Hand (Hand (..))
+import safe MtgPure.Model.Library (Library (..))
 import safe MtgPure.Model.Mulligan (Mulligan (..))
+import safe MtgPure.Model.Object (Object (..), ObjectType (..))
+import safe MtgPure.Model.ObjectId (GetObjectId (..), ObjectId (ObjectId))
+import safe MtgPure.Model.Player (Player (..))
 import safe MtgPure.Model.Recursive (AnyCard (..))
 import safe MtgPure.Model.Sideboard (Sideboard (..))
 
@@ -73,7 +80,6 @@ side =
 data DemoState = DemoState
   { demo_logDepth :: !Int
   , demo_logFrames :: ![CallFrameInfo]
-  , demo_logIgnore :: !(Set.Set String)
   }
 
 type Demo = State.StateT DemoState IO
@@ -86,7 +92,6 @@ runDemo demo = do
       DemoState
         { demo_logDepth = 0
         , demo_logFrames = []
-        , demo_logIgnore = demoLogIgnore
         }
   case demo_logDepth st of
     0 -> pure ()
@@ -125,11 +130,10 @@ input =
           }
     }
 
-demoIgnoreCall :: String -> Demo Bool
-demoIgnoreCall name = State.gets $ Set.member name . demo_logIgnore
-
-demoLogCallPush :: String -> Demo CallFrameId
-demoLogCallPush name = do
+-- TODO: Move the call stack maintenance logic inside State and only keep the printing as a Prompt.
+-- Needs its own StateT layer so that `put` and `modify` won't trample this data.
+demoLogCallPush :: OpaqueGameState Demo -> String -> Demo CallFrameId
+demoLogCallPush opaque name = do
   i <- State.gets demo_logDepth
   let frame =
         CallFrameInfo
@@ -141,15 +145,18 @@ demoLogCallPush name = do
       { demo_logDepth = i + 1
       , demo_logFrames = frame : demo_logFrames st
       }
-  demoIgnoreCall name >>= \case
+  case Set.member name demoLogIgnore of
     True -> pure ()
     False -> do
       let indent = replicate i ' '
       liftIO $ putStrLn $ indent ++ "+" ++ name ++ ": " ++ show i
+      case Set.member name demoLogDetailed of
+        False -> pure ()
+        True -> demoPrintGameState opaque
   pure i
 
-demoLogCallPop :: Demo Bool
-demoLogCallPop = do
+demoLogCallPop :: OpaqueGameState Demo -> Demo Bool
+demoLogCallPop _opaque = do
   frames <- State.gets demo_logFrames
   case frames of
     [] -> pure False
@@ -169,6 +176,43 @@ demoLogCallPop = do
 
 demoLogCallTop :: Demo (Maybe CallFrameInfo)
 demoLogCallTop = State.gets $ listToMaybe . demo_logFrames
+
+getPlayerName :: Object 'OTPlayer -> String
+getPlayerName o = case getObjectId o of
+  ObjectId i -> case i of
+    0 -> "Alice"
+    1 -> "Bob"
+    _ -> "UnknownPlayer" ++ show i
+
+horizLine :: IO ()
+horizLine = do
+  putStrLn $ replicate 20 '-'
+
+-- TODO: Expose sufficient Public API to avoid need for `internalFromPrivate`
+demoPrintGameState :: OpaqueGameState Demo -> Demo ()
+demoPrintGameState opaque = queryMagic opaque $ do
+  liftIO $ do
+    horizLine
+    print "GAME STATE BEGIN"
+  withEachPlayer_ $ \oPlayer -> do
+    let name = getPlayerName oPlayer
+    liftIO $ do
+      horizLine
+      putStrLn $ name ++ ":"
+    player <- internalFromPrivate $ getPlayer oPlayer
+    liftIO $ do
+      print ("library", length $ unLibrary $ playerLibrary player)
+      print ("hand", map ShowZO $ unHand $ playerHand player)
+  liftIO $ do
+    print "GAME STATE END"
+    horizLine
+
+demoLogDetailed :: Set.Set String
+demoLogDetailed =
+  Set.fromList
+    [ ""
+    , "MtgPure.Engine.Turn.untapStep"
+    ]
 
 demoLogIgnore :: Set.Set String
 demoLogIgnore =

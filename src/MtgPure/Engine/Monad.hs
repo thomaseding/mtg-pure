@@ -52,7 +52,7 @@ import safe Control.Monad.Access (
  )
 import safe qualified Control.Monad.Access as Access
 import safe qualified Control.Monad.State.Strict as State
-import safe Control.Monad.Trans (MonadTrans (..))
+import safe Control.Monad.Trans (MonadIO (..), MonadTrans (..))
 import safe Control.Monad.Trans.Except (ExceptT (ExceptT), catchE, runExceptT, throwE)
 import safe Data.Function (on)
 import safe Data.Functor ((<&>))
@@ -103,6 +103,11 @@ instance (IsReadWrite rw) => MonadTrans (Magic' ex st v rw) where
   lift = case singReadWrite @rw of
     SRO -> MagicRO . lift . lift
     SRW -> MagicRW . lift . lift . lift
+
+instance (IsReadWrite rw, MonadIO m) => MonadIO (Magic' ex st v rw m) where
+  liftIO = case singReadWrite @rw of
+    SRO -> MagicRO . lift . liftIO
+    SRW -> MagicRW . lift . lift . liftIO
 
 type MagicEx' ex st ex' v rw m = ExceptT ex' (Magic' ex st v rw m)
 
