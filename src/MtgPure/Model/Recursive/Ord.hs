@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ExtendedDefaultRules #-}
@@ -290,7 +291,7 @@ listM compareM xs ys = case (xs, ys) of
 newVariableId :: EnvM VariableId
 newVariableId = do
   raw <- State.gets nextRawId
-  State.modify' $ \st -> st{nextRawId = nextRawId st + 1}
+  State.modify' \st -> st{nextRawId = nextRawId st + 1}
   pure $ VariableId raw
 
 newObject :: forall a. IsObjectType a => EnvM (Object a)
@@ -298,7 +299,7 @@ newObject = do
   raw <- State.gets nextRawId
   let i = ObjectId raw
       obj = idToObject @a i
-  State.modify' $ \st -> st{nextRawId = nextRawId st + 1}
+  State.modify' \st -> st{nextRawId = nextRawId st + 1}
   pure obj
 
 -- NOTE: The `Typeable (ObjectN ot)` not needed, but keep it for now to prove it's possible
@@ -1800,9 +1801,9 @@ ordWithThis ordM = \case
             objNa' <- newObjectN @a O1
             objNb' <- newObjectN @b O1
             let objNa = toZone objNa'
-            let objNb = toZone objNb'
-            let lifted1 = cont1 (objNa, objNb)
-            let lifted2 = cont2 (objNa, objNb)
+                objNb = toZone objNb'
+                lifted1 = cont1 (objNa, objNb)
+                lifted2 = cont2 (objNa, objNb)
             ordM lifted1 lifted2
        in go cont1 cont2
  where
@@ -2042,9 +2043,9 @@ ordYourCard = \case
     you' <- newObjectN @ 'OTPlayer toObject1'
     let you = toZone you'
     action you
-  goPerm cont1 cont2 = withYou $ \you -> do
+  goPerm cont1 cont2 = withYou \you -> do
     ordCardFacet (cont1 you) (cont2 you)
-  goSpell cont1 cont2 = withYou $ \you -> do
+  goSpell cont1 cont2 = withYou \you -> do
     ordElectEl (cont1 you) (cont2 you)
 
 ordZoneObject :: ZO zone ot -> ZO zone ot -> EnvM Ordering

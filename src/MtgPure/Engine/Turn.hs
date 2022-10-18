@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -19,11 +20,13 @@
 {-# HLINT ignore "Use const" #-}
 {-# HLINT ignore "Use if" #-}
 {-# HLINT ignore "Redundant pure" #-}
+{-# HLINT ignore "Redundant if" #-}
 
 module MtgPure.Engine.Turn (
   startGameImpl,
 ) where
 
+import safe Control.Exception (assert)
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
 import safe Control.Monad.Trans (lift)
 import safe Control.Monad.Util (untilJust)
@@ -67,7 +70,7 @@ import safe MtgPure.Model.ZoneObject.Convert (oToZO1)
 
 -- (103)
 startGameImpl :: Monad m => Magic 'Private 'RW m Void
-startGameImpl = logCall 'startGameImpl $ do
+startGameImpl = logCall 'startGameImpl do
   determineStartingPlayer -- (103.1)
   withEachPlayer_ $ enact . ShuffleLibrary . oToZO1 -- (103.2)
   pure () -- (103.3) See `mkPlayer`
@@ -80,12 +83,12 @@ startGameImpl = logCall 'startGameImpl $ do
 
 -- (103.1)
 determineStartingPlayer :: Monad m => Magic 'Private 'RW m ()
-determineStartingPlayer = logCall 'determineStartingPlayer $ do
+determineStartingPlayer = logCall 'determineStartingPlayer do
   st <- fromRO get
   let prompt = magicPrompt st
       playerCount = Map.size $ magicPlayers st
   startingIndex <- lift $
-    untilJust $ do
+    untilJust do
       PlayerIndex playerIndex <- promptGetStartingPlayer prompt $ PlayerCount playerCount
       case playerIndex < playerCount of
         True -> pure $ Just playerIndex
@@ -93,7 +96,7 @@ determineStartingPlayer = logCall 'determineStartingPlayer $ do
           exceptionInvalidStartingPlayer prompt (PlayerCount playerCount) $ PlayerIndex playerIndex
           pure Nothing
   let ps = Stream.drop startingIndex $ magicPlayerOrderTurn st
-  put $
+  put
     st
       { magicPlayerOrderAPNAP = ps
       , magicPlayerOrderPriority = []
@@ -102,17 +105,17 @@ determineStartingPlayer = logCall 'determineStartingPlayer $ do
 
 -- (103.4)
 drawStartingHands :: Monad m => Magic 'Private 'RW m ()
-drawStartingHands = logCall 'drawStartingHands $ do
+drawStartingHands = logCall 'drawStartingHands do
   withEachPlayer_ drawStartingHand
 
 drawStartingHand :: Monad m => Object 'OTPlayer -> Magic 'Private 'RW m ()
-drawStartingHand oPlayer = logCall 'drawStartingHand $ do
+drawStartingHand oPlayer = logCall 'drawStartingHand do
   player <- fromRO $ getPlayer oPlayer
   enact $ DrawCards (oToZO1 oPlayer) $ playerStartingHandSize player
 
 setPhaseStep :: PhaseStep -> Monad m => MagicCont 'Private 'RW m Void ()
-setPhaseStep phaseStep = logCall 'setPhaseStep $ do
-  lift $ modify $ \st -> st{magicPhaseStep = phaseStep}
+setPhaseStep phaseStep = logCall 'setPhaseStep do
+  lift $ modify \st -> st{magicPhaseStep = phaseStep}
 
 -- NB: This hangs if there are not enough unique items.
 takeUnique :: Eq a => Int -> Stream.Stream a -> [a]
@@ -126,20 +129,26 @@ takeUnique n s = case n <= 0 of
 mkAPNAP :: PlayerCount -> Stream.Stream (Object 'OTPlayer) -> Stream.Stream (Object 'OTPlayer)
 mkAPNAP (PlayerCount n) = Stream.cycle . takeUnique n
 
+advanceTurnState :: Monad m => Magic 'Private 'RW m ()
+advanceTurnState = logCall 'advanceTurnState do
+  n <- fromPublicRO getAlivePlayerCount
+  ps <- fromRO $ gets $ Stream.tail . magicPlayerOrderTurn
+  modify \st ->
+    assert
+      (null $ magicPlayerOrderPriority st)
+      st
+        { magicCurrentTurn = magicCurrentTurn st + 1
+        , magicPlayerOrderAPNAP = mkAPNAP n ps
+        , magicPlayerOrderTurn = ps
+        }
+
 -- (502)
 untapStep :: Monad m => MagicCont 'Private 'RW m Void Void
 untapStep = do
-  logCall 'untapStep $ do
+  logCall 'untapStep do
     setPhaseStep $ PSBeginningPhase UntapStep
-    lift $ do
-      do
-        n <- fromPublicRO getAlivePlayerCount
-        ps <- fromRO $ gets magicPlayerOrderTurn
-        modify $ \st ->
-          st
-            { magicCurrentTurn = magicCurrentTurn st + 1
-            , magicPlayerOrderAPNAP = mkAPNAP n ps
-            }
+    lift do
+      advanceTurnState
       oPlayer <- fromPublicRO getActivePlayer
       do
         player <- fromRO $ getPlayer oPlayer
@@ -165,18 +174,18 @@ togglePermanentPhase oPerm = do
 
 upkeepStep :: Monad m => MagicCont 'Private 'RW m Void Void
 upkeepStep = do
-  logCall 'upkeepStep $ do
+  logCall 'upkeepStep do
     setPhaseStep $ PSBeginningPhase UpkeepStep
-    lift $ do
+    lift do
       oActive <- fromPublicRO getActivePlayer
       gainPriority oActive
   drawStep
 
 drawStep :: Monad m => MagicCont 'Private 'RW m Void Void
 drawStep = do
-  logCall 'drawStep $ do
+  logCall 'drawStep do
     setPhaseStep $ PSBeginningPhase DrawStep
-    lift $ do
+    lift do
       st <- fromRO get
       oActive <- fromPublicRO getActivePlayer
       case magicCurrentTurn st of
@@ -187,21 +196,21 @@ drawStep = do
 
 precombatMainPhase :: Monad m => MagicCont 'Private 'RW m Void Void
 precombatMainPhase = do
-  logCall 'precombatMainPhase $ do
+  logCall 'precombatMainPhase do
     setPhaseStep PSPreCombatMainPhase
     lift mainPhaseCommon
   beginningOfCombatStep
 
 postcombatMainPhase :: Monad m => MagicCont 'Private 'RW m Void Void
 postcombatMainPhase = do
-  logCall 'postcombatMainPhase $ do
+  logCall 'postcombatMainPhase do
     setPhaseStep PSPreCombatMainPhase
     lift mainPhaseCommon
   endStep
 
 -- (505)
 mainPhaseCommon :: Monad m => Magic 'Private 'RW m ()
-mainPhaseCommon = logCall 'mainPhaseCommon $ do
+mainPhaseCommon = logCall 'mainPhaseCommon do
   pure () -- (505.1) Rule just states nomenclature. Nothing special to do
   pure () -- (505.2) Rule just states this phase has no steps
   pure () -- (505.3) TODO: Archenemy
@@ -211,65 +220,65 @@ mainPhaseCommon = logCall 'mainPhaseCommon $ do
 
 beginningOfCombatStep :: Monad m => MagicCont 'Private 'RW m Void Void
 beginningOfCombatStep = do
-  logCall 'beginningOfCombatStep $ do
+  logCall 'beginningOfCombatStep do
     setPhaseStep $ PSCombatPhase BeginningOfCombatStep
     --_ <- undefined
-    lift $ do
+    lift do
       oActive <- fromPublicRO getActivePlayer
       gainPriority oActive
   declareAttackersStep
 
 declareAttackersStep :: Monad m => MagicCont 'Private 'RW m Void Void
 declareAttackersStep = do
-  logCall 'declareAttackersStep $ do
+  logCall 'declareAttackersStep do
     setPhaseStep $ PSCombatPhase DeclareAttackersStep
     --_ <- undefined
-    lift $ do
+    lift do
       oActive <- fromPublicRO getActivePlayer
       gainPriority oActive
   declareBlockersStep
 
 declareBlockersStep :: Monad m => MagicCont 'Private 'RW m Void Void
 declareBlockersStep = do
-  logCall 'declareBlockersStep $ do
+  logCall 'declareBlockersStep do
     setPhaseStep $ PSCombatPhase DeclareBlockersStep
     --_ <- undefined
-    lift $ do
+    lift do
       oActive <- fromPublicRO getActivePlayer
       gainPriority oActive
   combatDamageStep
 
 combatDamageStep :: Monad m => MagicCont 'Private 'RW m Void Void
 combatDamageStep = do
-  logCall 'combatDamageStep $ do
+  logCall 'combatDamageStep do
     setPhaseStep $ PSCombatPhase CombatDamageStep
     --_ <- undefined
-    lift $ do
+    lift do
       oActive <- fromPublicRO getActivePlayer
       gainPriority oActive
   endOfCombatStep
 
 endOfCombatStep :: Monad m => MagicCont 'Private 'RW m Void Void
 endOfCombatStep = do
-  logCall 'endOfCombatStep $ do
+  logCall 'endOfCombatStep do
     setPhaseStep $ PSCombatPhase EndOfCombatStep
-    lift $ do
+    lift do
       oActive <- fromPublicRO getActivePlayer
       gainPriority oActive
   postcombatMainPhase
 
 endStep :: Monad m => MagicCont 'Private 'RW m Void Void
 endStep = do
-  logCall 'endStep $ do
+  logCall 'endStep do
     setPhaseStep $ PSEndingPhase EndStep
-    lift $ do
+    lift do
       oActive <- fromPublicRO getActivePlayer
       gainPriority oActive
   cleanupStep
 
 cleanupStep :: Monad m => MagicCont 'Private 'RW m Void Void
 cleanupStep = do
-  logCall 'cleanupStep $ do
+  logCall 'cleanupStep do
     setPhaseStep $ PSEndingPhase CleanupStep
   --_ <- undefined
   untapStep

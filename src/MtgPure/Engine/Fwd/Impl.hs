@@ -23,7 +23,11 @@ module MtgPure.Engine.Fwd.Impl (
   fwdImpl,
 ) where
 
-import safe MtgPure.Engine.ActivateCast (activateAbilityImpl, castSpellImpl)
+import safe MtgPure.Engine.ActivateCast (
+  activateAbilityImpl,
+  askActivateAbilityImpl,
+  castSpellImpl,
+ )
 import safe MtgPure.Engine.CaseOf (caseOfImpl)
 import safe MtgPure.Engine.Core (
   allZOsImpl,
@@ -32,8 +36,10 @@ import safe MtgPure.Engine.Core (
   findPermanentImpl,
   findPlayerImpl,
   getAPNAPImpl,
+  getActivatedAbilitiesImpl,
   getActivePlayerImpl,
   getAlivePlayerCountImpl,
+  getAllActivatedAbilitiesImpl,
   getPermanentImpl,
   getPermanentsImpl,
   getPlayerImpl,
@@ -55,7 +61,7 @@ import safe MtgPure.Engine.Enact (enactImpl)
 import safe MtgPure.Engine.Fwd (Fwd' (..))
 import safe MtgPure.Engine.Pay (payImpl)
 import safe MtgPure.Engine.PerformElections (performElectionsImpl)
-import safe MtgPure.Engine.PlayLand (askPlayLandImpl, playLandImpl)
+import safe MtgPure.Engine.PlayLand (askPlayLandImpl)
 import safe MtgPure.Engine.Priority (
   gainPriorityImpl,
   getHasPriorityImpl,
@@ -64,6 +70,7 @@ import safe MtgPure.Engine.Priority (
 import safe MtgPure.Engine.Resolve (resolveTopOfStackImpl)
 import safe MtgPure.Engine.Satisfies (satisfiesImpl, zosSatisfyingImpl)
 import safe MtgPure.Engine.State (Fwd)
+import safe MtgPure.Engine.StateBasedActions (performStateBasedActionsImpl)
 import safe MtgPure.Engine.Turn (startGameImpl)
 
 fwdImpl :: Monad m => Fwd m
@@ -72,6 +79,7 @@ fwdImpl =
     { fwd_ = ()
     , fwd_activateAbility = activateAbilityImpl
     , fwd_allZOs = allZOsImpl
+    , fwd_askActivateAbility = askActivateAbilityImpl
     , fwd_askPlayLand = askPlayLandImpl
     , fwd_caseOf = caseOfImpl
     , fwd_castSpell = castSpellImpl
@@ -81,8 +89,10 @@ fwdImpl =
     , fwd_findPermanent = findPermanentImpl
     , fwd_findPlayer = findPlayerImpl
     , fwd_gainPriority = gainPriorityImpl
+    , fwd_getActivatedAbilities = getActivatedAbilitiesImpl
     , fwd_getActivePlayer = getActivePlayerImpl
     , fwd_getAlivePlayerCount = getAlivePlayerCountImpl
+    , fwd_getAllActivatedAbilities = getAllActivatedAbilitiesImpl
     , fwd_getAPNAP = getAPNAPImpl
     , fwd_getHasPriority = getHasPriorityImpl
     , fwd_getPermanent = getPermanentImpl
@@ -93,7 +103,7 @@ fwdImpl =
     , fwd_newObjectId = newObjectIdImpl
     , fwd_pay = payImpl
     , fwd_performElections = performElectionsImpl
-    , fwd_playLand = playLandImpl
+    , fwd_performStateBasedActions = performStateBasedActionsImpl
     , fwd_pushHandCard = pushHandCardImpl
     , fwd_pushLibraryCard = pushLibraryCardImpl
     , fwd_removeHandCard = removeHandCardImpl

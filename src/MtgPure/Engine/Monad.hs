@@ -123,8 +123,8 @@ instance (IsReadWrite rw) => MonadTrans (Magic' ex st v rw) where
 
 instance (IsReadWrite rw, MonadIO m) => MonadIO (Magic' ex st v rw m) where
   liftIO = case singReadWrite @rw of
-    SRO -> MagicRO . lift . lift . liftIO
-    SRW -> MagicRW . lift . lift . lift . liftIO
+    SRO -> MagicRO . liftIO
+    SRW -> MagicRW . liftIO
 
 type MagicEx' ex st ex' v rw m = ExceptT ex' (Magic' ex st v rw m)
 

@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -65,7 +66,7 @@ import safe MtgPure.Model.ZoneObject (ZO, ZOCreaturePlayerPlaneswalker, ZOPlayer
 import safe MtgPure.Model.ZoneObject.Convert (toZO0, zo0ToPermanent, zo1ToO)
 
 enactImpl :: Monad m => Effect 'OneShot -> Magic 'Private 'RW m ()
-enactImpl = logCall 'enactImpl $ \case
+enactImpl = logCall 'enactImpl \case
   AddMana oPlayer mana -> addMana' oPlayer mana
   DealDamage oSource oVictim damage -> dealDamage' oSource oVictim damage
   DrawCards oPlayer amount -> drawCards' amount $ zo1ToO oPlayer
@@ -77,7 +78,7 @@ enactImpl = logCall 'enactImpl $ \case
   _ -> undefined
 
 addMana' :: Monad m => ZOPlayer -> ManaPool 'NonSnow -> Magic 'Private 'RW m ()
-addMana' oPlayer mana = logCall 'addMana' $ do
+addMana' oPlayer mana = logCall 'addMana' do
   fromRO (findPlayer $ zo1ToO oPlayer) >>= \case
     Nothing -> pure ()
     Just player -> do
@@ -90,7 +91,7 @@ dealDamage' ::
   ZOCreaturePlayerPlaneswalker ->
   Damage var ->
   Magic 'Private 'RW m ()
-dealDamage' _oSource oVictim (forceVars -> Damage damage) = logCall 'dealDamage' $ do
+dealDamage' _oSource oVictim (forceVars -> Damage damage) = logCall 'dealDamage' do
   fromRO (findPermanent $ zo0ToPermanent $ toZO0 oVictim) >>= \case
     Nothing -> pure ()
     Just perm -> do
@@ -108,7 +109,7 @@ dealDamage' _oSource oVictim (forceVars -> Damage damage) = logCall 'dealDamage'
         Nothing -> pure ()
         Just () -> undefined
   oPlayers <- fromPublicRO getPlayers
-  M.forM_ oPlayers $ \oPlayer -> case getObjectId oVictim == getObjectId oPlayer of
+  M.forM_ oPlayers \oPlayer -> case getObjectId oVictim == getObjectId oPlayer of
     False -> pure ()
     True -> do
       player <- fromRO $ getPlayer oPlayer
@@ -116,14 +117,14 @@ dealDamage' _oSource oVictim (forceVars -> Damage damage) = logCall 'dealDamage'
       setPlayer oPlayer player{playerLife = Life $ life - damage}
 
 shuffleLibrary' :: Monad m => Object 'OTPlayer -> Magic 'Private 'RW m ()
-shuffleLibrary' oPlayer = logCall 'shuffleLibrary' $ do
+shuffleLibrary' oPlayer = logCall 'shuffleLibrary' do
   prompt <- fromRO $ gets magicPrompt
   player <- fromRO $ getPlayer oPlayer
   let library = fromCardList $ playerLibrary player
       count = length library
       ordered = [0 .. count - 1]
   ordering <- lift $
-    untilJust $ do
+    untilJust do
       ordering <- promptShuffle prompt (CardCount count) oPlayer
       case List.sort (map unCardIndex ordering) == ordered of
         True -> pure $ Just ordering
@@ -134,7 +135,7 @@ shuffleLibrary' oPlayer = logCall 'shuffleLibrary' $ do
   setPlayer oPlayer $ player{playerLibrary = toCardList library'}
 
 drawCard' :: Monad m => Object 'OTPlayer -> Magic 'Private 'RW m ()
-drawCard' oPlayer = logCall 'drawCard' $ do
+drawCard' oPlayer = logCall 'drawCard' do
   player <- fromRO $ getPlayer oPlayer
   let library = playerLibrary player
   case popCard library of
@@ -150,13 +151,13 @@ drawCards' :: Monad m => Int -> Object 'OTPlayer -> Magic 'Private 'RW m ()
 drawCards' n = logCall 'drawCards' $ M.replicateM_ n . drawCard'
 
 untap' :: Monad m => ZO 'ZBattlefield OTPermanent -> Magic 'Private 'RW m Bool
-untap' oPerm = logCall 'untap' $ do
+untap' oPerm = logCall 'untap' do
   perm <- fromRO $ getPermanent oPerm
   setPermanent oPerm $ Just perm{permanentTapped = Untapped}
   pure $ permanentTapped perm /= Untapped
 
 tap' :: Monad m => ZO 'ZBattlefield OTPermanent -> Magic 'Private 'RW m Bool
-tap' oPerm = logCall 'tap' $ do
+tap' oPerm = logCall 'tap' do
   perm <- fromRO $ getPermanent oPerm
   setPermanent oPerm $ Just perm{permanentTapped = Tapped}
   pure $ permanentTapped perm /= Tapped

@@ -30,7 +30,7 @@ module Control.Monad.Access (
   unsafeToRO,
 ) where
 
-import safe Control.Monad.Trans (MonadTrans (..))
+import safe Control.Monad.Trans (MonadIO (..), MonadTrans (..))
 import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
 
@@ -58,7 +58,13 @@ instance IsReadWrite 'RO where
 instance IsReadWrite 'RW where
   singReadWrite = SRW
 
-newtype AccessM (v :: Visibility) (rw :: ReadWrite) (m :: Type -> Type) (a :: Type) :: Type where
+newtype
+  AccessM
+    (v :: Visibility)
+    (rw :: ReadWrite)
+    (m :: Type -> Type)
+    (a :: Type) :: Type
+  where
   AccessM ::
     { runAccessM :: m a
     } ->
@@ -77,6 +83,9 @@ instance Monad m => Monad (AccessM v rw m) where
 
 instance MonadTrans (AccessM v rw) where
   lift = AccessM
+
+instance MonadIO m => MonadIO (AccessM v rw m) where
+  liftIO = AccessM . liftIO
 
 safeToPrivate :: AccessM v rw m a -> AccessM 'Private rw m a
 safeToPrivate (AccessM a) = AccessM a

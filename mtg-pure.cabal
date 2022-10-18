@@ -42,6 +42,7 @@ library
        containers ^>=0.6.5.1,
        dlist ^>=1.0,
        mtl ^>=2.2.2,
+       random ^>=1.2.1.1,
        singletons ^>=3.0.2,
        Stream ^>=0.4.7.2,
        template-haskell ^>=2.16.0.0,

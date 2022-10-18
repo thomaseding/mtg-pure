@@ -32,8 +32,8 @@ import safe MtgPure.Engine.Monad (Magic', MagicCont')
 import safe MtgPure.Engine.Prompt (
   ActivateAbility,
   CastSpell,
-  PlayLand,
   PlayerCount (..),
+  SomeActivatedAbility,
  )
 import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.Object (OT0, Object, ObjectType (..))
@@ -41,7 +41,14 @@ import safe MtgPure.Model.ObjectId (ObjectId)
 import safe MtgPure.Model.ObjectType.Kind (OTCard, OTPermanent)
 import safe MtgPure.Model.Permanent (Permanent)
 import safe MtgPure.Model.Player (Player)
-import safe MtgPure.Model.Recursive (AnyCard, Case, Cost, Effect, Elect, Requirement)
+import safe MtgPure.Model.Recursive (
+  AnyCard,
+  Case,
+  Cost,
+  Effect,
+  Elect,
+  Requirement,
+ )
 import safe MtgPure.Model.Zone (Zone (..))
 import safe MtgPure.Model.ZoneObject (IsZO, ZO)
 
@@ -50,6 +57,7 @@ data Fwd' ex st m where
     { fwd_ :: ()
     , fwd_activateAbility :: Object 'OTPlayer -> ActivateAbility -> Magic' ex st 'Private 'RW m Legality
     , fwd_allZOs :: forall zone ot. IsZO zone ot => Magic' ex st 'Private 'RO m [ZO zone ot]
+    , fwd_askActivateAbility :: Object 'OTPlayer -> MagicCont' ex st 'Private 'RW m () ()
     , fwd_askPlayLand :: Object 'OTPlayer -> MagicCont' ex st 'Private 'RW m () ()
     , fwd_caseOf :: forall x a. (x -> Magic' ex st 'Private 'RW m a) -> Case x -> Magic' ex st 'Private 'RW m a
     , fwd_castSpell :: Object 'OTPlayer -> CastSpell -> Magic' ex st 'Private 'RW m Legality
@@ -59,8 +67,10 @@ data Fwd' ex st m where
     , fwd_findPermanent :: ZO 'ZBattlefield OTPermanent -> Magic' ex st 'Private 'RO m (Maybe Permanent)
     , fwd_findPlayer :: Object 'OTPlayer -> Magic' ex st 'Private 'RO m (Maybe Player)
     , fwd_gainPriority :: Object 'OTPlayer -> Magic' ex st 'Private 'RW m ()
+    , fwd_getActivatedAbilities :: forall zone ot. IsZO zone ot => ZO zone ot -> Magic' ex st 'Private 'RO m [SomeActivatedAbility zone ot]
     , fwd_getActivePlayer :: Magic' ex st 'Public 'RO m (Object 'OTPlayer)
     , fwd_getAlivePlayerCount :: Magic' ex st 'Public 'RO m PlayerCount
+    , fwd_getAllActivatedAbilities :: forall zone ot. IsZO zone ot => Magic' ex st 'Private 'RO m [SomeActivatedAbility zone ot]
     , fwd_getAPNAP :: forall v. Magic' ex st v 'RO m (Stream.Stream (Object 'OTPlayer))
     , fwd_getHasPriority :: Object 'OTPlayer -> Magic' ex st 'Public 'RO m Bool
     , fwd_getPermanent :: ZO 'ZBattlefield OTPermanent -> Magic' ex st 'Private 'RO m Permanent
@@ -78,7 +88,7 @@ data Fwd' ex st m where
         (el -> Magic' ex st 'Private 'RW m (Maybe x)) ->
         Elect p el ot ->
         Magic' ex st 'Private 'RW m (Maybe x)
-    , fwd_playLand :: Object 'OTPlayer -> PlayLand -> Magic' ex st 'Private 'RW m Legality
+    , fwd_performStateBasedActions :: Magic' ex st 'Private 'RW m ()
     , fwd_pushHandCard :: Object 'OTPlayer -> AnyCard -> Magic' ex st 'Private 'RW m (ZO 'ZHand OTCard)
     , fwd_pushLibraryCard :: Object 'OTPlayer -> AnyCard -> Magic' ex st 'Private 'RW m (ZO 'ZLibrary OTCard)
     , fwd_removeHandCard :: Object 'OTPlayer -> ZO 'ZHand OTCard -> Magic' ex st 'Private 'RW m (Maybe AnyCard)

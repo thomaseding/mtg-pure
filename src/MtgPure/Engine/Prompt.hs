@@ -33,6 +33,7 @@ module MtgPure.Engine.Prompt (
   ShowZO (..),
   CallFrameId,
   CallFrameInfo (..),
+  SomeActivatedAbility (..),
 ) where
 
 import safe Data.Kind (Type)
@@ -40,7 +41,6 @@ import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.Object (Object, ObjectType (..))
 import safe MtgPure.Model.ObjectId (GetObjectId (..), ObjectId (..))
 import safe MtgPure.Model.ObjectN (ObjectN)
-import safe MtgPure.Model.ObjectType.Card (WCard)
 import safe MtgPure.Model.ObjectType.Kind (OTLand, OTPermanent, OTSpell)
 import safe MtgPure.Model.Recursive (AnyCard, SomeCard, WithThisActivated)
 import safe MtgPure.Model.Recursive.Ord ()
@@ -115,8 +115,16 @@ data Prompt' (opaqueGameState :: (Type -> Type) -> Type) (m :: Type -> Type) = P
   , promptShuffle :: CardCount -> Object 'OTPlayer -> m [CardIndex]
   }
 
+data SomeActivatedAbility (zone :: Zone) (ot :: Type) :: Type where
+  SomeActivatedAbility ::
+    (IsZO zone ot, IsZO zone ot') =>
+    { someActivatedZO :: ZO zone ot
+    , someActivatedAbility :: WithThisActivated zone ot'
+    } ->
+    SomeActivatedAbility zone ot
+
 data ActivateAbility :: Type where
-  ActivateAbility :: IsZO zone ot => WCard ot -> ZO zone ot -> WithThisActivated zone ot -> ActivateAbility
+  ActivateAbility :: IsZO zone ot => SomeActivatedAbility zone ot -> ActivateAbility
 
 -- NB (305.9): Lands + other types can never be cast
 -- Unfortuantely OTSpell intersects OTArtifactLand. Such is life.

@@ -20,13 +20,10 @@ module MtgPure.Model.Artifact (
 import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.ArtifactType (ArtifactType)
-import safe MtgPure.Model.ObjectType.Kind (OTArtifact)
-import safe MtgPure.Model.Recursive (Ability)
 
 data Artifact :: Type where
   Artifact ::
     { artifactTypes :: [ArtifactType]
-    , artifactAbilities :: [Ability OTArtifact]
     } ->
     Artifact
   deriving (Typeable)

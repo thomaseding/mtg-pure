@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -58,7 +59,7 @@ import safe MtgPure.Model.ZoneObject (ZO)
 import safe MtgPure.Model.ZoneObject.Convert (toZO0)
 
 resolveTopOfStackImpl :: Monad m => Magic 'Private 'RW m ()
-resolveTopOfStackImpl = logCall 'resolveTopOfStackImpl $ do
+resolveTopOfStackImpl = logCall 'resolveTopOfStackImpl do
   Stack stack <- fromRO $ gets magicStack
   case stack of -- (117.4) (405.5)
     [] -> pure ()
@@ -69,7 +70,7 @@ resolveTopOfStackImpl = logCall 'resolveTopOfStackImpl $ do
       gainPriority oActive
 
 resolveStackObject :: forall m. Monad m => StackObject -> Magic 'Private 'RW m ()
-resolveStackObject = logCall 'resolveStackObject $ \case
+resolveStackObject = logCall 'resolveStackObject \case
   StackAbility zoAbility -> resolve $ toZO0 zoAbility
   StackSpell zoSpell -> resolve $ toZO0 zoSpell
  where
@@ -88,7 +89,7 @@ resolveElected ::
   ZO 'ZStack OT0 ->
   Elected 'Pre ot ->
   Magic 'Private 'RW m ()
-resolveElected zoStack elected = logCall 'resolveElected $ do
+resolveElected zoStack elected = logCall 'resolveElected do
   let goElectEffect :: Elect 'Post (Effect 'OneShot) ot -> Magic 'Private 'RW m ()
       goElectEffect = M.void . performElections andM zoStack goEffect
 

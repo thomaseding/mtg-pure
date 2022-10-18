@@ -1,9 +1,11 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
@@ -23,12 +25,10 @@
 {-# HLINT ignore "Redundant pure" #-}
 
 module MtgPure.Engine.PlayLand (
-  playLandImpl,
   askPlayLandImpl,
 ) where
 
 import safe Control.Exception (assert)
-import safe qualified Control.Monad as M
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
 import safe Control.Monad.Trans (lift)
 import safe Control.Monad.Trans.Except (throwE)
@@ -40,12 +40,12 @@ import safe MtgPure.Engine.Fwd.Wrap (
   getHasPriority,
   getPlayer,
   logCall,
+  modifyPlayer,
   newObjectId,
   removeHandCard,
   rewindIllegal,
   runMagicCont,
   setPermanent,
-  setPlayer,
  )
 import safe MtgPure.Engine.Legality (Legality (..))
 import safe MtgPure.Engine.Monad (
@@ -106,7 +106,7 @@ pattern PlayLandReqs_Satisfied =
     }
 
 getPlayLandReqs :: Monad m => Object 'OTPlayer -> Magic 'Private 'RO m PlayLandReqs
-getPlayLandReqs oPlayer = logCall 'getPlayLandReqs $ do
+getPlayLandReqs oPlayer = logCall 'getPlayLandReqs do
   st <- internalFromPrivate $ fromRO get
   player <- fromRO $ getPlayer oPlayer
   let landsPlayed = playerLandsPlayedThisTurn player
@@ -125,7 +125,7 @@ getPlayLandReqs oPlayer = logCall 'getPlayLandReqs $ do
       }
 
 askPlayLandImpl :: Monad m => Object 'OTPlayer -> MagicCont 'Private 'RW m () ()
-askPlayLandImpl oPlayer = logCall 'askPlayLandImpl $ do
+askPlayLandImpl oPlayer = logCall 'askPlayLandImpl do
   reqs <- lift $ fromRO $ getPlayLandReqs oPlayer
   case reqs of
     PlayLandReqs_Satisfied -> do
@@ -136,14 +136,14 @@ askPlayLandImpl oPlayer = logCall 'askPlayLandImpl $ do
       case mSpecial of
         Nothing -> pure ()
         Just special -> do
-          isLegal <- lift $ rewindIllegal $ playLandImpl oPlayer special
-          throwE $ case isLegal of
+          isLegal <- lift $ rewindIllegal $ playLand oPlayer special
+          throwE case isLegal of
             True -> gainPriority oPlayer -- (117.3c)
             False -> runMagicCont (either id id) $ askPlayLandImpl oPlayer
     _ -> pure ()
 
-playLandImpl :: Monad m => Object 'OTPlayer -> PlayLand -> Magic 'Private 'RW m Legality
-playLandImpl oPlayer (PlayLand oLand) = logCall 'playLandImpl $ do
+playLand :: Monad m => Object 'OTPlayer -> PlayLand -> Magic 'Private 'RW m Legality
+playLand oPlayer (PlayLand oLand) = logCall 'playLand do
   playLandZO oPlayer oLand
 
 playLandZO ::
@@ -152,7 +152,8 @@ playLandZO ::
   Object 'OTPlayer ->
   ZO zone OTLand ->
   Magic 'Private 'RW m Legality
-playLandZO oPlayer zoLand = logCall 'playLandZO $ do
+playLandZO oPlayer zoLand = logCall 'playLandZO do
+  let logCall' s = logCall ('playLandZO, s :: String)
   st <- internalFromPrivate $ fromRO get
   reqs <- fromRO $ getPlayLandReqs oPlayer
   player <- fromRO $ getPlayer oPlayer
@@ -168,7 +169,7 @@ playLandZO oPlayer zoLand = logCall 'playLandZO $ do
       --
 
       goCard :: forall ot. IsSpecificCard ot => Card ot -> Magic 'Private 'RW m Legality
-      goCard card@(Card _name yourCard) = case yourCard of
+      goCard card@(Card _name yourCard) = logCall' "goCard" case yourCard of
         YourArtifact{} -> invalid PlayLand_NotALand
         YourArtifactCreature{} -> invalid PlayLand_NotALand
         YourCreature{} -> invalid PlayLand_NotALand
@@ -182,26 +183,30 @@ playLandZO oPlayer zoLand = logCall 'playLandZO $ do
         YourArtifactLand cont -> goPlayerToFacet cont
        where
         goPlayerToFacet :: IsSpecificCard ot => (ZOPlayer -> CardFacet ot) -> Magic 'Private 'RW m Legality
-        goPlayerToFacet playerToFacet = do
+        goPlayerToFacet playerToFacet = logCall' "goPlayerToFacet" do
           let facet = playerToFacet zoPlayer
           goFacet facet
 
         goFacet :: CardFacet ot -> Magic 'Private 'RW m Legality
-        goFacet facet = do
+        goFacet facet = logCall' "goFacet" do
           () <- case singZone @zone of
             SZBattlefield -> error $ show CantHappenByConstruction
             SZExile -> error $ show CantHappenByConstruction
             SZLibrary -> error $ show CantHappenByConstruction
             SZStack -> error $ show CantHappenByConstruction
             SZGraveyard -> undefined -- TODO: [Crucible of Worlds]
-            SZHand -> M.void $ removeHandCard oPlayer $ asCard zoLand
-          setPlayer oPlayer player{playerLandsPlayedThisTurn = playerLandsPlayedThisTurn player + 1}
+            SZHand -> do
+              removeHandCard oPlayer (asCard zoLand) >>= \case
+                Nothing -> error $ show ObjectIdExistsAndAlsoDoesNotExist
+                Just{} -> pure ()
+          modifyPlayer oPlayer \p -> p{playerLandsPlayedThisTurn = playerLandsPlayedThisTurn p + 1}
           i <- newObjectId
           let oLand' = zo0ToPermanent $ toZO0 i
               perm = case cardToPermanent oPlayer card facet of
                 Nothing -> error $ show ExpectedCardToBeAPermanentCard
                 Just perm' -> perm'
           setPermanent oLand' $ Just perm
+          lift $ promptDebugMessage prompt "successfully played land"
           pure Legal
 
   case reqs of
@@ -216,7 +221,7 @@ playLandZO oPlayer zoLand = logCall 'playLandZO $ do
       , playLandReqs_isMainPhase = True
       , playLandReqs_stackEmpty = True
       , playLandReqs_atMaxLands = False
-      } -> assert (reqs == PlayLandReqs_Satisfied) $ case singZone @zone of
+      } -> assert (reqs == PlayLandReqs_Satisfied) case singZone @zone of
         SZBattlefield -> invalid PlayLand_CannotPlayFromZone
         SZExile -> invalid PlayLand_CannotPlayFromZone
         SZLibrary -> invalid PlayLand_CannotPlayFromZone

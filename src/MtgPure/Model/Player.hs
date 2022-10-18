@@ -29,7 +29,8 @@ import safe MtgPure.Model.Sideboard (Sideboard)
 
 data Player :: Type where
   Player ::
-    { playerDrewFromEmptyLibrary :: Bool
+    { -- playerControlledObjects :: Set.Set ObjectId
+      playerDrewFromEmptyLibrary :: Bool
     , playerGraveyard :: Graveyard
     , playerHand :: Hand
     , playerLandsPlayedThisTurn :: Int

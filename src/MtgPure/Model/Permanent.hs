@@ -29,10 +29,11 @@ import safe MtgPure.Model.Artifact (Artifact)
 import safe MtgPure.Model.Colors (Colors)
 import safe MtgPure.Model.Creature (Creature)
 import safe MtgPure.Model.Damage (Damage, Damage' (..))
-import safe MtgPure.Model.Land (Land)
+import safe MtgPure.Model.Land (Land (..))
 import safe MtgPure.Model.Object (Object (..), ObjectType (..))
 import safe MtgPure.Model.ObjectType.Kind (OTPermanent)
 import safe MtgPure.Model.Recursive (
+  Ability,
   Card (..),
   CardFacet (..),
   Some (..),
@@ -56,7 +57,8 @@ data Phased = PhasedIn | PhasedOut
 
 data Permanent :: Type where
   Permanent ::
-    { permanentArtifact :: Maybe Artifact
+    { permanentAbilities :: [Some Ability OTPermanent]
+    , permanentArtifact :: Maybe Artifact
     , permanentCard :: SomeCardOrToken OTPermanent
     , permanentCardFacet :: Some CardFacet OTPermanent
     , permanentColors :: Colors
@@ -114,34 +116,47 @@ cardToPermanent ::
   Card ot ->
   CardFacet ot ->
   Maybe Permanent
-cardToPermanent owner card facet = cardToPermanent' owner card facet facet
-
-cardToPermanent' ::
-  Object 'OTPlayer ->
-  Card ot ->
-  CardFacet ot ->
-  CardFacet ot ->
-  Maybe Permanent
-cardToPermanent' owner card topFacet bottomFacet = case bottomFacet of
+cardToPermanent owner card facet = case facet of
   SorceryFacet{} -> Nothing
   InstantFacet{} -> Nothing
   --
-  ArtifactFacet{} -> Just $ go (Some5a $ SomeArtifact card) (Some5a $ SomeArtifact topFacet)
-  CreatureFacet{} -> Just $ go (Some5b $ SomeCreature card) (Some5b $ SomeCreature topFacet)
-  EnchantmentFacet{} -> Just $ go (Some5c $ SomeEnchantment card) (Some5c $ SomeEnchantment topFacet)
-  LandFacet{} -> Just $ go (Some5d $ SomeLand card) (Some5d $ SomeLand topFacet)
-  PlaneswalkerFacet{} -> Just $ go (Some5e $ SomePlaneswalker card) (Some5e $ SomePlaneswalker topFacet)
-  ArtifactCreatureFacet{} -> Just $ go (Some5ab $ SomeArtifactCreature card) (Some5ab $ SomeArtifactCreature topFacet)
-  ArtifactLandFacet{} -> Just $ go (Some5ad $ SomeArtifactLand card) (Some5ad $ SomeArtifactLand topFacet)
-  EnchantmentCreatureFacet{} -> Just $ go (Some5bc $ SomeEnchantmentCreature card) (Some5bc $ SomeEnchantmentCreature topFacet)
+  ArtifactFacet{} ->
+    let some = Some5a . SomeArtifact
+     in Just $ go (some card) (some facet)
+  CreatureFacet{} ->
+    let some = Some5b . SomeCreature
+     in Just $ go (some card) (some facet)
+  EnchantmentFacet{} ->
+    let some = Some5c . SomeEnchantment
+     in Just $ go (some card) (some facet)
+  LandFacet{} ->
+    let some = Some5d . SomeLand
+     in Just $
+          (go (some card) (some facet))
+            { permanentAbilities = map some $ land_abilities facet
+            , permanentLand = Just Land{landTypes = land_landTypes facet}
+            }
+  PlaneswalkerFacet{} ->
+    let some = Some5e . SomePlaneswalker
+     in Just $ go (some card) (some facet)
+  ArtifactCreatureFacet{} ->
+    let some = Some5ab . SomeArtifactCreature
+     in Just $ go (some card) (some facet)
+  ArtifactLandFacet{} ->
+    let some = Some5ad . SomeArtifactLand
+     in Just $ go (some card) (some facet)
+  EnchantmentCreatureFacet{} ->
+    let some = Some5bc . SomeEnchantmentCreature
+     in Just $ go (some card) (some facet)
  where
   go :: SomeCard OTPermanent -> Some CardFacet OTPermanent -> Permanent
   go someCard someFacet =
     Permanent
-      { permanentArtifact = Nothing
+      { permanentAbilities = mempty
+      , permanentArtifact = Nothing
       , permanentCard = Left someCard
       , permanentCardFacet = someFacet
-      , permanentColors = getColors topFacet
+      , permanentColors = getColors facet
       , permanentController = owner
       , permanentCreature = Nothing
       , permanentCreatureDamage = Damage 0

@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -11,6 +12,7 @@
 {-# LANGUAGE Safe #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskellQuotes #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
@@ -30,17 +32,30 @@ import safe Control.Exception (assert)
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
 import safe Control.Monad.Trans (lift)
 import safe Control.Monad.Util (AndLike, untilJust)
+import safe Data.ConsIndex (consIndex)
 import safe qualified Data.Map.Strict as Map
-import safe MtgPure.Engine.Fwd.Wrap (caseOf, logCall, zosSatisfying)
+import safe MtgPure.Engine.Fwd.Wrap (
+  caseOf,
+  getPermanent,
+  logCall,
+  zosSatisfying,
+ )
 import safe MtgPure.Engine.Monad (fromRO, gets, modify)
 import safe MtgPure.Engine.Prompt (InternalLogicError (..), Prompt' (..))
-import safe MtgPure.Engine.State (AnyRequirement (..), GameState (..), Magic, StackEntry (..))
+import safe MtgPure.Engine.State (
+  AnyRequirement (..),
+  GameState (..),
+  Magic,
+  StackEntry (..),
+ )
 import safe MtgPure.Model.Object (
   OT0,
   Object (..),
   pattern DefaultObjectDiscriminant,
  )
 import safe MtgPure.Model.ObjectId (GetObjectId (..))
+import safe MtgPure.Model.ObjectType.Kind (OTAny)
+import MtgPure.Model.Permanent (Permanent (..))
 import safe MtgPure.Model.Recursive (
   Effect (..),
   Elect (..),
@@ -51,9 +66,14 @@ import safe MtgPure.Model.Recursive (
  )
 import safe MtgPure.Model.Variable (Variable (..))
 import safe MtgPure.Model.VisitObjectN (VisitObjectN (..))
-import safe MtgPure.Model.Zone (Zone (..))
+import safe MtgPure.Model.Zone (IsZone (..), SZone (..), Zone (..))
 import safe MtgPure.Model.ZoneObject (IsZO, ZO, ZOPlayer, ZoneObject (ZO))
-import safe MtgPure.Model.ZoneObject.Convert (zo1ToO)
+import safe MtgPure.Model.ZoneObject.Convert (
+  oToZO1,
+  toZO0,
+  zo0ToPermanent,
+  zo1ToO,
+ )
 
 performElectionsImpl ::
   forall ot m p el x.
@@ -63,10 +83,12 @@ performElectionsImpl ::
   (el -> Magic 'Private 'RW m (Maybe x)) ->
   Elect p el ot ->
   Magic 'Private 'RW m (Maybe x)
-performElectionsImpl seqM zoStack goTerm = logCall 'performElectionsImpl $ \case
+performElectionsImpl seqM zoStack goTerm = logCall 'performElectionsImpl \case
   All masked -> electAll goRec masked
   Choose oPlayer thisToElect -> electA Choose' zoStack goRec oPlayer thisToElect
+  ControllerOf zo cont -> controllerOf goRec zo cont
   Cost cost -> goTerm cost
+  ElectActivated activated -> goTerm activated
   ElectCard facet -> goTerm facet
   ElectCase case_ -> caseOf goRec case_
   Effect effect -> goTerm $ Sequence effect
@@ -75,9 +97,24 @@ performElectionsImpl seqM zoStack goTerm = logCall 'performElectionsImpl $ \case
   VariableInt cont -> do
     let var = ReifiedVariable undefined undefined
     goRec $ cont var
-  _ -> undefined
+  x -> error $ show $ consIndex x
  where
   goRec = performElectionsImpl seqM zoStack goTerm
+
+controllerOf ::
+  forall p zone m el ot x.
+  (IsZO zone OTAny, Monad m) =>
+  (Elect p el ot -> Magic 'Private 'RW m (Maybe x)) ->
+  ZO zone OTAny ->
+  (ZOPlayer -> Elect p el ot) ->
+  Magic 'Private 'RW m (Maybe x)
+controllerOf goElect zo cont = logCall 'controllerOf case singZone @zone of
+  SZBattlefield -> do
+    perm <- fromRO $ getPermanent (zo0ToPermanent $ toZO0 zo)
+    let controller = permanentController perm
+        elect = cont $ oToZO1 controller
+    goElect elect
+  _ -> undefined
 
 data Selection
   = Choose'
@@ -90,7 +127,7 @@ newTarget ::
   ZO zone ot ->
   Requirement zone ot ->
   Magic 'Private 'RW m (ZO zone ot)
-newTarget zoStack zoTargetBase req = logCall 'newTarget $ do
+newTarget zoStack zoTargetBase req = logCall 'newTarget do
   discr <- fromRO $ gets magicNextObjectDiscriminant
   let (ZO sZone objN) = zoTargetBase
       go :: Object a -> Object a
@@ -125,7 +162,7 @@ electA ::
   ZOPlayer ->
   WithMaskedObject zone (Elect p el ot) ->
   Magic 'Private 'RW m (Maybe x)
-electA sel zoStack goElect oPlayer = logCall 'electA $ \case
+electA sel zoStack goElect oPlayer = logCall 'electA \case
   M1 reqs zoToElect -> go reqs zoToElect
   M2 reqs zoToElect -> go reqs zoToElect
   M3 reqs zoToElect -> go reqs zoToElect
@@ -144,9 +181,9 @@ electA sel zoStack goElect oPlayer = logCall 'electA $ \case
       [] -> pure Nothing
       zos -> do
         zo <- lift $
-          untilJust $ do
+          untilJust do
             zo <- promptPickZO prompt (zo1ToO oPlayer) zos
-            pure $ case zo `elem` zos of
+            pure case zo `elem` zos of
               False -> Nothing
               True -> Just zo
         zo' <- case sel of
@@ -161,7 +198,7 @@ electAll ::
   (Elect p el ot -> Magic 'Private 'RW m x) ->
   WithMaskedObjects zone (Elect p el ot) ->
   Magic 'Private 'RW m x
-electAll goElect = logCall 'electAll $ \case
+electAll goElect = logCall 'electAll \case
   M1s reqs zosToElect -> go reqs zosToElect
   M2s reqs zosToElect -> go reqs zosToElect
   M3s reqs zosToElect -> go reqs zosToElect

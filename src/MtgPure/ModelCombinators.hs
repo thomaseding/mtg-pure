@@ -92,7 +92,7 @@ import safe Data.Inst (
   Inst6,
  )
 import safe Data.Kind (Type)
-import Data.Nat (Fin, NatList (..), ToNat)
+import safe Data.Nat (Fin, NatList (..), ToNat)
 import safe Data.Proxy (Proxy (..))
 import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.BasicLandType (BasicLandType)
@@ -101,7 +101,7 @@ import safe MtgPure.Model.ColorsLike (ColorsLike (..))
 import safe MtgPure.Model.Damage (Damage, Damage' (..))
 import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.LandType (LandType (BasicLand))
-import MtgPure.Model.Mana (Snow (..))
+import safe MtgPure.Model.Mana (Snow (..))
 import safe MtgPure.Model.ManaCost (ManaCost)
 import safe MtgPure.Model.ManaSymbol (ManaSymbol (..))
 import safe MtgPure.Model.Object (

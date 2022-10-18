@@ -48,6 +48,8 @@ import safe Data.Inst (
   Inst1,
   Inst2,
   Inst3,
+  Inst4,
+  Inst5,
  )
 import safe Data.Kind (Type)
 import safe Data.Monoid (First (..))
@@ -211,8 +213,27 @@ castOToZO o = toZone <$> objN
                 , goCast $ O3c @a @b @c
                 ]
          in go ot
-      ot@OT4 -> undefined ot
-      ot@OT5 -> undefined ot
+      ot@OT4 ->
+        let go :: forall a b c d. Inst4 IsObjectType a b c d => OT4 a b c d -> MaybeObjectN (OT4 a b c d)
+            go _ =
+              goConcat
+                [ goCast $ O4a @a @b @c @d
+                , goCast $ O4b @a @b @c @d
+                , goCast $ O4c @a @b @c @d
+                , goCast $ O4d @a @b @c @d
+                ]
+         in go ot
+      ot@OT5 ->
+        let go :: forall a b c d e. Inst5 IsObjectType a b c d e => OT5 a b c d e -> MaybeObjectN (OT5 a b c d e)
+            go _ =
+              goConcat
+                [ goCast $ O5a @a @b @c @d @e
+                , goCast $ O5b @a @b @c @d @e
+                , goCast $ O5c @a @b @c @d @e
+                , goCast $ O5d @a @b @c @d @e
+                , goCast $ O5e @a @b @c @d @e
+                ]
+         in go ot
       ot@OT6 -> undefined ot
       ot@OT7 -> undefined ot
       ot@OT8 -> undefined ot

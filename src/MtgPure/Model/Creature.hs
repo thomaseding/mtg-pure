@@ -20,9 +20,7 @@ module MtgPure.Model.Creature (
 import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.CreatureType (CreatureType)
-import safe MtgPure.Model.ObjectType.Kind (OTCreature)
 import safe MtgPure.Model.Power (Power (..))
-import safe MtgPure.Model.Recursive (Ability)
 import safe MtgPure.Model.Toughness (Toughness (..))
 
 data Creature :: Type where
@@ -30,7 +28,6 @@ data Creature :: Type where
     { creatureTypes :: [CreatureType]
     , creaturePower :: Power
     , creatureToughness :: Toughness
-    , creatureAbilities :: [Ability OTCreature]
     } ->
     Creature
   deriving (Typeable)

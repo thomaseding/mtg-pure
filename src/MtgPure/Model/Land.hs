@@ -20,13 +20,10 @@ module MtgPure.Model.Land (
 import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.LandType (LandType)
-import safe MtgPure.Model.ObjectType.Kind (OTLand)
-import safe MtgPure.Model.Recursive (Ability)
 
 data Land :: Type where
   Land ::
     { landTypes :: [LandType]
-    , landAbilities :: [Ability OTLand]
     } ->
     Land
   deriving (Typeable)

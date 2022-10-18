@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -60,7 +61,7 @@ import safe MtgPure.Model.ZoneObject.Convert (toZO0, zo0ToPermanent)
 import safe MtgPure.ModelCombinators (isTapped)
 
 payImpl :: Monad m => Object 'OTPlayer -> Cost ot -> Magic 'Private 'RW m Legality
-payImpl oPlayer = logCall 'payImpl $ \case
+payImpl oPlayer = logCall 'payImpl \case
   AndCosts costs -> payAndCosts oPlayer costs
   ManaCost manaCost -> payManaCost oPlayer manaCost
   OrCosts costs -> payOrCosts oPlayer costs
@@ -92,7 +93,7 @@ instance FindMana CompleteManaPool 'NoVar where
 -- TODO: Give this a legit impl.
 -- TODO: Need to prompt for generic mana payments
 payManaCost :: Monad m => Object 'OTPlayer -> ManaCost 'Var -> Magic 'Private 'RW m Legality
-payManaCost oPlayer (forceVars -> cost) = logCall 'payManaCost $ do
+payManaCost oPlayer (forceVars -> cost) = logCall 'payManaCost do
   fromRO (findPlayer oPlayer) >>= \case
     Nothing -> pure Illegal
     Just player -> do
@@ -118,15 +119,15 @@ payTapCost ::
   Object 'OTPlayer ->
   Requirement 'ZBattlefield ot ->
   Magic 'Private 'RW m Legality
-payTapCost oPlayer req = logCall 'payTapCost $ do
+payTapCost oPlayer req = logCall 'payTapCost do
   fromRO (zosSatisfying req') >>= \case
     [] -> pure Illegal
     zos -> do
       prompt <- fromRO $ gets magicPrompt
       zo <- lift $
-        untilJust $ do
+        untilJust do
           zo <- promptPickZO prompt oPlayer zos
-          pure $ case zo `elem` zos of
+          pure case zo `elem` zos of
             False -> Nothing
             True -> Just zo
       let oPerm = zo0ToPermanent $ toZO0 zo
@@ -141,7 +142,7 @@ payTapCost oPlayer req = logCall 'payTapCost $ do
       ]
 
 payAndCosts :: Monad m => Object 'OTPlayer -> [Cost ot] -> Magic 'Private 'RW m Legality
-payAndCosts oPlayer = logCall 'payAndCosts $ \case
+payAndCosts oPlayer = logCall 'payAndCosts \case
   [] -> pure Legal
   cost : costs ->
     pay oPlayer cost >>= \case
@@ -149,7 +150,7 @@ payAndCosts oPlayer = logCall 'payAndCosts $ \case
       Legal -> payAndCosts oPlayer costs
 
 payOrCosts :: Monad m => Object 'OTPlayer -> [Cost ot] -> Magic 'Private 'RW m Legality
-payOrCosts oPlayer = logCall 'payOrCosts $ \case
+payOrCosts oPlayer = logCall 'payOrCosts \case
   [] -> pure Illegal
   cost : _costs ->
     pay oPlayer cost >>= \case

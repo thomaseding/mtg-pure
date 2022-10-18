@@ -5,14 +5,12 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE Safe #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskellQuotes #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
-{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Avoid lambda" #-}
@@ -23,23 +21,14 @@
 {-# HLINT ignore "Use if" #-}
 {-# HLINT ignore "Redundant pure" #-}
 
-module MtgPure.Engine.CaseOf (
-  caseOfImpl,
+module MtgPure.Engine.StateBasedActions (
+  performStateBasedActionsImpl,
 ) where
 
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
-import safe Data.Nat (Fin (..), NatList (..))
 import safe MtgPure.Engine.Fwd.Wrap (logCall)
 import safe MtgPure.Engine.State (Magic)
-import safe MtgPure.Model.Recursive (Case (..))
-import safe MtgPure.Model.Variable (readVariable)
 
-caseOfImpl :: forall m x a. Monad m => (x -> Magic 'Private 'RW m a) -> Case x -> Magic 'Private 'RW m a
-caseOfImpl cont = logCall 'caseOfImpl \case
-  CaseFin (readVariable -> fin) xs ->
-    let go :: Fin u n -> NatList u n x -> Magic 'Private 'RW m a
-        go fin' xs' = case (fin', xs') of
-          (FZ, LZ x) -> cont x
-          (FZ, LS x _) -> cont x
-          (FS fin'', LS _ xs'') -> go fin'' xs''
-     in go fin xs
+performStateBasedActionsImpl :: Monad m => Magic 'Private 'RW m ()
+performStateBasedActionsImpl = logCall 'performStateBasedActionsImpl do
+  pure () -- TODO

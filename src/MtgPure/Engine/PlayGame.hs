@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -70,13 +71,13 @@ playGame input = case mkGameState fwdImpl input of
       Right v -> absurd v
 
 startGame' :: Monad m => Magic 'Private 'RW m Void
-startGame' = logCall 'startGame' $ do
+startGame' = logCall 'startGame' do
   initLibraries
   startGame
 
 initLibraries :: Monad m => Magic 'Private 'RW m ()
 initLibraries = logCall 'initLibraries $
-  withEachPlayer_ $ \oPlayer -> do
+  withEachPlayer_ \oPlayer -> do
     player <- fromRO $ getPlayer oPlayer
     let Deck cards = playerStartingDeck player
     mapM_ (pushLibraryCard oPlayer) cards
@@ -99,7 +100,7 @@ mkPlayer format (deck, sideboard) =
     }
  where
   -- 103.3
-  life = Life $ case format of
+  life = Life case format of
     Vintage -> 20
 
 mkGameState :: Fwd m -> GameInput m -> Maybe (GameState m)

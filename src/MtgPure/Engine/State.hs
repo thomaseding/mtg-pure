@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -242,7 +243,7 @@ queryMagic' (OpaqueGameState st) = runMagicRO st
 
 logCallUnwind :: (IsReadWrite rw, Monad m) => Maybe CallFrameId -> Magic v rw m ()
 logCallUnwind top =
-  untilJust $ do
+  untilJust do
     top' <- logCallTop
     case top == fmap callFrameId top' of
       True -> pure $ Just ()
@@ -261,7 +262,7 @@ logCallPush name = do
           , callFrameName = name
           }
   internalLiftCallStackState $
-    State.modify' $ \st ->
+    State.modify' \st ->
       st
         { logCallDepth = i + 1
         , logCallFrames = frame : logCallFrames st
@@ -278,7 +279,7 @@ logCallPop = do
     [] -> pure False
     frame : frames' -> do
       internalLiftCallStackState $
-        State.modify' $ \st ->
+        State.modify' \st ->
           st
             { logCallDepth = logCallDepth st - 1
             , logCallFrames = frames'

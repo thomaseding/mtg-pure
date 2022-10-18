@@ -67,6 +67,8 @@ module MtgPure.Model.Recursive (
   YourCard (..),
   pattern CFalse,
   pattern CTrue,
+  fromSome,
+  mapSome,
 ) where
 
 import safe Data.ConsIndex (ConsIndex (..))
@@ -133,7 +135,7 @@ import safe MtgPure.Model.ZoneObject (
 -- Semantics legend:
 --
 -- "ot is exactly (a,b,c,...)"
---    Ability ot
+--    Ability ot (experimenting with engine not having this "exact" notion)
 --    Card ot
 --    EnchantmentType ot
 --    WithThis zone litfOT ot
@@ -805,6 +807,82 @@ type SomeCard = Some Card
 type SomeToken = Some Token
 
 type SomeCardOrToken ot = Either (SomeCard ot) (SomeToken ot)
+
+mapSome ::
+  forall liftOT liftOT' ot.
+  Some liftOT ot ->
+  (forall ot'. liftOT ot' -> Maybe (liftOT' ot')) ->
+  Maybe (Some liftOT' ot)
+mapSome some f = case some of
+  Some2a term -> Some2a <$> goTerm term
+  Some2b term -> Some2b <$> goTerm term
+  Some5a term -> Some5a <$> goTerm term
+  Some5b term -> Some5b <$> goTerm term
+  Some5c term -> Some5c <$> goTerm term
+  Some5d term -> Some5d <$> goTerm term
+  Some5e term -> Some5e <$> goTerm term
+  Some5ab term -> Some5ab <$> goTerm term
+  Some5ad term -> Some5ad <$> goTerm term
+  Some5bc term -> Some5bc <$> goTerm term
+  Some6a term -> Some6a <$> goTerm term
+  Some6b term -> Some6b <$> goTerm term
+  Some6c term -> Some6c <$> goTerm term
+  Some6d term -> Some6d <$> goTerm term
+  Some6e term -> Some6e <$> goTerm term
+  Some6f term -> Some6f <$> goTerm term
+  Some6ab term -> Some6ab <$> goTerm term
+  Some6bc term -> Some6bc <$> goTerm term
+ where
+  goTerm :: SomeTerm liftOT ot' -> Maybe (SomeTerm liftOT' ot')
+  goTerm = \case
+    SomeArtifact x -> SomeArtifact <$> f x
+    SomeCreature x -> SomeCreature <$> f x
+    SomeEnchantment x -> SomeEnchantment <$> f x
+    SomeInstant x -> SomeInstant <$> f x
+    SomeLand x -> SomeLand <$> f x
+    SomePlaneswalker x -> SomePlaneswalker <$> f x
+    SomeSorcery x -> SomeSorcery <$> f x
+    SomeArtifactCreature x -> SomeArtifactCreature <$> f x
+    SomeArtifactLand x -> SomeArtifactLand <$> f x
+    SomeEnchantmentCreature x -> SomeEnchantmentCreature <$> f x
+
+fromSome ::
+  forall liftOT ot x.
+  Some liftOT ot ->
+  (forall ot'. liftOT ot' -> x) ->
+  x
+fromSome some f = case some of
+  Some2a term -> goTerm term
+  Some2b term -> goTerm term
+  Some5a term -> goTerm term
+  Some5b term -> goTerm term
+  Some5c term -> goTerm term
+  Some5d term -> goTerm term
+  Some5e term -> goTerm term
+  Some5ab term -> goTerm term
+  Some5ad term -> goTerm term
+  Some5bc term -> goTerm term
+  Some6a term -> goTerm term
+  Some6b term -> goTerm term
+  Some6c term -> goTerm term
+  Some6d term -> goTerm term
+  Some6e term -> goTerm term
+  Some6f term -> goTerm term
+  Some6ab term -> goTerm term
+  Some6bc term -> goTerm term
+ where
+  goTerm :: SomeTerm liftOT ot' -> x
+  goTerm = \case
+    SomeArtifact x -> f x
+    SomeCreature x -> f x
+    SomeEnchantment x -> f x
+    SomeInstant x -> f x
+    SomeLand x -> f x
+    SomePlaneswalker x -> f x
+    SomeSorcery x -> f x
+    SomeArtifactCreature x -> f x
+    SomeArtifactLand x -> f x
+    SomeEnchantmentCreature x -> f x
 
 ----------------------------------------
 

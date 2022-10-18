@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -6,6 +7,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE Safe #-}
@@ -22,28 +24,43 @@
 {-# HLINT ignore "Redundant pure" #-}
 
 module MtgPure.Engine.ActivateCast (
+  askActivateAbilityImpl,
   activateAbilityImpl,
   castSpellImpl,
 ) where
 
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
+import safe Control.Monad.Trans (lift)
+import safe Control.Monad.Trans.Except (throwE)
 import safe Control.Monad.Util (AndLike (..))
 import safe Data.Kind (Type)
 import safe qualified Data.Map.Strict as Map
-import safe MtgPure.Engine.Fwd.Wrap (logCall, newObjectId, pay, performElections)
+import safe Data.Typeable (Typeable)
+import safe MtgPure.Engine.Fwd.Wrap (
+  gainPriority,
+  getHasPriority,
+  logCall,
+  newObjectId,
+  pay,
+  performElections,
+  rewindIllegal,
+  runMagicCont,
+ )
 import safe MtgPure.Engine.Legality (Legality (..), legalityToMaybe, maybeToLegality)
-import safe MtgPure.Engine.Monad (modify)
-import safe MtgPure.Engine.Prompt (ActivateAbility (..), CastSpell (..))
+import safe MtgPure.Engine.Monad (fromPublic, fromRO, get, gets, modify)
+import safe MtgPure.Engine.Prompt (ActivateAbility (..), CastSpell (..), Prompt' (..), SomeActivatedAbility (..))
 import safe MtgPure.Engine.State (
   AnyElected (..),
   Elected (..),
   GameState (..),
   Magic,
+  MagicCont,
   Pending,
   PendingReady (..),
   StackEntry (..),
   electedObject_controller,
   electedObject_cost,
+  mkOpaqueGameState,
  )
 import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.Object (IsObjectType (..), OT0, OT1, Object, ObjectType (..))
@@ -78,6 +95,44 @@ import safe MtgPure.Model.ZoneObject.Convert (oToZO1, toZO0)
 
 type Legality' = Maybe ()
 
+newtype ActivateAbilityReqs = ActivateAbilityReqs
+  { activateAbilityReqs_hasPriority :: Bool
+  }
+  deriving (Eq, Ord, Show, Typeable)
+
+-- Unfortunately pattern synonyms won't contribute to exhaustiveness checking.
+pattern ActivateAbilityReqs_Satisfied :: ActivateAbilityReqs
+pattern ActivateAbilityReqs_Satisfied =
+  ActivateAbilityReqs
+    { activateAbilityReqs_hasPriority = True
+    }
+
+getActivateAbilityReqs :: Monad m => Object 'OTPlayer -> Magic 'Private 'RO m ActivateAbilityReqs
+getActivateAbilityReqs oPlayer = logCall 'getActivateAbilityReqs do
+  hasPriority <- fromPublic $ getHasPriority oPlayer
+  pure
+    ActivateAbilityReqs
+      { activateAbilityReqs_hasPriority = hasPriority -- (116.2a)
+      }
+
+askActivateAbilityImpl :: Monad m => Object 'OTPlayer -> MagicCont 'Private 'RW m () ()
+askActivateAbilityImpl oPlayer = logCall 'askActivateAbilityImpl do
+  reqs <- lift $ fromRO $ getActivateAbilityReqs oPlayer
+  case reqs of
+    ActivateAbilityReqs_Satisfied -> do
+      st <- lift $ fromRO get
+      let opaque = mkOpaqueGameState st
+          prompt = magicPrompt st
+      mActivate <- lift $ lift $ promptActivateAbility prompt opaque oPlayer
+      case mActivate of
+        Nothing -> pure ()
+        Just special -> do
+          isLegal <- lift $ rewindIllegal $ activateAbilityImpl oPlayer special
+          throwE case isLegal of
+            True -> gainPriority oPlayer -- (117.3c)
+            False -> runMagicCont (either id id) $ askActivateAbilityImpl oPlayer
+    _ -> pure ()
+
 data CastMeta (ot :: Type) :: Type where
   CastMeta ::
     { castMeta_Elected ::
@@ -109,7 +164,7 @@ sorceryCastMeta =
     }
 
 castSpellImpl :: forall m. Monad m => Object 'OTPlayer -> CastSpell -> Magic 'Private 'RW m Legality
-castSpellImpl oCaster (CastSpell someCard) = logCall 'castSpellImpl $ case someCard of
+castSpellImpl oCaster (CastSpell someCard) = logCall 'castSpellImpl case someCard of
   Some6a (SomeArtifact card) -> undefined card
   Some6b (SomeCreature card) -> undefined card
   Some6c (SomeEnchantment card) -> undefined card
@@ -129,7 +184,7 @@ castSpellImpl' ::
   Card ot ->
   CastMeta ot ->
   Magic 'Private 'RW m Legality
-castSpellImpl' oCaster card meta = logCall 'castSpellImpl' $ case card of
+castSpellImpl' oCaster card meta = logCall 'castSpellImpl' case card of
   Card _name yourCard -> goYourCard yourCard
  where
   goInvalid :: Magic 'Private 'RW m Legality
@@ -183,7 +238,7 @@ castSpellImpl' oCaster card meta = logCall 'castSpellImpl' $ case card of
           zoSpell
           (castMeta_cost meta facet)
           (castMeta_effect meta facet)
-          $ \cost effect -> do
+          \cost effect -> do
             case singSpecificCard @ot of
               SorceryCard ->
                 legalityToMaybe <$> do
@@ -194,56 +249,71 @@ castSpellImpl' oCaster card meta = logCall 'castSpellImpl' $ case card of
     goElectFacet electFacet
 
 -- TODO: Generalize for TriggeredAbility as well. Prolly make an AbilityMeta type that is analogous to CastMeta.
+-- NOTE: A TriggeredAbility is basically the same as an ActivatedAbility that the game activates automatically.
 activateAbilityImpl :: forall m. Monad m => Object 'OTPlayer -> ActivateAbility -> Magic 'Private 'RW m Legality
-activateAbilityImpl oPlayer = logCall 'activateAbilityImpl $ \case
-  ActivateAbility _wit zoThis withThisAbility -> goWithThis zoThis withThisAbility
+activateAbilityImpl oPlayer = logCall 'activateAbilityImpl \case
+  ActivateAbility someActivated -> case someActivated of
+    SomeActivatedAbility zoThis withThisActivated -> do
+      goSomeActivatedAbility zoThis withThisActivated
  where
-  goWithThis ::
-    forall zone ot.
-    IsZO zone ot =>
-    ZO zone ot ->
+  logCall' s = logCall ('activateAbilityImpl, s :: String)
+
+  goSomeActivatedAbility ::
+    forall zone ot' ot.
+    (IsZO zone ot', IsZO zone ot) =>
+    ZO zone ot' ->
     WithThisActivated zone ot ->
     Magic 'Private 'RW m Legality
-  goWithThis zoThis = \case
-    T1 thisToElectActivated -> do
-      thisId <- newObjectId
-      goLegality thisToElectActivated (lensedThis thisId)
-    T2 thisToElectActivated -> do
-      thisId <- newObjectId
-      goLegality thisToElectActivated (lensedThis thisId, lensedThis thisId)
+  goSomeActivatedAbility zoThis' withThisActivated = logCall' "goSomeActivatedAbility" do
+    pure () -- TODO: Check that `zoThis'` actually has the `withThisActivated` and is in the correct zone
+    let zoThis = error "TODO: do_some_sort_of_cast" zoThis'
+    goWithThis zoThis
    where
-    goLegality ::
-      forall this.
-      (this -> Elect 'Pre (ActivatedAbility zone ot) ot) ->
-      this ->
+    goWithThis ::
+      ZO zone ot ->
       Magic 'Private 'RW m Legality
-    goLegality thisToElectAbility this = do
-      abilityId <- newObjectId
-      let zoAbility = toZO0 @ 'ZStack abilityId
+    goWithThis zoThis = logCall' "goWithThis" case withThisActivated of
+      T1 thisToElectActivated -> do
+        thisId <- newObjectId
+        goLegality thisToElectActivated (lensedThis thisId)
+      T2 thisToElectActivated -> do
+        thisId <- newObjectId
+        goLegality thisToElectActivated (lensedThis thisId, lensedThis thisId)
+     where
+      goLegality ::
+        forall this.
+        (this -> Elect 'Pre (ActivatedAbility zone ot) ot) ->
+        this ->
+        Magic 'Private 'RW m Legality
+      goLegality thisToElectAbility this = logCall' "goLegality" do
+        abilityId <- newObjectId
+        let zoAbility = toZO0 @ 'ZStack abilityId
 
-          goElectActivated :: Elect 'Pre (ActivatedAbility zone ot) ot -> Magic 'Private 'RW m Legality
-          goElectActivated = fmap maybeToLegality . performElections andM zoAbility goActivated
+            goElectActivated :: Elect 'Pre (ActivatedAbility zone ot) ot -> Magic 'Private 'RW m Legality
+            goElectActivated =
+              logCall' "goElectedActivated" $
+                fmap maybeToLegality . performElections andM zoAbility goActivated
 
-          goActivated :: ActivatedAbility zone ot -> Magic 'Private 'RW m Legality'
-          goActivated activated =
-            legalityToMaybe <$> do
-              let isThisInCorrectZone = True -- TODO
-                  isController = True -- TODO
-              case (isThisInCorrectZone, isController) of
-                (False, _) -> pure Illegal -- TODO prompt complaint
-                (_, False) -> pure Illegal -- TODO prompt complaint
-                (True, True) ->
-                  maybeToLegality <$> do
-                    playPendingAbility
-                      zoAbility
-                      (activated_cost activated)
-                      (activated_effect activated)
-                      $ \cost effect ->
-                        legalityToMaybe <$> do
-                          payElectedAndPutOnStack @ 'Activate $
-                            ElectedActivatedAbility oPlayer zoThis cost effect
+            goActivated :: ActivatedAbility zone ot -> Magic 'Private 'RW m Legality'
+            goActivated activated = logCall' "goActivated" do
+              legalityToMaybe <$> do
+                let isThisInCorrectZone = True -- TODO
+                    isController = True -- TODO
+                case (isThisInCorrectZone, isController) of
+                  (False, _) -> pure Illegal -- TODO prompt complaint
+                  (_, False) -> pure Illegal -- TODO prompt complaint
+                  (True, True) ->
+                    maybeToLegality <$> do
+                      playPendingAbility
+                        zoAbility
+                        (activated_cost activated)
+                        (activated_effect activated)
+                        \cost effect ->
+                          legalityToMaybe <$> do
+                            payElectedAndPutOnStack @ 'Activate $
+                              ElectedActivatedAbility oPlayer zoThis cost effect
 
-      goElectActivated $ thisToElectAbility this
+        goElectActivated $ thisToElectAbility this
 
 playPendingSpell ::
   forall m ot x.
@@ -254,7 +324,7 @@ playPendingSpell ::
   WithThisOneShot ot ->
   (Cost ot -> Pending (Effect 'OneShot) ot -> Magic 'Private 'RW m (Maybe x)) ->
   Magic 'Private 'RW m (Maybe x)
-playPendingSpell _zoStack cost withThisElectEffect cont = logCall 'playPendingSpell $ do
+playPendingSpell _zoStack cost withThisElectEffect cont = logCall 'playPendingSpell do
   goWithThis withThisElectEffect
  where
   goWithThis = \case
@@ -276,7 +346,7 @@ playPendingAbility ::
   Elect 'Post (Effect 'OneShot) ot ->
   (Cost ot -> Pending (Effect 'OneShot) ot -> Magic 'Private 'RW m (Maybe x)) ->
   Magic 'Private 'RW m (Maybe x)
-playPendingAbility _zoStack cost electEffect cont = logCall 'playPendingAbility $ do
+playPendingAbility _zoStack cost electEffect cont = logCall 'playPendingAbility do
   cont cost $ Pending electEffect
 
 setElectedObject_cost ::
@@ -317,7 +387,7 @@ payElectedAndPutOnStack' ::
   (ObjectId -> StackObject) ->
   Elected 'Pre ot ->
   Magic 'Private 'RW m Legality
-payElectedAndPutOnStack' idToStackObject elected = logCall 'payElectedAndPutOnStack' $ do
+payElectedAndPutOnStack' idToStackObject elected = logCall 'payElectedAndPutOnStack' do
   stackId <- newObjectId
   let stackItem = idToStackObject stackId
 
@@ -331,11 +401,16 @@ payElectedAndPutOnStack' idToStackObject elected = logCall 'payElectedAndPutOnSt
                     { stackEntryTargets = []
                     , stackEntryElected = AnyElected $ setElectedObject_cost elected cost
                     }
-            modify $ \st -> st{magicStack = Stack $ stackItem : unStack (magicStack st)}
-            modify $ \st -> st{magicStackEntryMap = Map.insert (toZO0 stackId) entry $ magicStackEntryMap st}
+            modify \st ->
+              st
+                { magicStack = Stack $ stackItem : unStack (magicStack st)
+                , magicStackEntryMap = Map.insert (toZO0 stackId) entry $ magicStackEntryMap st
+                }
             pure Legal
 
   legality <- goCost $ electedObject_cost elected
+  prompt <- fromRO $ gets magicPrompt
+  lift $ promptDebugMessage prompt $ show ("pay and put on stack", legality)
   case legality of
     Legal -> pure Legal
     Illegal -> pure Illegal -- TODO: GC stack object stuff if Illegal

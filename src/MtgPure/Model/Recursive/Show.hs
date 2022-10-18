@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ExtendedDefaultRules #-}
@@ -147,7 +148,9 @@ import safe MtgPure.Model.Recursive (
   WithMaskedObject (..),
   WithMaskedObjects (..),
   WithThis (..),
+  WithThisActivated,
   WithThisOneShot,
+  WithThisTriggered,
   YourCard (..),
  )
 import safe MtgPure.Model.Sideboard (Sideboard (Sideboard))
@@ -160,7 +163,7 @@ import safe MtgPure.Model.Variable (
   getVariableId,
  )
 import safe MtgPure.Model.VisitObjectN (KnownObjectN (..), VisitObjectN (..))
-import safe MtgPure.Model.Zone (IsZone (..))
+import safe MtgPure.Model.Zone (IsZone (..), Zone (..))
 import safe MtgPure.Model.ZoneObject (
   IsOT,
   IsZO,
@@ -168,7 +171,7 @@ import safe MtgPure.Model.ZoneObject (
   ZoneObject (..),
   toZone,
  )
-import Prelude hiding (showList)
+import safe Prelude hiding (showList)
 
 ----------------------------------------
 
@@ -228,6 +231,15 @@ instance Show (TriggeredAbility zone ot) where
 
 instance IsZO zone ot => Show (WithMaskedObject zone (Elect p e ot)) where
   show = runEnvM defaultDepthLimit . showWithMaskedObject showElect "obj"
+
+instance IsZO zone ot => Show (WithThisActivated zone ot) where
+  show = runEnvM defaultDepthLimit . showWithThis showElect "this"
+
+instance IsZO 'ZStack ot => Show (WithThisOneShot ot) where
+  show = runEnvM defaultDepthLimit . showWithThis showElect "this"
+
+instance IsZO zone ot => Show (WithThisTriggered zone ot) where
+  show = runEnvM defaultDepthLimit . showWithThis showTriggeredAbility "this"
 
 deriving instance Show Deck
 
@@ -345,12 +357,12 @@ runEnvM depth m = concat $ State.evalState strsM $ mkEnv depth
     ObjectItem i@(ObjectId n) g -> do
       prefix <- getObjectNamePrefix i
       let name = prefix ++ show n
-      pure $ case Map.findWithDefault False (i, g) (usedObjects used) of
+      pure case Map.findWithDefault False (i, g) (usedObjects used) of
         False -> "_" ++ name
         True -> name
     VariableItem vid@(VariableId i) -> do
       let name = varNames !! i
-      pure $ case Map.findWithDefault False vid (usedVariables used) of
+      pure case Map.findWithDefault False vid (usedVariables used) of
         False -> "_" ++ name
         True -> name
 
@@ -364,7 +376,7 @@ data Used = Used
   }
 
 getUsed :: [Item] -> Used
-getUsed = flip foldr empty $ \item used -> case item of
+getUsed = flip foldr empty \item used -> case item of
   StringItem{} -> used
   ObjectItem i g ->
     used
@@ -405,7 +417,7 @@ newObject ::
 newObject name = do
   i@(ObjectId raw) <- State.gets nextObjectId
   let obj = idToObject @a i
-  State.modify' $ \st ->
+  State.modify' \st ->
     st
       { nextObjectId = ObjectId $ raw + 1
       , originalObjectRep = Map.insert i (typeOf obj) $ originalObjectRep st
@@ -427,7 +439,7 @@ newObjectN make name = do
   (obj, snap) <- newObject @a name
   let i = objectToId obj
       objN = make obj
-  State.modify' $ \st ->
+  State.modify' \st ->
     st
       { originalObjectRep = Map.insert i (typeOf objN) $ originalObjectRep st
       }
@@ -454,7 +466,7 @@ getObjectNamePrefix i =
   State.gets (Map.findWithDefault "impossible" i . objectNames)
 
 showListM :: (a -> EnvM ParenItems) -> [a] -> EnvM ParenItems
-showListM f xs = noParens $ do
+showListM f xs = noParens do
   ss <- mapM (fmap dropParens . f) xs
   pure $ pure "[" <> DList.intercalate (pure ", ") ss <> pure "]"
 
@@ -462,13 +474,13 @@ showListM f xs = noParens $ do
 
 showAbility :: Ability ot -> EnvM ParenItems
 showAbility = \case
-  Activated ability -> yesParens $ do
+  Activated ability -> yesParens do
     sAbility <- dollar <$> showWithThis showElect "this" ability
     pure $ pure "Activated" <> sAbility
-  Static ability -> yesParens $ do
+  Static ability -> yesParens do
     sAbility <- dollar <$> showStaticAbility ability
     pure $ pure "Static" <> sAbility
-  Triggered ability -> yesParens $ do
+  Triggered ability -> yesParens do
     sAbility <- dollar <$> showWithThis showTriggeredAbility "this" ability
     pure $ pure "Triggered" <> sAbility
 
@@ -485,7 +497,7 @@ showAnyToken = \case
 
 showActivatedAbility :: ActivatedAbility zone ot -> EnvM ParenItems
 showActivatedAbility = \case
-  Ability cost effect -> yesParens $ do
+  Ability cost effect -> yesParens do
     sCost <- parens <$> showCost cost
     sEffect <- dollar <$> showElect effect
     pure $ pure "Ability " <> sCost <> sEffect
@@ -501,9 +513,9 @@ showBasicLandType = noParens . pure . pure . fromString . show
 
 showCard :: Card ot -> EnvM ParenItems
 showCard = \case
-  Card (CardName name) yourCard -> yesParens $ do
+  Card (CardName name) yourCard -> yesParens do
     depth <- State.gets cardDepth
-    State.modify' $ \st -> st{cardDepth = subtract 1 <$> depth}
+    State.modify' \st -> st{cardDepth = subtract 1 <$> depth}
     let sName = pure (fromString $ show name)
     case depth of
       Just 0 -> pure $ pure "Card " <> sName <> pure " ..."
@@ -516,7 +528,7 @@ showCard = \case
 
 showCardFacet :: CardFacet ot -> EnvM ParenItems
 showCardFacet = \case
-  ArtifactFacet colors cost artTypes creatTypes abilities -> yesParens $ do
+  ArtifactFacet colors cost artTypes creatTypes abilities -> yesParens do
     sColors <- parens <$> showColors colors
     sCost <- parens <$> showCost cost
     sArtTypes <- parens <$> showArtifactTypes artTypes
@@ -533,7 +545,7 @@ showCardFacet = \case
         <> sCreatTypes
         <> sAbilities
   ArtifactCreatureFacet colors cost artTypes creatTypes power toughness artAbils creatAbils ->
-    yesParens $ do
+    yesParens do
       sColors <- parens <$> showColors colors
       sCost <- parens <$> showCost cost
       sArtTypes <- parens <$> showArtifactTypes artTypes
@@ -559,7 +571,7 @@ showCardFacet = \case
           <> sArtAbils
           <> sCreatAbils
   ArtifactLandFacet artTypes creatTypes landTypes artAbils landAbils ->
-    yesParens $ do
+    yesParens do
       sArtTypes <- parens <$> showArtifactTypes artTypes
       sCreatTypes <- parens <$> showCreatureTypes creatTypes
       sLandTypes <- parens <$> showLandTypes landTypes
@@ -576,7 +588,7 @@ showCardFacet = \case
           <> sArtAbils
           <> sLandAbils
   CreatureFacet colors cost creatureTypes power toughness abilities ->
-    yesParens $ do
+    yesParens do
       sColors <- parens <$> showColors colors
       sCost <- parens <$> showCost cost
       sCreatureTypes <- parens <$> showCreatureTypes creatureTypes
@@ -595,7 +607,7 @@ showCardFacet = \case
           <> pure " "
           <> sToughness
           <> sAbilities
-  EnchantmentFacet colors cost creatTypes enchantTypes abilities -> yesParens $ do
+  EnchantmentFacet colors cost creatTypes enchantTypes abilities -> yesParens do
     sColors <- parens <$> showColors colors
     sCost <- parens <$> showCost cost
     sCreatTypes <- parens <$> showCreatureTypes creatTypes
@@ -611,7 +623,7 @@ showCardFacet = \case
         <> sEnchantTypes
         <> sAbilities
   EnchantmentCreatureFacet colors cost creatTypes power toughness creatAbils enchAbils bothAbils ->
-    yesParens $ do
+    yesParens do
       sColors <- parens <$> showColors colors
       sCost <- parens <$> showCost cost
       sCreatTypes <- parens <$> showCreatureTypes creatTypes
@@ -638,12 +650,12 @@ showCardFacet = \case
           <> sBothAbils
   InstantFacet colors cost creatTypes abilities oneShot -> do
     showOneShot "InstantFacet " colors cost creatTypes abilities oneShot
-  LandFacet creatTypes landTypes abilities -> yesParens $ do
+  LandFacet creatTypes landTypes abilities -> yesParens do
     sCreatTypes <- parens <$> showCreatureTypes creatTypes
     sLandTypes <- parens <$> showLandTypes landTypes
     sAbilities <- dollar <$> showAbilities abilities
     pure $ pure "LandFacet " <> sCreatTypes <> pure " " <> sLandTypes <> sAbilities
-  PlaneswalkerFacet colors cost loyalty abilities -> yesParens $ do
+  PlaneswalkerFacet colors cost loyalty abilities -> yesParens do
     sColors <- parens <$> showColors colors
     sCost <- parens <$> showCost cost
     sLoyalty <- parens <$> showLoyalty loyalty
@@ -670,7 +682,7 @@ showCardFacet = \case
     [Ability ot] ->
     WithThisOneShot ot ->
     EnvM ParenItems
-  showOneShot def colors cost creatTypes abilities oneShot = yesParens $ do
+  showOneShot def colors cost creatTypes abilities oneShot = yesParens do
     sColors <- parens <$> showColors colors
     sCost <- parens <$> showCost cost
     sCreatTypes <- parens <$> showCreatureTypes creatTypes
@@ -689,7 +701,7 @@ showCardFacet = \case
 
 showCase :: (x -> EnvM ParenItems) -> Case x -> EnvM ParenItems
 showCase showX = \case
-  CaseFin fin natList -> yesParens $ do
+  CaseFin fin natList -> yesParens do
     let sFin = pure $ getVarName fin
     sNatList <- dollar <$> showNatList showX natList
     pure $ pure "CaseFin " <> sFin <> sNatList
@@ -704,7 +716,7 @@ instance ShowColors [Color] where
   showColors = showListM showColor
 
 instance ShowColors Colors where
-  showColors colors = yesParens $ do
+  showColors colors = yesParens do
     pure $ pure "toColors " <> sOpen <> sSyms <> sClose
    where
     syms = case colors of
@@ -745,16 +757,16 @@ showColoredMana =
 
 showCondition :: Condition -> EnvM ParenItems
 showCondition = \case
-  CAnd conds -> yesParens $ do
+  CAnd conds -> yesParens do
     sConds <- parens <$> showConditions conds
     pure $ pure "CAnd " <> sConds
-  CNot cond -> yesParens $ do
+  CNot cond -> yesParens do
     sCond <- parens <$> showCondition cond
     pure $ pure "CNot " <> sCond
-  COr conds -> yesParens $ do
+  COr conds -> yesParens do
     sConds <- parens <$> showConditions conds
     pure $ pure "COr " <> sConds
-  Satisfies wAny objN reqs -> yesParens $ do
+  Satisfies wAny objN reqs -> yesParens do
     sWAny <- parens <$> showWAny wAny
     sObjN <- parens <$> showZoneObject objN
     sReqs <- dollar <$> showRequirements reqs
@@ -765,32 +777,32 @@ showConditions = showListM showCondition
 
 showCost :: Cost ot -> EnvM ParenItems
 showCost = \case
-  AndCosts costs -> yesParens $ do
+  AndCosts costs -> yesParens do
     sCosts <- dollar <$> showListM showCost costs
     pure $ pure "AndCosts" <> sCosts
-  CostCase case_ -> yesParens $ do
+  CostCase case_ -> yesParens do
     sCase <- dollar <$> showCase showCost case_
     pure $ pure "CostCase" <> sCase
-  DiscardRandomCost amount -> yesParens $ do
+  DiscardRandomCost amount -> yesParens do
     let sAmount = pure $ fromString $ show amount
     pure $ pure "DiscardRandomCost " <> sAmount
-  LoyaltyCost loyalty -> yesParens $ do
+  LoyaltyCost loyalty -> yesParens do
     sLoyalty <- dollar <$> showLoyalty loyalty
     pure $ pure "LoyaltyCost " <> sLoyalty
-  ManaCost cost -> yesParens $ do
+  ManaCost cost -> yesParens do
     sCost <- dollar <$> showManaCost cost
     pure $ pure (fromString "ManaCost") <> sCost
-  OrCosts costs -> yesParens $ do
+  OrCosts costs -> yesParens do
     sCosts <- parens <$> showListM showCost costs
     pure $ pure "OrCosts " <> sCosts
-  PayLife amount -> yesParens $ do
+  PayLife amount -> yesParens do
     let sAmount = pure $ fromString $ show amount
     pure $ pure "PayLife " <> sAmount
-  SacrificeCost perm reqs -> yesParens $ do
+  SacrificeCost perm reqs -> yesParens do
     sPerm <- parens <$> showWPermanent perm
     sReqs <- dollar <$> showRequirements reqs
     pure $ pure "SacrificeCost " <> sPerm <> sReqs
-  TapCost reqs -> yesParens $ do
+  TapCost reqs -> yesParens do
     sReqs <- dollar <$> showRequirements reqs
     pure $ pure "TapCost" <> sReqs
 
@@ -811,90 +823,90 @@ showDamage =
 
 showEffect :: Effect e -> EnvM ParenItems
 showEffect = \case
-  AddMana player mana -> yesParens $ do
+  AddMana player mana -> yesParens do
     sPlayer <- parens <$> showZoneObject player
     sMana <- dollar <$> showManaPool mana
     pure $ pure "AddMana " <> sPlayer <> sMana
-  AddToBattlefield perm player token -> yesParens $ do
+  AddToBattlefield perm player token -> yesParens do
     sPerm <- parens <$> showWPermanent perm
     sPlayer <- parens <$> showZoneObject player
     sCard <- dollar <$> showToken token
     pure $ pure "AddToBattlefield " <> sPerm <> pure " " <> sPlayer <> sCard
-  CantBeRegenerated creature -> yesParens $ do
+  CantBeRegenerated creature -> yesParens do
     sCreature <- dollar <$> showZoneObject creature
     pure $ pure "CantBeRegenerated" <> sCreature
-  ChangeTo perm before after -> yesParens $ do
+  ChangeTo perm before after -> yesParens do
     sPerm <- parens <$> showWPermanent perm
     sBefore <- parens <$> showZoneObject before
     sAfter <- dollar <$> showCard after
     pure $ pure "ChangeTo " <> sPerm <> pure " " <> sBefore <> sAfter
-  CounterAbility obj -> yesParens $ do
+  CounterAbility obj -> yesParens do
     sObj <- dollar <$> showZoneObject obj
     pure $ pure "CounterAbility" <> sObj
-  CounterSpell obj -> yesParens $ do
+  CounterSpell obj -> yesParens do
     sObj <- dollar <$> showZoneObject obj
     pure $ pure "CounterSpell" <> sObj
-  DealDamage source victim damage -> yesParens $ do
+  DealDamage source victim damage -> yesParens do
     sSource <- parens <$> showZoneObject source
     sVictim <- parens <$> showZoneObject victim
     sDamage <- dollar <$> showDamage damage
     pure $ pure "DealDamage " <> sSource <> pure " " <> sVictim <> sDamage
-  Destroy obj -> yesParens $ do
+  Destroy obj -> yesParens do
     sObj <- dollar <$> showZoneObject obj
     pure $ pure "Destroy" <> sObj
-  DrawCards player n -> yesParens $ do
+  DrawCards player n -> yesParens do
     sPlayer <- parens <$> showZoneObject player
     let amount = fromString $ show n
     pure $ pure "DrawCards " <> sPlayer <> pure " " <> pure amount
-  EffectCase case_ -> yesParens $ do
+  EffectCase case_ -> yesParens do
     sCase <- dollar <$> showCase showEffect case_
     pure $ pure "EffectCase" <> sCase
-  EffectContinuous effect -> yesParens $ do
+  EffectContinuous effect -> yesParens do
     sEffect <- dollar <$> showEffect effect
     pure $ pure "EffectContinuous" <> sEffect
-  Gain wAny obj ability -> yesParens $ do
+  Gain wAny obj ability -> yesParens do
     sWAny <- parens <$> showWAny wAny
     sObj <- parens <$> showZoneObject obj
     sAbility <- dollar <$> showAbility ability
     pure $ pure "Gain " <> sWAny <> pure " " <> sObj <> sAbility
-  Lose wAny obj ability -> yesParens $ do
+  Lose wAny obj ability -> yesParens do
     sWAny <- parens <$> showWAny wAny
     sObj <- parens <$> showZoneObject obj
     sAbility <- dollar <$> showAbility ability
     pure $ pure "Lose " <> sWAny <> pure " " <> sObj <> sAbility
-  PutOntoBattlefield wPerm player obj -> yesParens $ do
+  PutOntoBattlefield wPerm player obj -> yesParens do
     sWPerm <- parens <$> showWPermanent wPerm
     sPlayer <- parens <$> showZoneObject player
     sCard <- dollar <$> showZoneObject obj
     pure $ pure "PutOntoBattlefield " <> sWPerm <> pure " " <> sPlayer <> sCard
-  Sacrifice perm player reqs -> yesParens $ do
+  Sacrifice perm player reqs -> yesParens do
     sPerm <- parens <$> showWPermanent perm
     sPlayer <- parens <$> showZoneObject player
     sReqs <- dollar <$> showRequirements reqs
     pure $ pure "Sacrifice " <> sPerm <> pure " " <> sPlayer <> sReqs
-  SearchLibrary wCard player withCard -> yesParens $ do
+  SearchLibrary wCard player withCard -> yesParens do
     sWCard <- parens <$> showWCard wCard
     sPlayer <- parens <$> showZoneObject player
     sWithCard <- dollar <$> showWithLinkedObject showElect "card" withCard
     pure $ pure "SearchLibrary " <> sWCard <> pure " " <> sPlayer <> sWithCard
-  Sequence effects -> yesParens $ do
+  Sequence effects -> yesParens do
     sEffects <- dollar <$> showEffects effects
     pure $ pure "Sequence" <> sEffects
-  ShuffleLibrary player -> yesParens $ do
+  ShuffleLibrary player -> yesParens do
     sPlayer <- dollar <$> showZoneObject player
     pure $ pure "ShuffleLibrary" <> sPlayer
-  StatDelta creature power toughness -> yesParens $ do
+  StatDelta creature power toughness -> yesParens do
     sCreature <- parens <$> showZoneObject creature
     sPower <- parens <$> showPower power
     sToughness <- dollar <$> showToughness toughness
     pure $ pure "StatDelta " <> sCreature <> pure " " <> sPower <> sToughness
-  Tap obj -> yesParens $ do
+  Tap obj -> yesParens do
     sObj <- dollar <$> showZoneObject obj
     pure $ pure "Tap" <> sObj
-  Untap obj -> yesParens $ do
+  Untap obj -> yesParens do
     sObj <- dollar <$> showZoneObject obj
     pure $ pure "Untap" <> sObj
-  Until electEvent effect -> yesParens $ do
+  Until electEvent effect -> yesParens do
     sElectEvent <- parens <$> showElect electEvent
     sEffect <- dollar <$> showEffect effect
     pure $ pure "Until " <> sElectEvent <> sEffect
@@ -905,7 +917,7 @@ showEffects = showListM showEffect
 
 showElect :: Elect p e ot -> EnvM ParenItems
 showElect = \case
-  ActivePlayer contElect -> yesParens $ do
+  ActivePlayer contElect -> yesParens do
     (active', snap) <- newObjectN @ 'OTPlayer O1 "active"
     let active = toZone active'
         elect = contElect active
@@ -913,18 +925,18 @@ showElect = \case
     sElect <- dropParens <$> showElect elect
     restoreObject snap
     pure $ pure "ActivePlayer $ \\" <> sActive <> pure " -> " <> sElect
-  All withObjects -> yesParens $ do
+  All withObjects -> yesParens do
     sWithObjects <- dollar <$> showWithMaskedObjects showElect "obj" withObjects
     pure $ pure "All" <> sWithObjects
-  Choose player withObject -> yesParens $ do
+  Choose player withObject -> yesParens do
     sPlayer <- parens <$> showZoneObject player
     sWithObject <- dollar <$> showWithMaskedObject showElect "choose" withObject
     pure $ pure "Choose " <> sPlayer <> sWithObject
-  ChooseOption player natList varToElect -> yesParens $ do
+  ChooseOption player natList varToElect -> yesParens do
     sPlayer <- parens <$> showZoneObject player
     sNatList <- parens <$> showNatList showCondition natList
     discr <- State.gets nextVariableId
-    State.modify' $ \st -> st{nextVariableId = (1 +) <$> discr}
+    State.modify' \st -> st{nextVariableId = (1 +) <$> discr}
     let var = ReifiedVariable discr FZ
         varName = getVarName var
         elect = varToElect var
@@ -936,18 +948,18 @@ showElect = \case
         <> pure varName
         <> pure " -> "
         <> sElect
-  Condition cond -> yesParens $ do
+  Condition cond -> yesParens do
     sCond <- dollar <$> showCondition cond
     pure $ pure "Condition" <> sCond
-  ControllerOf zObj contElect -> yesParens $ do
+  ControllerOf zObj contElect -> yesParens do
     objPrefix <-
-      getObjectNamePrefix $
+      getObjectNamePrefix
         let objN :: ObjectN OTAny
             objN = case zObj of
               ZO _ o -> o
          in visitObjectN' objectToId objN
     (controller', snap) <-
-      newObjectN @ 'OTPlayer O1 $ case objPrefix == "this" of
+      newObjectN @ 'OTPlayer O1 case objPrefix == "this" of
         True -> "you"
         False -> "controller"
     let controller = toZone controller'
@@ -963,46 +975,46 @@ showElect = \case
         <> sController
         <> pure " -> "
         <> sElect
-  Cost cost -> yesParens $ do
+  Cost cost -> yesParens do
     sCost <- dollar <$> showCost cost
     pure $ pure "Cost" <> sCost
-  Effect effect -> yesParens $ do
+  Effect effect -> yesParens do
     sEffect <- dollar <$> showEffects effect
     pure $ pure "Effect" <> sEffect
-  Elect elect -> yesParens $ do
+  Elect elect -> yesParens do
     sElect <- dollar <$> showElect elect
     pure $ pure "Elect" <> sElect
-  ElectActivated activated -> yesParens $ do
+  ElectActivated activated -> yesParens do
     sPost <- dollar <$> showActivatedAbility activated
     pure $ pure "ElectActivated" <> sPost
-  ElectCard post -> yesParens $ do
+  ElectCard post -> yesParens do
     sPost <- dollar <$> showCardFacet post
     pure $ pure "ElectCard" <> sPost
-  ElectCase case_ -> yesParens $ do
+  ElectCase case_ -> yesParens do
     sCase <- dollar <$> showCase showElect case_
     pure $ pure "ElectCase" <> sCase
-  Event event -> yesParens $ do
+  Event event -> yesParens do
     sEvent <- dollar <$> showEvent event
     pure $ pure "Event" <> sEvent
-  If cond then_ else_ -> yesParens $ do
+  If cond then_ else_ -> yesParens do
     sCond <- parens <$> showCondition cond
     sThen <- parens <$> showElect then_
     sElse <- dollar <$> showElse else_
     pure $ pure "If " <> sCond <> pure " " <> sThen <> sElse
-  Listen listener -> yesParens $ do
+  Listen listener -> yesParens do
     sListener <- dollar <$> showEventListener listener
     pure $ pure "Listen" <> sListener
-  Random withObject -> yesParens $ do
+  Random withObject -> yesParens do
     sWithObject <- dollar <$> showWithMaskedObject showElect "rand" withObject
     pure $ pure "Random" <> sWithObject
-  Target player withObject -> yesParens $ do
+  Target player withObject -> yesParens do
     sPlayer <- parens <$> showZoneObject player
     sWithObject <- dollar <$> showWithMaskedObject showElect "target" withObject
     pure $ pure "Target " <> sPlayer <> sWithObject
-  VariableFromPower creature varToElect -> yesParens $ do
+  VariableFromPower creature varToElect -> yesParens do
     sCreature <- parens <$> showZoneObject creature
     discr <- State.gets nextVariableId
-    State.modify' $ \st -> st{nextVariableId = (1 +) <$> discr}
+    State.modify' \st -> st{nextVariableId = (1 +) <$> discr}
     let var = ReifiedVariable discr 0
         varName = getVarName var
         elect = varToElect var
@@ -1014,9 +1026,9 @@ showElect = \case
         <> pure varName
         <> pure " -> "
         <> sElect
-  VariableInt contElect -> yesParens $ do
+  VariableInt contElect -> yesParens do
     discr <- State.gets nextVariableId
-    State.modify' $ \st -> st{nextVariableId = (1 +) <$> discr}
+    State.modify' \st -> st{nextVariableId = (1 +) <$> discr}
     let var = ReifiedVariable discr 0
         varName = getVarName var
         elect = contElect var
@@ -1025,24 +1037,24 @@ showElect = \case
 
 showElse :: Else e ot -> EnvM ParenItems
 showElse = \case
-  ElseCost elect -> yesParens $ do
+  ElseCost elect -> yesParens do
     sElect <- dollar <$> showElect elect
     pure $ pure "ElseCost" <> sElect
-  ElseEffect elect -> yesParens $ do
+  ElseEffect elect -> yesParens do
     sElect <- dollar <$> showElect elect
     pure $ pure "ElseEffect" <> sElect
-  ElseEvent -> noParens $ do
+  ElseEvent -> noParens do
     pure $ pure "ElseEvent"
 
 showEnchant :: Enchant zone ot -> EnvM ParenItems
 showEnchant = \case
-  Enchant withObj -> yesParens $ do
+  Enchant withObj -> yesParens do
     sWithObj <- dollar <$> showWithLinkedObject showElect "enchanted" withObj
     pure $ pure "Enchant" <> sWithObj
 
 showEnchantmentType :: EnchantmentType ot -> EnvM ParenItems
 showEnchantmentType = \case
-  Aura enchant -> yesParens $ do
+  Aura enchant -> yesParens do
     sEnchant <- dollar <$> showEnchant enchant
     pure $ pure "Aura" <> sEnchant
 
@@ -1050,7 +1062,7 @@ showEnchantmentTypes :: [EnchantmentType ot] -> EnvM ParenItems
 showEnchantmentTypes = showListM showEnchantmentType
 
 showEvent :: Event -> EnvM ParenItems
-showEvent = showEventListener' $ \Proxy -> noParens $ pure $ pure "Proxy"
+showEvent = showEventListener' \Proxy -> noParens $ pure $ pure "Proxy"
 
 showEventListener :: EventListener -> EnvM ParenItems
 showEventListener = showEventListener' showElect
@@ -1060,18 +1072,18 @@ showEventListener' ::
   EventListener' x ->
   EnvM ParenItems
 showEventListener' showX = \case
-  BecomesTapped perm withObject -> yesParens $ do
+  BecomesTapped perm withObject -> yesParens do
     sPerm <- parens <$> showWPermanent perm
     sWithObject <- dollar <$> showWithLinkedObject showX "perm" withObject
     pure $ pure "BecomesTapped " <> sPerm <> sWithObject
-  Events listeners -> yesParens $ do
+  Events listeners -> yesParens do
     sListeners <- dollar <$> showListM (showEventListener' showX) listeners
     pure $ pure "Evenets" <> sListeners
-  SpellIsCast spell withObject -> yesParens $ do
+  SpellIsCast spell withObject -> yesParens do
     sSpell <- parens <$> showWSpell spell
     sWithObject <- dollar <$> showWithLinkedObject showX "spell" withObject
     pure $ pure "SpellIsCast " <> sSpell <> sWithObject
-  TimePoint timePoint oneShot -> yesParens $ do
+  TimePoint timePoint oneShot -> yesParens do
     sTimePoint <- parens <$> showTimePoint timePoint
     sOneShot <- dollar <$> showX oneShot
     pure $ pure "TimePoint " <> sTimePoint <> sOneShot
@@ -1090,7 +1102,7 @@ showGenericMana =
 
 showLandType :: LandType -> EnvM ParenItems
 showLandType landType = case landType of
-  BasicLand basic -> yesParens $ do
+  BasicLand basic -> yesParens do
     sBasic <- dollar <$> showBasicLandType basic
     pure $ pure "BasicLand" <> sBasic
   Desert -> sLandType
@@ -1122,7 +1134,7 @@ showMana =
     GenericMana m -> (pure "GenericMana" <>) . dollar <$> showGenericMana m
 
 showManaCost :: ManaCost var -> EnvM ParenItems
-showManaCost cost = yesParens $ do
+showManaCost cost = yesParens do
   let ManaCost'
         { costWhite = w
         , costBlue = u
@@ -1191,7 +1203,7 @@ showManaCost cost = yesParens $ do
           <> sX
 
 showManaPool :: ManaPool snow -> EnvM ParenItems
-showManaPool pool = yesParens $ do
+showManaPool pool = yesParens do
   let ManaPool
         { poolWhite = w
         , poolBlue = u
@@ -1250,7 +1262,7 @@ showManaPool pool = yesParens $ do
 
 showNatList :: forall u n x. IsUser u => (x -> EnvM ParenItems) -> NatList u n x -> EnvM ParenItems
 showNatList showX = \case
-  LZ x -> yesParens $ do
+  LZ x -> yesParens do
     sType <-
       parens <$> do
         let u = showUserType @u
@@ -1260,7 +1272,7 @@ showNatList showX = \case
         grouping $ pure $ pure (fromString u)
     sX <- dollar <$> showX x
     pure $ pure "LZ @" <> sType <> sX
-  LS x xs -> yesParens $ do
+  LS x xs -> yesParens do
     sX <- parens <$> showX x
     sXs <- dollar <$> showNatList showX xs
     pure $ pure "LS " <> sX <> sXs
@@ -1579,51 +1591,51 @@ showPower = yesParens . pure . pure . fromString . show
 
 showRequirement :: Requirement zone ot -> EnvM ParenItems
 showRequirement = \case
-  ControlledBy obj -> yesParens $ do
+  ControlledBy obj -> yesParens do
     sObj <- dollar <$> showZoneObject obj
     pure $ pure "ControlledBy" <> sObj
-  ControlsA req -> yesParens $ do
+  ControlsA req -> yesParens do
     sObj <- dollar <$> showRequirement req
     pure $ pure "ControlsA" <> sObj
-  HasAbility ability -> yesParens $ do
+  HasAbility ability -> yesParens do
     sAbility <- dollar <$> showWithThis showAbility "this" ability
     pure $ pure "HasAbility" <> sAbility
-  HasLandType landType -> yesParens $ do
+  HasLandType landType -> yesParens do
     sLandType <- dollar <$> showLandType landType
     pure $ pure "HasLandType" <> sLandType
-  Is wAny objN -> yesParens $ do
+  Is wAny objN -> yesParens do
     sWAny <- parens <$> showWAny wAny
     sObjN <- dollar <$> showZoneObject objN
     pure $ pure "Is " <> sWAny <> sObjN
-  IsTapped perm -> yesParens $ do
+  IsTapped perm -> yesParens do
     pure $ pure $ fromString $ "IsTapped " ++ show perm
-  Not req -> yesParens $ do
+  Not req -> yesParens do
     sReq <- dollar <$> showRequirement req
     pure $ pure "Not" <> sReq
-  OfColors colors -> yesParens $ do
+  OfColors colors -> yesParens do
     pure $ pure $ fromString $ "OfColors $ " ++ show colors
-  OwnedBy obj -> yesParens $ do
+  OwnedBy obj -> yesParens do
     sObj <- dollar <$> showZoneObject obj
     pure $ pure "OwnedBy" <> sObj
-  PlayerPays cost -> yesParens $ do
+  PlayerPays cost -> yesParens do
     sCost <- dollar <$> showCost cost
     pure $ pure "PlayerPays" <> sCost
-  RAnd reqs -> yesParens $ do
+  RAnd reqs -> yesParens do
     sReqs <- dollar <$> showRequirements reqs
     pure $ pure "RAnd" <> sReqs
-  ROr reqs -> yesParens $ do
+  ROr reqs -> yesParens do
     sReqs <- dollar <$> showRequirements reqs
     pure $ pure "ROr" <> sReqs
-  R2 reqsA reqsB -> yesParens $ do
+  R2 reqsA reqsB -> yesParens do
     sReqsA <- parens <$> showRequirements reqsA
     sReqsB <- dollar <$> showRequirements reqsB
     pure $ pure "R2 " <> sReqsA <> sReqsB
-  R3 reqsA reqsB reqsC -> yesParens $ do
+  R3 reqsA reqsB reqsC -> yesParens do
     sReqsA <- parens <$> showRequirements reqsA
     sReqsB <- parens <$> showRequirements reqsB
     sReqsC <- dollar <$> showRequirements reqsC
     pure $ pure "R3 " <> sReqsA <> pure " " <> sReqsB <> sReqsC
-  R4 reqsA reqsB reqsC reqsD -> yesParens $ do
+  R4 reqsA reqsB reqsC reqsD -> yesParens do
     sReqsA <- parens <$> showRequirements reqsA
     sReqsB <- parens <$> showRequirements reqsB
     sReqsC <- parens <$> showRequirements reqsC
@@ -1636,7 +1648,7 @@ showRequirement = \case
         <> pure " "
         <> sReqsC
         <> sReqsD
-  R5 reqsA reqsB reqsC reqsD reqsE -> yesParens $ do
+  R5 reqsA reqsB reqsC reqsD reqsE -> yesParens do
     sReqsA <- parens <$> showRequirements reqsA
     sReqsB <- parens <$> showRequirements reqsB
     sReqsC <- parens <$> showRequirements reqsC
@@ -1657,14 +1669,14 @@ showRequirements :: [Requirement zone ot] -> EnvM ParenItems
 showRequirements = showListM showRequirement
 
 showSetCard :: SetCard ot -> EnvM ParenItems
-showSetCard (SetCard set rarity card) = yesParens $ do
+showSetCard (SetCard set rarity card) = yesParens do
   sCard <- dollar <$> showCard card
   pure $
     pure (fromString $ "SetCard " ++ show set ++ " " ++ show rarity)
       <> sCard
 
 showSetToken :: SetToken ot -> EnvM ParenItems
-showSetToken (SetToken set rarity token) = yesParens $ do
+showSetToken (SetToken set rarity token) = yesParens do
   sToken <- dollar <$> showToken token
   pure $
     pure (fromString $ "SetToken " ++ show set ++ " " ++ show rarity)
@@ -1672,10 +1684,10 @@ showSetToken (SetToken set rarity token) = yesParens $ do
 
 showStaticAbility :: StaticAbility zone ot -> EnvM ParenItems
 showStaticAbility = \case
-  As electListener -> yesParens $ do
+  As electListener -> yesParens do
     sWithObject <- dollar <$> showElect electListener
     pure $ pure "As" <> sWithObject
-  Bestow cost enchant -> yesParens $ do
+  Bestow cost enchant -> yesParens do
     sCost <- parens <$> showElect cost
     sEnchant <- dollar <$> showEnchant enchant
     pure $ pure "Bestow " <> sCost <> sEnchant
@@ -1685,10 +1697,10 @@ showStaticAbility = \case
     pure $ pure "Flying"
   Haste -> noParens $ do
     pure $ pure "Haste"
-  StaticContinuous continuous -> yesParens $ do
+  StaticContinuous continuous -> yesParens do
     sContinuous <- dollar <$> showElect continuous
     pure $ pure "StaticContinuous" <> sContinuous
-  Suspend time cost -> yesParens $ do
+  Suspend time cost -> yesParens do
     let sTime = pure $ fromString $ show time
     sCost <- dollar <$> showElect cost
     pure $ pure "Suspend " <> sTime <> sCost
@@ -1698,7 +1710,7 @@ showTimePoint = yesParens . pure . pure . fromString . show
 
 showToken :: Token ot -> EnvM ParenItems
 showToken = \case
-  Token wPerm card -> yesParens $ do
+  Token wPerm card -> yesParens do
     sWPerm <- parens <$> showWPermanent wPerm
     sCard <- dollar <$> showCard card
     pure $ pure "Token " <> sWPerm <> sCard
@@ -1710,7 +1722,7 @@ showTriggeredAbility :: TriggeredAbility zone ot -> EnvM ParenItems
 showTriggeredAbility = \case
   When listener -> go "When" listener
  where
-  go consName eventListener = yesParens $ do
+  go consName eventListener = yesParens do
     sEventListener <- dollar <$> showElect eventListener
     pure $ pure (fromString consName) <> sEventListener
 
@@ -1731,7 +1743,7 @@ showWithLinkedObject ::
   WithLinkedObject zone x ot ->
   EnvM ParenItems
 showWithLinkedObject showM memo = \case
-  LProxy reqs -> yesParens $ do
+  LProxy reqs -> yesParens do
     sReqs <- dollar <$> showRequirements reqs
     pure $ pure "LProxy" <> sReqs
   L1 nonProxy reqs cont ->
@@ -1755,7 +1767,7 @@ showWithLinkedObject showM memo = \case
   getType :: [Requirement zone ot] -> Proxy ot
   getType _ = Proxy
 
-  go ty _nonProxy reqs sCont = yesParens $ do
+  go ty _nonProxy reqs sCont = yesParens do
     sTy <- parens <$> showTypeOf ty
     sReqs <- parens <$> showRequirements reqs
     sCont' <- dollar <$> sCont
@@ -1763,7 +1775,7 @@ showWithLinkedObject showM memo = \case
 
 showWithList :: (ret -> EnvM ParenItems) -> WithList ret zone ot -> EnvM ParenItems
 showWithList showRet = \case
-  CountOf zos cont -> yesParens $ do
+  CountOf zos cont -> yesParens do
     sZos <- parens <$> showZoneObjects zos
     discr <- State.gets nextVariableId
     State.modify' $ \st -> st{nextVariableId = (1 +) <$> discr}
@@ -1772,14 +1784,14 @@ showWithList showRet = \case
         ret = cont var
     sRet <- dropParens <$> showRet ret
     pure $ pure "CountOf " <> sZos <> pure " $ \\" <> pure varName <> pure " -> " <> sRet
-  Each zos cont -> yesParens $ do
+  Each zos cont -> yesParens do
     sZos <- parens <$> showZoneObjects zos
     let zo = lenseList zos
         ret = cont zo
     sZo <- parens <$> showZoneObject zo
     sRet <- dropParens <$> showRet ret
     pure $ pure "Each " <> sZos <> pure " $ \\" <> sZo <> pure " -> " <> sRet
-  SuchThat reqs withList -> yesParens $ do
+  SuchThat reqs withList -> yesParens do
     sReqs <- parens <$> showRequirements reqs
     sWithList <- dollar <$> showWithList showRet withList
     pure $ pure "SuchThat " <> sReqs <> sWithList
@@ -1810,7 +1822,7 @@ showWithMaskedObject showM memo = \case
   getType :: [Requirement zone ot] -> Proxy ot
   getType _ = Proxy
 
-  go ty reqs sCont = yesParens $ do
+  go ty reqs sCont = yesParens do
     sTy <- parens <$> showTypeOf ty
     sReqs <- parens <$> showRequirements reqs
     sCont' <- dollar <$> sCont
@@ -1842,7 +1854,7 @@ showWithMaskedObjects showM memo = \case
   getType :: [Requirement zone ot] -> Proxy ot
   getType _ = Proxy
 
-  go ty reqs sCont = yesParens $ do
+  go ty reqs sCont = yesParens do
     sTy <- parens <$> showTypeOf ty
     sReqs <- parens <$> showRequirements reqs
     sCont' <- dollar <$> sCont
@@ -1858,7 +1870,7 @@ showWithThis ::
   EnvM ParenItems
 showWithThis showM memo = \case
   T1 cont ->
-    let go = yesParens $ do
+    let go = yesParens do
           sTy <- parens <$> showTypeOf (Proxy @ot)
           sCont <- dollar <$> showO1 @zone Singular showM memo (cont . toZone)
           pure $ pure "thisObject @" <> sTy <> sCont
@@ -1869,7 +1881,7 @@ showWithThis showM memo = \case
           (IsOT (OT2 a b), Inst2 IsObjectType a b) =>
           ((ZO zone (OT1 a), ZO zone (OT1 b)) -> liftOT (OT2 a b)) ->
           EnvM ParenItems
-        go cont' = yesParens $ do
+        go cont' = yesParens do
           sTy <- parens <$> showTypeOf (Proxy @ot)
           (objNa, snap) <- newObjectN @a O1 memo
           (objNb, _) <- newObjectN @b O1 memo
@@ -1890,27 +1902,27 @@ showWithThis showM memo = \case
      in go cont
 
 showW2 :: forall wit a b. Inst2 IsObjectType a b => Item -> wit (OT2 a b) -> EnvM ParenItems
-showW2 tyName _ = yesParens $ do
+showW2 tyName _ = yesParens do
   sTy <- parens <$> showTypeOf (Proxy @(OT2 a b))
   pure $ pure "tyAp @" <> sTy <> pure " " <> pure tyName <> pure "2"
 
 showW3 :: forall wit a b c. Inst3 IsObjectType a b c => Item -> wit (OT3 a b c) -> EnvM ParenItems
-showW3 tyName _ = yesParens $ do
+showW3 tyName _ = yesParens do
   sTy <- parens <$> showTypeOf (Proxy @(OT3 a b c))
   pure $ pure "tyAp @" <> sTy <> pure " " <> pure tyName <> pure "3"
 
 showW4 :: forall wit a b c d. Inst4 IsObjectType a b c d => Item -> wit (OT4 a b c d) -> EnvM ParenItems
-showW4 tyName _ = yesParens $ do
+showW4 tyName _ = yesParens do
   sTy <- parens <$> showTypeOf (Proxy @(OT4 a b c d))
   pure $ pure "tyAp @" <> sTy <> pure " " <> pure tyName <> pure "4"
 
 showW5 :: forall wit a b c d e. Inst5 IsObjectType a b c d e => Item -> wit (OT5 a b c d e) -> EnvM ParenItems
-showW5 tyName _ = yesParens $ do
+showW5 tyName _ = yesParens do
   sTy <- parens <$> showTypeOf (Proxy @(OT5 a b c d e))
   pure $ pure "tyAp @" <> sTy <> pure " " <> pure tyName <> pure "5"
 
 showW6 :: forall wit a b c d e f. Inst6 IsObjectType a b c d e f => Item -> wit (OT6 a b c d e f) -> EnvM ParenItems
-showW6 tyName _ = yesParens $ do
+showW6 tyName _ = yesParens do
   sTy <- parens <$> showTypeOf (Proxy @(OT6 a b c d e f))
   pure $ pure "tyAp @" <> sTy <> pure " " <> pure tyName <> pure "6"
 
@@ -2026,12 +2038,12 @@ showYourCard = \case
     x <- action you
     restoreObject snap
     pure x
-  goPerm cont consName = withYou $ \you -> yesParens $ do
+  goPerm cont consName = withYou $ \you -> yesParens do
     sYou <- parens <$> showZoneObject you
     let facet = cont you
     sFacet <- dollar <$> showCardFacet facet
     pure $ pure consName <> pure " $ \\" <> sYou <> pure " -> " <> sFacet
-  goSpell cont consName = withYou $ \you -> yesParens $ do
+  goSpell cont consName = withYou $ \you -> yesParens do
     sYou <- parens <$> showZoneObject you
     let electFacet = cont you
     sFacet <- dollar <$> showElect electFacet

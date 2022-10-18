@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -57,7 +58,7 @@ satisfiesImpl ::
   ZO zone ot ->
   Requirement zone ot ->
   Magic 'Private 'RO m Bool
-satisfiesImpl zo = logCall 'satisfiesImpl $ \case
+satisfiesImpl zo = logCall 'satisfiesImpl \case
   ControlledBy zoPlayer -> controlledBy' zo zoPlayer
   HasLandType landType -> hasLandType' zo landType
   Is _wAny zo' -> is' zo zo'
@@ -68,16 +69,16 @@ satisfiesImpl zo = logCall 'satisfiesImpl $ \case
   _ -> undefined
 
 hasLandType' :: forall zone m. (Monad m, IsZone zone) => ZO zone OTLand -> LandType -> Magic 'Private 'RO m Bool
-hasLandType' zo landType = logCall 'hasLandType' $ case singZone @zone of
+hasLandType' zo landType = logCall 'hasLandType' case singZone @zone of
   SZBattlefield -> do
     perm <- getPermanent $ zo0ToPermanent $ toZO0 zo
-    pure $ case permanentLand perm of
+    pure case permanentLand perm of
       Nothing -> False
       Just land -> landType `elem` landTypes land
   _ -> undefined
 
 isTapped' :: (IsOT ot, Monad m) => ZO 'ZBattlefield ot -> Magic 'Private 'RO m Bool
-isTapped' zo = logCall 'isTapped' $ do
+isTapped' zo = logCall 'isTapped' do
   perm <- getPermanent $ zo0ToPermanent $ toZO0 zo
   pure $ permanentTapped perm == Tapped
 
@@ -87,7 +88,7 @@ controlledBy' ::
   ZO zone ot ->
   ZOPlayer ->
   Magic 'Private 'RO m Bool
-controlledBy' zo zoPlayer = logCall 'controlledBy' $ case singZone @zone of
+controlledBy' zo zoPlayer = logCall 'controlledBy' case singZone @zone of
   SZBattlefield ->
     findPermanent (zo0ToPermanent $ toZO0 zo) <&> \case
       Nothing -> getObjectId zo == getObjectId zoPlayer -- TODO: [Mindslaver]
@@ -95,7 +96,7 @@ controlledBy' zo zoPlayer = logCall 'controlledBy' $ case singZone @zone of
   _ -> undefined
 
 is' :: (Monad m, IsZO zone ot) => ZO zone ot -> ZO zone ot -> Magic 'Private 'RO m Bool
-is' zo zo' = logCall 'is' $ do
+is' zo zo' = logCall 'is' do
   pure $ getObjectId zo == getObjectId zo' -- XXX: Also check for ObjectId liveliness?
 
 not' ::
@@ -110,7 +111,7 @@ rAnd' ::
   ZO zone ot ->
   [Requirement zone ot] ->
   Magic 'Private 'RO m Bool
-rAnd' zo = logCall 'rAnd' $ \case
+rAnd' zo = logCall 'rAnd' \case
   [] -> pure True
   req : reqs ->
     satisfies zo req >>= \case
@@ -122,7 +123,7 @@ rOr' ::
   ZO zone ot ->
   [Requirement zone ot] ->
   Magic 'Private 'RO m Bool
-rOr' zo = logCall 'rOr' $ \case
+rOr' zo = logCall 'rOr' \case
   [] -> pure False
   req : reqs ->
     satisfies zo req >>= \case

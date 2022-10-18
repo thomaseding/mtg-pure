@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE Safe #-}
@@ -20,6 +21,7 @@
 {-# HLINT ignore "Use if" #-}
 {-# HLINT ignore "Redundant pure" #-}
 
+-- XXX: Rename to something like Magic.Engine.API
 module MtgPure.Engine.Fwd.Wrap (
   queryMagic,
   runMagicEx,
@@ -27,6 +29,7 @@ module MtgPure.Engine.Fwd.Wrap (
   --
   allZOs,
   activateAbility,
+  askActivateAbility,
   askPlayLand,
   caseOf,
   castSpell,
@@ -36,8 +39,10 @@ module MtgPure.Engine.Fwd.Wrap (
   findPermanent,
   findPlayer,
   gainPriority,
+  getActivatedAbilities,
   getActivePlayer,
   getAlivePlayerCount,
+  getAllActivatedAbilities,
   getAPNAP,
   getHasPriority,
   getPermanent,
@@ -46,10 +51,11 @@ module MtgPure.Engine.Fwd.Wrap (
   getPlayers,
   getPlayerWithPriority,
   logCall,
+  modifyPlayer,
   newObjectId,
   pay,
   performElections,
-  playLand,
+  performStateBasedActions,
   pushHandCard,
   pushLibraryCard,
   removeHandCard,
@@ -70,6 +76,8 @@ module MtgPure.Engine.Fwd.Wrap (
 import safe Control.Monad.Access (IsReadWrite, ReadWrite (..), Visibility (..))
 import safe Control.Monad.Trans (lift)
 import safe Control.Monad.Util (AndLike)
+import safe Data.Kind (Type)
+import safe qualified Data.List as List
 import safe qualified Data.Stream as Stream
 import safe Data.Void (Void)
 import safe Language.Haskell.TH.Syntax (Name)
@@ -87,8 +95,8 @@ import safe MtgPure.Engine.Prompt (
   ActivateAbility,
   CastSpell,
   InternalLogicError (..),
-  PlayLand,
   PlayerCount (..),
+  SomeActivatedAbility,
  )
 import safe MtgPure.Engine.State (
   Fwd,
@@ -172,12 +180,17 @@ fwd4 go a b c d = do
 activateAbility :: forall m. Monad m => Object 'OTPlayer -> ActivateAbility -> Magic 'Private 'RW m Legality
 activateAbility = fwd2 fwd_activateAbility
 
+askActivateAbility :: Monad m => Object 'OTPlayer -> MagicCont 'Private 'RW m () ()
+askActivateAbility p = do
+  fwd <- lift getFwd
+  fwd_askActivateAbility fwd p
+
 askPlayLand :: Monad m => Object 'OTPlayer -> MagicCont 'Private 'RW m () ()
 askPlayLand p = do
   fwd <- lift getFwd
   fwd_askPlayLand fwd p
 
-allZOs :: (Monad m, IsZO zone ot) => Magic 'Private 'RO m [ZO zone ot]
+allZOs :: (IsZO zone ot, Monad m) => Magic 'Private 'RO m [ZO zone ot]
 allZOs = fwd0 fwd_allZOs
 
 caseOf :: Monad m => (x -> Magic 'Private 'RW m a) -> Case x -> Magic 'Private 'RW m a
@@ -204,11 +217,17 @@ findPlayer = fwd1 fwd_findPlayer
 gainPriority :: Monad m => Object 'OTPlayer -> Magic 'Private 'RW m ()
 gainPriority = fwd1 fwd_gainPriority
 
+getActivatedAbilities :: (IsZO zone ot, Monad m) => ZO zone ot -> Magic 'Private 'RO m [SomeActivatedAbility zone ot]
+getActivatedAbilities = fwd1 fwd_getActivatedAbilities
+
 getActivePlayer :: Monad m => Magic 'Public 'RO m (Object 'OTPlayer)
 getActivePlayer = fwd0 fwd_getActivePlayer
 
 getAlivePlayerCount :: Monad m => Magic 'Public 'RO m PlayerCount
 getAlivePlayerCount = fwd0 fwd_getAlivePlayerCount
+
+getAllActivatedAbilities :: (IsZO zone ot, Monad m) => Magic 'Private 'RO m [SomeActivatedAbility zone ot]
+getAllActivatedAbilities = fwd0 fwd_getAllActivatedAbilities
 
 getAPNAP :: Monad m => Magic v 'RO m (Stream.Stream (Object 'OTPlayer))
 getAPNAP = fwd0 fwd_getAPNAP
@@ -231,50 +250,77 @@ getPlayers = fwd0 fwd_getPlayers
 getPlayerWithPriority :: Monad m => Magic 'Public 'RO m (Maybe (Object 'OTPlayer))
 getPlayerWithPriority = fwd0 fwd_getPlayerWithPriority
 
+newtype Named :: Type where
+  Named :: String -> Named
+
+class IsNamed name where
+  toNamed :: name -> Named
+
+instance IsNamed Named where
+  toNamed = id
+
+instance IsNamed Name where
+  toNamed = Named . show
+
+instance IsNamed (Name, [String]) where
+  toNamed (name, parts) = Named $ show name ++ "." ++ List.intercalate "." parts
+
+instance IsNamed (Name, String) where
+  toNamed (name, part) = toNamed (name, [part])
+
+showNamed :: IsNamed name => name -> String
+showNamed name = case toNamed name of
+  Named s -> s
+
 class LogCall x where
-  logCall :: Name -> x -> x
+  logCall :: IsNamed name => name -> x -> x
 
 instance (IsReadWrite rw, Monad m) => LogCall (Magic p rw m z) where
   logCall name action = do
-    _ <- logCallPush $ show name
+    _ <- logCallPush $ showNamed name
     result <- action
     _ <- logCallPop
     pure result
 
 instance (IsReadWrite rw, Monad m) => LogCall (a -> Magic p rw m z) where
   logCall name action a = do
-    _ <- logCallPush $ show name
+    _ <- logCallPush $ showNamed name
     result <- action a
     _ <- logCallPop
     pure result
 
 instance (IsReadWrite rw, Monad m) => LogCall (a -> b -> Magic p rw m z) where
   logCall name action a b = do
-    _ <- logCallPush $ show name
+    _ <- logCallPush $ showNamed name
     result <- action a b
     _ <- logCallPop
     pure result
 
 instance (IsReadWrite rw, Monad m) => LogCall (MagicCont p rw m y z) where
   logCall name action = do
-    _ <- lift $ logCallPush $ show name
+    _ <- lift $ logCallPush $ showNamed name
     result <- action
     _ <- lift logCallPop
     pure result
 
 instance (IsReadWrite rw, Monad m) => LogCall (a -> MagicCont p rw m y z) where
   logCall name action a = do
-    _ <- lift $ logCallPush $ show name
+    _ <- lift $ logCallPush $ showNamed name
     result <- action a
     _ <- lift logCallPop
     pure result
 
 instance (IsReadWrite rw, Monad m) => LogCall (a -> b -> MagicCont p rw m y z) where
   logCall name action a b = do
-    _ <- lift $ logCallPush $ show name
+    _ <- lift $ logCallPush $ showNamed name
     result <- action a b
     _ <- lift logCallPop
     pure result
+
+modifyPlayer :: Monad m => Object 'OTPlayer -> (Player -> Player) -> Magic 'Private 'RW m ()
+modifyPlayer o f = do
+  p <- fromRO $ getPlayer o
+  setPlayer o $ f p
 
 newObjectId :: Monad m => Magic 'Private 'RW m ObjectId
 newObjectId = fwd0 fwd_newObjectId
@@ -292,8 +338,8 @@ performElections ::
   Magic 'Private 'RW m (Maybe x)
 performElections = fwd4 fwd_performElections
 
-playLand :: Monad m => Object 'OTPlayer -> PlayLand -> Magic 'Private 'RW m Legality
-playLand = fwd2 fwd_playLand
+performStateBasedActions :: Monad m => Magic 'Private 'RW m ()
+performStateBasedActions = fwd0 fwd_performStateBasedActions
 
 pushHandCard :: Monad m => Object 'OTPlayer -> AnyCard -> Magic 'Private 'RW m (ZO 'ZHand OTCard)
 pushHandCard = fwd2 fwd_pushHandCard
