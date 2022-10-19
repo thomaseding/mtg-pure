@@ -24,7 +24,7 @@
 {-# HLINT ignore "Redundant pure" #-}
 
 module MtgPure.Engine.Enact (
-  enactImpl,
+  enact,
 ) where
 
 import safe qualified Control.Monad as M
@@ -32,7 +32,7 @@ import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
 import safe Control.Monad.Trans (lift)
 import safe Control.Monad.Util (untilJust)
 import safe qualified Data.List as List
-import safe MtgPure.Engine.Fwd.Wrap (
+import safe MtgPure.Engine.Fwd.Api (
   caseOf,
   findPermanent,
   findPlayer,
@@ -65,13 +65,13 @@ import safe MtgPure.Model.Zone (Zone (..))
 import safe MtgPure.Model.ZoneObject (ZO, ZOCreaturePlayerPlaneswalker, ZOPlayer)
 import safe MtgPure.Model.ZoneObject.Convert (toZO0, zo0ToPermanent, zo1ToO)
 
-enactImpl :: Monad m => Effect 'OneShot -> Magic 'Private 'RW m ()
-enactImpl = logCall 'enactImpl \case
+enact :: Monad m => Effect 'OneShot -> Magic 'Private 'RW m ()
+enact = logCall 'enact \case
   AddMana oPlayer mana -> addMana' oPlayer mana
   DealDamage oSource oVictim damage -> dealDamage' oSource oVictim damage
   DrawCards oPlayer amount -> drawCards' amount $ zo1ToO oPlayer
-  EffectCase case_ -> caseOf enactImpl case_
-  Sequence effects -> mapM_ enactImpl effects
+  EffectCase case_ -> caseOf enact case_
+  Sequence effects -> mapM_ enact effects
   ShuffleLibrary oPlayer -> shuffleLibrary' $ zo1ToO oPlayer
   Tap oPerm -> M.void $ tap' oPerm
   Untap oPerm -> M.void $ untap' oPerm

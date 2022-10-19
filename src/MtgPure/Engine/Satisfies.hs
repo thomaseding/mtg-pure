@@ -24,19 +24,18 @@
 {-# HLINT ignore "Redundant pure" #-}
 
 module MtgPure.Engine.Satisfies (
-  satisfiesImpl,
-  zosSatisfyingImpl,
+  satisfies,
+  zosSatisfying,
 ) where
 
 import safe qualified Control.Monad as M
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
 import safe Data.Functor ((<&>))
-import safe MtgPure.Engine.Fwd.Wrap (
+import safe MtgPure.Engine.Fwd.Api (
   allZOs,
   findPermanent,
   getPermanent,
   logCall,
-  satisfies,
  )
 import safe MtgPure.Engine.State (Magic)
 import safe MtgPure.Model.Land (Land (landTypes))
@@ -50,15 +49,15 @@ import safe MtgPure.Model.Zone (IsZone (..), SZone (SZBattlefield), Zone (..))
 import safe MtgPure.Model.ZoneObject (IsOT, IsZO, ZO, ZOPlayer)
 import safe MtgPure.Model.ZoneObject.Convert (toZO0, zo0ToPermanent)
 
-zosSatisfyingImpl :: (Monad m, IsZO zone ot) => Requirement zone ot -> Magic 'Private 'RO m [ZO zone ot]
-zosSatisfyingImpl req = allZOs >>= M.filterM (`satisfies` req)
+zosSatisfying :: (Monad m, IsZO zone ot) => Requirement zone ot -> Magic 'Private 'RO m [ZO zone ot]
+zosSatisfying req = allZOs >>= M.filterM (`satisfies` req)
 
-satisfiesImpl ::
+satisfies ::
   (Monad m, IsZO zone ot) =>
   ZO zone ot ->
   Requirement zone ot ->
   Magic 'Private 'RO m Bool
-satisfiesImpl zo = logCall 'satisfiesImpl \case
+satisfies zo = logCall 'satisfies \case
   ControlledBy zoPlayer -> controlledBy' zo zoPlayer
   HasLandType landType -> hasLandType' zo landType
   Is _wAny zo' -> is' zo zo'

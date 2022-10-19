@@ -22,13 +22,13 @@
 {-# HLINT ignore "Redundant pure" #-}
 
 module MtgPure.Engine.StateBasedActions (
-  performStateBasedActionsImpl,
+  performStateBasedActions,
 ) where
 
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
-import safe MtgPure.Engine.Fwd.Wrap (logCall)
+import safe MtgPure.Engine.Fwd.Api (logCall)
 import safe MtgPure.Engine.State (Magic)
 
-performStateBasedActionsImpl :: Monad m => Magic 'Private 'RW m ()
-performStateBasedActionsImpl = logCall 'performStateBasedActionsImpl do
+performStateBasedActions :: Monad m => Magic 'Private 'RW m ()
+performStateBasedActions = logCall 'performStateBasedActions do
   pure () -- TODO

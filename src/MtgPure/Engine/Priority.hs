@@ -23,9 +23,9 @@
 {-# HLINT ignore "Redundant pure" #-}
 
 module MtgPure.Engine.Priority (
-  gainPriorityImpl,
-  getPlayerWithPriorityImpl,
-  getHasPriorityImpl,
+  gainPriority,
+  getPlayerWithPriority,
+  getHasPriority,
 ) where
 
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
@@ -34,13 +34,11 @@ import safe Control.Monad.Trans.Except (throwE)
 import safe Data.Functor ((<&>))
 import safe qualified Data.Stream as Stream
 import safe Data.Void (Void, absurd)
-import safe MtgPure.Engine.Fwd.Wrap (
+import safe MtgPure.Engine.Fwd.Api (
   askActivateAbility,
   askPlayLand,
-  gainPriority,
   getAPNAP,
   getAlivePlayerCount,
-  getPlayerWithPriority,
   logCall,
   performStateBasedActions,
   resolveTopOfStack,
@@ -53,9 +51,9 @@ import safe MtgPure.Model.Object (Object, ObjectType (..))
 import safe MtgPure.Model.PhaseStep (isMainPhase)
 import safe MtgPure.Model.Stack (Stack (..))
 
-gainPriorityImpl :: Monad m => Object 'OTPlayer -> Magic 'Private 'RW m ()
-gainPriorityImpl oPlayer = do
-  logCall 'gainPriorityImpl do
+gainPriority :: Monad m => Object 'OTPlayer -> Magic 'Private 'RW m ()
+gainPriority oPlayer = do
+  logCall 'gainPriority do
     PlayerCount n <- fromPublicRO getAlivePlayerCount
     ps <- fromRO $ Stream.take n . Stream.dropWhile (/= oPlayer) <$> getAPNAP
     modify \st -> st{magicPlayerOrderPriority = ps}
@@ -74,15 +72,15 @@ runPriorityQueue = do
         lift $ modify \st -> st{magicPlayerOrderPriority = oPlayers} -- (117.3d)
   runPriorityQueue
 
-getPlayerWithPriorityImpl :: Monad m => Magic 'Public 'RO m (Maybe (Object 'OTPlayer))
-getPlayerWithPriorityImpl = logCall 'getPlayerWithPriorityImpl do
+getPlayerWithPriority :: Monad m => Magic 'Public 'RO m (Maybe (Object 'OTPlayer))
+getPlayerWithPriority = logCall 'getPlayerWithPriority do
   oPlayers <- internalFromPrivate $ gets magicPlayerOrderPriority
   pure case oPlayers of
     oPlayer : _ -> Just oPlayer
     [] -> Nothing
 
-getHasPriorityImpl :: Monad m => Object 'OTPlayer -> Magic 'Public 'RO m Bool
-getHasPriorityImpl oPlayer = logCall 'getHasPriorityImpl do
+getHasPriority :: Monad m => Object 'OTPlayer -> Magic 'Public 'RO m Bool
+getHasPriority oPlayer = logCall 'getHasPriority do
   getPlayerWithPriority <&> \case
     Nothing -> False
     Just p -> oPlayer == p

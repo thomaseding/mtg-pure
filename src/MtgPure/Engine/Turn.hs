@@ -23,7 +23,7 @@
 {-# HLINT ignore "Redundant if" #-}
 
 module MtgPure.Engine.Turn (
-  startGameImpl,
+  startGame,
 ) where
 
 import safe Control.Exception (assert)
@@ -33,7 +33,7 @@ import safe Control.Monad.Util (untilJust)
 import safe qualified Data.Map.Strict as Map
 import safe qualified Data.Stream as Stream
 import safe Data.Void (Void)
-import safe MtgPure.Engine.Fwd.Wrap (
+import safe MtgPure.Engine.Fwd.Api (
   enact,
   gainPriority,
   getActivePlayer,
@@ -69,8 +69,8 @@ import safe MtgPure.Model.ZoneObject (ZO)
 import safe MtgPure.Model.ZoneObject.Convert (oToZO1)
 
 -- (103)
-startGameImpl :: Monad m => Magic 'Private 'RW m Void
-startGameImpl = logCall 'startGameImpl do
+startGame :: Monad m => Magic 'Private 'RW m Void
+startGame = logCall 'startGame do
   determineStartingPlayer -- (103.1)
   withEachPlayer_ $ enact . ShuffleLibrary . oToZO1 -- (103.2)
   pure () -- (103.3) See `mkPlayer`

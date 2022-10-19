@@ -24,9 +24,9 @@
 {-# HLINT ignore "Redundant pure" #-}
 
 module MtgPure.Engine.ActivateCast (
-  askActivateAbilityImpl,
-  activateAbilityImpl,
-  castSpellImpl,
+  askActivateAbility,
+  activateAbility,
+  castSpell,
 ) where
 
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
@@ -36,7 +36,7 @@ import safe Control.Monad.Util (AndLike (..))
 import safe Data.Kind (Type)
 import safe qualified Data.Map.Strict as Map
 import safe Data.Typeable (Typeable)
-import safe MtgPure.Engine.Fwd.Wrap (
+import safe MtgPure.Engine.Fwd.Api (
   gainPriority,
   getHasPriority,
   logCall,
@@ -115,8 +115,8 @@ getActivateAbilityReqs oPlayer = logCall 'getActivateAbilityReqs do
       { activateAbilityReqs_hasPriority = hasPriority -- (116.2a)
       }
 
-askActivateAbilityImpl :: Monad m => Object 'OTPlayer -> MagicCont 'Private 'RW m () ()
-askActivateAbilityImpl oPlayer = logCall 'askActivateAbilityImpl do
+askActivateAbility :: Monad m => Object 'OTPlayer -> MagicCont 'Private 'RW m () ()
+askActivateAbility oPlayer = logCall 'askActivateAbility do
   reqs <- lift $ fromRO $ getActivateAbilityReqs oPlayer
   case reqs of
     ActivateAbilityReqs_Satisfied -> do
@@ -127,10 +127,10 @@ askActivateAbilityImpl oPlayer = logCall 'askActivateAbilityImpl do
       case mActivate of
         Nothing -> pure ()
         Just special -> do
-          isLegal <- lift $ rewindIllegal $ activateAbilityImpl oPlayer special
+          isLegal <- lift $ rewindIllegal $ activateAbility oPlayer special
           throwE case isLegal of
             True -> gainPriority oPlayer -- (117.3c)
-            False -> runMagicCont (either id id) $ askActivateAbilityImpl oPlayer
+            False -> runMagicCont (either id id) $ askActivateAbility oPlayer
     _ -> pure ()
 
 data CastMeta (ot :: Type) :: Type where
@@ -163,28 +163,28 @@ sorceryCastMeta =
     , castMeta_cost = sorcery_cost
     }
 
-castSpellImpl :: forall m. Monad m => Object 'OTPlayer -> CastSpell -> Magic 'Private 'RW m Legality
-castSpellImpl oCaster (CastSpell someCard) = logCall 'castSpellImpl case someCard of
+castSpell :: forall m. Monad m => Object 'OTPlayer -> CastSpell -> Magic 'Private 'RW m Legality
+castSpell oCaster (CastSpell someCard) = logCall 'castSpell case someCard of
   Some6a (SomeArtifact card) -> undefined card
   Some6b (SomeCreature card) -> undefined card
   Some6c (SomeEnchantment card) -> undefined card
-  Some6d (SomeInstant card) -> castSpellImpl' oCaster card instantCastMeta
+  Some6d (SomeInstant card) -> castSpell' oCaster card instantCastMeta
   Some6e (SomePlaneswalker card) -> undefined card
-  Some6f (SomeSorcery card) -> castSpellImpl' oCaster card sorceryCastMeta
+  Some6f (SomeSorcery card) -> castSpell' oCaster card sorceryCastMeta
   Some6ab (SomeArtifactCreature card) -> undefined card
   Some6bc (SomeEnchantmentCreature card) -> undefined card
 
 lensedThis :: (IsZone zone, IsObjectType a) => ObjectId -> ZO zone (OT1 a)
 lensedThis = ZO singZone . O1 . idToObject
 
-castSpellImpl' ::
+castSpell' ::
   forall ot m.
   Monad m =>
   Object 'OTPlayer ->
   Card ot ->
   CastMeta ot ->
   Magic 'Private 'RW m Legality
-castSpellImpl' oCaster card meta = logCall 'castSpellImpl' case card of
+castSpell' oCaster card meta = logCall 'castSpell' case card of
   Card _name yourCard -> goYourCard yourCard
  where
   goInvalid :: Magic 'Private 'RW m Legality
@@ -250,13 +250,13 @@ castSpellImpl' oCaster card meta = logCall 'castSpellImpl' case card of
 
 -- TODO: Generalize for TriggeredAbility as well. Prolly make an AbilityMeta type that is analogous to CastMeta.
 -- NOTE: A TriggeredAbility is basically the same as an ActivatedAbility that the game activates automatically.
-activateAbilityImpl :: forall m. Monad m => Object 'OTPlayer -> ActivateAbility -> Magic 'Private 'RW m Legality
-activateAbilityImpl oPlayer = logCall 'activateAbilityImpl \case
+activateAbility :: forall m. Monad m => Object 'OTPlayer -> ActivateAbility -> Magic 'Private 'RW m Legality
+activateAbility oPlayer = logCall 'activateAbility \case
   ActivateAbility someActivated -> case someActivated of
     SomeActivatedAbility zoThis withThisActivated -> do
       goSomeActivatedAbility zoThis withThisActivated
  where
-  logCall' s = logCall ('activateAbilityImpl, s :: String)
+  logCall' s = logCall ('activateAbility, s :: String)
 
   goSomeActivatedAbility ::
     forall zone ot' ot.

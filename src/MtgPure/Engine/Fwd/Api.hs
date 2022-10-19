@@ -21,8 +21,7 @@
 {-# HLINT ignore "Use if" #-}
 {-# HLINT ignore "Redundant pure" #-}
 
--- XXX: Rename to something like Magic.Engine.API
-module MtgPure.Engine.Fwd.Wrap (
+module MtgPure.Engine.Fwd.Api (
   queryMagic,
   runMagicEx,
   runMagicCont,
@@ -81,7 +80,7 @@ import safe qualified Data.List as List
 import safe qualified Data.Stream as Stream
 import safe Data.Void (Void)
 import safe Language.Haskell.TH.Syntax (Name)
-import safe MtgPure.Engine.Fwd (Fwd' (..))
+import safe MtgPure.Engine.Fwd.Type (Fwd' (..))
 import safe MtgPure.Engine.Legality (Legality)
 import safe MtgPure.Engine.Monad (
   EnvLogCall (..),

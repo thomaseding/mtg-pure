@@ -25,7 +25,7 @@
 {-# HLINT ignore "Redundant pure" #-}
 
 module MtgPure.Engine.PlayLand (
-  askPlayLandImpl,
+  askPlayLand,
 ) where
 
 import safe Control.Exception (assert)
@@ -34,7 +34,7 @@ import safe Control.Monad.Trans (lift)
 import safe Control.Monad.Trans.Except (throwE)
 import safe qualified Data.Map.Strict as Map
 import safe Data.Typeable (Typeable)
-import safe MtgPure.Engine.Fwd.Wrap (
+import safe MtgPure.Engine.Fwd.Api (
   gainPriority,
   getActivePlayer,
   getHasPriority,
@@ -124,8 +124,8 @@ getPlayLandReqs oPlayer = logCall 'getPlayLandReqs do
       , playLandReqs_atMaxLands = landsPlayed >= maxLands -- (305.2)
       }
 
-askPlayLandImpl :: Monad m => Object 'OTPlayer -> MagicCont 'Private 'RW m () ()
-askPlayLandImpl oPlayer = logCall 'askPlayLandImpl do
+askPlayLand :: Monad m => Object 'OTPlayer -> MagicCont 'Private 'RW m () ()
+askPlayLand oPlayer = logCall 'askPlayLand do
   reqs <- lift $ fromRO $ getPlayLandReqs oPlayer
   case reqs of
     PlayLandReqs_Satisfied -> do
@@ -139,7 +139,7 @@ askPlayLandImpl oPlayer = logCall 'askPlayLandImpl do
           isLegal <- lift $ rewindIllegal $ playLand oPlayer special
           throwE case isLegal of
             True -> gainPriority oPlayer -- (117.3c)
-            False -> runMagicCont (either id id) $ askPlayLandImpl oPlayer
+            False -> runMagicCont (either id id) $ askPlayLand oPlayer
     _ -> pure ()
 
 playLand :: Monad m => Object 'OTPlayer -> PlayLand -> Magic 'Private 'RW m Legality

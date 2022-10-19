@@ -19,7 +19,7 @@
 {-# HLINT ignore "Use if" #-}
 {-# HLINT ignore "Redundant pure" #-}
 
-module MtgPure.Engine.Fwd (
+module MtgPure.Engine.Fwd.Type (
   Fwd' (..),
 ) where
 

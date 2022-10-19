@@ -25,7 +25,7 @@
 {-# HLINT ignore "Redundant pure" #-}
 
 module MtgPure.Engine.Pay (
-  payImpl,
+  pay,
 ) where
 
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
@@ -33,11 +33,10 @@ import safe Control.Monad.Trans (lift)
 import safe Control.Monad.Util (untilJust)
 import safe Data.Functor ((<&>))
 import safe Data.Monoid (First (..))
-import safe MtgPure.Engine.Fwd.Wrap (
+import safe MtgPure.Engine.Fwd.Api (
   enact,
   findPlayer,
   logCall,
-  pay,
   satisfies,
   setPlayer,
   zosSatisfying,
@@ -60,8 +59,8 @@ import safe MtgPure.Model.ZoneObject (IsZO, ZoneObject (..))
 import safe MtgPure.Model.ZoneObject.Convert (toZO0, zo0ToPermanent)
 import safe MtgPure.ModelCombinators (isTapped)
 
-payImpl :: Monad m => Object 'OTPlayer -> Cost ot -> Magic 'Private 'RW m Legality
-payImpl oPlayer = logCall 'payImpl \case
+pay :: Monad m => Object 'OTPlayer -> Cost ot -> Magic 'Private 'RW m Legality
+pay oPlayer = logCall 'pay \case
   AndCosts costs -> payAndCosts oPlayer costs
   ManaCost manaCost -> payManaCost oPlayer manaCost
   OrCosts costs -> payOrCosts oPlayer costs

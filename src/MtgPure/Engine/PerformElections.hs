@@ -25,7 +25,7 @@
 {-# HLINT ignore "Redundant pure" #-}
 
 module MtgPure.Engine.PerformElections (
-  performElectionsImpl,
+  performElections,
 ) where
 
 import safe Control.Exception (assert)
@@ -34,7 +34,7 @@ import safe Control.Monad.Trans (lift)
 import safe Control.Monad.Util (AndLike, untilJust)
 import safe Data.ConsIndex (consIndex)
 import safe qualified Data.Map.Strict as Map
-import safe MtgPure.Engine.Fwd.Wrap (
+import safe MtgPure.Engine.Fwd.Api (
   caseOf,
   getPermanent,
   logCall,
@@ -55,7 +55,7 @@ import safe MtgPure.Model.Object (
  )
 import safe MtgPure.Model.ObjectId (GetObjectId (..))
 import safe MtgPure.Model.ObjectType.Kind (OTAny)
-import MtgPure.Model.Permanent (Permanent (..))
+import safe MtgPure.Model.Permanent (Permanent (..))
 import safe MtgPure.Model.Recursive (
   Effect (..),
   Elect (..),
@@ -75,7 +75,7 @@ import safe MtgPure.Model.ZoneObject.Convert (
   zo1ToO,
  )
 
-performElectionsImpl ::
+performElections ::
   forall ot m p el x.
   (Monad m, AndLike (Maybe x)) =>
   ([Magic 'Private 'RW m (Maybe x)] -> Magic 'Private 'RW m (Maybe x)) ->
@@ -83,7 +83,7 @@ performElectionsImpl ::
   (el -> Magic 'Private 'RW m (Maybe x)) ->
   Elect p el ot ->
   Magic 'Private 'RW m (Maybe x)
-performElectionsImpl seqM zoStack goTerm = logCall 'performElectionsImpl \case
+performElections seqM zoStack goTerm = logCall 'performElections \case
   All masked -> electAll goRec masked
   Choose oPlayer thisToElect -> electA Choose' zoStack goRec oPlayer thisToElect
   ControllerOf zo cont -> controllerOf goRec zo cont
@@ -99,7 +99,7 @@ performElectionsImpl seqM zoStack goTerm = logCall 'performElectionsImpl \case
     goRec $ cont var
   x -> error $ show $ consIndex x
  where
-  goRec = performElectionsImpl seqM zoStack goTerm
+  goRec = performElections seqM zoStack goTerm
 
 controllerOf ::
   forall p zone m el ot x.

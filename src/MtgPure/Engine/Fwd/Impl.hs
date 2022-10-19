@@ -24,99 +24,99 @@ module MtgPure.Engine.Fwd.Impl (
 ) where
 
 import safe MtgPure.Engine.ActivateCast (
-  activateAbilityImpl,
-  askActivateAbilityImpl,
-  castSpellImpl,
+  activateAbility,
+  askActivateAbility,
+  castSpell,
  )
-import safe MtgPure.Engine.CaseOf (caseOfImpl)
+import safe MtgPure.Engine.CaseOf (caseOf)
 import safe MtgPure.Engine.Core (
-  allZOsImpl,
-  findHandCardImpl,
-  findLibraryCardImpl,
-  findPermanentImpl,
-  findPlayerImpl,
-  getAPNAPImpl,
-  getActivatedAbilitiesImpl,
-  getActivePlayerImpl,
-  getAlivePlayerCountImpl,
-  getAllActivatedAbilitiesImpl,
-  getPermanentImpl,
-  getPermanentsImpl,
-  getPlayerImpl,
-  getPlayersImpl,
-  newObjectIdImpl,
-  pushHandCardImpl,
-  pushLibraryCardImpl,
-  removeHandCardImpl,
-  removeLibraryCardImpl,
-  rewindIllegalImpl,
-  setPermanentImpl,
-  setPlayerImpl,
-  withEachControlledPermanentImpl_,
-  withEachPermanentImpl,
-  withEachPermanentImpl_,
-  withEachPlayerImpl_,
+  allZOs,
+  findHandCard,
+  findLibraryCard,
+  findPermanent,
+  findPlayer,
+  getAPNAP,
+  getActivatedAbilities,
+  getActivePlayer,
+  getAlivePlayerCount,
+  getAllActivatedAbilities,
+  getPermanent,
+  getPermanents,
+  getPlayer,
+  getPlayers,
+  newObjectId,
+  pushHandCard,
+  pushLibraryCard,
+  removeHandCard,
+  removeLibraryCard,
+  rewindIllegal,
+  setPermanent,
+  setPlayer,
+  withEachControlledPermanent_,
+  withEachPermanent,
+  withEachPermanent_,
+  withEachPlayer_,
  )
-import safe MtgPure.Engine.Enact (enactImpl)
-import safe MtgPure.Engine.Fwd (Fwd' (..))
-import safe MtgPure.Engine.Pay (payImpl)
-import safe MtgPure.Engine.PerformElections (performElectionsImpl)
-import safe MtgPure.Engine.PlayLand (askPlayLandImpl)
+import safe MtgPure.Engine.Enact (enact)
+import safe MtgPure.Engine.Fwd.Type (Fwd' (..))
+import safe MtgPure.Engine.Pay (pay)
+import safe MtgPure.Engine.PerformElections (performElections)
+import safe MtgPure.Engine.PlayLand (askPlayLand)
 import safe MtgPure.Engine.Priority (
-  gainPriorityImpl,
-  getHasPriorityImpl,
-  getPlayerWithPriorityImpl,
+  gainPriority,
+  getHasPriority,
+  getPlayerWithPriority,
  )
-import safe MtgPure.Engine.Resolve (resolveTopOfStackImpl)
-import safe MtgPure.Engine.Satisfies (satisfiesImpl, zosSatisfyingImpl)
+import safe MtgPure.Engine.Resolve (resolveTopOfStack)
+import safe MtgPure.Engine.Satisfies (satisfies, zosSatisfying)
 import safe MtgPure.Engine.State (Fwd)
-import safe MtgPure.Engine.StateBasedActions (performStateBasedActionsImpl)
-import safe MtgPure.Engine.Turn (startGameImpl)
+import safe MtgPure.Engine.StateBasedActions (performStateBasedActions)
+import safe MtgPure.Engine.Turn (startGame)
 
 fwdImpl :: Monad m => Fwd m
 fwdImpl =
   Fwd
     { fwd_ = ()
-    , fwd_activateAbility = activateAbilityImpl
-    , fwd_allZOs = allZOsImpl
-    , fwd_askActivateAbility = askActivateAbilityImpl
-    , fwd_askPlayLand = askPlayLandImpl
-    , fwd_caseOf = caseOfImpl
-    , fwd_castSpell = castSpellImpl
-    , fwd_enact = enactImpl
-    , fwd_findHandCard = findHandCardImpl
-    , fwd_findLibraryCard = findLibraryCardImpl
-    , fwd_findPermanent = findPermanentImpl
-    , fwd_findPlayer = findPlayerImpl
-    , fwd_gainPriority = gainPriorityImpl
-    , fwd_getActivatedAbilities = getActivatedAbilitiesImpl
-    , fwd_getActivePlayer = getActivePlayerImpl
-    , fwd_getAlivePlayerCount = getAlivePlayerCountImpl
-    , fwd_getAllActivatedAbilities = getAllActivatedAbilitiesImpl
-    , fwd_getAPNAP = getAPNAPImpl
-    , fwd_getHasPriority = getHasPriorityImpl
-    , fwd_getPermanent = getPermanentImpl
-    , fwd_getPermanents = getPermanentsImpl
-    , fwd_getPlayer = getPlayerImpl
-    , fwd_getPlayers = getPlayersImpl
-    , fwd_getPlayerWithPriority = getPlayerWithPriorityImpl
-    , fwd_newObjectId = newObjectIdImpl
-    , fwd_pay = payImpl
-    , fwd_performElections = performElectionsImpl
-    , fwd_performStateBasedActions = performStateBasedActionsImpl
-    , fwd_pushHandCard = pushHandCardImpl
-    , fwd_pushLibraryCard = pushLibraryCardImpl
-    , fwd_removeHandCard = removeHandCardImpl
-    , fwd_removeLibraryCard = removeLibraryCardImpl
-    , fwd_resolveTopOfStack = resolveTopOfStackImpl
-    , fwd_rewindIllegal = rewindIllegalImpl
-    , fwd_satisfies = satisfiesImpl
-    , fwd_setPermanent = setPermanentImpl
-    , fwd_setPlayer = setPlayerImpl
-    , fwd_startGame = startGameImpl
-    , fwd_withEachControlledPermanent_ = withEachControlledPermanentImpl_
-    , fwd_withEachPermanent = withEachPermanentImpl
-    , fwd_withEachPermanent_ = withEachPermanentImpl_
-    , fwd_withEachPlayer_ = withEachPlayerImpl_
-    , fwd_zosSatisfying = zosSatisfyingImpl
+    , fwd_activateAbility = activateAbility
+    , fwd_allZOs = allZOs
+    , fwd_askActivateAbility = askActivateAbility
+    , fwd_askPlayLand = askPlayLand
+    , fwd_caseOf = caseOf
+    , fwd_castSpell = castSpell
+    , fwd_enact = enact
+    , fwd_findHandCard = findHandCard
+    , fwd_findLibraryCard = findLibraryCard
+    , fwd_findPermanent = findPermanent
+    , fwd_findPlayer = findPlayer
+    , fwd_gainPriority = gainPriority
+    , fwd_getActivatedAbilities = getActivatedAbilities
+    , fwd_getActivePlayer = getActivePlayer
+    , fwd_getAlivePlayerCount = getAlivePlayerCount
+    , fwd_getAllActivatedAbilities = getAllActivatedAbilities
+    , fwd_getAPNAP = getAPNAP
+    , fwd_getHasPriority = getHasPriority
+    , fwd_getPermanent = getPermanent
+    , fwd_getPermanents = getPermanents
+    , fwd_getPlayer = getPlayer
+    , fwd_getPlayers = getPlayers
+    , fwd_getPlayerWithPriority = getPlayerWithPriority
+    , fwd_newObjectId = newObjectId
+    , fwd_pay = pay
+    , fwd_performElections = performElections
+    , fwd_performStateBasedActions = performStateBasedActions
+    , fwd_pushHandCard = pushHandCard
+    , fwd_pushLibraryCard = pushLibraryCard
+    , fwd_removeHandCard = removeHandCard
+    , fwd_removeLibraryCard = removeLibraryCard
+    , fwd_resolveTopOfStack = resolveTopOfStack
+    , fwd_rewindIllegal = rewindIllegal
+    , fwd_satisfies = satisfies
+    , fwd_setPermanent = setPermanent
+    , fwd_setPlayer = setPlayer
+    , fwd_startGame = startGame
+    , fwd_withEachControlledPermanent_ = withEachControlledPermanent_
+    , fwd_withEachPermanent = withEachPermanent
+    , fwd_withEachPermanent_ = withEachPermanent_
+    , fwd_withEachPlayer_ = withEachPlayer_
+    , fwd_zosSatisfying = zosSatisfying
     }

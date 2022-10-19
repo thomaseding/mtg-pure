@@ -61,7 +61,7 @@ import safe qualified Data.Map.Strict as Map
 import safe Data.Maybe (listToMaybe)
 import safe qualified Data.Stream as Stream
 import safe Data.Typeable (Typeable)
-import safe MtgPure.Engine.Fwd (Fwd')
+import safe MtgPure.Engine.Fwd.Type (Fwd')
 import safe MtgPure.Engine.Monad (
   LogCallState (..),
   Magic',

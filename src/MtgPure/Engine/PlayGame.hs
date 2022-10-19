@@ -29,14 +29,14 @@ import safe Data.Functor ((<&>))
 import safe qualified Data.Map.Strict as Map
 import safe qualified Data.Stream as Stream
 import safe Data.Void (Void, absurd)
-import safe MtgPure.Engine.Fwd.Impl (fwdImpl)
-import safe MtgPure.Engine.Fwd.Wrap (
+import safe MtgPure.Engine.Fwd.Api (
   getPlayer,
   logCall,
   pushLibraryCard,
   startGame,
   withEachPlayer_,
  )
+import safe MtgPure.Engine.Fwd.Impl (fwdImpl)
 import safe MtgPure.Engine.Monad (fromRO, runMagicRW)
 import safe MtgPure.Engine.Prompt (Prompt' (..))
 import safe MtgPure.Engine.State (

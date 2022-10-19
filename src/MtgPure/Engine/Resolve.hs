@@ -23,7 +23,7 @@
 {-# HLINT ignore "Redundant pure" #-}
 
 module MtgPure.Engine.Resolve (
-  resolveTopOfStackImpl,
+  resolveTopOfStack,
 ) where
 
 import safe qualified Control.Monad as M
@@ -31,7 +31,7 @@ import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
 import safe Control.Monad.Util (AndLike (..))
 import safe qualified Data.Map.Strict as Map
 import safe Data.Void (Void)
-import safe MtgPure.Engine.Fwd.Wrap (
+import safe MtgPure.Engine.Fwd.Api (
   enact,
   gainPriority,
   getActivePlayer,
@@ -58,8 +58,8 @@ import safe MtgPure.Model.Zone (Zone (..))
 import safe MtgPure.Model.ZoneObject (ZO)
 import safe MtgPure.Model.ZoneObject.Convert (toZO0)
 
-resolveTopOfStackImpl :: Monad m => Magic 'Private 'RW m ()
-resolveTopOfStackImpl = logCall 'resolveTopOfStackImpl do
+resolveTopOfStack :: Monad m => Magic 'Private 'RW m ()
+resolveTopOfStack = logCall 'resolveTopOfStack do
   Stack stack <- fromRO $ gets magicStack
   case stack of -- (117.4) (405.5)
     [] -> pure ()

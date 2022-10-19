@@ -24,32 +24,32 @@
 {-# HLINT ignore "Redundant pure" #-}
 
 module MtgPure.Engine.Core (
-  allZOsImpl,
-  findHandCardImpl,
-  findLibraryCardImpl,
-  findPermanentImpl,
-  findPlayerImpl,
-  getActivatedAbilitiesImpl,
-  getActivePlayerImpl,
-  getAlivePlayerCountImpl,
-  getAllActivatedAbilitiesImpl,
-  getAPNAPImpl,
-  getPermanentImpl,
-  getPermanentsImpl,
-  getPlayerImpl,
-  getPlayersImpl,
-  newObjectIdImpl,
-  pushHandCardImpl,
-  pushLibraryCardImpl,
-  removeHandCardImpl,
-  removeLibraryCardImpl,
-  rewindIllegalImpl,
-  setPermanentImpl,
-  setPlayerImpl,
-  withEachControlledPermanentImpl_,
-  withEachPermanentImpl_,
-  withEachPermanentImpl,
-  withEachPlayerImpl_,
+  allZOs,
+  findHandCard,
+  findLibraryCard,
+  findPermanent,
+  findPlayer,
+  getActivatedAbilities,
+  getActivePlayer,
+  getAlivePlayerCount,
+  getAllActivatedAbilities,
+  getAPNAP,
+  getPermanent,
+  getPermanents,
+  getPlayer,
+  getPlayers,
+  newObjectId,
+  pushHandCard,
+  pushLibraryCard,
+  removeHandCard,
+  removeLibraryCard,
+  rewindIllegal,
+  setPermanent,
+  setPlayer,
+  withEachControlledPermanent_,
+  withEachPermanent_,
+  withEachPermanent,
+  withEachPlayer_,
 ) where
 
 import safe Control.Exception (assert)
@@ -63,18 +63,8 @@ import safe Data.Maybe (catMaybes, isJust, mapMaybe)
 import safe qualified Data.Stream as Stream
 import safe qualified Data.Traversable as T
 import safe Data.Typeable (cast)
-import safe MtgPure.Engine.Fwd.Wrap (
-  findPlayer,
-  getAPNAP,
-  getPermanent,
-  getPermanents,
-  getPlayer,
-  getPlayers,
+import safe MtgPure.Engine.Fwd.Api (
   logCall,
-  newObjectId,
-  setPlayer,
-  withEachPermanent,
-  withEachPermanent_,
  )
 import safe MtgPure.Engine.Legality (Legality (..))
 import safe MtgPure.Engine.Monad (
@@ -124,53 +114,53 @@ import safe MtgPure.Model.ZoneObject.Convert (
   zo0ToPermanent,
  )
 
-getAlivePlayerCountImpl :: Monad m => Magic 'Public 'RO m PlayerCount
-getAlivePlayerCountImpl = logCall 'getAlivePlayerCountImpl $ PlayerCount . length <$> getPlayersImpl
+getAlivePlayerCount :: Monad m => Magic 'Public 'RO m PlayerCount
+getAlivePlayerCount = logCall 'getAlivePlayerCount $ PlayerCount . length <$> getPlayers
 
-getAPNAPImpl :: Monad m => Magic v 'RO m (Stream.Stream (Object 'OTPlayer))
-getAPNAPImpl = logCall 'getAPNAPImpl $ internalFromPrivate $ gets magicPlayerOrderAPNAP
+getAPNAP :: Monad m => Magic v 'RO m (Stream.Stream (Object 'OTPlayer))
+getAPNAP = logCall 'getAPNAP $ internalFromPrivate $ gets magicPlayerOrderAPNAP
 
-getActivePlayerImpl :: Monad m => Magic 'Public 'RO m (Object 'OTPlayer)
-getActivePlayerImpl = logCall 'getActivePlayerImpl $ Stream.head <$> getAPNAP
+getActivePlayer :: Monad m => Magic 'Public 'RO m (Object 'OTPlayer)
+getActivePlayer = logCall 'getActivePlayer $ Stream.head <$> getAPNAP
 
-getPlayersImpl :: Monad m => Magic 'Public 'RO m [Object 'OTPlayer]
-getPlayersImpl = logCall 'getPlayersImpl do
+getPlayers :: Monad m => Magic 'Public 'RO m [Object 'OTPlayer]
+getPlayers = logCall 'getPlayers do
   st <- internalFromPrivate get
   let ps = Map.assocs $ magicPlayers st
   pure $ map fst $ filter (not . playerLost . snd) ps
 
-withEachPlayerImpl_ :: (IsReadWrite rw, Monad m) => (Object 'OTPlayer -> Magic v rw m ()) -> Magic v rw m ()
-withEachPlayerImpl_ f = logCall 'withEachPlayerImpl_ $ fromPublicRO getPlayers >>= mapM_ f
+withEachPlayer_ :: (IsReadWrite rw, Monad m) => (Object 'OTPlayer -> Magic v rw m ()) -> Magic v rw m ()
+withEachPlayer_ f = logCall 'withEachPlayer_ $ fromPublicRO getPlayers >>= mapM_ f
 
-getPermanentsImpl :: Monad m => Magic 'Public 'RO m [ZO 'ZBattlefield OTPermanent]
-getPermanentsImpl = logCall 'getPermanentsImpl $ map zo0ToPermanent <$> perms0
+getPermanents :: Monad m => Magic 'Public 'RO m [ZO 'ZBattlefield OTPermanent]
+getPermanents = logCall 'getPermanents $ map zo0ToPermanent <$> perms0
  where
   perms0 = internalFromPrivate $ gets $ Map.keys . magicPermanents
 
-withEachPermanentImpl ::
+withEachPermanent ::
   (IsReadWrite rw, Monad m) =>
   (ZO 'ZBattlefield OTPermanent -> Magic v rw m a) ->
   Magic v rw m [a]
-withEachPermanentImpl f = logCall 'withEachPermanentImpl $ fromPublicRO getPermanents >>= mapM f
+withEachPermanent f = logCall 'withEachPermanent $ fromPublicRO getPermanents >>= mapM f
 
-withEachPermanentImpl_ ::
+withEachPermanent_ ::
   (IsReadWrite rw, Monad m) =>
   (ZO 'ZBattlefield OTPermanent -> Magic v rw m ()) ->
   Magic v rw m ()
-withEachPermanentImpl_ f = logCall 'withEachPermanentImpl_ $ fromPublicRO getPermanents >>= mapM_ f
+withEachPermanent_ f = logCall 'withEachPermanent_ $ fromPublicRO getPermanents >>= mapM_ f
 
-withEachControlledPermanentImpl_ ::
+withEachControlledPermanent_ ::
   (IsReadWrite rw, Monad m) =>
   Object 'OTPlayer ->
   (ZO 'ZBattlefield OTPermanent -> Magic v rw m ()) ->
   Magic v rw m ()
-withEachControlledPermanentImpl_ oPlayer f = logCall 'withEachControlledPermanentImpl_ $
+withEachControlledPermanent_ oPlayer f = logCall 'withEachControlledPermanent_ $
   withEachPermanent_ $ \oPerm -> do
     perm <- internalFromPrivate $ fromRO $ getPermanent oPerm
     M.when (permanentController perm == oPlayer) $ f oPerm
 
-rewindIllegalImpl :: Monad m => Magic 'Private 'RW m Legality -> Magic 'Private 'RW m Bool
-rewindIllegalImpl m = logCall 'rewindIllegalImpl $ do
+rewindIllegal :: Monad m => Magic 'Private 'RW m Legality -> Magic 'Private 'RW m Bool
+rewindIllegal m = logCall 'rewindIllegal $ do
   -- (104.1) (727.1) XXX: Is it possible for GameResult to be thrown during an illegal action?
   -- If so, is should it sometimes/always/never be rewound?
   let m' = magicCatch m \case
@@ -181,8 +171,8 @@ rewindIllegalImpl m = logCall 'rewindIllegalImpl $ do
     Legal -> pure True
     Illegal -> put st >> pure False
 
-allZOsImpl :: forall zone ot m. (Monad m, IsZO zone ot) => Magic 'Private 'RO m [ZO zone ot]
-allZOsImpl = logCall 'allZOsImpl case singZone @zone of
+allZOs :: forall zone ot m. (Monad m, IsZO zone ot) => Magic 'Private 'RO m [ZO zone ot]
+allZOs = logCall 'allZOs case singZone @zone of
   SZBattlefield -> case indexOT @ot of
     objectTypes ->
       let goPerms :: ObjectType -> Magic 'Private 'RO m [ZO zone ot]
@@ -220,25 +210,25 @@ allZOsImpl = logCall 'allZOsImpl case singZone @zone of
        in DList.toList <$> goRec objectTypes
   _ -> undefined
 
-getAllActivatedAbilitiesImpl ::
+getAllActivatedAbilities ::
   forall zone ot m.
   (IsZO zone ot, Monad m) =>
   Magic 'Private 'RO m [SomeActivatedAbility zone ot]
-getAllActivatedAbilitiesImpl = logCall 'getAllActivatedAbilitiesImpl do
-  zos <- allZOsImpl @zone @ot
-  concat <$> T.for zos getActivatedAbilitiesImpl
+getAllActivatedAbilities = logCall 'getAllActivatedAbilities do
+  zos <- allZOs @zone @ot
+  concat <$> T.for zos getActivatedAbilities
 
-getActivatedAbilitiesImpl ::
+getActivatedAbilities ::
   forall zone ot m.
   (IsZO zone ot, Monad m) =>
   ZO zone ot ->
   Magic 'Private 'RO m [SomeActivatedAbility zone ot]
-getActivatedAbilitiesImpl zo = logCall 'getActivatedAbilitiesImpl do
+getActivatedAbilities zo = logCall 'getActivatedAbilities do
   -- XXX: Being lazy at the moment and assuming it's a permanent
   case singZone @zone of
     SZBattlefield -> do
       let zoPerm = zo0ToPermanent $ toZO0 zo
-      findPermanentImpl zoPerm <&> \case
+      findPermanent zoPerm <&> \case
         Nothing -> []
         Just perm -> catMaybes $ flip map (permanentAbilities perm) \ability ->
           fromSome ability \case
@@ -260,14 +250,14 @@ getActivatedAbilitiesImpl zo = logCall 'getActivatedAbilitiesImpl do
             _ -> Nothing
     _ -> undefined
 
-newObjectIdImpl :: Monad m => Magic 'Private 'RW m ObjectId
-newObjectIdImpl = logCall 'newObjectIdImpl do
+newObjectId :: Monad m => Magic 'Private 'RW m ObjectId
+newObjectId = logCall 'newObjectId do
   ObjectId i <- fromRO $ gets magicNextObjectId
   modify \st -> st{magicNextObjectId = ObjectId $ i + 1}
   pure $ ObjectId i
 
-pushLibraryCardImpl :: Monad m => Object 'OTPlayer -> AnyCard -> Magic 'Private 'RW m (ZO 'ZLibrary OTCard)
-pushLibraryCardImpl oPlayer card = logCall 'pushLibraryCardImpl do
+pushLibraryCard :: Monad m => Object 'OTPlayer -> AnyCard -> Magic 'Private 'RW m (ZO 'ZLibrary OTCard)
+pushLibraryCard oPlayer card = logCall 'pushLibraryCard do
   player <- fromRO $ getPlayer oPlayer
   i <- newObjectId
   let zo0 = toZO0 i
@@ -276,8 +266,8 @@ pushLibraryCardImpl oPlayer card = logCall 'pushLibraryCardImpl do
   setPlayer oPlayer player{playerLibrary = pushCard zoCard $ playerLibrary player}
   pure zoCard
 
-pushHandCardImpl :: Monad m => Object 'OTPlayer -> AnyCard -> Magic 'Private 'RW m (ZO 'ZHand OTCard)
-pushHandCardImpl oPlayer card = logCall 'pushHandCardImpl do
+pushHandCard :: Monad m => Object 'OTPlayer -> AnyCard -> Magic 'Private 'RW m (ZO 'ZHand OTCard)
+pushHandCard oPlayer card = logCall 'pushHandCard do
   player <- fromRO $ getPlayer oPlayer
   i <- newObjectId
   let zo0 = toZO0 i
@@ -286,8 +276,8 @@ pushHandCardImpl oPlayer card = logCall 'pushHandCardImpl do
   setPlayer oPlayer player{playerHand = pushCard zoCard $ playerHand player}
   pure zoCard
 
-findHandCardImpl :: Monad m => Object 'OTPlayer -> ZO 'ZHand OTCard -> Magic 'Private 'RW m (Maybe AnyCard)
-findHandCardImpl oPlayer zoCard = logCall 'findHandCardImpl do
+findHandCard :: Monad m => Object 'OTPlayer -> ZO 'ZHand OTCard -> Magic 'Private 'RW m (Maybe AnyCard)
+findHandCard oPlayer zoCard = logCall 'findHandCard do
   fromRO (gets $ Map.lookup (toZO0 zoCard) . magicHandCards) >>= \case
     Nothing -> pure Nothing
     Just card -> do
@@ -296,8 +286,8 @@ findHandCardImpl oPlayer zoCard = logCall 'findHandCardImpl do
         False -> Nothing
         True -> Just card
 
-findLibraryCardImpl :: Monad m => Object 'OTPlayer -> ZO 'ZLibrary OTCard -> Magic 'Private 'RW m (Maybe AnyCard)
-findLibraryCardImpl oPlayer zoCard = logCall 'findLibraryCardImpl do
+findLibraryCard :: Monad m => Object 'OTPlayer -> ZO 'ZLibrary OTCard -> Magic 'Private 'RW m (Maybe AnyCard)
+findLibraryCard oPlayer zoCard = logCall 'findLibraryCard do
   fromRO (gets $ Map.lookup (toZO0 zoCard) . magicLibraryCards) >>= \case
     Nothing -> pure Nothing
     Just card -> do
@@ -306,9 +296,9 @@ findLibraryCardImpl oPlayer zoCard = logCall 'findLibraryCardImpl do
         False -> Nothing
         True -> Just card
 
-removeHandCardImpl :: Monad m => Object 'OTPlayer -> ZO 'ZHand OTCard -> Magic 'Private 'RW m (Maybe AnyCard)
-removeHandCardImpl oPlayer zoCard = logCall 'removeHandCardImpl do
-  findHandCardImpl oPlayer zoCard >>= \case
+removeHandCard :: Monad m => Object 'OTPlayer -> ZO 'ZHand OTCard -> Magic 'Private 'RW m (Maybe AnyCard)
+removeHandCard oPlayer zoCard = logCall 'removeHandCard do
+  findHandCard oPlayer zoCard >>= \case
     Nothing -> pure Nothing
     Just{} -> do
       mCard <- fromRO $ gets $ Map.lookup (toZO0 zoCard) . magicHandCards
@@ -317,9 +307,9 @@ removeHandCardImpl oPlayer zoCard = logCall 'removeHandCardImpl do
       setPlayer oPlayer player{playerHand = Hand $ List.delete zoCard $ unHand $ playerHand player}
       pure $ assert (isJust mCard) mCard
 
-removeLibraryCardImpl :: Monad m => Object 'OTPlayer -> ZO 'ZLibrary OTCard -> Magic 'Private 'RW m (Maybe AnyCard)
-removeLibraryCardImpl oPlayer zoCard = logCall 'removeLibraryCardImpl do
-  findLibraryCardImpl oPlayer zoCard >>= \case
+removeLibraryCard :: Monad m => Object 'OTPlayer -> ZO 'ZLibrary OTCard -> Magic 'Private 'RW m (Maybe AnyCard)
+removeLibraryCard oPlayer zoCard = logCall 'removeLibraryCard do
+  findLibraryCard oPlayer zoCard >>= \case
     Nothing -> pure Nothing
     Just{} -> do
       mCard <- fromRO $ gets $ Map.lookup (toZO0 zoCard) . magicLibraryCards
@@ -328,17 +318,17 @@ removeLibraryCardImpl oPlayer zoCard = logCall 'removeLibraryCardImpl do
       setPlayer oPlayer player{playerLibrary = Library $ List.delete zoCard $ unLibrary (playerLibrary player)}
       pure $ assert (isJust mCard) mCard
 
-findPermanentImpl :: Monad m => ZO 'ZBattlefield OTPermanent -> Magic 'Private 'RO m (Maybe Permanent)
-findPermanentImpl zoPerm = logCall 'findPermanentImpl $ gets $ Map.lookup (toZO0 zoPerm) . magicPermanents
+findPermanent :: Monad m => ZO 'ZBattlefield OTPermanent -> Magic 'Private 'RO m (Maybe Permanent)
+findPermanent zoPerm = logCall 'findPermanent $ gets $ Map.lookup (toZO0 zoPerm) . magicPermanents
 
-getPermanentImpl :: Monad m => ZO 'ZBattlefield OTPermanent -> Magic 'Private 'RO m Permanent
-getPermanentImpl zoPerm = logCall 'getPermanentImpl $ do
-  findPermanentImpl zoPerm <&> \case
+getPermanent :: Monad m => ZO 'ZBattlefield OTPermanent -> Magic 'Private 'RO m Permanent
+getPermanent zoPerm = logCall 'getPermanent $ do
+  findPermanent zoPerm <&> \case
     Nothing -> error $ show $ InvalidPermanent $ ShowZO zoPerm
     Just perm -> perm
 
-setPermanentImpl :: Monad m => ZO 'ZBattlefield OTPermanent -> Maybe Permanent -> Magic 'Private 'RW m ()
-setPermanentImpl zoPerm mPerm = logCall 'setPermanentImpl do
+setPermanent :: Monad m => ZO 'ZBattlefield OTPermanent -> Maybe Permanent -> Magic 'Private 'RW m ()
+setPermanent zoPerm mPerm = logCall 'setPermanent do
   modify \st ->
     let permMap = magicPermanents st
         permMap' = case mPerm of
@@ -346,17 +336,17 @@ setPermanentImpl zoPerm mPerm = logCall 'setPermanentImpl do
           Nothing -> Map.delete (toZO0 zoPerm) permMap
      in st{magicPermanents = permMap'}
 
-findPlayerImpl :: Monad m => Object 'OTPlayer -> Magic 'Private 'RO m (Maybe Player)
-findPlayerImpl oPlayer = logCall 'findPlayerImpl $ gets $ Map.lookup oPlayer . magicPlayers
+findPlayer :: Monad m => Object 'OTPlayer -> Magic 'Private 'RO m (Maybe Player)
+findPlayer oPlayer = logCall 'findPlayer $ gets $ Map.lookup oPlayer . magicPlayers
 
-getPlayerImpl :: Monad m => Object 'OTPlayer -> Magic 'Private 'RO m Player
-getPlayerImpl oPlayer = logCall 'getPlayerImpl do
+getPlayer :: Monad m => Object 'OTPlayer -> Magic 'Private 'RO m Player
+getPlayer oPlayer = logCall 'getPlayer do
   findPlayer oPlayer <&> \case
     Nothing -> error $ show $ InvalidPlayer oPlayer
     Just player -> player
 
-setPlayerImpl :: Monad m => Object 'OTPlayer -> Player -> Magic 'Private 'RW m ()
-setPlayerImpl oPlayer player = logCall 'setPlayerImpl do
+setPlayer :: Monad m => Object 'OTPlayer -> Player -> Magic 'Private 'RW m ()
+setPlayer oPlayer player = logCall 'setPlayer do
   modify \st ->
     let playerMap = magicPlayers st
         playerMap' = Map.insertWith (\_ _ -> player) oPlayer fatal playerMap

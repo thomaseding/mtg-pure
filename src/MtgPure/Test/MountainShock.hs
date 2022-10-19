@@ -38,7 +38,7 @@ import safe qualified Data.Map.Strict as Map
 import safe qualified Data.Set as Set
 import safe qualified Data.Traversable as T
 import safe MtgPure.Cards (mountain, shock)
-import safe MtgPure.Engine.Fwd.Wrap (
+import safe MtgPure.Engine.Fwd.Api (
   getAllActivatedAbilities,
   getPlayer,
   queryMagic,
@@ -197,7 +197,7 @@ demoActivateAbility opaque oPlayer = queryMagic opaque do
           pure $ Just $ ActivateAbility ability
 
 demoLogCallPush :: OpaqueGameState Demo -> CallFrameInfo -> Demo ()
-demoLogCallPush opaque frame = case name == "MtgPure.Engine.Fwd.Wrap.queryMagic" of
+demoLogCallPush opaque frame = case name == "MtgPure.Engine.Fwd.Api.queryMagic" of
   True -> State.modify' \st -> assert (not $ demo_logDisabled st) st{demo_logDisabled = True}
   False ->
     State.gets demo_logDisabled >>= \case
@@ -215,7 +215,7 @@ demoLogCallPush opaque frame = case name == "MtgPure.Engine.Fwd.Wrap.queryMagic"
   i = callFrameId frame
 
 demoLogCallPop :: OpaqueGameState Demo -> CallFrameInfo -> Demo ()
-demoLogCallPop _opaque frame = case name == "MtgPure.Engine.Fwd.Wrap.queryMagic" of
+demoLogCallPop _opaque frame = case name == "MtgPure.Engine.Fwd.Api.queryMagic" of
   True -> State.modify' \st -> assert (demo_logDisabled st) st{demo_logDisabled = False}
   False ->
     State.gets demo_logDisabled >>= \case
@@ -287,18 +287,18 @@ logIgnore :: Set.Set String
 logIgnore =
   Set.fromList
     [ ""
-    , "MtgPure.Engine.Core.findHandCardImpl"
-    , "MtgPure.Engine.Core.findLibraryCardImpl"
-    , "MtgPure.Engine.Core.findPlayerImpl"
-    , "MtgPure.Engine.Core.getActivePlayerImpl"
-    , "MtgPure.Engine.Core.getAlivePlayerCountImpl"
-    , "MtgPure.Engine.Core.getAPNAPImpl"
-    , "MtgPure.Engine.Core.getPlayerImpl"
-    , "MtgPure.Engine.Core.getPlayersImpl"
-    , "MtgPure.Engine.Core.newObjectIdImpl"
-    , "MtgPure.Engine.Core.pushHandCardImpl"
-    , "MtgPure.Engine.Core.pushLibraryCardImpl"
-    , "MtgPure.Engine.Core.removeHandCardImpl"
-    , "MtgPure.Engine.Core.removeLibraryCardImpl"
-    , "MtgPure.Engine.Core.setPlayerImpl"
+    , "MtgPure.Engine.Core.findHandCard"
+    , "MtgPure.Engine.Core.findLibraryCard"
+    , "MtgPure.Engine.Core.findPlayer"
+    , "MtgPure.Engine.Core.getActivePlayer"
+    , "MtgPure.Engine.Core.getAlivePlayerCount"
+    , "MtgPure.Engine.Core.getAPNAP"
+    , "MtgPure.Engine.Core.getPlayer"
+    , "MtgPure.Engine.Core.getPlayers"
+    , "MtgPure.Engine.Core.newObjectId"
+    , "MtgPure.Engine.Core.pushHandCard"
+    , "MtgPure.Engine.Core.pushLibraryCard"
+    , "MtgPure.Engine.Core.removeHandCard"
+    , "MtgPure.Engine.Core.removeLibraryCard"
+    , "MtgPure.Engine.Core.setPlayer"
     ]
