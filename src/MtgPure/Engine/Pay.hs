@@ -36,7 +36,6 @@ import safe Data.Monoid (First (..))
 import safe MtgPure.Engine.Fwd.Api (
   enact,
   findPlayer,
-  logCall,
   satisfies,
   setPlayer,
   zosSatisfying,
@@ -44,7 +43,7 @@ import safe MtgPure.Engine.Fwd.Api (
 import safe MtgPure.Engine.Legality (Legality (..), toLegality)
 import safe MtgPure.Engine.Monad (fromRO, gets)
 import safe MtgPure.Engine.Prompt (Prompt' (..))
-import safe MtgPure.Engine.State (GameState (..), Magic)
+import safe MtgPure.Engine.State (GameState (..), Magic, logCall)
 import safe MtgPure.Model.Mana (IsManaNoVar, IsSnow, Mana)
 import safe MtgPure.Model.ManaCost (ManaCost (..))
 import safe MtgPure.Model.ManaPool (CompleteManaPool (..), ManaPool (..))
@@ -119,10 +118,12 @@ payTapCost ::
   Requirement 'ZBattlefield ot ->
   Magic 'Private 'RW m Legality
 payTapCost oPlayer req = logCall 'payTapCost do
+  prompt <- fromRO $ gets magicPrompt
   fromRO (zosSatisfying req') >>= \case
-    [] -> pure Illegal
+    [] -> do
+      lift $ promptDebugMessage prompt $ show ("payTapCost no zos satisfying" :: String)
+      pure Illegal
     zos -> do
-      prompt <- fromRO $ gets magicPrompt
       zo <- lift $
         untilJust do
           zo <- promptPickZO prompt oPlayer zos
@@ -130,7 +131,11 @@ payTapCost oPlayer req = logCall 'payTapCost do
             False -> Nothing
             True -> Just zo
       let oPerm = zo0ToPermanent $ toZO0 zo
+      shouldBeUntapped <- fromRO $ satisfies oPerm isTapped <&> toLegality
+      lift $ promptDebugMessage prompt $ show ("payTapCost tapping..." :: String, shouldBeUntapped)
       enact $ Tap oPerm
+      shouldBeTapped <- fromRO $ satisfies oPerm isTapped <&> toLegality
+      lift $ promptDebugMessage prompt $ show ("...payTapCost done" :: String, shouldBeTapped)
       fromRO $ satisfies oPerm isTapped <&> toLegality
  where
   req' =

@@ -39,9 +39,10 @@ import safe qualified Data.Set as Set
 import safe qualified Data.Traversable as T
 import safe MtgPure.Cards (mountain, shock)
 import safe MtgPure.Engine.Fwd.Api (
+  controllerOf,
   getAllActivatedAbilities,
   getPlayer,
-  queryMagic,
+  satisfies,
   withEachPlayer_,
  )
 import safe MtgPure.Engine.Monad (gets, internalFromPrivate)
@@ -51,6 +52,7 @@ import safe MtgPure.Engine.Prompt (
   CallFrameInfo (..),
   CardCount (..),
   CardIndex (..),
+  CastSpell (..),
   InternalLogicError (CorruptCallStackLogging),
   PlayLand (..),
   PlayerIndex (PlayerIndex),
@@ -64,6 +66,7 @@ import safe MtgPure.Engine.State (
   GameState (..),
   Magic,
   OpaqueGameState,
+  queryMagic,
  )
 import safe MtgPure.Model.CardName (CardName (..))
 import safe MtgPure.Model.Deck (Deck (..))
@@ -74,12 +77,14 @@ import safe MtgPure.Model.Object (Object (..), ObjectType (..))
 import safe MtgPure.Model.ObjectId (GetObjectId (..), ObjectId (ObjectId))
 import safe MtgPure.Model.ObjectType.Kind (OTCard, OTPermanent)
 import safe MtgPure.Model.Player (Player (..))
-import safe MtgPure.Model.Recursive (AnyCard (..), Card (..))
+import safe MtgPure.Model.Recursive (AnyCard (..), Card (..), Requirement (..))
 import safe MtgPure.Model.Sideboard (Sideboard (..))
 import safe MtgPure.Model.ToObjectN.Instances ()
-import safe MtgPure.Model.Zone (Zone (..))
-import safe MtgPure.Model.ZoneObject (ZO)
+import MtgPure.Model.VisitObjectN (VisitObjectN (promoteIdToObjectN))
+import safe MtgPure.Model.Zone (SZone (..), Zone (..))
+import safe MtgPure.Model.ZoneObject (ZO, ZoneObject (..))
 import safe MtgPure.Model.ZoneObject.Convert (toZO0, toZO1)
+import safe MtgPure.ModelCombinators (isTapped)
 import safe System.Random (randomRIO)
 
 main :: IO ()
@@ -142,7 +147,7 @@ input =
           , exceptionInvalidShuffle = \_ _ -> liftIO $ putStrLn "exceptionInvalidShuffle"
           , exceptionInvalidStartingPlayer = \_ _ -> liftIO $ putStrLn "exceptionInvalidStartingPlayer"
           , promptActivateAbility = demoActivateAbility
-          , promptCastSpell = \_ _ -> pure Nothing
+          , promptCastSpell = demoCastSpell
           , promptDebugMessage = \msg -> liftIO $ putStrLn $ "DEBUG: " ++ msg
           , promptGetStartingPlayer = \_count -> pure $ PlayerIndex 0
           , promptLogCallPop = demoLogCallPop
@@ -158,6 +163,9 @@ input =
 
 tabWidth :: Int
 tabWidth = 2
+
+pause :: MonadIO m => m ()
+pause = M.void $ liftIO getLine
 
 -- TODO: Expose sufficient Public API to avoid need for `internalFromPrivate`
 demoPlayLand :: OpaqueGameState Demo -> Object 'OTPlayer -> Demo (Maybe PlayLand)
@@ -178,15 +186,42 @@ demoPlayLand opaque oPlayer = queryMagic opaque do
           pure $ Just $ PlayLand $ toZO1 zo0
 
 -- TODO: Expose sufficient Public API to avoid need for `internalFromPrivate`
+demoCastSpell :: OpaqueGameState Demo -> Object 'OTPlayer -> Demo (Maybe CastSpell)
+demoCastSpell opaque oPlayer = queryMagic opaque do
+  player <- internalFromPrivate $ getPlayer oPlayer
+  let noMana = playerMana player == mempty
+  let Hand zos = playerHand player
+  case (noMana, zos) of
+    (True, _) -> pure Nothing
+    (_, []) -> pure Nothing
+    _ -> do
+      let n = length zos
+      idx <- randomRIO (-1, n - 1)
+      let zo = zos !! idx
+          zo0 = toZO0 @ 'ZHand zo
+      case idx of
+        -1 -> pure Nothing
+        _ -> do
+          liftIO $ print ("casting spell", ShowZO zo)
+          pause
+          pure $ Just $ CastSpell $ ZO SZHand $ promoteIdToObjectN $ getObjectId zo0
+
+-- TODO: Expose sufficient Public API to avoid need for `internalFromPrivate`
 demoActivateAbility :: OpaqueGameState Demo -> Object 'OTPlayer -> Demo (Maybe ActivateAbility)
 demoActivateAbility opaque oPlayer = queryMagic opaque do
-  -- TODO: Filter based on player
-  _player <- internalFromPrivate $ getPlayer oPlayer
-  abilities <- internalFromPrivate (getAllActivatedAbilities @ 'ZBattlefield @OTPermanent)
-  liftIO $ print ("len all abils", length abilities)
+  allAbilities <- internalFromPrivate (getAllActivatedAbilities @ 'ZBattlefield @OTPermanent)
+  abilities <- internalFromPrivate $ flip M.filterM allAbilities \ability -> do
+    let zo = someActivatedZO ability
+    controller <- controllerOf zo
+    notTapped <- satisfies zo $ Not isTapped
+    liftIO $ print (getObjectId oPlayer, getObjectId controller, notTapped)
+    pure $ controller == oPlayer && notTapped
+  liftIO $ print (getObjectId oPlayer, "len all abils", length allAbilities)
+  liftIO $ print (getObjectId oPlayer, "len controlled abils", length abilities)
   case abilities of
     [] -> pure Nothing
     _ -> do
+      pause
       let n = length abilities
       idx <- randomRIO (-1, n - 1)
       let ability = abilities !! idx
@@ -197,7 +232,7 @@ demoActivateAbility opaque oPlayer = queryMagic opaque do
           pure $ Just $ ActivateAbility ability
 
 demoLogCallPush :: OpaqueGameState Demo -> CallFrameInfo -> Demo ()
-demoLogCallPush opaque frame = case name == "MtgPure.Engine.Fwd.Api.queryMagic" of
+demoLogCallPush opaque frame = case name == "MtgPure.Engine.State.queryMagic" of
   True -> State.modify' \st -> assert (not $ demo_logDisabled st) st{demo_logDisabled = True}
   False ->
     State.gets demo_logDisabled >>= \case
@@ -215,7 +250,7 @@ demoLogCallPush opaque frame = case name == "MtgPure.Engine.Fwd.Api.queryMagic" 
   i = callFrameId frame
 
 demoLogCallPop :: OpaqueGameState Demo -> CallFrameInfo -> Demo ()
-demoLogCallPop _opaque frame = case name == "MtgPure.Engine.Fwd.Api.queryMagic" of
+demoLogCallPop _opaque frame = case name == "MtgPure.Engine.State.queryMagic" of
   True -> State.modify' \st -> assert (demo_logDisabled st) st{demo_logDisabled = False}
   False ->
     State.gets demo_logDisabled >>= \case
@@ -260,7 +295,7 @@ printGameState opaque = queryMagic opaque do
   liftIO do
     print "GAME STATE END"
     horizLine
-    M.void getLine
+    pause
 
 printHand :: Hand -> Magic 'Public 'RO Demo ()
 printHand (Hand zos) = do
@@ -274,13 +309,14 @@ getHandCardName zo = do
   case Map.lookup zo0 handCards of
     Nothing -> pure $ "IllegalHandCard@" ++ show (ShowZO zo)
     Just (AnyCard card) -> case card of
-      Card (CardName name) _ -> pure name
+      Card (CardName name) _ -> pure $ name ++ "@" ++ show (ShowZO zo)
 
 logDetailed :: Set.Set String
 logDetailed =
   Set.fromList
     [ ""
-    , "MtgPure.Engine.Turn.untapStep"
+    , "MtgPure.Engine.Turn.precombatMainPhase"
+    , "MtgPure.Engine.Turn.cleanupStep"
     ]
 
 logIgnore :: Set.Set String

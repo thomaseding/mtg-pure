@@ -9,6 +9,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE Safe #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskellQuotes #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
@@ -25,7 +26,10 @@ module MtgPure.Engine.State (
   Magic,
   MagicEx,
   MagicCont,
-  queryMagic',
+  queryMagic,
+  runMagicEx,
+  runMagicCont,
+  logCall,
   --
   mkOpaqueGameState,
   OpaqueGameState,
@@ -57,12 +61,15 @@ import safe qualified Control.Monad.State.Strict as State
 import safe Control.Monad.Trans (lift)
 import safe Control.Monad.Util (untilJust)
 import safe Data.Kind (Type)
+import safe qualified Data.List as List
 import safe qualified Data.Map.Strict as Map
 import safe Data.Maybe (listToMaybe)
 import safe qualified Data.Stream as Stream
 import safe Data.Typeable (Typeable)
+import safe Language.Haskell.TH.Syntax (Name)
 import safe MtgPure.Engine.Fwd.Type (Fwd')
 import safe MtgPure.Engine.Monad (
+  EnvLogCall (..),
   LogCallState (..),
   Magic',
   MagicCont',
@@ -71,6 +78,8 @@ import safe MtgPure.Engine.Monad (
   get,
   internalFromPrivate,
   internalLiftCallStackState,
+  runMagicCont',
+  runMagicEx',
   runMagicRO,
  )
 import safe MtgPure.Engine.Prompt (
@@ -241,6 +250,31 @@ mkOpaqueGameState = OpaqueGameState
 queryMagic' :: Monad m => OpaqueGameState m -> Magic 'Public 'RO m a -> m a
 queryMagic' (OpaqueGameState st) = runMagicRO st
 
+queryMagic :: Monad m => OpaqueGameState m -> Magic 'Public 'RO m a -> m a
+queryMagic opaque = queryMagic' opaque . logCall 'queryMagic
+
+runMagicEx ::
+  (IsReadWrite rw, Monad m) =>
+  (Either ex a -> b) ->
+  MagicEx ex v rw m a ->
+  Magic v rw m b
+runMagicEx = runMagicEx' envLogCall
+
+runMagicCont ::
+  (IsReadWrite rw, Monad m) =>
+  (Either a b -> c) ->
+  MagicCont v rw m a b ->
+  Magic v rw m c
+runMagicCont = runMagicCont' envLogCall
+
+envLogCall :: (IsReadWrite rw, Monad m) => EnvLogCall (GameResult m) (GameState m) v rw m
+envLogCall =
+  EnvLogCall
+    { envLogCallTop = logCallTop
+    , envLogCallUnwind = logCallUnwind
+    , envLogCallCorruptCallStackLogging = error $ show CorruptCallStackLogging
+    }
+
 logCallUnwind :: (IsReadWrite rw, Monad m) => Maybe CallFrameId -> Magic v rw m ()
 logCallUnwind top =
   untilJust do
@@ -295,3 +329,70 @@ logCallPop = do
 
 logCallTop :: (IsReadWrite rw, Monad m) => Magic v rw m (Maybe CallFrameInfo)
 logCallTop = internalLiftCallStackState $ State.gets $ listToMaybe . logCallFrames
+
+newtype Named :: Type where
+  Named :: String -> Named
+
+class IsNamed name where
+  toNamed :: name -> Named
+
+instance IsNamed Named where
+  toNamed = id
+
+instance IsNamed Name where
+  toNamed = Named . show
+
+instance IsNamed (Name, [String]) where
+  toNamed (name, parts) = Named $ show name ++ "." ++ List.intercalate "." parts
+
+instance IsNamed (Name, String) where
+  toNamed (name, part) = toNamed (name, [part])
+
+showNamed :: IsNamed name => name -> String
+showNamed name = case toNamed name of
+  Named s -> s
+
+class LogCall x where
+  logCall :: IsNamed name => name -> x -> x
+
+instance (IsReadWrite rw, Monad m) => LogCall (Magic p rw m z) where
+  logCall name action = do
+    _ <- logCallPush $ showNamed name
+    result <- action
+    _ <- logCallPop
+    pure result
+
+instance (IsReadWrite rw, Monad m) => LogCall (a -> Magic p rw m z) where
+  logCall name action a = do
+    _ <- logCallPush $ showNamed name
+    result <- action a
+    _ <- logCallPop
+    pure result
+
+instance (IsReadWrite rw, Monad m) => LogCall (a -> b -> Magic p rw m z) where
+  logCall name action a b = do
+    _ <- logCallPush $ showNamed name
+    result <- action a b
+    _ <- logCallPop
+    pure result
+
+instance (IsReadWrite rw, Monad m) => LogCall (MagicCont p rw m y z) where
+  logCall name action = do
+    _ <- lift $ logCallPush $ showNamed name
+    result <- action
+    _ <- lift logCallPop
+    pure result
+
+instance (IsReadWrite rw, Monad m) => LogCall (a -> MagicCont p rw m y z) where
+  logCall name action a = do
+    _ <- lift $ logCallPush $ showNamed name
+    result <- action a
+    _ <- lift logCallPop
+    pure result
+
+instance (IsReadWrite rw, Monad m) => LogCall (a -> b -> MagicCont p rw m y z) where
+  logCall name action a b = do
+    _ <- lift $ logCallPush $ showNamed name
+    result <- action a b
+    _ <- lift logCallPop
+    pure result

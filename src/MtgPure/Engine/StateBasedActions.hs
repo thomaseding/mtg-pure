@@ -26,8 +26,7 @@ module MtgPure.Engine.StateBasedActions (
 ) where
 
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
-import safe MtgPure.Engine.Fwd.Api (logCall)
-import safe MtgPure.Engine.State (Magic)
+import safe MtgPure.Engine.State (Magic, logCall)
 
 performStateBasedActions :: Monad m => Magic 'Private 'RW m ()
 performStateBasedActions = logCall 'performStateBasedActions do

@@ -31,7 +31,6 @@ import safe qualified Data.Stream as Stream
 import safe Data.Void (Void, absurd)
 import safe MtgPure.Engine.Fwd.Api (
   getPlayer,
-  logCall,
   pushLibraryCard,
   startGame,
   withEachPlayer_,
@@ -46,6 +45,7 @@ import safe MtgPure.Engine.State (
   GameResult,
   GameState (..),
   Magic,
+  logCall,
  )
 import safe MtgPure.Model.Deck (Deck (..))
 import safe MtgPure.Model.Graveyard (Graveyard (..))

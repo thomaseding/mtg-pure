@@ -19,6 +19,8 @@
 
 module MtgPure.Model.Object (
   ObjectType (..),
+  pattern OTArbitrary,
+  OTArbitrary,
   OT (..),
   OT0,
   OT1,
@@ -108,6 +110,11 @@ data ObjectType
   | OTStaticAbility
   | OTTriggeredAbility
   deriving (Bounded, Enum, Eq, Ord, Show, Typeable)
+
+type OTArbitrary = 'OTLand
+
+pattern OTArbitrary :: ObjectType
+pattern OTArbitrary = OTLand
 
 data SObjectType :: ObjectType -> Type where
   SActivatedAbility :: SObjectType 'OTActivatedAbility

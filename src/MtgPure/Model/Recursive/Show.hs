@@ -72,7 +72,7 @@ import safe MtgPure.Model.LandType (LandType (..))
 import safe MtgPure.Model.Loyalty (Loyalty)
 import safe MtgPure.Model.Mana (Mana (..))
 import safe MtgPure.Model.ManaCost (ManaCost (..))
-import safe MtgPure.Model.ManaPool (ManaPool (..))
+import safe MtgPure.Model.ManaPool (CompleteManaPool (..), ManaPool (..))
 import safe MtgPure.Model.ManaSymbol (ManaSymbol (..))
 import safe MtgPure.Model.Object (
   IsObjectType (..),
@@ -85,8 +85,9 @@ import safe MtgPure.Model.Object (
   Object (..),
   ObjectType (..),
  )
-import safe MtgPure.Model.ObjectId (ObjectId (ObjectId))
+import safe MtgPure.Model.ObjectId (GetObjectId (..), ObjectId (ObjectId))
 import safe MtgPure.Model.ObjectN (
+  ON0,
   ON1,
   ON10,
   ON11,
@@ -196,6 +197,9 @@ instance Show (Card ot) where
 instance Show (CardFacet ot) where
   show = runEnvM defaultDepthLimit . showCardFacet
 
+instance Show CompleteManaPool where
+  show = runEnvM defaultDepthLimit . showCompleteManaPool
+
 instance Show Condition where
   show = runEnvM defaultDepthLimit . showCondition
 
@@ -210,6 +214,12 @@ instance Show (Elect p el ot) where
 
 instance Show EventListener where
   show = runEnvM defaultDepthLimit . showEventListener
+
+instance Show (ManaCost var) where
+  show = runEnvM defaultDepthLimit . showManaCost
+
+instance Show (ManaPool snow) where
+  show = runEnvM defaultDepthLimit . showManaPool
 
 instance Show (Requirement zone ot) where
   show = runEnvM defaultDepthLimit . showRequirement
@@ -754,6 +764,17 @@ showColoredMana =
       sX <- parens <$> showColoredMana x
       sY <- parens <$> showColoredMana y
       pure $ pure "SumColoredMana " <> sSym <> pure " " <> sX <> pure " " <> sY
+
+showCompleteManaPool :: CompleteManaPool -> EnvM ParenItems
+showCompleteManaPool complete = yesParens $ do
+  sSnow <- parens <$> showManaPool snow
+  sNonSnow <- dollar <$> showManaPool nonSnow
+  pure $ pure "CompleteManaPool " <> sSnow <> sNonSnow
+ where
+  CompleteManaPool
+    { poolSnow = snow
+    , poolNonSnow = nonSnow
+    } = complete
 
 showCondition :: Condition -> EnvM ParenItems
 showCondition = \case
@@ -1379,15 +1400,15 @@ showObjectNImpl objNRef prefix obj = do
       False -> yesParens $ pure $ pure prefix <> pure " " <> sObj
       True -> noParens $ pure sObj
 
--- showObject0 ::
---   forall zone.
---   (IsZone zone) =>
---   ON0 ->
---   EnvM ParenItems
--- showObject0 objN = yesParens $ do
---   pure $ pure $ fromString $ "toZO0 " ++ show i
---  where
---   i = getObjectId objN
+showObject0 ::
+  forall zone.
+  (IsZone zone) =>
+  ON0 ->
+  EnvM ParenItems
+showObject0 objN = yesParens $ do
+  pure $ pure $ fromString $ "toZO0 " ++ show i
+ where
+  i = getObjectId objN
 
 showObject1 ::
   forall zone a.
@@ -1573,6 +1594,7 @@ showObject12 objN = visitObjectN' visit objN
 
 showObjectN :: forall zone ot. (IsZone zone, VisitObjectN ot) => ObjectN ot -> EnvM ParenItems
 showObjectN objN = case knownObjectN objN of
+  KO0 obj0 -> showObject0 @zone obj0
   KO1 obj1 -> showObject1 @zone obj1
   KO2 obj2 -> showObject2 @zone obj2
   KO3 obj3 -> showObject3 @zone obj3

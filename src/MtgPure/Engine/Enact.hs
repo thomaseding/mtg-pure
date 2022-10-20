@@ -39,15 +39,19 @@ import safe MtgPure.Engine.Fwd.Api (
   getPermanent,
   getPlayer,
   getPlayers,
-  logCall,
   pushHandCard,
   removeLibraryCard,
   setPermanent,
   setPlayer,
  )
 import safe MtgPure.Engine.Monad (fromPublicRO, fromRO, gets)
-import safe MtgPure.Engine.Prompt (CardCount (..), CardIndex (..), InternalLogicError (..), Prompt' (..))
-import safe MtgPure.Engine.State (GameState (..), Magic)
+import safe MtgPure.Engine.Prompt (
+  CardCount (..),
+  CardIndex (..),
+  InternalLogicError (..),
+  Prompt' (..),
+ )
+import safe MtgPure.Engine.State (GameState (..), Magic, logCall)
 import safe MtgPure.Model.Damage (Damage, Damage' (..))
 import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.IsCardList (IsCardList (..), popCard)

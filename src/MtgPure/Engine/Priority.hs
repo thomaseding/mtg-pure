@@ -36,17 +36,23 @@ import safe qualified Data.Stream as Stream
 import safe Data.Void (Void, absurd)
 import safe MtgPure.Engine.Fwd.Api (
   askActivateAbility,
+  askCastSpell,
   askPlayLand,
   getAPNAP,
   getAlivePlayerCount,
-  logCall,
   performStateBasedActions,
   resolveTopOfStack,
-  runMagicCont,
  )
-import safe MtgPure.Engine.Monad (fromPublicRO, fromRO, get, gets, internalFromPrivate, modify)
+import safe MtgPure.Engine.Monad (
+  fromPublicRO,
+  fromRO,
+  get,
+  gets,
+  internalFromPrivate,
+  modify,
+ )
 import safe MtgPure.Engine.Prompt (PlayerCount (..))
-import safe MtgPure.Engine.State (GameState (..), Magic, MagicCont)
+import safe MtgPure.Engine.State (GameState (..), Magic, MagicCont, logCall, runMagicCont)
 import safe MtgPure.Model.Object (Object, ObjectType (..))
 import safe MtgPure.Model.PhaseStep (isMainPhase)
 import safe MtgPure.Model.Stack (Stack (..))
@@ -84,16 +90,6 @@ getHasPriority oPlayer = logCall 'getHasPriority do
   getPlayerWithPriority <&> \case
     Nothing -> False
     Just p -> oPlayer == p
-
--- (117.1a)
-askCastSpell :: Monad m => Object 'OTPlayer -> MagicCont 'Private 'RW m () ()
-askCastSpell oPlayer = logCall 'askCastSpell do
-  pure () -- TODO
-  let spellIsCast = False
-  pure () -- (305.9) TODO: dont forget this rule: lands + other types can never be cast
-  case spellIsCast of
-    True -> throwE $ gainPriority oPlayer -- (117.3c)
-    False -> pure ()
 
 -- (117.1c)
 askSpecialAction :: Monad m => Object 'OTPlayer -> MagicCont 'Private 'RW m () ()

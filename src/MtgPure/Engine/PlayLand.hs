@@ -39,12 +39,10 @@ import safe MtgPure.Engine.Fwd.Api (
   getActivePlayer,
   getHasPriority,
   getPlayer,
-  logCall,
   modifyPlayer,
   newObjectId,
   removeHandCard,
   rewindIllegal,
-  runMagicCont,
   setPermanent,
  )
 import safe MtgPure.Engine.Legality (Legality (..))
@@ -65,7 +63,9 @@ import safe MtgPure.Engine.State (
   GameState (..),
   Magic,
   MagicCont,
+  logCall,
   mkOpaqueGameState,
+  runMagicCont,
  )
 import safe MtgPure.Model.IsCardList (containsCard)
 import safe MtgPure.Model.Object (Object, ObjectType (..))

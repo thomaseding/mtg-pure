@@ -34,7 +34,7 @@ data ManaCost (var :: Var) = ManaCost'
   , costGeneric :: Mana var 'NonSnow 'MTGeneric
   , costSnow :: Mana var 'Snow 'MTGeneric -- NB: I could support RealManaType snow costs if I want.
   }
-  deriving (Eq, Ord, Show, Typeable) --  TODO: Make some of these orphans
+  deriving (Eq, Ord, Typeable) --  TODO: Make some of these orphans
 
 instance Semigroup (ManaCost var) where
   mc1 <> mc2 =

@@ -33,13 +33,13 @@ data ManaPool (snow :: Snow) = ManaPool
   , poolGreen :: Mana 'NoVar snow 'MTGreen
   , poolColorless :: Mana 'NoVar snow 'MTColorless
   }
-  deriving (Eq, Ord, Show, Typeable) --  TODO: Make some of these orphans
+  deriving (Eq, Ord, Typeable) --  TODO: Make some of these orphans
 
 data CompleteManaPool = CompleteManaPool
   { poolSnow :: ManaPool 'Snow
   , poolNonSnow :: ManaPool 'NonSnow
   }
-  deriving (Show, Typeable)
+  deriving (Eq, Ord, Typeable) --  TODO: Make some of these orphans
 
 instance Semigroup (ManaPool snow) where
   mp1 <> mp2 =

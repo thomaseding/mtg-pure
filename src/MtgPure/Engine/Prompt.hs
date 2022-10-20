@@ -42,7 +42,7 @@ import safe MtgPure.Model.Object (Object, ObjectType (..))
 import safe MtgPure.Model.ObjectId (GetObjectId (..), ObjectId (..))
 import safe MtgPure.Model.ObjectN (ObjectN)
 import safe MtgPure.Model.ObjectType.Kind (OTLand, OTPermanent, OTSpell)
-import safe MtgPure.Model.Recursive (AnyCard, SomeCard, WithThisActivated)
+import safe MtgPure.Model.Recursive (AnyCard, WithThisActivated)
 import safe MtgPure.Model.Recursive.Ord ()
 import safe MtgPure.Model.Recursive.Show ()
 import safe MtgPure.Model.Zone (IsZone, Zone (..))
@@ -110,7 +110,7 @@ data Prompt' (opaqueGameState :: (Type -> Type) -> Type) (m :: Type -> Type) = P
   , promptLogCallPop :: opaqueGameState m -> CallFrameInfo -> m ()
   , promptLogCallPush :: opaqueGameState m -> CallFrameInfo -> m ()
   , promptPerformMulligan :: Object 'OTPlayer -> [AnyCard] -> m Bool -- TODO: Encode limited game state about players' mulligan states and [Serum Powder].
-  , promptPickZO :: forall zone ot. IsZO zone ot => Object 'OTPlayer -> [ZO zone ot] -> m (ZO zone ot)
+  , promptPickZO :: forall zone ot. IsZO zone ot => Object 'OTPlayer -> [ZO zone ot] -> m (ZO zone ot) -- TODO: NonEmpty; TODO: Add a discriminant for UX
   , promptPlayLand :: opaqueGameState m -> Object 'OTPlayer -> m (Maybe PlayLand)
   , promptShuffle :: CardCount -> Object 'OTPlayer -> m [CardIndex]
   }
@@ -130,11 +130,11 @@ data ActivateAbility :: Type where
 -- Unfortuantely OTSpell intersects OTArtifactLand. Such is life.
 -- Prolly don't want to model `SomeButNot allowed disallowed`? Maybe `SomeButNot` is okay for Runtime,
 -- though it's probably unnecessary for Authoring (thankfully).
-newtype CastSpell :: Type where
-  CastSpell :: SomeCard OTSpell -> CastSpell
+data CastSpell :: Type where
+  CastSpell :: IsZO zone OTSpell => ZO zone OTSpell -> CastSpell
 
 data PlayLand :: Type where
-  PlayLand :: IsZone zone => ZO zone OTLand -> PlayLand
+  PlayLand :: IsZO zone OTLand => ZO zone OTLand -> PlayLand
 
 data SpecialAction :: Type where
   SA_PlayLand :: PlayLand -> SpecialAction
@@ -151,5 +151,8 @@ data InvalidPlayLand :: Type where
   PlayLand_StackNonEmpty :: IsZone zone => ZO zone OTLand -> InvalidPlayLand
 
 data InvalidCastSpell :: Type where
-  CastSpell_NotASpell :: IsZone zone => ZO zone OTSpell -> InvalidCastSpell
   CastSpell_CannotPlayFromZone :: IsZone zone => ZO zone OTSpell -> InvalidCastSpell
+  CastSpell_NoPriority :: IsZone zone => ZO zone OTSpell -> InvalidCastSpell
+  CastSpell_NotASpell :: IsZone zone => ZO zone OTSpell -> InvalidCastSpell
+  CastSpell_NotInZone :: ZO zone OTSpell -> InvalidCastSpell
+  CastSpell_NotOwned :: ZO zone OTSpell -> InvalidCastSpell

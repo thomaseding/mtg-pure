@@ -35,7 +35,6 @@ import safe MtgPure.Engine.Fwd.Api (
   enact,
   gainPriority,
   getActivePlayer,
-  logCall,
   performElections,
  )
 import safe MtgPure.Engine.Monad (fromPublicRO, fromRO, get, gets, modify)
@@ -48,6 +47,7 @@ import safe MtgPure.Engine.State (
   PendingReady (..),
   StackEntry (..),
   electedObject_effect,
+  logCall,
  )
 import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.Object (OT0)

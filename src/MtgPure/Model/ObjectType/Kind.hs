@@ -49,7 +49,10 @@ module MtgPure.Model.ObjectType.Kind (
   OTTriggeredAbility,
 ) where
 
-import safe MtgPure.Model.Object (OT, ObjectType (..))
+import safe MtgPure.Model.Object (
+  OT,
+  ObjectType (..),
+ )
 
 -- GHC doesn't seem to do the injectivity... simplify for bug report
 --

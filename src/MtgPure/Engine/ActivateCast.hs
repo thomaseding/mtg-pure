@@ -25,10 +25,12 @@
 
 module MtgPure.Engine.ActivateCast (
   askActivateAbility,
+  askCastSpell,
   activateAbility,
   castSpell,
 ) where
 
+import Control.Exception (assert)
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
 import safe Control.Monad.Trans (lift)
 import safe Control.Monad.Trans.Except (throwE)
@@ -39,16 +41,21 @@ import safe Data.Typeable (Typeable)
 import safe MtgPure.Engine.Fwd.Api (
   gainPriority,
   getHasPriority,
-  logCall,
+  getPlayer,
   newObjectId,
   pay,
   performElections,
   rewindIllegal,
-  runMagicCont,
  )
 import safe MtgPure.Engine.Legality (Legality (..), legalityToMaybe, maybeToLegality)
 import safe MtgPure.Engine.Monad (fromPublic, fromRO, get, gets, modify)
-import safe MtgPure.Engine.Prompt (ActivateAbility (..), CastSpell (..), Prompt' (..), SomeActivatedAbility (..))
+import safe MtgPure.Engine.Prompt (
+  ActivateAbility (..),
+  CastSpell (..),
+  InvalidCastSpell (..),
+  Prompt' (..),
+  SomeActivatedAbility (..),
+ )
 import safe MtgPure.Engine.State (
   AnyElected (..),
   Elected (..),
@@ -60,27 +67,31 @@ import safe MtgPure.Engine.State (
   StackEntry (..),
   electedObject_controller,
   electedObject_cost,
+  logCall,
   mkOpaqueGameState,
+  runMagicCont,
  )
 import safe MtgPure.Model.EffectType (EffectType (..))
+import MtgPure.Model.IsCardList (containsCard)
 import safe MtgPure.Model.Object (IsObjectType (..), OT0, OT1, Object, ObjectType (..))
-import safe MtgPure.Model.ObjectId (ObjectId)
+import safe MtgPure.Model.ObjectId (GetObjectId (getObjectId), ObjectId)
 import safe MtgPure.Model.ObjectN (ObjectN (O1))
 import safe MtgPure.Model.ObjectType.Kind (
   OTInstant,
   OTSorcery,
+  OTSpell,
  )
+import MtgPure.Model.Player (Player (..))
 import safe MtgPure.Model.PrePost (PrePost (..))
 import safe MtgPure.Model.Recursive (
   ActivatedAbility (..),
+  AnyCard (..),
   Card (..),
   CardFacet (..),
   Cost (..),
   Effect (..),
   Elect (..),
   IsSpecificCard (singSpecificCard),
-  Some (..),
-  SomeTerm (..),
   SpecificCard (..),
   WithThis (..),
   WithThisActivated,
@@ -89,9 +100,10 @@ import safe MtgPure.Model.Recursive (
  )
 import safe MtgPure.Model.Stack (Stack (..), StackObject (..))
 import safe MtgPure.Model.ToObjectN.Classes (ToObject2' (..), ToObject6' (..))
+import safe MtgPure.Model.VisitObjectN (VisitObjectN (promoteIdToObjectN))
 import safe MtgPure.Model.Zone (IsZone (..), SZone (..), Zone (..))
 import safe MtgPure.Model.ZoneObject (IsZO, ZO, ZOPlayer, ZoneObject (..))
-import safe MtgPure.Model.ZoneObject.Convert (oToZO1, toZO0)
+import safe MtgPure.Model.ZoneObject.Convert (asCard, oToZO1, toZO0)
 
 type Legality' = Maybe ()
 
@@ -126,11 +138,49 @@ askActivateAbility oPlayer = logCall 'askActivateAbility do
       mActivate <- lift $ lift $ promptActivateAbility prompt opaque oPlayer
       case mActivate of
         Nothing -> pure ()
-        Just special -> do
-          isLegal <- lift $ rewindIllegal $ activateAbility oPlayer special
+        Just activate -> do
+          isLegal <- lift $ rewindIllegal $ activateAbility oPlayer activate
           throwE case isLegal of
             True -> gainPriority oPlayer -- (117.3c)
             False -> runMagicCont (either id id) $ askActivateAbility oPlayer
+    _ -> pure ()
+
+newtype CastSpellReqs = CastSpellReqs
+  { castSpellReqs_hasPriority :: Bool
+  }
+  deriving (Eq, Ord, Show, Typeable)
+
+-- Unfortunately pattern synonyms won't contribute to exhaustiveness checking.
+pattern CastSpellReqs_Satisfied :: CastSpellReqs
+pattern CastSpellReqs_Satisfied =
+  CastSpellReqs
+    { castSpellReqs_hasPriority = True
+    }
+
+getCastSpellReqs :: Monad m => Object 'OTPlayer -> Magic 'Private 'RO m CastSpellReqs
+getCastSpellReqs oPlayer = logCall 'getCastSpellReqs do
+  hasPriority <- fromPublic $ getHasPriority oPlayer
+  pure
+    CastSpellReqs
+      { castSpellReqs_hasPriority = hasPriority -- (116.2a)
+      }
+
+askCastSpell :: Monad m => Object 'OTPlayer -> MagicCont 'Private 'RW m () ()
+askCastSpell oPlayer = logCall 'askCastSpell do
+  reqs <- lift $ fromRO $ getCastSpellReqs oPlayer
+  case reqs of
+    CastSpellReqs_Satisfied -> do
+      st <- lift $ fromRO get
+      let opaque = mkOpaqueGameState st
+          prompt = magicPrompt st
+      mCast <- lift $ lift $ promptCastSpell prompt opaque oPlayer
+      case mCast of
+        Nothing -> pure ()
+        Just cast -> do
+          isLegal <- lift $ rewindIllegal $ castSpell oPlayer cast
+          throwE case isLegal of
+            True -> gainPriority oPlayer -- (117.3c)
+            False -> runMagicCont (either id id) $ askCastSpell oPlayer
     _ -> pure ()
 
 data CastMeta (ot :: Type) :: Type where
@@ -163,28 +213,56 @@ sorceryCastMeta =
     , castMeta_cost = sorcery_cost
     }
 
-castSpell :: forall m. Monad m => Object 'OTPlayer -> CastSpell -> Magic 'Private 'RW m Legality
-castSpell oCaster (CastSpell someCard) = logCall 'castSpell case someCard of
-  Some6a (SomeArtifact card) -> undefined card
-  Some6b (SomeCreature card) -> undefined card
-  Some6c (SomeEnchantment card) -> undefined card
-  Some6d (SomeInstant card) -> castSpell' oCaster card instantCastMeta
-  Some6e (SomePlaneswalker card) -> undefined card
-  Some6f (SomeSorcery card) -> castSpell' oCaster card sorceryCastMeta
-  Some6ab (SomeArtifactCreature card) -> undefined card
-  Some6bc (SomeEnchantmentCreature card) -> undefined card
-
 lensedThis :: (IsZone zone, IsObjectType a) => ObjectId -> ZO zone (OT1 a)
 lensedThis = ZO singZone . O1 . idToObject
 
-castSpell' ::
+castSpell :: forall m. Monad m => Object 'OTPlayer -> CastSpell -> Magic 'Private 'RW m Legality
+castSpell oCaster = logCall 'castSpell \case
+  CastSpell zoSpell -> goSpell zoSpell
+ where
+  goSpell :: forall zone. IsZO zone OTSpell => ZO zone OTSpell -> Magic 'Private 'RW m Legality
+  goSpell zoSpell = do
+    st <- fromRO get
+    reqs <- fromRO $ getCastSpellReqs oCaster
+    player <- fromRO $ getPlayer oCaster
+    let opaque = mkOpaqueGameState st
+        prompt = magicPrompt st
+        hand = playerHand player
+        --zoCaster = oToZO1 oCaster
+        --
+        invalid :: (ZO zone OTSpell -> InvalidCastSpell) -> Magic 'Private 'RW m Legality
+        invalid ex = do
+          lift $ exceptionInvalidCastSpell prompt opaque oCaster $ ex zoSpell
+          pure Illegal
+
+    case reqs of
+      CastSpellReqs{castSpellReqs_hasPriority = False} -> invalid CastSpell_NoPriority
+      CastSpellReqs
+        { castSpellReqs_hasPriority = True
+        } -> assert (reqs == CastSpellReqs_Satisfied) case singZone @zone of
+          SZBattlefield -> invalid undefined
+          SZExile -> invalid undefined
+          SZLibrary -> invalid undefined
+          SZStack -> invalid undefined
+          SZGraveyard -> invalid undefined
+          SZHand -> do
+            mCard <- fromRO $ gets $ Map.lookup (toZO0 zoSpell) . magicHandCards
+            case mCard of
+              Nothing -> invalid CastSpell_NotInZone
+              Just anyCard -> do
+                case containsCard (asCard zoSpell) hand of
+                  False -> invalid CastSpell_NotOwned
+                  True -> case anyCard of
+                    AnyCard card -> case card of
+                      Card{} -> castSpellCard oCaster card
+
+castSpellCard ::
   forall ot m.
   Monad m =>
   Object 'OTPlayer ->
   Card ot ->
-  CastMeta ot ->
   Magic 'Private 'RW m Legality
-castSpell' oCaster card meta = logCall 'castSpell' case card of
+castSpellCard oCaster card = logCall 'castSpellCard case card of
   Card _name yourCard -> goYourCard yourCard
  where
   goInvalid :: Magic 'Private 'RW m Legality
@@ -223,23 +301,27 @@ castSpell' oCaster card meta = logCall 'castSpell' case card of
           ArtifactLandFacet{} -> undefined -- TODO: Not a spell
           LandFacet{} -> undefined -- TODO: Not a spell
           --
-          ArtifactFacet{} -> goFacet' facet
-          ArtifactCreatureFacet{} -> goFacet' facet
-          CreatureFacet{} -> goFacet' facet
-          EnchantmentFacet{} -> goFacet' facet
-          EnchantmentCreatureFacet{} -> goFacet' facet
-          PlaneswalkerFacet{} -> goFacet' facet
+          ArtifactFacet{} -> goFacet' facet undefined
+          ArtifactCreatureFacet{} -> goFacet' facet undefined
+          CreatureFacet{} -> goFacet' facet undefined
+          EnchantmentFacet{} -> goFacet' facet undefined
+          EnchantmentCreatureFacet{} -> goFacet' facet undefined
+          PlaneswalkerFacet{} -> goFacet' facet undefined
           --
-          InstantFacet{} -> goFacet' facet
-          SorceryFacet{} -> goFacet' facet
+          InstantFacet{} -> goFacet' facet instantCastMeta
+          SorceryFacet{} -> goFacet' facet sorceryCastMeta
 
-        goFacet' :: CardFacet ot -> Magic 'Private 'RW m Legality'
-        goFacet' facet = playPendingSpell
+        goFacet' :: CardFacet ot -> CastMeta ot -> Magic 'Private 'RW m Legality'
+        goFacet' facet meta = playPendingSpell
           zoSpell
           (castMeta_cost meta facet)
           (castMeta_effect meta facet)
           \cost effect -> do
             case singSpecificCard @ot of
+              InstantCard ->
+                legalityToMaybe <$> do
+                  payElectedAndPutOnStack @ 'Cast $
+                    castMeta_Elected meta oCaster card facet cost effect
               SorceryCard ->
                 legalityToMaybe <$> do
                   payElectedAndPutOnStack @ 'Cast $
@@ -250,6 +332,7 @@ castSpell' oCaster card meta = logCall 'castSpell' case card of
 
 -- TODO: Generalize for TriggeredAbility as well. Prolly make an AbilityMeta type that is analogous to CastMeta.
 -- NOTE: A TriggeredAbility is basically the same as an ActivatedAbility that the game activates automatically.
+-- TODO: This needs to validate ActivateAbilityReqs
 activateAbility :: forall m. Monad m => Object 'OTPlayer -> ActivateAbility -> Magic 'Private 'RW m Legality
 activateAbility oPlayer = logCall 'activateAbility \case
   ActivateAbility someActivated -> case someActivated of
@@ -266,7 +349,8 @@ activateAbility oPlayer = logCall 'activateAbility \case
     Magic 'Private 'RW m Legality
   goSomeActivatedAbility zoThis' withThisActivated = logCall' "goSomeActivatedAbility" do
     pure () -- TODO: Check that `zoThis'` actually has the `withThisActivated` and is in the correct zone
-    let zoThis = error "TODO: do_some_sort_of_cast" zoThis'
+    let oThis = promoteIdToObjectN @ot $ getObjectId zoThis'
+        zoThis = ZO (singZone @zone) oThis
     goWithThis zoThis
    where
     goWithThis ::
@@ -274,10 +358,10 @@ activateAbility oPlayer = logCall 'activateAbility \case
       Magic 'Private 'RW m Legality
     goWithThis zoThis = logCall' "goWithThis" case withThisActivated of
       T1 thisToElectActivated -> do
-        thisId <- newObjectId
+        let thisId = getObjectId zoThis
         goLegality thisToElectActivated (lensedThis thisId)
       T2 thisToElectActivated -> do
-        thisId <- newObjectId
+        let thisId = getObjectId zoThis
         goLegality thisToElectActivated (lensedThis thisId, lensedThis thisId)
      where
       goLegality ::

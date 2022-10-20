@@ -29,8 +29,7 @@ module MtgPure.Engine.CaseOf (
 
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
 import safe Data.Nat (Fin (..), NatList (..))
-import safe MtgPure.Engine.Fwd.Api (logCall)
-import safe MtgPure.Engine.State (Magic)
+import safe MtgPure.Engine.State (Magic, logCall)
 import safe MtgPure.Model.Recursive (Case (..))
 import safe MtgPure.Model.Variable (readVariable)
 

@@ -40,8 +40,6 @@ import safe MtgPure.Engine.Fwd.Api (
   getAlivePlayerCount,
   getPermanent,
   getPlayer,
-  logCall,
-  runMagicCont,
   setPermanent,
   setPlayer,
   withEachControlledPermanent_,
@@ -56,7 +54,7 @@ import safe MtgPure.Engine.Monad (
   put,
  )
 import safe MtgPure.Engine.Prompt (PlayerCount (..), PlayerIndex (..), Prompt' (..))
-import safe MtgPure.Engine.State (GameState (..), Magic, MagicCont)
+import safe MtgPure.Engine.State (GameState (..), Magic, MagicCont, logCall, runMagicCont)
 import safe MtgPure.Model.Object (Object, ObjectType (..))
 import safe MtgPure.Model.ObjectType.Kind (OTPermanent)
 import safe MtgPure.Model.Permanent (Permanent (..), Phased (..))

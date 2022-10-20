@@ -26,6 +26,7 @@
 
 module MtgPure.Engine.PerformElections (
   performElections,
+  controllerOf,
 ) where
 
 import safe Control.Exception (assert)
@@ -37,7 +38,6 @@ import safe qualified Data.Map.Strict as Map
 import safe MtgPure.Engine.Fwd.Api (
   caseOf,
   getPermanent,
-  logCall,
   zosSatisfying,
  )
 import safe MtgPure.Engine.Monad (fromRO, gets, modify)
@@ -47,15 +47,18 @@ import safe MtgPure.Engine.State (
   GameState (..),
   Magic,
   StackEntry (..),
+  logCall,
  )
 import safe MtgPure.Model.Object (
   OT0,
   Object (..),
+  ObjectType (..),
   pattern DefaultObjectDiscriminant,
  )
 import safe MtgPure.Model.ObjectId (GetObjectId (..))
 import safe MtgPure.Model.ObjectType.Kind (OTAny)
 import safe MtgPure.Model.Permanent (Permanent (..))
+import safe MtgPure.Model.PrePost (PrePost (..))
 import safe MtgPure.Model.Recursive (
   Effect (..),
   Elect (..),
@@ -86,7 +89,7 @@ performElections ::
 performElections seqM zoStack goTerm = logCall 'performElections \case
   All masked -> electAll goRec masked
   Choose oPlayer thisToElect -> electA Choose' zoStack goRec oPlayer thisToElect
-  ControllerOf zo cont -> controllerOf goRec zo cont
+  ControllerOf zo cont -> electControllerOf goRec zo cont
   Cost cost -> goTerm cost
   ElectActivated activated -> goTerm activated
   ElectCard facet -> goTerm facet
@@ -94,27 +97,42 @@ performElections seqM zoStack goTerm = logCall 'performElections \case
   Effect effect -> goTerm $ Sequence effect
   Elect elect -> goTerm elect
   Target oPlayer thisToElect -> electA Target' zoStack goRec oPlayer thisToElect
-  VariableInt cont -> do
-    let var = ReifiedVariable undefined undefined
-    goRec $ cont var
+  VariableInt cont -> electVariableInt goRec cont
   x -> error $ show $ consIndex x
  where
   goRec = performElections seqM zoStack goTerm
 
+electVariableInt ::
+  Monad m =>
+  (Elect 'Pre el ot -> Magic 'Private 'RW m (Maybe x)) ->
+  (Variable Int -> Elect 'Pre el ot) ->
+  Magic 'Private 'RW m (Maybe x)
+electVariableInt goElect cont = logCall 'electVariableInt do
+  let var = ReifiedVariable undefined undefined
+  goElect $ cont var
+
 controllerOf ::
+  forall zone ot m.
+  (IsZO zone ot, Monad m) =>
+  ZO zone ot ->
+  Magic 'Private 'RO m (Object 'OTPlayer)
+controllerOf zo = logCall 'controllerOf case singZone @zone of
+  SZBattlefield -> do
+    perm <- fromRO $ getPermanent $ zo0ToPermanent $ toZO0 zo
+    pure $ permanentController perm
+  _ -> undefined
+
+electControllerOf ::
   forall p zone m el ot x.
   (IsZO zone OTAny, Monad m) =>
   (Elect p el ot -> Magic 'Private 'RW m (Maybe x)) ->
   ZO zone OTAny ->
   (ZOPlayer -> Elect p el ot) ->
   Magic 'Private 'RW m (Maybe x)
-controllerOf goElect zo cont = logCall 'controllerOf case singZone @zone of
-  SZBattlefield -> do
-    perm <- fromRO $ getPermanent (zo0ToPermanent $ toZO0 zo)
-    let controller = permanentController perm
-        elect = cont $ oToZO1 controller
-    goElect elect
-  _ -> undefined
+electControllerOf goElect zo cont = logCall 'electControllerOf do
+  controller <- fromRO $ controllerOf zo
+  let elect = cont $ oToZO1 controller
+  goElect elect
 
 data Selection
   = Choose'

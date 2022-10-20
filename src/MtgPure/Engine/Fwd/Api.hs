@@ -9,7 +9,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE Safe #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskellQuotes #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
@@ -22,16 +21,14 @@
 {-# HLINT ignore "Redundant pure" #-}
 
 module MtgPure.Engine.Fwd.Api (
-  queryMagic,
-  runMagicEx,
-  runMagicCont,
-  --
   allZOs,
   activateAbility,
   askActivateAbility,
+  askCastSpell,
   askPlayLand,
   caseOf,
   castSpell,
+  controllerOf,
   enact,
   findHandCard,
   findLibraryCard,
@@ -49,7 +46,6 @@ module MtgPure.Engine.Fwd.Api (
   getPlayer,
   getPlayers,
   getPlayerWithPriority,
-  logCall,
   modifyPlayer,
   newObjectId,
   pay,
@@ -75,41 +71,26 @@ module MtgPure.Engine.Fwd.Api (
 import safe Control.Monad.Access (IsReadWrite, ReadWrite (..), Visibility (..))
 import safe Control.Monad.Trans (lift)
 import safe Control.Monad.Util (AndLike)
-import safe Data.Kind (Type)
-import safe qualified Data.List as List
 import safe qualified Data.Stream as Stream
 import safe Data.Void (Void)
-import safe Language.Haskell.TH.Syntax (Name)
 import safe MtgPure.Engine.Fwd.Type (Fwd' (..))
 import safe MtgPure.Engine.Legality (Legality)
 import safe MtgPure.Engine.Monad (
-  EnvLogCall (..),
   fromRO,
   gets,
   internalFromPrivate,
-  runMagicCont',
-  runMagicEx',
  )
 import safe MtgPure.Engine.Prompt (
   ActivateAbility,
   CastSpell,
-  InternalLogicError (..),
   PlayerCount (..),
   SomeActivatedAbility,
  )
 import safe MtgPure.Engine.State (
   Fwd,
-  GameResult,
   GameState (..),
   Magic,
   MagicCont,
-  MagicEx,
-  OpaqueGameState,
-  logCallPop,
-  logCallPush,
-  logCallTop,
-  logCallUnwind,
-  queryMagic',
  )
 import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.Object (OT0, Object, ObjectType (..))
@@ -127,31 +108,6 @@ import safe MtgPure.Model.Recursive (
  )
 import safe MtgPure.Model.Zone (Zone (..))
 import safe MtgPure.Model.ZoneObject (IsZO, ZO)
-
-queryMagic :: Monad m => OpaqueGameState m -> Magic 'Public 'RO m a -> m a
-queryMagic opaque = queryMagic' opaque . logCall 'queryMagic
-
-runMagicEx ::
-  (IsReadWrite rw, Monad m) =>
-  (Either ex a -> b) ->
-  MagicEx ex v rw m a ->
-  Magic v rw m b
-runMagicEx = runMagicEx' envLogCall
-
-runMagicCont ::
-  (IsReadWrite rw, Monad m) =>
-  (Either a b -> c) ->
-  MagicCont v rw m a b ->
-  Magic v rw m c
-runMagicCont = runMagicCont' envLogCall
-
-envLogCall :: (IsReadWrite rw, Monad m) => EnvLogCall (GameResult m) (GameState m) v rw m
-envLogCall =
-  EnvLogCall
-    { envLogCallTop = logCallTop
-    , envLogCallUnwind = logCallUnwind
-    , envLogCallCorruptCallStackLogging = error $ show CorruptCallStackLogging
-    }
 
 getFwd :: (Monad m, IsReadWrite rw) => Magic v rw m (Fwd m)
 getFwd = internalFromPrivate $ fromRO $ gets magicFwd
@@ -184,6 +140,11 @@ askActivateAbility p = do
   fwd <- lift getFwd
   fwd_askActivateAbility fwd p
 
+askCastSpell :: Monad m => Object 'OTPlayer -> MagicCont 'Private 'RW m () ()
+askCastSpell p = do
+  fwd <- lift getFwd
+  fwd_askCastSpell fwd p
+
 askPlayLand :: Monad m => Object 'OTPlayer -> MagicCont 'Private 'RW m () ()
 askPlayLand p = do
   fwd <- lift getFwd
@@ -197,6 +158,9 @@ caseOf = fwd2 fwd_caseOf
 
 castSpell :: forall m. Monad m => Object 'OTPlayer -> CastSpell -> Magic 'Private 'RW m Legality
 castSpell = fwd2 fwd_castSpell
+
+controllerOf :: (IsZO zone ot, Monad m) => ZO zone ot -> Magic 'Private 'RO m (Object 'OTPlayer)
+controllerOf = fwd1 fwd_controllerOf
 
 enact :: Monad m => Effect 'OneShot -> Magic 'Private 'RW m ()
 enact = fwd1 fwd_enact
@@ -248,73 +212,6 @@ getPlayers = fwd0 fwd_getPlayers
 
 getPlayerWithPriority :: Monad m => Magic 'Public 'RO m (Maybe (Object 'OTPlayer))
 getPlayerWithPriority = fwd0 fwd_getPlayerWithPriority
-
-newtype Named :: Type where
-  Named :: String -> Named
-
-class IsNamed name where
-  toNamed :: name -> Named
-
-instance IsNamed Named where
-  toNamed = id
-
-instance IsNamed Name where
-  toNamed = Named . show
-
-instance IsNamed (Name, [String]) where
-  toNamed (name, parts) = Named $ show name ++ "." ++ List.intercalate "." parts
-
-instance IsNamed (Name, String) where
-  toNamed (name, part) = toNamed (name, [part])
-
-showNamed :: IsNamed name => name -> String
-showNamed name = case toNamed name of
-  Named s -> s
-
-class LogCall x where
-  logCall :: IsNamed name => name -> x -> x
-
-instance (IsReadWrite rw, Monad m) => LogCall (Magic p rw m z) where
-  logCall name action = do
-    _ <- logCallPush $ showNamed name
-    result <- action
-    _ <- logCallPop
-    pure result
-
-instance (IsReadWrite rw, Monad m) => LogCall (a -> Magic p rw m z) where
-  logCall name action a = do
-    _ <- logCallPush $ showNamed name
-    result <- action a
-    _ <- logCallPop
-    pure result
-
-instance (IsReadWrite rw, Monad m) => LogCall (a -> b -> Magic p rw m z) where
-  logCall name action a b = do
-    _ <- logCallPush $ showNamed name
-    result <- action a b
-    _ <- logCallPop
-    pure result
-
-instance (IsReadWrite rw, Monad m) => LogCall (MagicCont p rw m y z) where
-  logCall name action = do
-    _ <- lift $ logCallPush $ showNamed name
-    result <- action
-    _ <- lift logCallPop
-    pure result
-
-instance (IsReadWrite rw, Monad m) => LogCall (a -> MagicCont p rw m y z) where
-  logCall name action a = do
-    _ <- lift $ logCallPush $ showNamed name
-    result <- action a
-    _ <- lift logCallPop
-    pure result
-
-instance (IsReadWrite rw, Monad m) => LogCall (a -> b -> MagicCont p rw m y z) where
-  logCall name action a b = do
-    _ <- lift $ logCallPush $ showNamed name
-    result <- action a b
-    _ <- lift logCallPop
-    pure result
 
 modifyPlayer :: Monad m => Object 'OTPlayer -> (Player -> Player) -> Magic 'Private 'RW m ()
 modifyPlayer o f = do

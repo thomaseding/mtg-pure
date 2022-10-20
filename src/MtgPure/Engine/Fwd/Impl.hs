@@ -26,6 +26,7 @@ module MtgPure.Engine.Fwd.Impl (
 import safe MtgPure.Engine.ActivateCast (
   activateAbility,
   askActivateAbility,
+  askCastSpell,
   castSpell,
  )
 import safe MtgPure.Engine.CaseOf (caseOf)
@@ -60,7 +61,7 @@ import safe MtgPure.Engine.Core (
 import safe MtgPure.Engine.Enact (enact)
 import safe MtgPure.Engine.Fwd.Type (Fwd' (..))
 import safe MtgPure.Engine.Pay (pay)
-import safe MtgPure.Engine.PerformElections (performElections)
+import safe MtgPure.Engine.PerformElections (controllerOf, performElections)
 import safe MtgPure.Engine.PlayLand (askPlayLand)
 import safe MtgPure.Engine.Priority (
   gainPriority,
@@ -80,9 +81,11 @@ fwdImpl =
     , fwd_activateAbility = activateAbility
     , fwd_allZOs = allZOs
     , fwd_askActivateAbility = askActivateAbility
+    , fwd_askCastSpell = askCastSpell
     , fwd_askPlayLand = askPlayLand
     , fwd_caseOf = caseOf
     , fwd_castSpell = castSpell
+    , fwd_controllerOf = controllerOf
     , fwd_enact = enact
     , fwd_findHandCard = findHandCard
     , fwd_findLibraryCard = findLibraryCard

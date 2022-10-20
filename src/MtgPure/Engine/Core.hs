@@ -63,9 +63,6 @@ import safe Data.Maybe (catMaybes, isJust, mapMaybe)
 import safe qualified Data.Stream as Stream
 import safe qualified Data.Traversable as T
 import safe Data.Typeable (cast)
-import safe MtgPure.Engine.Fwd.Api (
-  logCall,
- )
 import safe MtgPure.Engine.Legality (Legality (..))
 import safe MtgPure.Engine.Monad (
   fromPublic,
@@ -89,6 +86,7 @@ import safe MtgPure.Engine.State (
   GameResult (..),
   GameState (..),
   Magic,
+  logCall,
  )
 import safe MtgPure.Model.Hand (Hand (..))
 import safe MtgPure.Model.IsCardList (pushCard)

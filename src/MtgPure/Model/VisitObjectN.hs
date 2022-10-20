@@ -4,10 +4,12 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE Safe #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
@@ -39,7 +41,7 @@ import safe Data.Kind (Type)
 import safe Data.Proxy (Proxy)
 import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.Object (
-  IsObjectType (objectToId),
+  IsObjectType (objectToId, singObjectType),
   OT0,
   OT1,
   OT10,
@@ -53,10 +55,13 @@ import safe MtgPure.Model.Object (
   OT7,
   OT8,
   OT9,
-  Object,
+  OTArbitrary,
+  Object (..),
+  pattern DefaultObjectDiscriminant,
  )
-import safe MtgPure.Model.ObjectId (GetObjectId (..))
+import safe MtgPure.Model.ObjectId (GetObjectId (..), ObjectId (..))
 import safe MtgPure.Model.ObjectN (
+  ON0,
   ON1,
   ON10,
   ON11,
@@ -73,6 +78,7 @@ import safe MtgPure.Model.ObjectN (
  )
 
 data KnownObjectTypeN :: Type -> Type where
+  KOT0 :: KnownObjectTypeN OT0
   KOT1 :: Inst1 IsObjectType a => KnownObjectTypeN (OT1 a)
   KOT2 :: Inst2 IsObjectType a b => KnownObjectTypeN (OT2 a b)
   KOT3 :: Inst3 IsObjectType a b c => KnownObjectTypeN (OT3 a b c)
@@ -88,6 +94,7 @@ data KnownObjectTypeN :: Type -> Type where
   deriving (Typeable)
 
 data KnownObjectN :: Type -> Type where
+  KO0 :: ON0 -> KnownObjectN OT0
   KO1 :: Inst1 IsObjectType a => ON1 a -> KnownObjectN (OT1 a)
   KO2 :: Inst2 IsObjectType a b => ON2 a b -> KnownObjectN (OT2 a b)
   KO3 :: Inst3 IsObjectType a b c => ON3 a b c -> KnownObjectN (OT3 a b c)
@@ -110,6 +117,7 @@ class Typeable ot => VisitObjectN ot where
   knownObjectN :: ObjectN ot -> KnownObjectN ot
   knownObjectTypeN :: Proxy ot -> KnownObjectTypeN ot
   mapObjectN :: (forall a. IsObjectType a => Object a -> Object a) -> ObjectN ot -> ObjectN ot
+  promoteIdToObjectN :: ObjectId -> ObjectN ot
 
 instance GetObjectId (ObjectN OT0) where
   getObjectId (O0 i) = i
@@ -153,6 +161,25 @@ instance Inst12 IsObjectType a b c d e f g h i j k l => GetObjectId (ObjectN (OT
 vn :: VisitObjectN ot => ObjectVisitorN ot x -> ObjectN ot -> x
 vn = visitObjectN
 
+instance VisitObjectN OT0 where
+  data ObjectVisitorN OT0 x = ObjectVisitor0
+    { visitObject0 :: Object OTArbitrary -> x
+    }
+
+  visitObjectN' f = visitObjectN $ ObjectVisitor0 f
+  visitObjectN v = \case
+    O0 x -> visitObject0 v $ Object (singObjectType @OTArbitrary) DefaultObjectDiscriminant x
+  orderObjectN _ = 1
+  knownObjectN = KO0
+  knownObjectTypeN _ = KOT0
+  mapObjectN f = \case
+    O0 x ->
+      let o = Object (singObjectType @OTArbitrary) DefaultObjectDiscriminant x
+          o' = f o
+          Object _ _ i = o'
+       in O0 i
+  promoteIdToObjectN = O0
+
 instance Inst1 IsObjectType a => VisitObjectN (OT1 a) where
   data ObjectVisitorN (OT1 a) x = ObjectVisitor1
     { visitObject1 :: Object a -> x
@@ -166,6 +193,7 @@ instance Inst1 IsObjectType a => VisitObjectN (OT1 a) where
   knownObjectTypeN _ = KOT1
   mapObjectN f = \case
     O1 x -> O1 $ f x
+  promoteIdToObjectN = O1 . Object (singObjectType @a) DefaultObjectDiscriminant
 
 instance Inst2 IsObjectType a b => VisitObjectN (OT2 a b) where
   data ObjectVisitorN (OT2 a b) x = ObjectVisitor2
@@ -189,6 +217,7 @@ instance Inst2 IsObjectType a b => VisitObjectN (OT2 a b) where
     O2b x -> O2b $ f x
     ON2a x -> ON2a $ mapObjectN f x
     ON2b x -> ON2b $ mapObjectN f x
+  promoteIdToObjectN = O2a . Object (singObjectType @a) DefaultObjectDiscriminant
 
 instance Inst3 IsObjectType a b c => VisitObjectN (OT3 a b c) where
   data ObjectVisitorN (OT3 a b c) x = ObjectVisitor3
@@ -218,6 +247,7 @@ instance Inst3 IsObjectType a b c => VisitObjectN (OT3 a b c) where
     ON3a x -> ON3a $ mapObjectN f x
     ON3b x -> ON3b $ mapObjectN f x
     ON3c x -> ON3c $ mapObjectN f x
+  promoteIdToObjectN = O3a . Object (singObjectType @a) DefaultObjectDiscriminant
 
 instance Inst4 IsObjectType a b c d => VisitObjectN (OT4 a b c d) where
   data ObjectVisitorN (OT4 a b c d) x = ObjectVisitor4
@@ -253,6 +283,7 @@ instance Inst4 IsObjectType a b c d => VisitObjectN (OT4 a b c d) where
     ON4b x -> ON4b $ mapObjectN f x
     ON4c x -> ON4c $ mapObjectN f x
     ON4d x -> ON4d $ mapObjectN f x
+  promoteIdToObjectN = O4a . Object (singObjectType @a) DefaultObjectDiscriminant
 
 instance Inst5 IsObjectType a b c d e => VisitObjectN (OT5 a b c d e) where
   data ObjectVisitorN (OT5 a b c d e) x = ObjectVisitor5
@@ -294,6 +325,7 @@ instance Inst5 IsObjectType a b c d e => VisitObjectN (OT5 a b c d e) where
     ON5c x -> ON5c $ mapObjectN f x
     ON5d x -> ON5d $ mapObjectN f x
     ON5e x -> ON5e $ mapObjectN f x
+  promoteIdToObjectN = O5a . Object (singObjectType @a) DefaultObjectDiscriminant
 
 instance Inst6 IsObjectType a b c d e f => VisitObjectN (OT6 a b c d e f) where
   data ObjectVisitorN (OT6 a b c d e f) x = ObjectVisitor6
@@ -341,6 +373,7 @@ instance Inst6 IsObjectType a b c d e f => VisitObjectN (OT6 a b c d e f) where
     ON6d x -> ON6d $ mapObjectN f x
     ON6e x -> ON6e $ mapObjectN f x
     ON6f x -> ON6f $ mapObjectN f x
+  promoteIdToObjectN = O6a . Object (singObjectType @a) DefaultObjectDiscriminant
 
 instance Inst7 IsObjectType a b c d e f g => VisitObjectN (OT7 a b c d e f g) where
   data ObjectVisitorN (OT7 a b c d e f g) x = ObjectVisitor7
@@ -394,6 +427,7 @@ instance Inst7 IsObjectType a b c d e f g => VisitObjectN (OT7 a b c d e f g) wh
     ON7e x -> ON7e $ mapObjectN f x
     ON7f x -> ON7f $ mapObjectN f x
     ON7g x -> ON7g $ mapObjectN f x
+  promoteIdToObjectN = O7a . Object (singObjectType @a) DefaultObjectDiscriminant
 
 instance Inst8 IsObjectType a b c d e f g h => VisitObjectN (OT8 a b c d e f g h) where
   data ObjectVisitorN (OT8 a b c d e f g h) x = ObjectVisitor8
@@ -453,6 +487,7 @@ instance Inst8 IsObjectType a b c d e f g h => VisitObjectN (OT8 a b c d e f g h
     ON8f x -> ON8f $ mapObjectN f x
     ON8g x -> ON8g $ mapObjectN f x
     ON8h x -> ON8h $ mapObjectN f x
+  promoteIdToObjectN = O8a . Object (singObjectType @a) DefaultObjectDiscriminant
 
 instance Inst9 IsObjectType a b c d e f g h i => VisitObjectN (OT9 a b c d e f g h i) where
   data ObjectVisitorN (OT9 a b c d e f g h i) x = ObjectVisitor9
@@ -518,6 +553,7 @@ instance Inst9 IsObjectType a b c d e f g h i => VisitObjectN (OT9 a b c d e f g
     ON9g x -> ON9g $ mapObjectN f x
     ON9h x -> ON9h $ mapObjectN f x
     ON9i x -> ON9i $ mapObjectN f x
+  promoteIdToObjectN = O9a . Object (singObjectType @a) DefaultObjectDiscriminant
 
 instance Inst10 IsObjectType a b c d e f g h i j => VisitObjectN (OT10 a b c d e f g h i j) where
   data ObjectVisitorN (OT10 a b c d e f g h i j) x = ObjectVisitor10
@@ -589,6 +625,7 @@ instance Inst10 IsObjectType a b c d e f g h i j => VisitObjectN (OT10 a b c d e
     ON10h x -> ON10h $ mapObjectN f x
     ON10i x -> ON10i $ mapObjectN f x
     ON10j x -> ON10j $ mapObjectN f x
+  promoteIdToObjectN = O10a . Object (singObjectType @a) DefaultObjectDiscriminant
 
 instance Inst11 IsObjectType a b c d e f g h i j k => VisitObjectN (OT11 a b c d e f g h i j k) where
   data ObjectVisitorN (OT11 a b c d e f g h i j k) x = ObjectVisitor11
@@ -666,6 +703,7 @@ instance Inst11 IsObjectType a b c d e f g h i j k => VisitObjectN (OT11 a b c d
     ON11i x -> ON11i $ mapObjectN f x
     ON11j x -> ON11j $ mapObjectN f x
     ON11k x -> ON11k $ mapObjectN f x
+  promoteIdToObjectN = O11a . Object (singObjectType @a) DefaultObjectDiscriminant
 
 instance Inst12 IsObjectType a b c d e f g h i j k l => VisitObjectN (OT12 a b c d e f g h i j k l) where
   data ObjectVisitorN (OT12 a b c d e f g h i j k l) x = ObjectVisitor12
@@ -749,3 +787,4 @@ instance Inst12 IsObjectType a b c d e f g h i j k l => VisitObjectN (OT12 a b c
     ON12j x -> ON12j $ mapObjectN f x
     ON12k x -> ON12k $ mapObjectN f x
     ON12l x -> ON12l $ mapObjectN f x
+  promoteIdToObjectN = O12a . Object (singObjectType @a) DefaultObjectDiscriminant
