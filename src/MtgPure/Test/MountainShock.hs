@@ -34,27 +34,27 @@ import safe qualified Control.Monad as M
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
 import safe Control.Monad.Trans (MonadIO (..))
 import safe qualified Control.Monad.Trans.State.Strict as State
+import safe Data.List.NonEmpty (NonEmpty (..))
 import safe qualified Data.Map.Strict as Map
 import safe qualified Data.Set as Set
 import safe qualified Data.Traversable as T
 import safe MtgPure.Cards (mountain, shock)
 import safe MtgPure.Engine.Fwd.Api (
+  allPlayers,
+  allZOActivatedAbilities,
   controllerOf,
-  getAllActivatedAbilities,
+  eachLogged_,
   getPlayer,
   satisfies,
-  withEachPlayer_,
  )
 import safe MtgPure.Engine.Monad (gets, internalFromPrivate)
 import safe MtgPure.Engine.PlayGame (playGame)
 import safe MtgPure.Engine.Prompt (
-  ActivateAbility (ActivateAbility),
   CallFrameInfo (..),
   CardCount (..),
   CardIndex (..),
-  CastSpell (..),
   InternalLogicError (CorruptCallStackLogging),
-  PlayLand (..),
+  Play (..),
   PlayerIndex (PlayerIndex),
   Prompt' (..),
   ShowZO (ShowZO),
@@ -75,12 +75,18 @@ import safe MtgPure.Model.Library (Library (..))
 import safe MtgPure.Model.Mulligan (Mulligan (..))
 import safe MtgPure.Model.Object (Object (..), ObjectType (..))
 import safe MtgPure.Model.ObjectId (GetObjectId (..), ObjectId (ObjectId))
-import safe MtgPure.Model.ObjectType.Kind (OTCard, OTPermanent)
+import safe MtgPure.Model.ObjectType.Kind (
+  OTActivatedAbility,
+  OTCard,
+  OTLand,
+  OTPermanent,
+  OTSpell,
+ )
 import safe MtgPure.Model.Player (Player (..))
 import safe MtgPure.Model.Recursive (AnyCard (..), Card (..), Requirement (..))
 import safe MtgPure.Model.Sideboard (Sideboard (..))
 import safe MtgPure.Model.ToObjectN.Instances ()
-import MtgPure.Model.VisitObjectN (VisitObjectN (promoteIdToObjectN))
+import safe MtgPure.Model.VisitObjectN (VisitObjectN (promoteIdToObjectN))
 import safe MtgPure.Model.Zone (SZone (..), Zone (..))
 import safe MtgPure.Model.ZoneObject (ZO, ZoneObject (..))
 import safe MtgPure.Model.ZoneObject.Convert (toZO0, toZO1)
@@ -154,8 +160,7 @@ input =
           , promptLogCallPush = demoLogCallPush
           , promptPerformMulligan = \_p _hand -> pure False
           , promptPickZO = \_p zos -> pure case zos of
-              [] -> error "should be non-empty"
-              zo : _ -> zo
+              zo :| _ -> zo
           , promptPlayLand = demoPlayLand
           , promptShuffle = \(CardCount n) _player -> pure $ map CardIndex [0 .. n - 1]
           }
@@ -168,7 +173,7 @@ pause :: MonadIO m => m ()
 pause = M.void $ liftIO getLine
 
 -- TODO: Expose sufficient Public API to avoid need for `internalFromPrivate`
-demoPlayLand :: OpaqueGameState Demo -> Object 'OTPlayer -> Demo (Maybe PlayLand)
+demoPlayLand :: OpaqueGameState Demo -> Object 'OTPlayer -> Demo (Maybe (Play OTLand))
 demoPlayLand opaque oPlayer = queryMagic opaque do
   player <- internalFromPrivate $ getPlayer oPlayer
   let Hand zos = playerHand player
@@ -186,7 +191,7 @@ demoPlayLand opaque oPlayer = queryMagic opaque do
           pure $ Just $ PlayLand $ toZO1 zo0
 
 -- TODO: Expose sufficient Public API to avoid need for `internalFromPrivate`
-demoCastSpell :: OpaqueGameState Demo -> Object 'OTPlayer -> Demo (Maybe CastSpell)
+demoCastSpell :: OpaqueGameState Demo -> Object 'OTPlayer -> Demo (Maybe (Play OTSpell))
 demoCastSpell opaque oPlayer = queryMagic opaque do
   player <- internalFromPrivate $ getPlayer oPlayer
   let noMana = playerMana player == mempty
@@ -207,9 +212,9 @@ demoCastSpell opaque oPlayer = queryMagic opaque do
           pure $ Just $ CastSpell $ ZO SZHand $ promoteIdToObjectN $ getObjectId zo0
 
 -- TODO: Expose sufficient Public API to avoid need for `internalFromPrivate`
-demoActivateAbility :: OpaqueGameState Demo -> Object 'OTPlayer -> Demo (Maybe ActivateAbility)
+demoActivateAbility :: OpaqueGameState Demo -> Object 'OTPlayer -> Demo (Maybe (Play OTActivatedAbility))
 demoActivateAbility opaque oPlayer = queryMagic opaque do
-  allAbilities <- internalFromPrivate (getAllActivatedAbilities @ 'ZBattlefield @OTPermanent)
+  allAbilities <- internalFromPrivate (allZOActivatedAbilities @ 'ZBattlefield @OTPermanent)
   abilities <- internalFromPrivate $ flip M.filterM allAbilities \ability -> do
     let zo = someActivatedZO ability
     controller <- controllerOf zo
@@ -281,7 +286,8 @@ printGameState opaque = queryMagic opaque do
   liftIO do
     horizLine
     print "GAME STATE BEGIN"
-  withEachPlayer_ \oPlayer -> do
+  oPlayers <- allPlayers
+  eachLogged_ oPlayers \oPlayer -> do
     let name = getPlayerName oPlayer
     liftIO do
       horizLine

@@ -30,13 +30,14 @@ import safe qualified Data.Map.Strict as Map
 import safe qualified Data.Stream as Stream
 import safe Data.Void (Void, absurd)
 import safe MtgPure.Engine.Fwd.Api (
+  allPlayers,
+  eachLogged_,
   getPlayer,
   pushLibraryCard,
   startGame,
-  withEachPlayer_,
  )
 import safe MtgPure.Engine.Fwd.Impl (fwdImpl)
-import safe MtgPure.Engine.Monad (fromRO, runMagicRW)
+import safe MtgPure.Engine.Monad (fromPublicRO, fromRO, runMagicRW)
 import safe MtgPure.Engine.Prompt (Prompt' (..))
 import safe MtgPure.Engine.State (
   Fwd,
@@ -76,8 +77,9 @@ startGame' = logCall 'startGame' do
   startGame
 
 initLibraries :: Monad m => Magic 'Private 'RW m ()
-initLibraries = logCall 'initLibraries $
-  withEachPlayer_ \oPlayer -> do
+initLibraries = logCall 'initLibraries do
+  oPlayers <- fromPublicRO allPlayers
+  eachLogged_ oPlayers \oPlayer -> do
     player <- fromRO $ getPlayer oPlayer
     let Deck cards = playerStartingDeck player
     mapM_ (pushLibraryCard oPlayer) cards

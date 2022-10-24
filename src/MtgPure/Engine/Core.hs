@@ -24,20 +24,21 @@
 {-# HLINT ignore "Redundant pure" #-}
 
 module MtgPure.Engine.Core (
+  allControlledPermanentsOf,
+  allZOActivatedAbilities,
   allZOs,
   findHandCard,
   findLibraryCard,
   findPermanent,
   findPlayer,
-  getActivatedAbilities,
+  getActivatedAbilitiesOf,
   getActivePlayer,
   getAlivePlayerCount,
-  getAllActivatedAbilities,
   getAPNAP,
   getPermanent,
-  getPermanents,
+  allPermanents,
   getPlayer,
-  getPlayers,
+  allPlayers,
   newObjectId,
   pushHandCard,
   pushLibraryCard,
@@ -46,15 +47,11 @@ module MtgPure.Engine.Core (
   rewindIllegal,
   setPermanent,
   setPlayer,
-  withEachControlledPermanent_,
-  withEachPermanent_,
-  withEachPermanent,
-  withEachPlayer_,
 ) where
 
 import safe Control.Exception (assert)
 import safe qualified Control.Monad as M
-import safe Control.Monad.Access (IsReadWrite, ReadWrite (..), Visibility (..))
+import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
 import safe qualified Data.DList as DList
 import safe Data.Functor ((<&>))
 import safe qualified Data.List as List
@@ -63,10 +60,10 @@ import safe Data.Maybe (catMaybes, isJust, mapMaybe)
 import safe qualified Data.Stream as Stream
 import safe qualified Data.Traversable as T
 import safe Data.Typeable (cast)
+import safe MtgPure.Engine.Fwd.Api (eachLogged)
 import safe MtgPure.Engine.Legality (Legality (..))
 import safe MtgPure.Engine.Monad (
   fromPublic,
-  fromPublicRO,
   fromRO,
   get,
   gets,
@@ -113,7 +110,7 @@ import safe MtgPure.Model.ZoneObject.Convert (
  )
 
 getAlivePlayerCount :: Monad m => Magic 'Public 'RO m PlayerCount
-getAlivePlayerCount = logCall 'getAlivePlayerCount $ PlayerCount . length <$> getPlayers
+getAlivePlayerCount = logCall 'getAlivePlayerCount $ PlayerCount . length <$> allPlayers
 
 getAPNAP :: Monad m => Magic v 'RO m (Stream.Stream (Object 'OTPlayer))
 getAPNAP = logCall 'getAPNAP $ internalFromPrivate $ gets magicPlayerOrderAPNAP
@@ -121,41 +118,26 @@ getAPNAP = logCall 'getAPNAP $ internalFromPrivate $ gets magicPlayerOrderAPNAP
 getActivePlayer :: Monad m => Magic 'Public 'RO m (Object 'OTPlayer)
 getActivePlayer = logCall 'getActivePlayer $ Stream.head <$> getAPNAP
 
-getPlayers :: Monad m => Magic 'Public 'RO m [Object 'OTPlayer]
-getPlayers = logCall 'getPlayers do
+allPlayers :: Monad m => Magic 'Public 'RO m [Object 'OTPlayer]
+allPlayers = logCall 'allPlayers do
   st <- internalFromPrivate get
   let ps = Map.assocs $ magicPlayers st
   pure $ map fst $ filter (not . playerLost . snd) ps
 
-withEachPlayer_ :: (IsReadWrite rw, Monad m) => (Object 'OTPlayer -> Magic v rw m ()) -> Magic v rw m ()
-withEachPlayer_ f = logCall 'withEachPlayer_ $ fromPublicRO getPlayers >>= mapM_ f
-
-getPermanents :: Monad m => Magic 'Public 'RO m [ZO 'ZBattlefield OTPermanent]
-getPermanents = logCall 'getPermanents $ map zo0ToPermanent <$> perms0
+allPermanents :: Monad m => Magic 'Public 'RO m [ZO 'ZBattlefield OTPermanent]
+allPermanents = logCall 'allPermanents $ map zo0ToPermanent <$> perms0
  where
   perms0 = internalFromPrivate $ gets $ Map.keys . magicPermanents
 
-withEachPermanent ::
-  (IsReadWrite rw, Monad m) =>
-  (ZO 'ZBattlefield OTPermanent -> Magic v rw m a) ->
-  Magic v rw m [a]
-withEachPermanent f = logCall 'withEachPermanent $ fromPublicRO getPermanents >>= mapM f
-
-withEachPermanent_ ::
-  (IsReadWrite rw, Monad m) =>
-  (ZO 'ZBattlefield OTPermanent -> Magic v rw m ()) ->
-  Magic v rw m ()
-withEachPermanent_ f = logCall 'withEachPermanent_ $ fromPublicRO getPermanents >>= mapM_ f
-
-withEachControlledPermanent_ ::
-  (IsReadWrite rw, Monad m) =>
+allControlledPermanentsOf ::
+  Monad m =>
   Object 'OTPlayer ->
-  (ZO 'ZBattlefield OTPermanent -> Magic v rw m ()) ->
-  Magic v rw m ()
-withEachControlledPermanent_ oPlayer f = logCall 'withEachControlledPermanent_ $
-  withEachPermanent_ $ \oPerm -> do
-    perm <- internalFromPrivate $ fromRO $ getPermanent oPerm
-    M.when (permanentController perm == oPlayer) $ f oPerm
+  Magic 'Public 'RO m [ZO 'ZBattlefield OTPermanent]
+allControlledPermanentsOf oPlayer =
+  logCall 'allControlledPermanentsOf $
+    allPermanents >>= M.filterM \zoPerm -> do
+      perm <- internalFromPrivate $ fromRO $ getPermanent zoPerm
+      pure $ permanentController perm == oPlayer
 
 rewindIllegal :: Monad m => Magic 'Private 'RW m Legality -> Magic 'Private 'RW m Bool
 rewindIllegal m = logCall 'rewindIllegal $ do
@@ -174,28 +156,28 @@ allZOs = logCall 'allZOs case singZone @zone of
   SZBattlefield -> case indexOT @ot of
     objectTypes ->
       let goPerms :: ObjectType -> Magic 'Private 'RO m [ZO zone ot]
-          goPerms ot =
-            catMaybes
-              <$> withEachPermanent \oPerm -> do
-                perm <- getPermanent oPerm
-                let goPerm ::
-                      forall a x.
-                      IsObjectType a =>
-                      (Permanent -> Maybe x) ->
-                      Maybe (ZO 'ZBattlefield ot)
-                    goPerm viewPerm = case viewPerm perm of
-                      Nothing -> Nothing
-                      Just{} -> castOToZO $ idToObject @a $ getObjectId oPerm
-                pure case ot of
-                  OTArtifact -> goPerm @ 'OTArtifact permanentArtifact
-                  OTCreature -> goPerm @ 'OTCreature permanentCreature
-                  --OTEnchantment -> goPerm @ 'OTEnchantment undefined
-                  OTLand -> goPerm @ 'OTLand permanentLand
-                  --OTPlaneswalker -> goPerm @ 'OTPlaneswalker undefined
-                  _ -> Nothing
+          goPerms ot = do
+            perms <- fromPublic allPermanents
+            catMaybes <$> eachLogged perms \oPerm -> do
+              perm <- getPermanent oPerm
+              let goPerm ::
+                    forall a x.
+                    IsObjectType a =>
+                    (Permanent -> Maybe x) ->
+                    Maybe (ZO 'ZBattlefield ot)
+                  goPerm viewPerm = case viewPerm perm of
+                    Nothing -> Nothing
+                    Just{} -> castOToZO $ idToObject @a $ getObjectId oPerm
+              pure case ot of
+                OTArtifact -> goPerm @ 'OTArtifact permanentArtifact
+                OTCreature -> goPerm @ 'OTCreature permanentCreature
+                --OTEnchantment -> goPerm @ 'OTEnchantment undefined
+                OTLand -> goPerm @ 'OTLand permanentLand
+                --OTPlaneswalker -> goPerm @ 'OTPlaneswalker undefined
+                _ -> Nothing
           goPlayers :: ObjectType -> Magic 'Private 'RO m [ZO zone ot]
           goPlayers = \case
-            OTPlayer -> mapMaybe castOToZO <$> fromPublic getPlayers
+            OTPlayer -> mapMaybe castOToZO <$> fromPublic allPlayers
             _ -> pure []
           goRec :: [ObjectType] -> Magic 'Private 'RO m (DList.DList (ZO zone ot))
           goRec = \case
@@ -208,20 +190,20 @@ allZOs = logCall 'allZOs case singZone @zone of
        in DList.toList <$> goRec objectTypes
   _ -> undefined
 
-getAllActivatedAbilities ::
+allZOActivatedAbilities ::
   forall zone ot m.
   (IsZO zone ot, Monad m) =>
   Magic 'Private 'RO m [SomeActivatedAbility zone ot]
-getAllActivatedAbilities = logCall 'getAllActivatedAbilities do
+allZOActivatedAbilities = logCall 'allZOActivatedAbilities do
   zos <- allZOs @zone @ot
-  concat <$> T.for zos getActivatedAbilities
+  concat <$> T.for zos getActivatedAbilitiesOf
 
-getActivatedAbilities ::
+getActivatedAbilitiesOf ::
   forall zone ot m.
   (IsZO zone ot, Monad m) =>
   ZO zone ot ->
   Magic 'Private 'RO m [SomeActivatedAbility zone ot]
-getActivatedAbilities zo = logCall 'getActivatedAbilities do
+getActivatedAbilitiesOf zo = logCall 'getActivatedAbilitiesOf do
   -- XXX: Being lazy at the moment and assuming it's a permanent
   case singZone @zone of
     SZBattlefield -> do

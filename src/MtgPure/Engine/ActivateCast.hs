@@ -30,7 +30,7 @@ module MtgPure.Engine.ActivateCast (
   castSpell,
 ) where
 
-import Control.Exception (assert)
+import safe Control.Exception (assert)
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
 import safe Control.Monad.Trans (lift)
 import safe Control.Monad.Trans.Except (throwE)
@@ -50,9 +50,8 @@ import safe MtgPure.Engine.Fwd.Api (
 import safe MtgPure.Engine.Legality (Legality (..), legalityToMaybe, maybeToLegality)
 import safe MtgPure.Engine.Monad (fromPublic, fromRO, get, gets, modify)
 import safe MtgPure.Engine.Prompt (
-  ActivateAbility (..),
-  CastSpell (..),
   InvalidCastSpell (..),
+  Play (..),
   Prompt' (..),
   SomeActivatedAbility (..),
  )
@@ -72,16 +71,17 @@ import safe MtgPure.Engine.State (
   runMagicCont,
  )
 import safe MtgPure.Model.EffectType (EffectType (..))
-import MtgPure.Model.IsCardList (containsCard)
+import safe MtgPure.Model.IsCardList (containsCard)
 import safe MtgPure.Model.Object (IsObjectType (..), OT0, OT1, Object, ObjectType (..))
 import safe MtgPure.Model.ObjectId (GetObjectId (getObjectId), ObjectId)
 import safe MtgPure.Model.ObjectN (ObjectN (O1))
 import safe MtgPure.Model.ObjectType.Kind (
+  OTActivatedAbility,
   OTInstant,
   OTSorcery,
   OTSpell,
  )
-import MtgPure.Model.Player (Player (..))
+import safe MtgPure.Model.Player (Player (..))
 import safe MtgPure.Model.PrePost (PrePost (..))
 import safe MtgPure.Model.Recursive (
   ActivatedAbility (..),
@@ -216,7 +216,7 @@ sorceryCastMeta =
 lensedThis :: (IsZone zone, IsObjectType a) => ObjectId -> ZO zone (OT1 a)
 lensedThis = ZO singZone . O1 . idToObject
 
-castSpell :: forall m. Monad m => Object 'OTPlayer -> CastSpell -> Magic 'Private 'RW m Legality
+castSpell :: forall m. Monad m => Object 'OTPlayer -> Play OTSpell -> Magic 'Private 'RW m Legality
 castSpell oCaster = logCall 'castSpell \case
   CastSpell zoSpell -> goSpell zoSpell
  where
@@ -294,7 +294,7 @@ castSpellCard oCaster card = logCall 'castSpellCard case card of
     let zoSpell = toZO0 @ 'ZStack spellId
 
         goElectFacet :: Elect 'Pre (CardFacet ot) ot -> Magic 'Private 'RW m Legality
-        goElectFacet = fmap maybeToLegality . performElections andM zoSpell goFacet
+        goElectFacet = fmap maybeToLegality . performElections zoSpell goFacet
 
         goFacet :: CardFacet ot -> Magic 'Private 'RW m Legality'
         goFacet facet = case facet of
@@ -333,7 +333,7 @@ castSpellCard oCaster card = logCall 'castSpellCard case card of
 -- TODO: Generalize for TriggeredAbility as well. Prolly make an AbilityMeta type that is analogous to CastMeta.
 -- NOTE: A TriggeredAbility is basically the same as an ActivatedAbility that the game activates automatically.
 -- TODO: This needs to validate ActivateAbilityReqs
-activateAbility :: forall m. Monad m => Object 'OTPlayer -> ActivateAbility -> Magic 'Private 'RW m Legality
+activateAbility :: forall m. Monad m => Object 'OTPlayer -> Play OTActivatedAbility -> Magic 'Private 'RW m Legality
 activateAbility oPlayer = logCall 'activateAbility \case
   ActivateAbility someActivated -> case someActivated of
     SomeActivatedAbility zoThis withThisActivated -> do
@@ -376,7 +376,7 @@ activateAbility oPlayer = logCall 'activateAbility \case
             goElectActivated :: Elect 'Pre (ActivatedAbility zone ot) ot -> Magic 'Private 'RW m Legality
             goElectActivated =
               logCall' "goElectedActivated" $
-                fmap maybeToLegality . performElections andM zoAbility goActivated
+                fmap maybeToLegality . performElections zoAbility goActivated
 
             goActivated :: ActivatedAbility zone ot -> Magic 'Private 'RW m Legality'
             goActivated activated = logCall' "goActivated" do

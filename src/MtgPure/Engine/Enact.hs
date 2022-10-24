@@ -33,12 +33,12 @@ import safe Control.Monad.Trans (lift)
 import safe Control.Monad.Util (untilJust)
 import safe qualified Data.List as List
 import safe MtgPure.Engine.Fwd.Api (
+  allPlayers,
   caseOf,
   findPermanent,
   findPlayer,
   getPermanent,
   getPlayer,
-  getPlayers,
   pushHandCard,
   removeLibraryCard,
   setPermanent,
@@ -112,7 +112,7 @@ dealDamage' _oSource oVictim (forceVars -> Damage damage) = logCall 'dealDamage'
       case permanentPlaneswalker perm of
         Nothing -> pure ()
         Just () -> undefined
-  oPlayers <- fromPublicRO getPlayers
+  oPlayers <- fromPublicRO allPlayers
   M.forM_ oPlayers \oPlayer -> case getObjectId oVictim == getObjectId oPlayer of
     False -> pure ()
     True -> do

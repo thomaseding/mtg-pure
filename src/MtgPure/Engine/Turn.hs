@@ -34,6 +34,9 @@ import safe qualified Data.Map.Strict as Map
 import safe qualified Data.Stream as Stream
 import safe Data.Void (Void)
 import safe MtgPure.Engine.Fwd.Api (
+  allControlledPermanentsOf,
+  allPlayers,
+  eachLogged_,
   enact,
   gainPriority,
   getActivePlayer,
@@ -42,10 +45,9 @@ import safe MtgPure.Engine.Fwd.Api (
   getPlayer,
   setPermanent,
   setPlayer,
-  withEachControlledPermanent_,
-  withEachPlayer_,
  )
 import safe MtgPure.Engine.Monad (
+  fromPublic,
   fromPublicRO,
   fromRO,
   get,
@@ -70,7 +72,8 @@ import safe MtgPure.Model.ZoneObject.Convert (oToZO1)
 startGame :: Monad m => Magic 'Private 'RW m Void
 startGame = logCall 'startGame do
   determineStartingPlayer -- (103.1)
-  withEachPlayer_ $ enact . ShuffleLibrary . oToZO1 -- (103.2)
+  ps <- fromPublicRO allPlayers
+  eachLogged_ ps $ enact . ShuffleLibrary . oToZO1 -- (103.2)
   pure () -- (103.3) See `mkPlayer`
   drawStartingHands -- (103.4)
   pure () -- (103.5) TODO: leylines and such
@@ -104,7 +107,8 @@ determineStartingPlayer = logCall 'determineStartingPlayer do
 -- (103.4)
 drawStartingHands :: Monad m => Magic 'Private 'RW m ()
 drawStartingHands = logCall 'drawStartingHands do
-  withEachPlayer_ drawStartingHand
+  ps <- fromPublic $ fromRO allPlayers
+  eachLogged_ ps drawStartingHand
 
 drawStartingHand :: Monad m => Object 'OTPlayer -> Magic 'Private 'RW m ()
 drawStartingHand oPlayer = logCall 'drawStartingHand do
@@ -151,9 +155,13 @@ untapStep = do
       do
         player <- fromRO $ getPlayer oPlayer
         setPlayer oPlayer player{playerLandsPlayedThisTurn = 0}
-      withEachControlledPermanent_ oPlayer togglePermanentPhase -- (502.1)
+      do
+        zos <- fromPublicRO $ allControlledPermanentsOf oPlayer
+        eachLogged_ zos togglePermanentPhase -- (502.1)
       pure () -- (502.2) TODO: day/night
-      withEachControlledPermanent_ oPlayer (enact . Untap) -- (502.3) TODO: fine-grained untapping
+      do
+        zos <- fromPublicRO $ allControlledPermanentsOf oPlayer
+        eachLogged_ zos $ enact . Untap -- (502.3) TODO: fine-grained untapping
       pure () -- (502.4) Rule states that players can't get priority, so nothing to do here.
   upkeepStep
 

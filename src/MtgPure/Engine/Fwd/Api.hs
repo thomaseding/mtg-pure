@@ -1,14 +1,17 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE Safe #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskellQuotes #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
@@ -21,8 +24,20 @@
 {-# HLINT ignore "Redundant pure" #-}
 
 module MtgPure.Engine.Fwd.Api (
+  Api (..),
+  ApiCont (..),
+  run,
+  runCont,
+  rewindIllegal,
+  eachLogged,
+  eachLogged_,
+  --
+  activatedAbilitiesOf,
+  allControlledPermanentsOf,
+  allPermanents,
+  allPlayers,
+  allZOActivatedAbilities,
   allZOs,
-  activateAbility,
   askActivateAbility,
   askCastSpell,
   askPlayLand,
@@ -35,16 +50,12 @@ module MtgPure.Engine.Fwd.Api (
   findPermanent,
   findPlayer,
   gainPriority,
-  getActivatedAbilities,
   getActivePlayer,
   getAlivePlayerCount,
-  getAllActivatedAbilities,
   getAPNAP,
   getHasPriority,
   getPermanent,
-  getPermanents,
   getPlayer,
-  getPlayers,
   getPlayerWithPriority,
   modifyPlayer,
   newObjectId,
@@ -56,22 +67,20 @@ module MtgPure.Engine.Fwd.Api (
   removeHandCard,
   removeLibraryCard,
   resolveTopOfStack,
-  rewindIllegal,
   satisfies,
   setPermanent,
   setPlayer,
   startGame,
-  withEachControlledPermanent_,
-  withEachPermanent,
-  withEachPermanent_,
-  withEachPlayer_,
   zosSatisfying,
 ) where
 
 import safe Control.Monad.Access (IsReadWrite, ReadWrite (..), Visibility (..))
 import safe Control.Monad.Trans (lift)
 import safe Control.Monad.Util (AndLike)
+import safe qualified Data.Foldable as F
+import safe Data.Kind (Type)
 import safe qualified Data.Stream as Stream
+import safe qualified Data.Traversable as T
 import safe Data.Void (Void)
 import safe MtgPure.Engine.Fwd.Type (Fwd' (..))
 import safe MtgPure.Engine.Legality (Legality)
@@ -81,8 +90,7 @@ import safe MtgPure.Engine.Monad (
   internalFromPrivate,
  )
 import safe MtgPure.Engine.Prompt (
-  ActivateAbility,
-  CastSpell,
+  Play,
   PlayerCount (..),
   SomeActivatedAbility,
  )
@@ -91,11 +99,12 @@ import safe MtgPure.Engine.State (
   GameState (..),
   Magic,
   MagicCont,
+  logCall,
  )
 import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.Object (OT0, Object, ObjectType (..))
 import safe MtgPure.Model.ObjectId (ObjectId)
-import safe MtgPure.Model.ObjectType.Kind (OTCard, OTPermanent)
+import safe MtgPure.Model.ObjectType.Kind (OTCard, OTPermanent, OTSpell)
 import safe MtgPure.Model.Permanent (Permanent)
 import safe MtgPure.Model.Player (Player)
 import safe MtgPure.Model.Recursive (
@@ -127,13 +136,116 @@ fwd2 go a b = do
   fwd <- getFwd
   go fwd a b
 
-fwd4 :: (IsReadWrite rw, Monad m) => (Fwd m -> (a -> b -> c -> d -> Magic v rw m z)) -> a -> b -> c -> d -> Magic v rw m z
-fwd4 go a b c d = do
+fwd3 :: (IsReadWrite rw, Monad m) => (Fwd m -> (a -> b -> c -> Magic v rw m z)) -> a -> b -> c -> Magic v rw m z
+fwd3 go a b c = do
   fwd <- getFwd
-  go fwd a b c d
+  go fwd a b c
 
-activateAbility :: forall m. Monad m => Object 'OTPlayer -> ActivateAbility -> Magic 'Private 'RW m Legality
-activateAbility = fwd2 fwd_activateAbility
+data Api (m :: Type -> Type) (v :: Visibility) (rw :: ReadWrite) (ret :: Type) :: Type where
+  ActivatedAbilitiesOf :: IsZO zone ot => ZO zone ot -> Api m 'Private 'RO [SomeActivatedAbility zone ot]
+  ActivePlayer :: Api m 'Public 'RO (Object 'OTPlayer)
+  AlivePlayerCount :: Api m 'Public 'RO PlayerCount
+  AllPermanents :: Api m 'Public 'RO [ZO 'ZBattlefield OTPermanent]
+  AllPlayers :: Api m 'Public 'RO [Object 'OTPlayer]
+  AllZOActivatedAbilities :: IsZO zone ot => Api m 'Private 'RO [SomeActivatedAbility zone ot]
+  AllZOs :: IsZO zone ot => Api m 'Private 'RO [ZO zone ot]
+  CaseOf :: (x -> Api m 'Private 'RW a) -> Case x -> Api m 'Private 'RW a
+  ControllerOf :: IsZO zone ot => ZO zone ot -> Api m 'Private 'RO (Object 'OTPlayer)
+  Enact :: Effect 'OneShot -> Api m 'Private 'RW ()
+  FindHandCard :: Object 'OTPlayer -> ZO 'ZHand OTCard -> Api m 'Private 'RW (Maybe AnyCard)
+  FindLibraryCard :: Object 'OTPlayer -> ZO 'ZLibrary OTCard -> Api m 'Private 'RW (Maybe AnyCard)
+  FindPermanent :: ZO 'ZBattlefield OTPermanent -> Api m 'Private 'RO (Maybe Permanent)
+  FindPlayer :: Object 'OTPlayer -> Api m 'Private 'RO (Maybe Player)
+  GainPriority :: Object 'OTPlayer -> Api m 'Private 'RW ()
+  GetAPNAP :: Api m v 'RO (Stream.Stream (Object 'OTPlayer))
+  GetPermanent :: ZO 'ZBattlefield OTPermanent -> Api m 'Private 'RO Permanent
+  GetPlayer :: Object 'OTPlayer -> Api m 'Private 'RO Player
+  HasPriority :: Object 'OTPlayer -> Api m 'Public 'RO Bool
+  ModifyPlayer :: Object 'OTPlayer -> (Player -> Player) -> Api m 'Private 'RW ()
+  NewObjectId :: Api m 'Private 'RW ObjectId
+  Pay :: Object 'OTPlayer -> Cost ot -> Api m 'Private 'RW Legality
+  PerformElections :: AndLike (Maybe ret) => ZO 'ZStack OT0 -> (el -> Api m 'Private 'RW (Maybe ret)) -> Elect p el ot -> Api m 'Private 'RW (Maybe ret)
+  PerformStateBasedActions :: Api m 'Private 'RW ()
+  Play :: Object 'OTPlayer -> Play ot -> Api m 'Private 'RW Legality
+  PlayerWithPriority :: Api m 'Public 'RO (Maybe (Object 'OTPlayer))
+  PushHandCard :: Object 'OTPlayer -> AnyCard -> Api m 'Private 'RW (ZO 'ZHand OTCard)
+  PushLibraryCard :: Object 'OTPlayer -> AnyCard -> Api m 'Private 'RW (ZO 'ZLibrary OTCard)
+  RemoveHandCard :: Object 'OTPlayer -> ZO 'ZHand OTCard -> Api m 'Private 'RW (Maybe AnyCard)
+  RemoveLibraryCard :: Object 'OTPlayer -> ZO 'ZLibrary OTCard -> Api m 'Private 'RW (Maybe AnyCard)
+  ResolveTopOfStack :: Api m 'Private 'RW ()
+  Satisfies :: IsZO zone ot => ZO zone ot -> Requirement zone ot -> Api m 'Private 'RO Bool
+  SetPermanent :: ZO 'ZBattlefield OTPermanent -> Maybe Permanent -> Api m 'Private 'RW ()
+  SetPlayer :: Object 'OTPlayer -> Player -> Api m 'Private 'RW ()
+  StartGame :: Api m 'Private 'RW Void
+  ZOsSatisfying :: IsZO zone ot => Requirement zone ot -> Api m 'Private 'RO [ZO zone ot]
+
+data ApiCont (v :: Visibility) (rw :: ReadWrite) (y :: Type) (z :: Type) :: Type where
+  AskActivateAbility :: Object 'OTPlayer -> ApiCont 'Private 'RW () ()
+  AskCastSpell :: Object 'OTPlayer -> ApiCont 'Private 'RW () ()
+  AskPlayLand :: Object 'OTPlayer -> ApiCont 'Private 'RW () ()
+
+run :: Monad m => Api m v rw z -> Magic v rw m z
+run = \case
+  ActivatedAbilitiesOf a -> activatedAbilitiesOf a
+  ActivePlayer -> getActivePlayer
+  AlivePlayerCount -> getAlivePlayerCount
+  AllPermanents -> allPermanents
+  AllPlayers -> allPlayers
+  AllZOActivatedAbilities -> allZOActivatedAbilities
+  AllZOs -> allZOs
+  CaseOf a b -> caseOf (run . a) b
+  ControllerOf a -> controllerOf a
+  Enact a -> enact a
+  FindHandCard a b -> findHandCard a b
+  FindLibraryCard a b -> findLibraryCard a b
+  FindPermanent a -> findPermanent a
+  FindPlayer a -> findPlayer a
+  GainPriority a -> gainPriority a
+  GetAPNAP -> getAPNAP
+  GetPermanent a -> getPermanent a
+  GetPlayer a -> getPlayer a
+  HasPriority a -> getHasPriority a
+  ModifyPlayer o f -> do p <- fromRO $ getPlayer o; setPlayer o $ f p
+  NewObjectId -> newObjectId
+  Pay a b -> pay a b
+  PerformElections a b c -> performElections a (run . b) c
+  PerformStateBasedActions -> performStateBasedActions
+  Play a b -> play a b
+  PlayerWithPriority -> getPlayerWithPriority
+  PushHandCard a b -> pushHandCard a b
+  PushLibraryCard a b -> pushLibraryCard a b
+  RemoveHandCard a b -> removeHandCard a b
+  RemoveLibraryCard a b -> removeLibraryCard a b
+  ResolveTopOfStack -> resolveTopOfStack
+  Satisfies a b -> satisfies a b
+  SetPermanent a b -> setPermanent a b
+  SetPlayer a b -> setPlayer a b
+  StartGame -> startGame
+  ZOsSatisfying a -> zosSatisfying a
+
+runCont :: Monad m => ApiCont v rw y z -> MagicCont v rw m y z
+runCont = \case
+  AskActivateAbility p -> do
+    fwd <- lift getFwd
+    fwd_askActivateAbility fwd p
+  AskCastSpell p -> do
+    fwd <- lift getFwd
+    fwd_askCastSpell fwd p
+  AskPlayLand p -> do
+    fwd <- lift getFwd
+    fwd_askPlayLand fwd p
+
+-- generalize?: e.g. (Maybe x) or (Legality, a) (Bool, a)
+rewindIllegal :: Monad m => Magic 'Private 'RW m Legality -> Magic 'Private 'RW m Bool
+rewindIllegal = fwd1 fwd_rewindIllegal
+
+eachLogged :: (IsReadWrite rw, Monad m) => [a] -> (a -> Magic v rw m z) -> Magic v rw m [z]
+eachLogged f = logCall 'eachLogged . T.for f
+
+eachLogged_ :: (IsReadWrite rw, Monad m) => [a] -> (a -> Magic v rw m ()) -> Magic v rw m ()
+eachLogged_ f = logCall 'eachLogged_ . F.for_ f
+
+----------------------------------------
 
 askActivateAbility :: Monad m => Object 'OTPlayer -> MagicCont 'Private 'RW m () ()
 askActivateAbility p = do
@@ -150,13 +262,30 @@ askPlayLand p = do
   fwd <- lift getFwd
   fwd_askPlayLand fwd p
 
+----------------------------------------
+
+allZOActivatedAbilities :: (IsZO zone ot, Monad m) => Magic 'Private 'RO m [SomeActivatedAbility zone ot]
+allZOActivatedAbilities = fwd0 fwd_allZOActivatedAbilities
+
+allControlledPermanentsOf ::
+  Monad m =>
+  Object 'OTPlayer ->
+  Magic 'Public 'RO m [ZO 'ZBattlefield OTPermanent]
+allControlledPermanentsOf = fwd1 fwd_allControlledPermanentsOf
+
+allPermanents :: Monad m => Magic 'Public 'RO m [ZO 'ZBattlefield OTPermanent]
+allPermanents = fwd0 fwd_allPermanents
+
+allPlayers :: Monad m => Magic 'Public 'RO m [Object 'OTPlayer]
+allPlayers = fwd0 fwd_allPlayers
+
 allZOs :: (IsZO zone ot, Monad m) => Magic 'Private 'RO m [ZO zone ot]
 allZOs = fwd0 fwd_allZOs
 
 caseOf :: Monad m => (x -> Magic 'Private 'RW m a) -> Case x -> Magic 'Private 'RW m a
 caseOf = fwd2 fwd_caseOf
 
-castSpell :: forall m. Monad m => Object 'OTPlayer -> CastSpell -> Magic 'Private 'RW m Legality
+castSpell :: forall m. Monad m => Object 'OTPlayer -> Play OTSpell -> Magic 'Private 'RW m Legality
 castSpell = fwd2 fwd_castSpell
 
 controllerOf :: (IsZO zone ot, Monad m) => ZO zone ot -> Magic 'Private 'RO m (Object 'OTPlayer)
@@ -180,17 +309,14 @@ findPlayer = fwd1 fwd_findPlayer
 gainPriority :: Monad m => Object 'OTPlayer -> Magic 'Private 'RW m ()
 gainPriority = fwd1 fwd_gainPriority
 
-getActivatedAbilities :: (IsZO zone ot, Monad m) => ZO zone ot -> Magic 'Private 'RO m [SomeActivatedAbility zone ot]
-getActivatedAbilities = fwd1 fwd_getActivatedAbilities
+activatedAbilitiesOf :: (IsZO zone ot, Monad m) => ZO zone ot -> Magic 'Private 'RO m [SomeActivatedAbility zone ot]
+activatedAbilitiesOf = fwd1 fwd_activatedAbilitiesOf
 
 getActivePlayer :: Monad m => Magic 'Public 'RO m (Object 'OTPlayer)
 getActivePlayer = fwd0 fwd_getActivePlayer
 
 getAlivePlayerCount :: Monad m => Magic 'Public 'RO m PlayerCount
 getAlivePlayerCount = fwd0 fwd_getAlivePlayerCount
-
-getAllActivatedAbilities :: (IsZO zone ot, Monad m) => Magic 'Private 'RO m [SomeActivatedAbility zone ot]
-getAllActivatedAbilities = fwd0 fwd_getAllActivatedAbilities
 
 getAPNAP :: Monad m => Magic v 'RO m (Stream.Stream (Object 'OTPlayer))
 getAPNAP = fwd0 fwd_getAPNAP
@@ -201,14 +327,8 @@ getHasPriority = fwd1 fwd_getHasPriority
 getPermanent :: Monad m => ZO 'ZBattlefield OTPermanent -> Magic 'Private 'RO m Permanent
 getPermanent = fwd1 fwd_getPermanent
 
-getPermanents :: Monad m => Magic 'Public 'RO m [ZO 'ZBattlefield OTPermanent]
-getPermanents = fwd0 fwd_getPermanents
-
 getPlayer :: Monad m => Object 'OTPlayer -> Magic 'Private 'RO m Player
 getPlayer = fwd1 fwd_getPlayer
-
-getPlayers :: Monad m => Magic 'Public 'RO m [Object 'OTPlayer]
-getPlayers = fwd0 fwd_getPlayers
 
 getPlayerWithPriority :: Monad m => Magic 'Public 'RO m (Maybe (Object 'OTPlayer))
 getPlayerWithPriority = fwd0 fwd_getPlayerWithPriority
@@ -227,15 +347,17 @@ pay = fwd2 fwd_pay
 performElections ::
   forall ot m p el x.
   (Monad m, AndLike (Maybe x)) =>
-  ([Magic 'Private 'RW m (Maybe x)] -> Magic 'Private 'RW m (Maybe x)) ->
   ZO 'ZStack OT0 ->
   (el -> Magic 'Private 'RW m (Maybe x)) ->
   Elect p el ot ->
   Magic 'Private 'RW m (Maybe x)
-performElections = fwd4 fwd_performElections
+performElections = fwd3 fwd_performElections
 
 performStateBasedActions :: Monad m => Magic 'Private 'RW m ()
 performStateBasedActions = fwd0 fwd_performStateBasedActions
+
+play :: Monad m => Object 'OTPlayer -> Play ot -> Magic 'Private 'RW m Legality
+play = fwd2 fwd_play
 
 pushHandCard :: Monad m => Object 'OTPlayer -> AnyCard -> Magic 'Private 'RW m (ZO 'ZHand OTCard)
 pushHandCard = fwd2 fwd_pushHandCard
@@ -252,9 +374,6 @@ removeLibraryCard = fwd2 fwd_removeLibraryCard
 resolveTopOfStack :: Monad m => Magic 'Private 'RW m ()
 resolveTopOfStack = fwd0 fwd_resolveTopOfStack
 
-rewindIllegal :: Monad m => Magic 'Private 'RW m Legality -> Magic 'Private 'RW m Bool
-rewindIllegal = fwd1 fwd_rewindIllegal
-
 satisfies :: (Monad m, IsZO zone ot) => ZO zone ot -> Requirement zone ot -> Magic 'Private 'RO m Bool
 satisfies = fwd2 fwd_satisfies
 
@@ -266,31 +385,6 @@ setPlayer = fwd2 fwd_setPlayer
 
 startGame :: Monad m => Magic 'Private 'RW m Void
 startGame = fwd0 fwd_startGame
-
-withEachControlledPermanent_ ::
-  (IsReadWrite rw, Monad m) =>
-  Object 'OTPlayer ->
-  (ZO 'ZBattlefield OTPermanent -> Magic v rw m ()) ->
-  Magic v rw m ()
-withEachControlledPermanent_ = fwd2 fwd_withEachControlledPermanent_
-
-withEachPermanent ::
-  (IsReadWrite rw, Monad m) =>
-  (ZO 'ZBattlefield OTPermanent -> Magic v rw m a) ->
-  Magic v rw m [a]
-withEachPermanent = fwd1 fwd_withEachPermanent
-
-withEachPermanent_ ::
-  (IsReadWrite rw, Monad m) =>
-  (ZO 'ZBattlefield OTPermanent -> Magic v rw m ()) ->
-  Magic v rw m ()
-withEachPermanent_ = fwd1 fwd_withEachPermanent_
-
-withEachPlayer_ ::
-  (IsReadWrite rw, Monad m) =>
-  (Object 'OTPlayer -> Magic v rw m ()) ->
-  Magic v rw m ()
-withEachPlayer_ = fwd1 fwd_withEachPlayer_
 
 zosSatisfying :: (Monad m, IsZO zone ot) => Requirement zone ot -> Magic 'Private 'RO m [ZO zone ot]
 zosSatisfying = fwd1 fwd_zosSatisfying

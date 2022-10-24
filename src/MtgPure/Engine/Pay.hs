@@ -32,6 +32,7 @@ import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
 import safe Control.Monad.Trans (lift)
 import safe Control.Monad.Util (untilJust)
 import safe Data.Functor ((<&>))
+import safe Data.List.NonEmpty (NonEmpty (..))
 import safe Data.Monoid (First (..))
 import safe MtgPure.Engine.Fwd.Api (
   enact,
@@ -123,10 +124,10 @@ payTapCost oPlayer req = logCall 'payTapCost do
     [] -> do
       lift $ promptDebugMessage prompt $ show ("payTapCost no zos satisfying" :: String)
       pure Illegal
-    zos -> do
+    zos@(zosHead : zosTail) -> do
       zo <- lift $
         untilJust do
-          zo <- promptPickZO prompt oPlayer zos
+          zo <- promptPickZO prompt oPlayer $ zosHead :| zosTail
           pure case zo `elem` zos of
             False -> Nothing
             True -> Just zo

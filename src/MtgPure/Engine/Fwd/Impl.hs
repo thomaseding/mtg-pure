@@ -23,6 +23,7 @@ module MtgPure.Engine.Fwd.Impl (
   fwdImpl,
 ) where
 
+import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
 import safe MtgPure.Engine.ActivateCast (
   activateAbility,
   askActivateAbility,
@@ -31,20 +32,21 @@ import safe MtgPure.Engine.ActivateCast (
  )
 import safe MtgPure.Engine.CaseOf (caseOf)
 import safe MtgPure.Engine.Core (
+  allControlledPermanentsOf,
+  allPermanents,
+  allPlayers,
+  allZOActivatedAbilities,
   allZOs,
   findHandCard,
   findLibraryCard,
   findPermanent,
   findPlayer,
   getAPNAP,
-  getActivatedAbilities,
+  getActivatedAbilitiesOf,
   getActivePlayer,
   getAlivePlayerCount,
-  getAllActivatedAbilities,
   getPermanent,
-  getPermanents,
   getPlayer,
-  getPlayers,
   newObjectId,
   pushHandCard,
   pushLibraryCard,
@@ -53,32 +55,35 @@ import safe MtgPure.Engine.Core (
   rewindIllegal,
   setPermanent,
   setPlayer,
-  withEachControlledPermanent_,
-  withEachPermanent,
-  withEachPermanent_,
-  withEachPlayer_,
  )
 import safe MtgPure.Engine.Enact (enact)
 import safe MtgPure.Engine.Fwd.Type (Fwd' (..))
+import safe MtgPure.Engine.Legality (Legality)
 import safe MtgPure.Engine.Pay (pay)
 import safe MtgPure.Engine.PerformElections (controllerOf, performElections)
-import safe MtgPure.Engine.PlayLand (askPlayLand)
+import safe MtgPure.Engine.PlayLand (askPlayLand, playLand)
 import safe MtgPure.Engine.Priority (
   gainPriority,
   getHasPriority,
   getPlayerWithPriority,
  )
+import safe MtgPure.Engine.Prompt (Play (..))
 import safe MtgPure.Engine.Resolve (resolveTopOfStack)
 import safe MtgPure.Engine.Satisfies (satisfies, zosSatisfying)
-import safe MtgPure.Engine.State (Fwd)
+import safe MtgPure.Engine.State (Fwd, Magic)
 import safe MtgPure.Engine.StateBasedActions (performStateBasedActions)
 import safe MtgPure.Engine.Turn (startGame)
+import safe MtgPure.Model.Object (Object, ObjectType (..))
 
 fwdImpl :: Monad m => Fwd m
 fwdImpl =
   Fwd
     { fwd_ = ()
-    , fwd_activateAbility = activateAbility
+    , fwd_activatedAbilitiesOf = getActivatedAbilitiesOf
+    , fwd_allControlledPermanentsOf = allControlledPermanentsOf
+    , fwd_allPermanents = allPermanents
+    , fwd_allPlayers = allPlayers
+    , fwd_allZOActivatedAbilities = allZOActivatedAbilities
     , fwd_allZOs = allZOs
     , fwd_askActivateAbility = askActivateAbility
     , fwd_askCastSpell = askCastSpell
@@ -92,19 +97,16 @@ fwdImpl =
     , fwd_findPermanent = findPermanent
     , fwd_findPlayer = findPlayer
     , fwd_gainPriority = gainPriority
-    , fwd_getActivatedAbilities = getActivatedAbilities
     , fwd_getActivePlayer = getActivePlayer
     , fwd_getAlivePlayerCount = getAlivePlayerCount
-    , fwd_getAllActivatedAbilities = getAllActivatedAbilities
     , fwd_getAPNAP = getAPNAP
     , fwd_getHasPriority = getHasPriority
     , fwd_getPermanent = getPermanent
-    , fwd_getPermanents = getPermanents
     , fwd_getPlayer = getPlayer
-    , fwd_getPlayers = getPlayers
     , fwd_getPlayerWithPriority = getPlayerWithPriority
     , fwd_newObjectId = newObjectId
     , fwd_pay = pay
+    , fwd_play = play
     , fwd_performElections = performElections
     , fwd_performStateBasedActions = performStateBasedActions
     , fwd_pushHandCard = pushHandCard
@@ -117,9 +119,11 @@ fwdImpl =
     , fwd_setPermanent = setPermanent
     , fwd_setPlayer = setPlayer
     , fwd_startGame = startGame
-    , fwd_withEachControlledPermanent_ = withEachControlledPermanent_
-    , fwd_withEachPermanent = withEachPermanent
-    , fwd_withEachPermanent_ = withEachPermanent_
-    , fwd_withEachPlayer_ = withEachPlayer_
     , fwd_zosSatisfying = zosSatisfying
     }
+
+play :: Monad m => Object 'OTPlayer -> Play ot -> Magic 'Private 'RW m Legality
+play oPlayer x = case x of
+  ActivateAbility{} -> activateAbility oPlayer x
+  CastSpell{} -> castSpell oPlayer x
+  PlayLand{} -> playLand oPlayer x

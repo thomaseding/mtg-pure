@@ -24,9 +24,7 @@ module MtgPure.Engine.Prompt (
   PlayerIndex (..),
   CardCount (..),
   CardIndex (..),
-  ActivateAbility (..),
-  CastSpell (..),
-  PlayLand (..),
+  Play (..),
   SpecialAction (..),
   InvalidPlayLand (..),
   InvalidCastSpell (..),
@@ -37,11 +35,12 @@ module MtgPure.Engine.Prompt (
 ) where
 
 import safe Data.Kind (Type)
+import safe Data.List.NonEmpty (NonEmpty)
 import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.Object (Object, ObjectType (..))
 import safe MtgPure.Model.ObjectId (GetObjectId (..), ObjectId (..))
 import safe MtgPure.Model.ObjectN (ObjectN)
-import safe MtgPure.Model.ObjectType.Kind (OTLand, OTPermanent, OTSpell)
+import safe MtgPure.Model.ObjectType.Kind (OTActivatedAbility, OTLand, OTPermanent, OTSpell)
 import safe MtgPure.Model.Recursive (AnyCard, WithThisActivated)
 import safe MtgPure.Model.Recursive.Ord ()
 import safe MtgPure.Model.Recursive.Show ()
@@ -103,15 +102,15 @@ data Prompt' (opaqueGameState :: (Type -> Type) -> Type) (m :: Type -> Type) = P
   , exceptionInvalidPlayLand :: opaqueGameState m -> Object 'OTPlayer -> InvalidPlayLand -> m ()
   , exceptionInvalidShuffle :: CardCount -> [CardIndex] -> m ()
   , exceptionInvalidStartingPlayer :: PlayerCount -> PlayerIndex -> m ()
-  , promptActivateAbility :: opaqueGameState m -> Object 'OTPlayer -> m (Maybe ActivateAbility)
-  , promptCastSpell :: opaqueGameState m -> Object 'OTPlayer -> m (Maybe CastSpell)
+  , promptActivateAbility :: opaqueGameState m -> Object 'OTPlayer -> m (Maybe (Play OTActivatedAbility))
+  , promptCastSpell :: opaqueGameState m -> Object 'OTPlayer -> m (Maybe (Play OTSpell))
   , promptDebugMessage :: String -> m ()
   , promptGetStartingPlayer :: PlayerCount -> m PlayerIndex
   , promptLogCallPop :: opaqueGameState m -> CallFrameInfo -> m ()
   , promptLogCallPush :: opaqueGameState m -> CallFrameInfo -> m ()
   , promptPerformMulligan :: Object 'OTPlayer -> [AnyCard] -> m Bool -- TODO: Encode limited game state about players' mulligan states and [Serum Powder].
-  , promptPickZO :: forall zone ot. IsZO zone ot => Object 'OTPlayer -> [ZO zone ot] -> m (ZO zone ot) -- TODO: NonEmpty; TODO: Add a discriminant for UX
-  , promptPlayLand :: opaqueGameState m -> Object 'OTPlayer -> m (Maybe PlayLand)
+  , promptPickZO :: forall zone ot. IsZO zone ot => Object 'OTPlayer -> NonEmpty (ZO zone ot) -> m (ZO zone ot)
+  , promptPlayLand :: opaqueGameState m -> Object 'OTPlayer -> m (Maybe (Play OTLand))
   , promptShuffle :: CardCount -> Object 'OTPlayer -> m [CardIndex]
   }
 
@@ -123,21 +122,17 @@ data SomeActivatedAbility (zone :: Zone) (ot :: Type) :: Type where
     } ->
     SomeActivatedAbility zone ot
 
-data ActivateAbility :: Type where
-  ActivateAbility :: IsZO zone ot => SomeActivatedAbility zone ot -> ActivateAbility
-
--- NB (305.9): Lands + other types can never be cast
--- Unfortuantely OTSpell intersects OTArtifactLand. Such is life.
--- Prolly don't want to model `SomeButNot allowed disallowed`? Maybe `SomeButNot` is okay for Runtime,
--- though it's probably unnecessary for Authoring (thankfully).
-data CastSpell :: Type where
-  CastSpell :: IsZO zone OTSpell => ZO zone OTSpell -> CastSpell
-
-data PlayLand :: Type where
-  PlayLand :: IsZO zone OTLand => ZO zone OTLand -> PlayLand
+data Play (ot :: Type) :: Type where
+  ActivateAbility :: IsZO zone ot => SomeActivatedAbility zone ot -> Play OTActivatedAbility
+  -- NB (305.9): Lands + other types can never be cast
+  -- Unfortuantely OTSpell intersects OTArtifactLand. Such is life.
+  -- Prolly don't want to model `SomeButNot allowed disallowed`? Maybe `SomeButNot` is okay for Runtime,
+  -- though it's probably unnecessary for Authoring (thankfully).
+  CastSpell :: IsZO zone OTSpell => ZO zone OTSpell -> Play OTSpell
+  PlayLand :: IsZO zone OTLand => ZO zone OTLand -> Play OTLand
 
 data SpecialAction :: Type where
-  SA_PlayLand :: PlayLand -> SpecialAction
+  SA_PlayLand :: Play OTLand -> SpecialAction
 
 data InvalidPlayLand :: Type where
   PlayLand_AtMaxLands :: IsZone zone => ZO zone OTLand -> InvalidPlayLand

@@ -34,6 +34,7 @@ import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
 import safe Control.Monad.Trans (lift)
 import safe Control.Monad.Util (AndLike, untilJust)
 import safe Data.ConsIndex (consIndex)
+import safe Data.List.NonEmpty (NonEmpty (..))
 import safe qualified Data.Map.Strict as Map
 import safe MtgPure.Engine.Fwd.Api (
   caseOf,
@@ -81,12 +82,11 @@ import safe MtgPure.Model.ZoneObject.Convert (
 performElections ::
   forall ot m p el x.
   (Monad m, AndLike (Maybe x)) =>
-  ([Magic 'Private 'RW m (Maybe x)] -> Magic 'Private 'RW m (Maybe x)) ->
   ZO 'ZStack OT0 ->
   (el -> Magic 'Private 'RW m (Maybe x)) ->
   Elect p el ot ->
   Magic 'Private 'RW m (Maybe x)
-performElections seqM zoStack goTerm = logCall 'performElections \case
+performElections zoStack goTerm = logCall 'performElections \case
   All masked -> electAll goRec masked
   Choose oPlayer thisToElect -> electA Choose' zoStack goRec oPlayer thisToElect
   ControllerOf zo cont -> electControllerOf goRec zo cont
@@ -100,7 +100,7 @@ performElections seqM zoStack goTerm = logCall 'performElections \case
   VariableInt cont -> electVariableInt goRec cont
   x -> error $ show $ consIndex x
  where
-  goRec = performElections seqM zoStack goTerm
+  goRec = performElections zoStack goTerm
 
 electVariableInt ::
   Monad m =>
@@ -197,10 +197,10 @@ electA sel zoStack goElect oPlayer = logCall 'electA \case
     prompt <- fromRO $ gets magicPrompt
     fromRO (zosSatisfying (RAnd reqs)) >>= \case
       [] -> pure Nothing
-      zos -> do
+      zos@(zosHead : zosTail) -> do
         zo <- lift $
           untilJust do
-            zo <- promptPickZO prompt (zo1ToO oPlayer) zos
+            zo <- promptPickZO prompt (zo1ToO oPlayer) $ zosHead :| zosTail
             pure case zo `elem` zos of
               False -> Nothing
               True -> Just zo

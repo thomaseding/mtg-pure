@@ -26,6 +26,7 @@
 
 module MtgPure.Engine.PlayLand (
   askPlayLand,
+  playLand,
 ) where
 
 import safe Control.Exception (assert)
@@ -56,7 +57,7 @@ import safe MtgPure.Engine.Monad (
 import safe MtgPure.Engine.Prompt (
   InternalLogicError (..),
   InvalidPlayLand (..),
-  PlayLand (..),
+  Play (..),
   Prompt' (..),
  )
 import safe MtgPure.Engine.State (
@@ -142,7 +143,7 @@ askPlayLand oPlayer = logCall 'askPlayLand do
             False -> runMagicCont (either id id) $ askPlayLand oPlayer
     _ -> pure ()
 
-playLand :: Monad m => Object 'OTPlayer -> PlayLand -> Magic 'Private 'RW m Legality
+playLand :: Monad m => Object 'OTPlayer -> Play OTLand -> Magic 'Private 'RW m Legality
 playLand oPlayer (PlayLand oLand) = logCall 'playLand do
   playLandZO oPlayer oLand
 

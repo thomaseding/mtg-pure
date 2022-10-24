@@ -28,7 +28,6 @@ module MtgPure.Engine.Resolve (
 
 import safe qualified Control.Monad as M
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
-import safe Control.Monad.Util (AndLike (..))
 import safe qualified Data.Map.Strict as Map
 import safe Data.Void (Void)
 import safe MtgPure.Engine.Fwd.Api (
@@ -91,7 +90,7 @@ resolveElected ::
   Magic 'Private 'RW m ()
 resolveElected zoStack elected = logCall 'resolveElected do
   let goElectEffect :: Elect 'Post (Effect 'OneShot) ot -> Magic 'Private 'RW m ()
-      goElectEffect = M.void . performElections andM zoStack goEffect
+      goElectEffect = M.void . performElections zoStack goEffect
 
       goEffect :: Effect 'OneShot -> Magic 'Private 'RW m (Maybe Void)
       goEffect = fmap (const Nothing) . enact
