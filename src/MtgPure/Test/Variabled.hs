@@ -4,8 +4,10 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes #-}
@@ -25,54 +27,68 @@
 
 module MtgPure.Test.Variabled (
   VarID,
-  VarLike (..),
-  IsVar,
-  varLike,
   Var (..),
-  Monad (..),
+  DString,
+  Env (..),
+  EnvM,
+  EnvRead,
+  EnvShow (..),
+  RS,
+  runEnvM,
 ) where
 
-import safe Data.Kind (Type)
-import safe Prelude (Int, Read, Show)
+import safe qualified Control.Monad.State.Strict as State
+import safe qualified Data.DList as DList
+import safe Data.Kind (Constraint, Type)
 
 type VarID = Int
 
 data Var s (a :: Type) :: Type where
   Lit :: a -> Var s a
   Var :: VarID -> Var s a
-  deriving (Show) -- XXX: remove this instance
 
--- This can support NatList of Var I think, but certainly not [] of Var
-data VarLike s (a :: Type) :: Type where
-  --Var0 :: VarLike ()
-  --Var2 :: (Var a, Var b) -> VarLike (a, b)
-  --Var3 :: (Var a, Var b, Var c) -> VarLike (a, b, c)
-  --Var4 :: (Var a, Var b, Var c, Var d) -> VarLike (a, b, c, d)
-  --Var5 :: (Var a, Var b, Var c, Var d, Var e) -> VarLike (a, b, c, d, e)
-  Var1 :: Var s a -> VarLike s a
+type DString = DList.DList Char
 
-class (Read a, Show a, Read va, Show va) => IsVar' s va a | va -> s a where
-  varLike :: va -> VarLike s a
+data Env = Env
+  { env_ :: ()
+  , envVarID :: VarID
+  }
 
--- instance Bindable' () () where
---   bindable () = BindVar0
+type EnvM = State.State Env
 
-instance (Read a, Show a, Read (Var s a), Show (Var s a)) => IsVar' s (Var s a) a where
-  varLike = Var1
+runEnvM :: EnvM DString -> String
+runEnvM = DList.toList . (`State.evalState` st)
+ where
+  st =
+    Env
+      { env_ = ()
+      , envVarID = 0
+      }
 
--- instance Bindable' (Var a, Var b) (a, b) where
---   bindable = BindVar2
+type RS a = (EnvRead a, EnvShow a)
 
-type IsVar = IsVar'
+type EnvRead (a :: Type) = () :: Constraint -- TODO
 
-class Monad (s :: Type) (m :: Type -> Type -> Type) where
-  pure :: a -> m s a
+class EnvShow (a :: Type) where
+  envShow :: a -> EnvM DString
 
-  infixl 1 >>=
-  (>>=) :: (Read a, Show a) => m s (Var s a) -> (Var s a -> m s b) -> m s b
+instance EnvShow () where
+  envShow _ = pure "()"
 
-  infixl 1 >>
-  (>>) :: (Read a, Show a) => m s a -> m s b -> m s b
+instance EnvShow Int where
+  envShow = pure . DList.fromList . show
 
-  return :: a -> m s a
-  return = pure
+instance EnvShow String where
+  envShow = pure . DList.fromList . show
+
+instance EnvShow a => EnvShow (Var s a) where
+  envShow = \case
+    Lit a -> do
+      sa <- envShow a
+      pure $ "Lit (" <> sa <> ")"
+    Var i -> do
+      let sVar = DList.fromList $ "v" ++ show i
+      pure sVar
+
+instance EnvShow a => Show (Var s a) where
+  show = runEnvM . envShow
