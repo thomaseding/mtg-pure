@@ -30,15 +30,15 @@ module MtgPure.Engine.Satisfies (
 
 import safe qualified Control.Monad as M
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
-import Control.Monad.Trans (lift)
+import safe Control.Monad.Trans (lift)
 import safe Data.Functor ((<&>))
 import safe MtgPure.Engine.Fwd.Api (
   allZOs,
   findPermanent,
   getPermanent,
  )
-import MtgPure.Engine.Monad (fromRO, gets)
-import MtgPure.Engine.Prompt (Prompt' (..), ShowZO (..))
+import safe MtgPure.Engine.Monad (fromRO, gets)
+import safe MtgPure.Engine.Prompt (Prompt' (..), ShowZO (..))
 import safe MtgPure.Engine.State (GameState (..), Magic, logCall)
 import safe MtgPure.Model.Land (Land (landTypes))
 import safe MtgPure.Model.LandType (LandType)

@@ -204,7 +204,7 @@ mkBasicLand mTy = Card name $
           Just ty -> [BasicLand ty]
           Nothing -> []
       , land_abilities =
-          -- TODO: Synthesize basic land mana abilities inside the engine instead of explicitly making.
+          -- TODO: Synthesize basic land mana abilities inside the engine instead of explicitly making here.
           [ Activated @ 'ZBattlefield $
               thisObject \this ->
                 controllerOf this \you ->

@@ -107,7 +107,15 @@ import safe MtgPure.Model.Permanent (Permanent)
 import safe MtgPure.Model.PhaseStep (PhaseStep (..))
 import safe MtgPure.Model.Player (Player (..))
 import safe MtgPure.Model.PrePost (PrePost (..))
-import safe MtgPure.Model.Recursive (AnyCard, Card, CardFacet, Cost, Effect, Elect, Requirement)
+import safe MtgPure.Model.Recursive (
+  AnyCard,
+  Card,
+  CardFacet,
+  Cost,
+  Effect,
+  Elect,
+  Requirement,
+ )
 import safe MtgPure.Model.Sideboard (Sideboard)
 import safe MtgPure.Model.Stack (Stack (..))
 import safe MtgPure.Model.Zone (Zone (..))
