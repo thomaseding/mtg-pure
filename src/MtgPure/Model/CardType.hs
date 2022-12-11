@@ -1,13 +1,3 @@
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE Safe #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeFamilyDependencies #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Avoid lambda" #-}
@@ -21,7 +11,7 @@ module MtgPure.Model.CardType (
 
 import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
-import MtgPure.Model.Object (ObjectType (..))
+import safe MtgPure.Model.ObjectType (ObjectType (..))
 
 data CardType :: Type where
   CTArtifact :: CardType

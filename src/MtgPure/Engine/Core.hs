@@ -1,18 +1,3 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE BlockArguments #-}
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE Safe #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskellQuotes #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilyDependencies #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Avoid lambda" #-}
@@ -76,7 +61,6 @@ import safe MtgPure.Engine.Monad (
 import safe MtgPure.Engine.Prompt (
   InternalLogicError (..),
   PlayerCount (..),
-  ShowZO (..),
   SomeActivatedAbility (..),
  )
 import safe MtgPure.Engine.State (
@@ -87,9 +71,16 @@ import safe MtgPure.Engine.State (
  )
 import safe MtgPure.Model.Hand (Hand (..))
 import safe MtgPure.Model.IsCardList (pushCard)
+import safe MtgPure.Model.IsObjectType (IsObjectType (..))
 import safe MtgPure.Model.Library (Library (..))
-import safe MtgPure.Model.Object (IsObjectType (..), Object, ObjectType (..))
-import safe MtgPure.Model.ObjectId (GetObjectId (..), ObjectId (..))
+import safe MtgPure.Model.Object (Object)
+import safe MtgPure.Model.ObjectId (
+  ObjectId (..),
+  UntypedObject (..),
+  getObjectId,
+  pattern DefaultObjectDiscriminant,
+ )
+import safe MtgPure.Model.ObjectType (ObjectType (..))
 import safe MtgPure.Model.ObjectType.Index (IndexOT (..))
 import safe MtgPure.Model.ObjectType.Kind (OTCard, OTPermanent)
 import safe MtgPure.Model.Permanent (Permanent (..))
@@ -167,7 +158,7 @@ allZOs = logCall 'allZOs case singZone @zone of
                     Maybe (ZO 'ZBattlefield ot)
                   goPerm viewPerm = case viewPerm perm of
                     Nothing -> Nothing
-                    Just{} -> castOToZO $ idToObject @a $ getObjectId oPerm
+                    Just{} -> castOToZO $ idToObject @a $ UntypedObject DefaultObjectDiscriminant $ getObjectId oPerm
               pure case ot of
                 OTArtifact -> goPerm @ 'OTArtifact permanentArtifact
                 OTCreature -> goPerm @ 'OTCreature permanentCreature
@@ -304,7 +295,7 @@ findPermanent zoPerm = logCall 'findPermanent $ gets $ Map.lookup (toZO0 zoPerm)
 getPermanent :: Monad m => ZO 'ZBattlefield OTPermanent -> Magic 'Private 'RO m Permanent
 getPermanent zoPerm = logCall 'getPermanent $ do
   findPermanent zoPerm <&> \case
-    Nothing -> error $ show $ InvalidPermanent $ ShowZO zoPerm
+    Nothing -> error $ show $ InvalidPermanent zoPerm
     Just perm -> perm
 
 setPermanent :: Monad m => ZO 'ZBattlefield OTPermanent -> Maybe Permanent -> Magic 'Private 'RW m ()

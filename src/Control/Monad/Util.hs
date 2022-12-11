@@ -1,32 +1,29 @@
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE Safe #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeFamilyDependencies #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
 module Control.Monad.Util (
+  UntilJust (..),
   untilJust,
   AndLike (..),
 ) where
 
+import safe Data.Data (Typeable)
 import safe Data.Void (Void)
 import safe MtgPure.Engine.Legality (Legality (..), fromLegality, toLegality)
 
-untilJust :: Monad m => m (Maybe a) -> m a
-untilJust m =
-  m >>= \case
+data UntilJust = FirstTry | Retried
+  deriving (Eq, Ord, Show, Typeable)
+
+untilJust :: Monad m => (UntilJust -> m (Maybe a)) -> m a
+untilJust = untilJust' FirstTry
+
+untilJust' :: Monad m => UntilJust -> (UntilJust -> m (Maybe a)) -> m a
+untilJust' uj fm =
+  fm uj >>= \case
     Just x -> pure x
-    Nothing -> untilJust m
+    Nothing -> untilJust' Retried fm
 
 class AndLike a where
   andM :: Monad m => [m a] -> m a

@@ -1,18 +1,3 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE BlockArguments #-}
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE Safe #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskellQuotes #-}
-{-# LANGUAGE TypeFamilyDependencies #-}
-{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Avoid lambda" #-}
@@ -58,8 +43,9 @@ import safe MtgPure.Model.IsCardList (IsCardList (..), popCard)
 import safe MtgPure.Model.Life (Life (..))
 import safe MtgPure.Model.Mana (Snow (..))
 import safe MtgPure.Model.ManaPool (CompleteManaPool (..), ManaPool (..))
-import safe MtgPure.Model.Object (Object, ObjectType (..))
-import safe MtgPure.Model.ObjectId (GetObjectId (..))
+import safe MtgPure.Model.Object (Object)
+import safe MtgPure.Model.ObjectId (getObjectId)
+import safe MtgPure.Model.ObjectType (ObjectType (..))
 import safe MtgPure.Model.ObjectType.Kind (OTDamageSource, OTPermanent)
 import safe MtgPure.Model.Permanent (Permanent (..), Tapped (..))
 import safe MtgPure.Model.Player (Player (..))
@@ -128,7 +114,7 @@ shuffleLibrary' oPlayer = logCall 'shuffleLibrary' do
       count = length library
       ordered = [0 .. count - 1]
   ordering <- lift $
-    untilJust do
+    untilJust \_ -> do
       ordering <- promptShuffle prompt (CardCount count) oPlayer
       case List.sort (map unCardIndex ordering) == ordered of
         True -> pure $ Just ordering

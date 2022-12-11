@@ -1,18 +1,3 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE BlockArguments #-}
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE Safe #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskellQuotes #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilyDependencies #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Avoid lambda" #-}
@@ -38,11 +23,12 @@ import safe MtgPure.Engine.Fwd.Api (
   getPermanent,
  )
 import safe MtgPure.Engine.Monad (fromRO, gets)
-import safe MtgPure.Engine.Prompt (Prompt' (..), ShowZO (..))
+import safe MtgPure.Engine.Orphans ()
+import safe MtgPure.Engine.Prompt (Prompt' (..))
 import safe MtgPure.Engine.State (GameState (..), Magic, logCall)
 import safe MtgPure.Model.Land (Land (landTypes))
 import safe MtgPure.Model.LandType (LandType)
-import safe MtgPure.Model.ObjectId (GetObjectId (..))
+import safe MtgPure.Model.ObjectId (getObjectId)
 import safe MtgPure.Model.ObjectType.Kind (OTLand)
 import safe MtgPure.Model.Permanent (Permanent (..), Tapped (..))
 import safe MtgPure.Model.Recursive (Requirement (..))
@@ -96,14 +82,14 @@ controlledBy' zo zoPlayer = logCall 'controlledBy' case singZone @zone of
         Nothing -> getObjectId zo == getObjectId zoPlayer -- TODO: [Mindslaver]
         Just perm -> getObjectId (permanentController perm) == getObjectId zoPlayer
     prompt <- gets magicPrompt
-    lift $ promptDebugMessage prompt $ show (ShowZO zo, ShowZO zoPlayer, result)
+    lift $ promptDebugMessage prompt $ show (zo, zoPlayer, result)
     pure result
   _ -> undefined
 
 is' :: (Monad m, IsZO zone ot) => ZO zone ot -> ZO zone ot -> Magic 'Private 'RO m Bool
 is' zo zo' = logCall 'is' do
   prompt <- fromRO $ gets magicPrompt
-  lift $ promptDebugMessage prompt $ show (ShowZO zo, ShowZO zo')
+  lift $ promptDebugMessage prompt $ show (zo, zo')
   pure $ getObjectId zo == getObjectId zo' -- XXX: Also check for ObjectId liveliness?
 
 not' ::

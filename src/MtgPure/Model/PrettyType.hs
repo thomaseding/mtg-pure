@@ -1,17 +1,3 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE MultiWayIf #-}
-{-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE Safe #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilyDependencies #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Avoid lambda" #-}
@@ -37,8 +23,10 @@ import safe Data.Inst (
  )
 import safe Data.Proxy (Proxy (Proxy))
 import safe Data.Typeable (TypeRep, Typeable, typeRep)
-import safe MtgPure.Model.Object (
+import safe MtgPure.Model.IsObjectType (
   IsObjectType (litObjectType),
+ )
+import safe MtgPure.Model.OTN (
   OT1,
   OT10,
   OT11,
@@ -51,6 +39,8 @@ import safe MtgPure.Model.Object (
   OT7,
   OT8,
   OT9,
+ )
+import safe MtgPure.Model.ObjectType (
   ObjectType (..),
  )
 import safe MtgPure.Model.ObjectType.Kind (

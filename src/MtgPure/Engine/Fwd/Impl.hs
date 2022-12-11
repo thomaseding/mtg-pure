@@ -1,14 +1,3 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE Safe #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeFamilyDependencies #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Avoid lambda" #-}
@@ -73,7 +62,8 @@ import safe MtgPure.Engine.Satisfies (satisfies, zosSatisfying)
 import safe MtgPure.Engine.State (Fwd, Magic)
 import safe MtgPure.Engine.StateBasedActions (performStateBasedActions)
 import safe MtgPure.Engine.Turn (startGame)
-import safe MtgPure.Model.Object (Object, ObjectType (..))
+import safe MtgPure.Model.Object (Object)
+import safe MtgPure.Model.ObjectType (ObjectType (..))
 
 fwdImpl :: Monad m => Fwd m
 fwdImpl =

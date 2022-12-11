@@ -1,15 +1,3 @@
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE Safe #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeFamilyDependencies #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Avoid lambda" #-}
@@ -57,8 +45,10 @@ import safe Data.Inst (
   Inst8,
   Inst9,
  )
-import safe MtgPure.Model.Object (
+import safe MtgPure.Model.IsObjectType (
   IsObjectType (idToObject),
+ )
+import safe MtgPure.Model.OTN (
   OT0,
   OT1,
   OT10,
@@ -72,6 +62,8 @@ import safe MtgPure.Model.Object (
   OT7,
   OT8,
   OT9,
+ )
+import safe MtgPure.Model.Object (
   Object (..),
  )
 import safe MtgPure.Model.ObjectN (ObjectN (..))
@@ -152,4 +144,4 @@ class Inst12 IsObjectType a b c d e f g h i j k l => ToObject12 ot a b c d e f g
 
 instance IsObjectType a => ToObject1 OT0 a where
   toObject1 = \case
-    O0 i -> O1 $ idToObject i
+    O0 o -> O1 $ idToObject o

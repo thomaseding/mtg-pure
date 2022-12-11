@@ -1,5 +1,3 @@
-{-# LANGUAGE Safe #-}
-
 module MtgPure.Engine (
   module MtgPure.Engine.Fwd.Api,
   module MtgPure.Engine.Legality,

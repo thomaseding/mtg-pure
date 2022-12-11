@@ -1,18 +1,3 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE BlockArguments #-}
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE Safe #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskellQuotes #-}
-{-# LANGUAGE TypeFamilyDependencies #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Avoid lambda" #-}
@@ -51,10 +36,14 @@ import safe MtgPure.Engine.State (
 import safe MtgPure.Model.Deck (Deck (..))
 import safe MtgPure.Model.Graveyard (Graveyard (..))
 import safe MtgPure.Model.Hand (Hand (..))
+import safe MtgPure.Model.IsObjectType (IsObjectType (..))
 import safe MtgPure.Model.Library (Library (..))
 import safe MtgPure.Model.Life (Life (..))
-import safe MtgPure.Model.Object (IsObjectType (..), pattern DefaultObjectDiscriminant)
-import safe MtgPure.Model.ObjectId (ObjectId (..))
+import safe MtgPure.Model.ObjectId (
+  ObjectId (..),
+  UntypedObject (..),
+  pattern DefaultObjectDiscriminant,
+ )
 import safe MtgPure.Model.PhaseStep (PhaseStep (..))
 import safe MtgPure.Model.Player (Player (..))
 import safe MtgPure.Model.Sideboard (Sideboard (..))
@@ -118,7 +107,7 @@ mkGameState fwd input = case playerObjects of
         , magicLibraryCards = mempty
         , magicManaBurn = False
         , magicNextObjectDiscriminant = (1 +) <$> DefaultObjectDiscriminant
-        , magicNextObjectId = ObjectId playerCount
+        , magicNextObjectId = ObjectId $ 1 + playerCount
         , magicPermanents = mempty
         , magicPhaseStep = PSBeginningPhase UntapStep
         , magicPlayers = playerMap
@@ -136,5 +125,5 @@ mkGameState fwd input = case playerObjects of
   decks = gameInput_decks input
   playerCount = length decks
   players = map (mkPlayer format) decks
-  playerObjects = map (idToObject . ObjectId) [0 .. playerCount - 1]
+  playerObjects = map (idToObject . UntypedObject DefaultObjectDiscriminant . ObjectId) [1 .. playerCount] -- NOTE: reserving 0 for "null" for UI choice
   playerMap = Map.fromList $ zip playerObjects players

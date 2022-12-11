@@ -1,19 +1,3 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE BlockArguments #-}
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE Safe #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskellQuotes #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilyDependencies #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Avoid lambda" #-}
@@ -42,6 +26,7 @@ import safe MtgPure.Engine.Fwd.Api (
   zosSatisfying,
  )
 import safe MtgPure.Engine.Monad (fromRO, gets, modify)
+import safe MtgPure.Engine.Orphans ()
 import safe MtgPure.Engine.Prompt (InternalLogicError (..), Prompt' (..))
 import safe MtgPure.Engine.State (
   AnyRequirement (..),
@@ -50,13 +35,14 @@ import safe MtgPure.Engine.State (
   StackEntry (..),
   logCall,
  )
-import safe MtgPure.Model.Object (
-  OT0,
-  Object (..),
-  ObjectType (..),
+import safe MtgPure.Model.OTN (OT0)
+import safe MtgPure.Model.Object (Object (..))
+import safe MtgPure.Model.ObjectId (
+  UntypedObject (..),
+  getObjectId,
   pattern DefaultObjectDiscriminant,
  )
-import safe MtgPure.Model.ObjectId (GetObjectId (..))
+import safe MtgPure.Model.ObjectType (ObjectType (..))
 import safe MtgPure.Model.ObjectType.Kind (OTAny)
 import safe MtgPure.Model.Permanent (Permanent (..))
 import safe MtgPure.Model.PrePost (PrePost (..))
@@ -150,8 +136,8 @@ newTarget zoStack zoTargetBase req = logCall 'newTarget do
   let (ZO sZone objN) = zoTargetBase
       go :: Object a -> Object a
       go = \case
-        Object wit oldDisc i ->
-          assert (oldDisc == DefaultObjectDiscriminant) $ Object wit discr i
+        Object wit (UntypedObject oldDisc i) ->
+          assert (oldDisc == DefaultObjectDiscriminant) $ Object wit (UntypedObject discr i)
       objN' = mapObjectN go objN
       zoTarget = ZO sZone objN'
   modify $ \st ->
@@ -199,7 +185,7 @@ electA sel zoStack goElect oPlayer = logCall 'electA \case
       [] -> pure Nothing
       zos@(zosHead : zosTail) -> do
         zo <- lift $
-          untilJust do
+          untilJust \_ -> do
             zo <- promptPickZO prompt (zo1ToO oPlayer) $ zosHead :| zosTail
             pure case zo `elem` zos of
               False -> Nothing

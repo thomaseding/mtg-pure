@@ -1,15 +1,3 @@
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE Safe #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeFamilyDependencies #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Avoid lambda" #-}
@@ -49,8 +37,8 @@ import safe Data.Inst (
  )
 import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
-import safe MtgPure.Model.Object (
-  IsObjectType,
+import safe MtgPure.Model.IsObjectType (IsObjectType)
+import safe MtgPure.Model.OTN (
   OT0,
   OT1,
   OT10,
@@ -64,9 +52,11 @@ import safe MtgPure.Model.Object (
   OT7,
   OT8,
   OT9,
+ )
+import safe MtgPure.Model.Object (
   Object,
  )
-import safe MtgPure.Model.ObjectId (ObjectId)
+import safe MtgPure.Model.ObjectId (UntypedObject)
 
 type ON0 = ObjectN OT0
 
@@ -99,7 +89,7 @@ type ON12 a b c d e f g h i j k l = ObjectN (OT12 a b c d e f g h i j k l)
 -- Supply factory constructors for authoring
 
 data ObjectN (ot :: Type) :: Type where
-  O0 :: ObjectId -> ObjectN OT0
+  O0 :: UntypedObject -> ObjectN OT0
   --
   O1 :: Inst1 IsObjectType a => Object a -> ObjectN (OT1 a)
   --

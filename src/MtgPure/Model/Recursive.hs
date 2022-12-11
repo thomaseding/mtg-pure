@@ -1,20 +1,3 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveFunctor #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE Safe #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilyDependencies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Avoid lambda" #-}
@@ -78,19 +61,20 @@ import safe Data.Nat (Fin, IsNat, NatList)
 import safe Data.Proxy (Proxy (..))
 import safe Data.Typeable (Typeable, typeRep)
 import safe MtgPure.Model.ArtifactType (ArtifactType)
-import safe MtgPure.Model.CardName (CardName)
+import safe MtgPure.Model.CardName (CardName, HasCardName (..))
 import safe MtgPure.Model.CardSet (CardSet)
 import safe MtgPure.Model.Color (Color)
 import safe MtgPure.Model.Colors (Colors)
 import safe MtgPure.Model.CreatureType (CreatureType)
 import safe MtgPure.Model.Damage (Damage)
 import safe MtgPure.Model.EffectType (EffectType (..))
+import safe MtgPure.Model.IsObjectType (IsObjectType)
 import safe MtgPure.Model.LandType (LandType)
 import safe MtgPure.Model.Loyalty (Loyalty)
 import safe MtgPure.Model.Mana (Snow (..))
 import safe MtgPure.Model.ManaCost (ManaCost)
 import safe MtgPure.Model.ManaPool (ManaPool)
-import safe MtgPure.Model.Object (IsObjectType, OT1, OT2, OT3, OT4, OT5, OT6)
+import safe MtgPure.Model.OTN (OT1, OT2, OT3, OT4, OT5, OT6)
 import safe MtgPure.Model.ObjectType.Any (WAny)
 import safe MtgPure.Model.ObjectType.Card (WCard)
 import safe MtgPure.Model.ObjectType.Kind (
@@ -266,6 +250,10 @@ instance ConsIndex AnyCard where
   consIndex = \case
     AnyCard{} -> 1
 
+instance HasCardName AnyCard where
+  getCardName = \case
+    AnyCard card -> getCardName card
+
 ----------------------------------------
 
 data AnyToken :: Type where
@@ -275,6 +263,10 @@ data AnyToken :: Type where
 instance ConsIndex AnyToken where
   consIndex = \case
     AnyToken{} -> 1
+
+instance HasCardName AnyToken where
+  getCardName = \case
+    AnyToken token -> getCardName token
 
 ----------------------------------------
 
@@ -287,6 +279,10 @@ data Card (ot :: Type) :: Type where
 instance ConsIndex (Card ot) where
   consIndex = \case
     Card{} -> 1
+
+instance HasCardName (Card ot) where
+  getCardName = \case
+    Card name _ -> name
 
 ----------------------------------------
 
@@ -917,6 +913,10 @@ data Token (ot :: Type) :: Type where
 instance ConsIndex (Token ot) where
   consIndex = \case
     Token{} -> 1
+
+instance HasCardName (Token ot) where
+  getCardName = \case
+    Token _ card -> getCardName card
 
 ----------------------------------------
 

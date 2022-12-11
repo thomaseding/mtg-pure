@@ -1,18 +1,3 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE BlockArguments #-}
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE ExtendedDefaultRules #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE Safe #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
@@ -32,10 +17,10 @@ import safe Data.Typeable (Typeable, cast, typeRep)
 import safe MtgPure.Model.Color (Color (..))
 import safe MtgPure.Model.Colors (Colors)
 import safe MtgPure.Model.Damage (Damage)
+import safe MtgPure.Model.IsObjectType (IsObjectType (..))
 import safe MtgPure.Model.ManaCost (ManaCost)
 import safe MtgPure.Model.ManaPool (ManaPool)
-import safe MtgPure.Model.Object (
-  IsObjectType (..),
+import safe MtgPure.Model.OTN (
   OT0,
   OT1,
   OT2,
@@ -43,11 +28,16 @@ import safe MtgPure.Model.Object (
   OT4,
   OT5,
   OT6,
-  Object (..),
-  ObjectType (..),
  )
-import safe MtgPure.Model.ObjectId (GetObjectId (getObjectId), ObjectId (..))
+import safe MtgPure.Model.Object (Object (..))
+import safe MtgPure.Model.ObjectId (
+  ObjectId (..),
+  UntypedObject (..),
+  getObjectId,
+  pattern DefaultObjectDiscriminant,
+ )
 import safe MtgPure.Model.ObjectN (ObjectN (..))
+import safe MtgPure.Model.ObjectType (ObjectType (..))
 import safe MtgPure.Model.ObjectType.Any (WAny (..))
 import safe MtgPure.Model.ObjectType.Card (WCard (..))
 import safe MtgPure.Model.ObjectType.Index (IndexOT (indexOT))
@@ -298,7 +288,7 @@ newObject :: forall a. IsObjectType a => EnvM (Object a)
 newObject = do
   raw <- State.gets nextRawId
   let i = ObjectId raw
-      obj = idToObject @a i
+      obj = idToObject @a $ UntypedObject DefaultObjectDiscriminant i
   State.modify' \st -> st{nextRawId = nextRawId st + 1}
   pure obj
 

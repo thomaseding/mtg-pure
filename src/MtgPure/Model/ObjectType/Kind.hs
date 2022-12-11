@@ -1,13 +1,3 @@
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE Safe #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeFamilyDependencies #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Avoid lambda" #-}
@@ -49,8 +39,8 @@ module MtgPure.Model.ObjectType.Kind (
   OTTriggeredAbility,
 ) where
 
-import safe MtgPure.Model.Object (
-  OT,
+import safe MtgPure.Model.OTN (OT)
+import safe MtgPure.Model.ObjectType (
   ObjectType (..),
  )
 

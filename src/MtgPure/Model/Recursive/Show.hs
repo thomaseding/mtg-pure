@@ -1,22 +1,3 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE BlockArguments #-}
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE ExtendedDefaultRules #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE MultiWayIf #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE Safe #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilyDependencies #-}
-{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
@@ -66,26 +47,29 @@ import safe MtgPure.Model.ColorlessMana (ColorlessMana (..))
 import safe MtgPure.Model.Colors (Colors (..))
 import safe MtgPure.Model.CreatureType (CreatureType)
 import safe MtgPure.Model.Damage (Damage, Damage' (..))
-import safe MtgPure.Model.Deck (Deck (..))
 import safe MtgPure.Model.GenericMana (GenericMana (..))
+import safe MtgPure.Model.IsObjectType (IsObjectType (..))
 import safe MtgPure.Model.LandType (LandType (..))
 import safe MtgPure.Model.Loyalty (Loyalty)
 import safe MtgPure.Model.Mana (Mana (..))
 import safe MtgPure.Model.ManaCost (ManaCost (..))
 import safe MtgPure.Model.ManaPool (CompleteManaPool (..), ManaPool (..))
 import safe MtgPure.Model.ManaSymbol (ManaSymbol (..))
-import safe MtgPure.Model.Object (
-  IsObjectType (..),
+import safe MtgPure.Model.OTN (
   OT1,
   OT2,
   OT3,
   OT4,
   OT5,
   OT6,
-  Object (..),
-  ObjectType (..),
  )
-import safe MtgPure.Model.ObjectId (GetObjectId (..), ObjectId (ObjectId))
+import safe MtgPure.Model.Object (Object (..))
+import safe MtgPure.Model.ObjectId (
+  ObjectId (ObjectId),
+  UntypedObject (..),
+  getObjectId,
+  pattern DefaultObjectDiscriminant,
+ )
 import safe MtgPure.Model.ObjectN (
   ON0,
   ON1,
@@ -102,6 +86,7 @@ import safe MtgPure.Model.ObjectN (
   ON9,
   ObjectN (..),
  )
+import safe MtgPure.Model.ObjectType (ObjectType (..))
 import safe MtgPure.Model.ObjectType.Any (WAny (..))
 import safe MtgPure.Model.ObjectType.Card (WCard (..))
 import safe MtgPure.Model.ObjectType.Kind (
@@ -154,7 +139,6 @@ import safe MtgPure.Model.Recursive (
   WithThisTriggered,
   YourCard (..),
  )
-import safe MtgPure.Model.Sideboard (Sideboard (Sideboard))
 import safe MtgPure.Model.TimePoint (TimePoint (..))
 import safe MtgPure.Model.Toughness (Toughness)
 import safe MtgPure.Model.Variable (
@@ -250,10 +234,6 @@ instance IsZO 'ZStack ot => Show (WithThisOneShot ot) where
 
 instance IsZO zone ot => Show (WithThisTriggered zone ot) where
   show = runEnvM defaultDepthLimit . showWithThis showTriggeredAbility "this"
-
-deriving instance Show Deck
-
-deriving instance Show Sideboard
 
 ----------------------------------------
 
@@ -414,7 +394,7 @@ getVarName :: Variable a -> Item
 getVarName = VariableItem . getVariableId
 
 getObjectName :: Object a -> EnvM Item
-getObjectName (Object _ _ i) = do
+getObjectName (Object _ (UntypedObject _ i)) = do
   gens <- State.gets objectGenerations
   case Map.lookup i gens of
     Nothing -> error "impossible"
@@ -426,7 +406,7 @@ newObject ::
   forall a. IsObjectType a => String -> EnvM (Object a, ObjectIdState)
 newObject name = do
   i@(ObjectId raw) <- State.gets nextObjectId
-  let obj = idToObject @a i
+  let obj = idToObject @a $ UntypedObject DefaultObjectDiscriminant i
   State.modify' \st ->
     st
       { nextObjectId = ObjectId $ raw + 1

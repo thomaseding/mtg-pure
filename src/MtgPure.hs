@@ -1,5 +1,3 @@
-{-# LANGUAGE Safe #-}
-
 -- ghci -hidir .output -odir .output -fobject-code -Wall -Werror -XDataKinds MtgPure
 
 module MtgPure (
@@ -24,4 +22,7 @@ import safe MtgPure.Engine hiding (
 import safe MtgPure.Model
 import safe MtgPure.Model.ToObjectN.CodeGen (codeGenToObjectN)
 import safe MtgPure.ModelCombinators
+import safe MtgPure.Test.Direct ()
 import safe MtgPure.Test.MountainShock (mainMountainShock)
+import safe MtgPure.Test.Variabled ()
+import safe MtgPure.Test.VariabledMonad ()

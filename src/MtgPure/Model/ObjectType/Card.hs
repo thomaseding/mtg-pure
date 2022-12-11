@@ -1,15 +1,3 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE Safe #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeFamilyDependencies #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Avoid lambda" #-}
@@ -27,14 +15,18 @@ module MtgPure.Model.ObjectType.Card (
 import safe Data.Inst (Inst2, Inst3)
 import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
-import safe MtgPure.Model.CardType (CardType (..), ObjectTypeToCardType, SCardType (..))
-import safe MtgPure.Model.Object (
-  IsObjectType,
+import safe MtgPure.Model.CardType (
+  CardType (..),
+  ObjectTypeToCardType,
+  SCardType (..),
+ )
+import safe MtgPure.Model.IsObjectType (IsObjectType)
+import safe MtgPure.Model.OTN (
   OT1,
   OT2,
   OT3,
-  ObjectType (..),
  )
+import safe MtgPure.Model.ObjectType (ObjectType (..))
 import safe MtgPure.Model.ObjectType.Kind (
   OTArtifact,
   OTCard,

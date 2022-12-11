@@ -1,14 +1,3 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE Safe #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeFamilyDependencies #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Avoid lambda" #-}
@@ -35,8 +24,10 @@ import safe MtgPure.Engine.Prompt (
   SomeActivatedAbility,
  )
 import safe MtgPure.Model.EffectType (EffectType (..))
-import safe MtgPure.Model.Object (OT0, Object, ObjectType (..))
+import safe MtgPure.Model.OTN (OT0)
+import safe MtgPure.Model.Object (Object)
 import safe MtgPure.Model.ObjectId (ObjectId)
+import safe MtgPure.Model.ObjectType (ObjectType (..))
 import safe MtgPure.Model.ObjectType.Kind (OTCard, OTPermanent, OTSpell)
 import safe MtgPure.Model.Permanent (Permanent)
 import safe MtgPure.Model.Player (Player)

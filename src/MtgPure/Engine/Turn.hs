@@ -1,16 +1,3 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE BlockArguments #-}
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE Safe #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskellQuotes #-}
-{-# LANGUAGE TypeFamilyDependencies #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Avoid lambda" #-}
@@ -57,7 +44,8 @@ import safe MtgPure.Engine.Monad (
  )
 import safe MtgPure.Engine.Prompt (PlayerCount (..), PlayerIndex (..), Prompt' (..))
 import safe MtgPure.Engine.State (GameState (..), Magic, MagicCont, logCall, runMagicCont)
-import safe MtgPure.Model.Object (Object, ObjectType (..))
+import safe MtgPure.Model.Object (Object)
+import safe MtgPure.Model.ObjectType (ObjectType (..))
 import safe MtgPure.Model.ObjectType.Kind (OTPermanent)
 import safe MtgPure.Model.Permanent (Permanent (..), Phased (..))
 import safe MtgPure.Model.PhaseStep (PhaseStep (..))
@@ -89,7 +77,7 @@ determineStartingPlayer = logCall 'determineStartingPlayer do
   let prompt = magicPrompt st
       playerCount = Map.size $ magicPlayers st
   startingIndex <- lift $
-    untilJust do
+    untilJust \_ -> do
       PlayerIndex playerIndex <- promptGetStartingPlayer prompt $ PlayerCount playerCount
       case playerIndex < playerCount of
         True -> pure $ Just playerIndex

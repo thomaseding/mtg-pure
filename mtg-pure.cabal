@@ -25,17 +25,39 @@ library
     exposed-modules:
         MtgPure
 
-    -- LANGUAGE extensions used by modules in this package.
-    other-extensions:
+    default-extensions:
+        AllowAmbiguousTypes,
+        BangPatterns,
+        BlockArguments,
         ConstraintKinds,
         DataKinds,
+        DefaultSignatures,
+        DeriveFunctor,
+        EmptyDataDecls,
+        FlexibleContexts,
         FlexibleInstances,
+        FunctionalDependencies,
         GADTs,
         LambdaCase,
+        MagicHash,
+        MultiParamTypeClasses,
+        MultiWayIf,
+        OverloadedStrings,
+        PatternSynonyms,
         PolyKinds,
+        QuantifiedConstraints,
         RankNTypes,
+        RecursiveDo,
+        Safe,
+        ScopedTypeVariables,
         StandaloneDeriving,
-        TypeFamilyDependencies
+        TemplateHaskellQuotes,
+        TypeApplications,
+        TypeFamilyDependencies,
+        ViewPatterns
+
+    other-extensions:
+        ExtendedDefaultRules
 
     build-depends:
        base ^>=4.14.3.0,

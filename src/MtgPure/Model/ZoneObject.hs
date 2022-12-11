@@ -1,16 +1,3 @@
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE Safe #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilyDependencies #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Avoid lambda" #-}
@@ -54,7 +41,7 @@ module MtgPure.Model.ZoneObject (
 import safe Data.ConsIndex (ConsIndex (..))
 import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
-import safe MtgPure.Model.Object (LitOT)
+import safe MtgPure.Model.LitOT (LitOT)
 import safe MtgPure.Model.ObjectId (GetObjectId (..))
 import safe MtgPure.Model.ObjectN (ObjectN (..))
 import safe MtgPure.Model.ObjectType.Index (IndexOT (..))
@@ -112,7 +99,7 @@ instance (IsZone zone, PrettyType ot) => PrettyType (ZO zone ot) where
       False -> ("", "")
 
 instance GetObjectId (ObjectN ot) => GetObjectId (ZO zone ot) where
-  getObjectId = getObjectId . zoToObjectN
+  getUntypedObject = getUntypedObject . zoToObjectN
 
 type IsOT (ot :: Type) =
   ( IndexOT ot

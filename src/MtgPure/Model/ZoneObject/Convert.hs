@@ -1,17 +1,3 @@
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE Safe #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilyDependencies #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Avoid lambda" #-}
@@ -54,10 +40,10 @@ import safe Data.Inst (
 import safe Data.Kind (Type)
 import safe Data.Monoid (First (..))
 import safe Data.Typeable (Typeable, cast)
-import safe MtgPure.Model.Object (
-  IsObjectType,
-  LitOT (..),
-  OT (..),
+import safe MtgPure.Model.IsObjectType (IsObjectType)
+import safe MtgPure.Model.LitOT (LitOT (..))
+import safe MtgPure.Model.OT (OT' (..))
+import safe MtgPure.Model.OTN (
   OT0,
   OT1,
   OT10,
@@ -71,13 +57,20 @@ import safe MtgPure.Model.Object (
   OT7,
   OT8,
   OT9,
-  Object (..),
-  ObjectType (..),
-  SObjectType (..),
+ )
+import safe MtgPure.Model.Object (Object (..))
+import safe MtgPure.Model.ObjectId (
+  GetObjectId (..),
+  ObjectId (..),
+  UntypedObject (..),
+  getObjectId,
   pattern DefaultObjectDiscriminant,
  )
-import safe MtgPure.Model.ObjectId (GetObjectId (..), ObjectId (..))
 import safe MtgPure.Model.ObjectN (ObjectN (..))
+import safe MtgPure.Model.ObjectType (
+  ObjectType (..),
+  SObjectType (..),
+ )
 import safe MtgPure.Model.ObjectType.Kind (OTCard, OTPermanent)
 import safe MtgPure.Model.Recursive.Ord ()
 import safe MtgPure.Model.ToObjectN.Classes (
@@ -106,7 +99,7 @@ class ToZO0 (zone :: Zone) (object :: Type) where
   toZO0 :: object -> ZO zone OT0
 
 instance IsZone zone => ToZO0 zone ObjectId where
-  toZO0 = toZone . O0
+  toZO0 = toZone . O0 . UntypedObject DefaultObjectDiscriminant
 
 instance IsZone zone => ToZO0 zone (Object a) where
   toZO0 = toZO0 . getObjectId
@@ -191,7 +184,9 @@ castOToZO o = toZone <$> objN
   objN :: Maybe (ObjectN ot)
   objN = unMaybeObjectN $
     mapOT @ot $ \case
-      OT0 -> MaybeObjectN $ Just $ O0 $ getObjectId o
+      OT0 -> MaybeObjectN $
+        Just $ O0 case o of
+          Object _ u -> u
       ot@OT1 ->
         let go :: forall a. Inst1 IsObjectType a => OT1 a -> MaybeObjectN (OT1 a)
             go _ = MaybeObjectN $ goCast $ O1 @a
@@ -274,7 +269,7 @@ asCard :: AsCard ot => ZO zone ot -> ZO zone OTCard
 asCard = toZO7
 
 zo0ToPermanent :: ZO 'ZBattlefield OT0 -> ZO 'ZBattlefield OTPermanent
-zo0ToPermanent = asPermanent . ZO SZBattlefield . O1 . Object SLand DefaultObjectDiscriminant . getObjectId
+zo0ToPermanent = asPermanent . ZO SZBattlefield . O1 . Object SLand . getUntypedObject
 
 zo0ToCard :: forall zone. IsZone zone => ZO zone OT0 -> ZO zone OTCard
-zo0ToCard = asCard . ZO (singZone @zone) . O1 . Object SLand DefaultObjectDiscriminant . getObjectId
+zo0ToCard = asCard . ZO (singZone @zone) . O1 . Object SLand . getUntypedObject

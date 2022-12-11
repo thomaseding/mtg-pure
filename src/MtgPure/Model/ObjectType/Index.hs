@@ -1,16 +1,3 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE Safe #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilyDependencies #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Avoid lambda" #-}
@@ -35,8 +22,8 @@ import Data.Inst (
   Inst9,
  )
 import safe Data.Typeable (Typeable)
-import safe MtgPure.Model.Object (
-  IsObjectType (..),
+import safe MtgPure.Model.IsObjectType (IsObjectType (..))
+import safe MtgPure.Model.OTN (
   OT0,
   OT1,
   OT10,
@@ -50,8 +37,8 @@ import safe MtgPure.Model.Object (
   OT7,
   OT8,
   OT9,
-  ObjectType,
  )
+import safe MtgPure.Model.ObjectType (ObjectType)
 
 idx :: forall ot. IsObjectType ot => ObjectType
 idx = litObjectType @ot

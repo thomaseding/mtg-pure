@@ -1,20 +1,3 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE BlockArguments #-}
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE Safe #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskellQuotes #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilyDependencies #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Avoid lambda" #-}
@@ -72,9 +55,17 @@ import safe MtgPure.Engine.State (
  )
 import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.IsCardList (containsCard)
-import safe MtgPure.Model.Object (IsObjectType (..), OT0, OT1, Object, ObjectType (..))
-import safe MtgPure.Model.ObjectId (GetObjectId (getObjectId), ObjectId)
+import safe MtgPure.Model.IsObjectType (IsObjectType (..))
+import safe MtgPure.Model.OTN (OT0, OT1)
+import safe MtgPure.Model.Object (Object)
+import safe MtgPure.Model.ObjectId (
+  ObjectId,
+  UntypedObject (..),
+  getObjectId,
+  pattern DefaultObjectDiscriminant,
+ )
 import safe MtgPure.Model.ObjectN (ObjectN (O1))
+import safe MtgPure.Model.ObjectType (ObjectType (..))
 import safe MtgPure.Model.ObjectType.Kind (
   OTActivatedAbility,
   OTInstant,
@@ -214,7 +205,7 @@ sorceryCastMeta =
     }
 
 lensedThis :: (IsZone zone, IsObjectType a) => ObjectId -> ZO zone (OT1 a)
-lensedThis = ZO singZone . O1 . idToObject
+lensedThis = ZO singZone . O1 . idToObject . UntypedObject DefaultObjectDiscriminant
 
 castSpell :: forall m. Monad m => Object 'OTPlayer -> Play OTSpell -> Magic 'Private 'RW m Legality
 castSpell oCaster = logCall 'castSpell \case
@@ -451,19 +442,19 @@ instance PayElected 'Activate ot where
   payElectedAndPutOnStack =
     logCall 'payElectedAndPutOnStack $
       payElectedAndPutOnStack' $
-        StackAbility . ZO SZStack . toObject2' . idToObject @ 'OTActivatedAbility
+        StackAbility . ZO SZStack . toObject2' . idToObject @ 'OTActivatedAbility . UntypedObject DefaultObjectDiscriminant
 
 instance PayElected 'Cast OTInstant where
   payElectedAndPutOnStack =
     logCall 'payElectedAndPutOnStack $
       payElectedAndPutOnStack' $
-        StackSpell . ZO SZStack . toObject6' . idToObject @ 'OTInstant
+        StackSpell . ZO SZStack . toObject6' . idToObject @ 'OTInstant . UntypedObject DefaultObjectDiscriminant
 
 instance PayElected 'Cast OTSorcery where
   payElectedAndPutOnStack =
     logCall 'payElectedAndPutOnStack $
       payElectedAndPutOnStack' $
-        StackSpell . ZO SZStack . toObject6' . idToObject @ 'OTSorcery
+        StackSpell . ZO SZStack . toObject6' . idToObject @ 'OTSorcery . UntypedObject DefaultObjectDiscriminant
 
 payElectedAndPutOnStack' ::
   forall ot m.

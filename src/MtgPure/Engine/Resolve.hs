@@ -1,17 +1,3 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE BlockArguments #-}
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE Safe #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskellQuotes #-}
-{-# LANGUAGE TypeFamilyDependencies #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Avoid lambda" #-}
@@ -37,6 +23,7 @@ import safe MtgPure.Engine.Fwd.Api (
   performElections,
  )
 import safe MtgPure.Engine.Monad (fromPublicRO, fromRO, get, gets, modify)
+import safe MtgPure.Engine.Orphans ()
 import safe MtgPure.Engine.Prompt (InternalLogicError (..))
 import safe MtgPure.Engine.State (
   AnyElected (..),
@@ -49,7 +36,7 @@ import safe MtgPure.Engine.State (
   logCall,
  )
 import safe MtgPure.Model.EffectType (EffectType (..))
-import safe MtgPure.Model.Object (OT0)
+import safe MtgPure.Model.OTN (OT0)
 import safe MtgPure.Model.PrePost (PrePost (..))
 import safe MtgPure.Model.Recursive (Effect (..), Elect (..))
 import safe MtgPure.Model.Stack (Stack (..), StackObject (..))

@@ -1,16 +1,3 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE BlockArguments #-}
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE Safe #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskellQuotes #-}
-{-# LANGUAGE TypeFamilyDependencies #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Avoid lambda" #-}
@@ -92,13 +79,12 @@ import safe MtgPure.Engine.Prompt (
 import safe MtgPure.Model.Deck (Deck (..))
 import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.Mulligan (Mulligan)
-import safe MtgPure.Model.Object (
-  OT0,
-  Object,
-  ObjectDiscriminant,
+import safe MtgPure.Model.OTN (OT0)
+import safe MtgPure.Model.Object (Object)
+import safe MtgPure.Model.ObjectId (ObjectDiscriminant, ObjectId (..))
+import safe MtgPure.Model.ObjectType (
   ObjectType (..),
  )
-import safe MtgPure.Model.ObjectId (ObjectId (..))
 import safe MtgPure.Model.ObjectType.Kind (
   OTInstant,
   OTSorcery,
@@ -116,6 +102,7 @@ import safe MtgPure.Model.Recursive (
   Elect,
   Requirement,
  )
+import safe MtgPure.Model.Recursive.Show ()
 import safe MtgPure.Model.Sideboard (Sideboard)
 import safe MtgPure.Model.Stack (Stack (..))
 import safe MtgPure.Model.Zone (Zone (..))
@@ -124,18 +111,25 @@ import safe MtgPure.Model.ZoneObject (IsZO, ZO)
 type Fwd m = Fwd' (GameResult m) (GameState m) m
 
 instance Show (Fwd m) where
-  show _ = "MtgPure.Engine.State.Fwd"
+  show _ = show ''Fwd
 
 type Prompt = Prompt' OpaqueGameState
+
+instance Show (Prompt m) where
+  show _ = show ''Prompt
 
 type TargetId = ObjectId
 
 data AnyRequirement :: Type where
   AnyRequirement :: IsZO zone ot => Requirement zone ot -> AnyRequirement
 
+deriving instance Show AnyRequirement
+
 data PendingReady (p :: PrePost) (el :: Type) (ot :: Type) where
   Pending :: {unPending :: Elect 'Post el ot} -> Pending el ot
   Ready :: {unReady :: el} -> Ready el ot
+
+deriving instance Show el => Show (PendingReady p el ot)
 
 type Pending = PendingReady 'Pre
 
@@ -220,13 +214,10 @@ data GameState (m :: Type -> Type) where
     GameState m
   deriving (Typeable)
 
-instance Show (GameState m) where
-  show _ = "MtgPure.Engine.State.GameState"
-
 newtype OpaqueGameState m = OpaqueGameState (GameState m)
 
 instance Show (OpaqueGameState m) where
-  show _ = "MtgPure.Engine.State.OpaqueGameState"
+  show _ = show ''OpaqueGameState
 
 data GameFormat
   = Vintage
@@ -244,7 +235,7 @@ data GameResult m = GameResult
   , gameWinners :: [PlayerIndex] -- 🏆🥇🏆
   , gameLosers :: [PlayerIndex] -- 👎👎👎
   }
-  deriving (Show, Typeable)
+  deriving (Typeable)
 
 type Magic v rw m = Magic' (GameResult m) (GameState m) v rw m
 
@@ -285,7 +276,7 @@ envLogCall =
 
 logCallUnwind :: (IsReadWrite rw, Monad m) => Maybe CallFrameId -> Magic v rw m ()
 logCallUnwind top =
-  untilJust do
+  untilJust \_ -> do
     top' <- logCallTop
     case top == fmap callFrameId top' of
       True -> pure $ Just ()

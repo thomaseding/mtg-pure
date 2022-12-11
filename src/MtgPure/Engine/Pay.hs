@@ -1,19 +1,3 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE BlockArguments #-}
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE Safe #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskellQuotes #-}
-{-# LANGUAGE TypeFamilyDependencies #-}
-{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Avoid lambda" #-}
@@ -48,8 +32,9 @@ import safe MtgPure.Engine.State (GameState (..), Magic, logCall)
 import safe MtgPure.Model.Mana (IsManaNoVar, IsSnow, Mana)
 import safe MtgPure.Model.ManaCost (ManaCost (..))
 import safe MtgPure.Model.ManaPool (CompleteManaPool (..), ManaPool (..))
-import safe MtgPure.Model.Object (Object, ObjectType (..))
+import safe MtgPure.Model.Object (Object)
 import safe MtgPure.Model.ObjectN (ObjectN (..))
+import safe MtgPure.Model.ObjectType (ObjectType (..))
 import safe MtgPure.Model.ObjectType.Permanent (CoPermanent)
 import safe MtgPure.Model.Player (Player (..))
 import safe MtgPure.Model.Recursive (Cost (..), Effect (..), Requirement (..))
@@ -126,7 +111,7 @@ payTapCost oPlayer req = logCall 'payTapCost do
       pure Illegal
     zos@(zosHead : zosTail) -> do
       zo <- lift $
-        untilJust do
+        untilJust \_ -> do
           zo <- promptPickZO prompt oPlayer $ zosHead :| zosTail
           pure case zo `elem` zos of
             False -> Nothing

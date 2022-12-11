@@ -1,19 +1,3 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE BlockArguments #-}
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE Safe #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskellQuotes #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilyDependencies #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Avoid lambda" #-}
@@ -54,6 +38,7 @@ import safe MtgPure.Engine.Monad (
   gets,
   internalFromPrivate,
  )
+import safe MtgPure.Engine.Orphans ()
 import safe MtgPure.Engine.Prompt (
   InternalLogicError (..),
   InvalidPlayLand (..),
@@ -69,7 +54,8 @@ import safe MtgPure.Engine.State (
   runMagicCont,
  )
 import safe MtgPure.Model.IsCardList (containsCard)
-import safe MtgPure.Model.Object (Object, ObjectType (..))
+import safe MtgPure.Model.Object (Object)
+import safe MtgPure.Model.ObjectType (ObjectType (..))
 import safe MtgPure.Model.ObjectType.Kind (OTLand)
 import safe MtgPure.Model.Permanent (cardToPermanent)
 import safe MtgPure.Model.PhaseStep (PhaseStep (..))

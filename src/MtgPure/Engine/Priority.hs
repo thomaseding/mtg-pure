@@ -1,17 +1,3 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE BlockArguments #-}
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE Safe #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskellQuotes #-}
-{-# LANGUAGE TypeFamilyDependencies #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Avoid lambda" #-}
@@ -53,7 +39,8 @@ import safe MtgPure.Engine.Monad (
  )
 import safe MtgPure.Engine.Prompt (PlayerCount (..))
 import safe MtgPure.Engine.State (GameState (..), Magic, MagicCont, logCall, runMagicCont)
-import safe MtgPure.Model.Object (Object, ObjectType (..))
+import safe MtgPure.Model.Object (Object)
+import safe MtgPure.Model.ObjectType (ObjectType (..))
 import safe MtgPure.Model.PhaseStep (isMainPhase)
 import safe MtgPure.Model.Stack (Stack (..))
 

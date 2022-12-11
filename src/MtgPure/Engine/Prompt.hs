@@ -1,15 +1,3 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE Safe #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeFamilyDependencies #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Avoid lambda" #-}
@@ -28,7 +16,6 @@ module MtgPure.Engine.Prompt (
   SpecialAction (..),
   InvalidPlayLand (..),
   InvalidCastSpell (..),
-  ShowZO (..),
   CallFrameId,
   CallFrameInfo (..),
   SomeActivatedAbility (..),
@@ -37,9 +24,9 @@ module MtgPure.Engine.Prompt (
 import safe Data.Kind (Type)
 import safe Data.List.NonEmpty (NonEmpty)
 import safe Data.Typeable (Typeable)
-import safe MtgPure.Model.Object (Object, ObjectType (..))
-import safe MtgPure.Model.ObjectId (GetObjectId (..), ObjectId (..))
-import safe MtgPure.Model.ObjectN (ObjectN)
+import safe MtgPure.Engine.Orphans.ZO ()
+import safe MtgPure.Model.Object (Object)
+import safe MtgPure.Model.ObjectType (ObjectType (..))
 import safe MtgPure.Model.ObjectType.Kind (OTActivatedAbility, OTLand, OTPermanent, OTSpell)
 import safe MtgPure.Model.Recursive (AnyCard, WithThisActivated)
 import safe MtgPure.Model.Recursive.Ord ()
@@ -47,24 +34,13 @@ import safe MtgPure.Model.Recursive.Show ()
 import safe MtgPure.Model.Zone (IsZone, Zone (..))
 import safe MtgPure.Model.ZoneObject (IsZO, ZO)
 
-newtype ShowZO zone ot = ShowZO (ZO zone ot)
-  deriving (Eq, Ord)
-
-instance GetObjectId (ObjectN ot) => GetObjectId (ShowZO zone ot) where
-  getObjectId (ShowZO zo) = getObjectId zo
-
-instance GetObjectId (ObjectN ot) => Show (ShowZO zone ot) where
-  show zo = "ZO=" ++ show n
-   where
-    ObjectId n = getObjectId zo
-
 data InternalLogicError
   = CantHappenByConstruction
   | CorruptCallStackLogging
   | ExpectedCardToBeAPermanentCard
   | ExpectedStackObjectToExist
   | ImpossibleGameOver
-  | InvalidPermanent (ShowZO 'ZBattlefield OTPermanent)
+  | InvalidPermanent (ZO 'ZBattlefield OTPermanent)
   | InvalidPlayer (Object 'OTPlayer)
   | NotSureWhatThisEntails
   | ObjectIdExistsAndAlsoDoesNotExist
@@ -145,9 +121,13 @@ data InvalidPlayLand :: Type where
   PlayLand_NotOwned :: IsZone zone => ZO zone OTLand -> InvalidPlayLand
   PlayLand_StackNonEmpty :: IsZone zone => ZO zone OTLand -> InvalidPlayLand
 
+deriving instance Show InvalidPlayLand
+
 data InvalidCastSpell :: Type where
   CastSpell_CannotPlayFromZone :: IsZone zone => ZO zone OTSpell -> InvalidCastSpell
   CastSpell_NoPriority :: IsZone zone => ZO zone OTSpell -> InvalidCastSpell
   CastSpell_NotASpell :: IsZone zone => ZO zone OTSpell -> InvalidCastSpell
   CastSpell_NotInZone :: ZO zone OTSpell -> InvalidCastSpell
   CastSpell_NotOwned :: ZO zone OTSpell -> InvalidCastSpell
+
+deriving instance Show InvalidCastSpell
