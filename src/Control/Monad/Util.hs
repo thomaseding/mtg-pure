@@ -4,7 +4,8 @@
 {-# HLINT ignore "Use const" #-}
 
 module Control.Monad.Util (
-  UntilJust (..),
+  Attempt' (..),
+  Attempt,
   untilJust,
   AndLike (..),
 ) where
@@ -13,17 +14,19 @@ import safe Data.Data (Typeable)
 import safe Data.Void (Void)
 import safe MtgPure.Engine.Legality (Legality (..), fromLegality, toLegality)
 
-data UntilJust = FirstTry | Retried
-  deriving (Eq, Ord, Show, Typeable)
+newtype Attempt' a = Attempt a
+  deriving (Eq, Functor, Ord, Show, Typeable)
 
-untilJust :: Monad m => (UntilJust -> m (Maybe a)) -> m a
-untilJust = untilJust' FirstTry
+type Attempt = Attempt' Int
 
-untilJust' :: Monad m => UntilJust -> (UntilJust -> m (Maybe a)) -> m a
-untilJust' uj fm =
-  fm uj >>= \case
+untilJust :: Monad m => (Attempt -> m (Maybe a)) -> m a
+untilJust = untilJust' $ Attempt 0
+
+untilJust' :: Monad m => Attempt -> (Attempt -> m (Maybe a)) -> m a
+untilJust' attempt fm =
+  fm attempt >>= \case
     Just x -> pure x
-    Nothing -> untilJust' Retried fm
+    Nothing -> untilJust' ((1 +) <$> attempt) fm
 
 class AndLike a where
   andM :: Monad m => [m a] -> m a

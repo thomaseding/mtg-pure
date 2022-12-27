@@ -21,6 +21,7 @@ import safe MtgPure.Engine.ActivateCast (
  )
 import safe MtgPure.Engine.CaseOf (caseOf)
 import safe MtgPure.Engine.Core (
+  activatedToIndex,
   allControlledPermanentsOf,
   allPermanents,
   allPlayers,
@@ -36,6 +37,7 @@ import safe MtgPure.Engine.Core (
   getAlivePlayerCount,
   getPermanent,
   getPlayer,
+  indexToActivated,
   newObjectId,
   pushHandCard,
   pushLibraryCard,
@@ -44,6 +46,7 @@ import safe MtgPure.Engine.Core (
   rewindIllegal,
   setPermanent,
   setPlayer,
+  toZO,
  )
 import safe MtgPure.Engine.Enact (enact)
 import safe MtgPure.Engine.Fwd.Type (Fwd' (..))
@@ -69,6 +72,7 @@ fwdImpl :: Monad m => Fwd m
 fwdImpl =
   Fwd
     { fwd_ = ()
+    , fwd_abilityToIndex = activatedToIndex
     , fwd_activatedAbilitiesOf = getActivatedAbilitiesOf
     , fwd_allControlledPermanentsOf = allControlledPermanentsOf
     , fwd_allPermanents = allPermanents
@@ -94,6 +98,7 @@ fwdImpl =
     , fwd_getPermanent = getPermanent
     , fwd_getPlayer = getPlayer
     , fwd_getPlayerWithPriority = getPlayerWithPriority
+    , fwd_indexToAbility = indexToActivated
     , fwd_newObjectId = newObjectId
     , fwd_pay = pay
     , fwd_play = play
@@ -109,6 +114,7 @@ fwdImpl =
     , fwd_setPermanent = setPermanent
     , fwd_setPlayer = setPlayer
     , fwd_startGame = startGame
+    , fwd_toZO = toZO
     , fwd_zosSatisfying = zosSatisfying
     }
 

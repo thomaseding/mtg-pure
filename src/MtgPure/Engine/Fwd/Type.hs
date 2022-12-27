@@ -19,6 +19,7 @@ import safe Data.Void (Void)
 import safe MtgPure.Engine.Legality (Legality)
 import safe MtgPure.Engine.Monad (Magic', MagicCont')
 import safe MtgPure.Engine.Prompt (
+  AbsoluteActivatedAbilityIndex,
   Play,
   PlayerCount (..),
   SomeActivatedAbility,
@@ -45,6 +46,7 @@ import safe MtgPure.Model.ZoneObject (IsZO, ZO)
 data Fwd' ex st m where
   Fwd ::
     { fwd_ :: ()
+    , fwd_abilityToIndex :: forall zone ot. IsZO zone ot => SomeActivatedAbility zone ot -> Magic' ex st 'Private 'RO m AbsoluteActivatedAbilityIndex
     , fwd_activatedAbilitiesOf :: forall zone ot. IsZO zone ot => ZO zone ot -> Magic' ex st 'Private 'RO m [SomeActivatedAbility zone ot]
     , fwd_allControlledPermanentsOf :: Object 'OTPlayer -> Magic' ex st 'Public 'RO m [ZO 'ZBattlefield OTPermanent]
     , fwd_allPermanents :: Magic' ex st 'Public 'RO m [ZO 'ZBattlefield OTPermanent]
@@ -70,6 +72,7 @@ data Fwd' ex st m where
     , fwd_getPermanent :: ZO 'ZBattlefield OTPermanent -> Magic' ex st 'Private 'RO m Permanent
     , fwd_getPlayer :: Object 'OTPlayer -> Magic' ex st 'Private 'RO m Player
     , fwd_getPlayerWithPriority :: Magic' ex st 'Public 'RO m (Maybe (Object 'OTPlayer))
+    , fwd_indexToAbility :: forall zone ot. IsZO zone ot => AbsoluteActivatedAbilityIndex -> Magic' ex st 'Private 'RO m (Maybe (SomeActivatedAbility zone ot))
     , fwd_newObjectId :: Magic' ex st 'Private 'RW m ObjectId
     , fwd_pay :: forall ot. Object 'OTPlayer -> Cost ot -> Magic' ex st 'Private 'RW m Legality
     , fwd_performElections :: forall ot p el x. AndLike (Maybe x) => ZO 'ZStack OT0 -> (el -> Magic' ex st 'Private 'RW m (Maybe x)) -> Elect p el ot -> Magic' ex st 'Private 'RW m (Maybe x)
@@ -85,6 +88,7 @@ data Fwd' ex st m where
     , fwd_setPermanent :: ZO 'ZBattlefield OTPermanent -> Maybe Permanent -> Magic' ex st 'Private 'RW m ()
     , fwd_setPlayer :: Object 'OTPlayer -> Player -> Magic' ex st 'Private 'RW m ()
     , fwd_startGame :: Magic' ex st 'Private 'RW m Void
+    , fwd_toZO :: forall zone ot. IsZO zone ot => ObjectId -> Magic' ex st 'Private 'RO m (Maybe (ZO zone ot))
     , fwd_zosSatisfying :: forall zone ot. IsZO zone ot => Requirement zone ot -> Magic' ex st 'Private 'RO m [ZO zone ot]
     } ->
     Fwd' ex st m

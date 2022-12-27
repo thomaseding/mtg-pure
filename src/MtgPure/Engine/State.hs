@@ -163,19 +163,19 @@ data Elected (pEffect :: PrePost) (ot :: Type) :: Type where
   deriving (Typeable)
 
 electedObject_controller :: Elected pEffect ot -> Object 'OTPlayer
-electedObject_controller elected = ($ elected) $ case elected of
+electedObject_controller elected = ($ elected) case elected of
   ElectedActivatedAbility{} -> electedActivatedAbility_controller
   ElectedInstant{} -> electedInstant_controller
   ElectedSorcery{} -> electedSorcery_controller
 
 electedObject_cost :: Elected pEffect ot -> Cost ot
-electedObject_cost elected = ($ elected) $ case elected of
+electedObject_cost elected = ($ elected) case elected of
   ElectedActivatedAbility{} -> electedActivatedAbility_cost
   ElectedInstant{} -> electedInstant_cost
   ElectedSorcery{} -> electedSorcery_cost
 
 electedObject_effect :: Elected pEffect ot -> PendingReady pEffect (Effect 'OneShot) ot
-electedObject_effect elected = ($ elected) $ case elected of
+electedObject_effect elected = ($ elected) case elected of
   ElectedActivatedAbility{} -> electedActivatedAbility_effect
   ElectedInstant{} -> electedInstant_effect
   ElectedSorcery{} -> electedSorcery_effect

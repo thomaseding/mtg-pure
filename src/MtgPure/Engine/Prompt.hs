@@ -12,6 +12,8 @@ module MtgPure.Engine.Prompt (
   PlayerIndex (..),
   CardCount (..),
   CardIndex (..),
+  RelativeAbilityIndex (..),
+  AbsoluteActivatedAbilityIndex (..),
   Play (..),
   SpecialAction (..),
   InvalidPlayLand (..),
@@ -21,15 +23,18 @@ module MtgPure.Engine.Prompt (
   SomeActivatedAbility (..),
 ) where
 
+import safe Control.Monad.Util (Attempt)
 import safe Data.Kind (Type)
 import safe Data.List.NonEmpty (NonEmpty)
-import safe Data.Typeable (Typeable)
+import safe Data.Typeable (Typeable, cast)
 import safe MtgPure.Engine.Orphans.ZO ()
 import safe MtgPure.Model.Object (Object)
+import safe MtgPure.Model.ObjectId (ObjectId)
 import safe MtgPure.Model.ObjectType (ObjectType (..))
 import safe MtgPure.Model.ObjectType.Kind (OTActivatedAbility, OTLand, OTPermanent, OTSpell)
 import safe MtgPure.Model.Recursive (AnyCard, WithThisActivated)
 import safe MtgPure.Model.Recursive.Ord ()
+import safe qualified MtgPure.Model.Recursive.Ord as O
 import safe MtgPure.Model.Recursive.Show ()
 import safe MtgPure.Model.Zone (IsZone, Zone (..))
 import safe MtgPure.Model.ZoneObject (IsZO, ZO)
@@ -43,6 +48,7 @@ data InternalLogicError
   | InvalidPermanent (ZO 'ZBattlefield OTPermanent)
   | InvalidPlayer (Object 'OTPlayer)
   | NotSureWhatThisEntails
+  | ObjectDoesNotHaveAbility -- XXX: GADTify this so this can squirrel away more info
   | ObjectIdExistsAndAlsoDoesNotExist
   deriving (Typeable)
 
@@ -53,16 +59,19 @@ deriving instance Ord InternalLogicError
 deriving instance Show InternalLogicError
 
 newtype PlayerCount = PlayerCount {unPlayerCount :: Int}
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Typeable)
 
 newtype PlayerIndex = PlayerIndex {unPlayerIndex :: Int}
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Typeable)
 
 newtype CardCount = CardCount {unCardCount :: Int}
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Typeable)
 
 newtype CardIndex = CardIndex {unCardIndex :: Int}
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Typeable)
+
+newtype RelativeAbilityIndex = RelativeAbilityIndex {unRelativeAbilityIndex :: Int}
+  deriving (Eq, Ord, Show, Typeable)
 
 type CallFrameId = Int
 
@@ -78,25 +87,60 @@ data Prompt' (opaqueGameState :: (Type -> Type) -> Type) (m :: Type -> Type) = P
   , exceptionInvalidPlayLand :: opaqueGameState m -> Object 'OTPlayer -> InvalidPlayLand -> m ()
   , exceptionInvalidShuffle :: CardCount -> [CardIndex] -> m ()
   , exceptionInvalidStartingPlayer :: PlayerCount -> PlayerIndex -> m ()
-  , promptActivateAbility :: opaqueGameState m -> Object 'OTPlayer -> m (Maybe (Play OTActivatedAbility))
-  , promptCastSpell :: opaqueGameState m -> Object 'OTPlayer -> m (Maybe (Play OTSpell))
+  , promptActivateAbility :: Attempt -> opaqueGameState m -> Object 'OTPlayer -> m (Maybe (Play OTActivatedAbility))
+  , promptCastSpell :: Attempt -> opaqueGameState m -> Object 'OTPlayer -> m (Maybe (Play OTSpell))
   , promptDebugMessage :: String -> m ()
-  , promptGetStartingPlayer :: PlayerCount -> m PlayerIndex
+  , promptGetStartingPlayer :: Attempt -> PlayerCount -> m PlayerIndex
   , promptLogCallPop :: opaqueGameState m -> CallFrameInfo -> m ()
   , promptLogCallPush :: opaqueGameState m -> CallFrameInfo -> m ()
-  , promptPerformMulligan :: Object 'OTPlayer -> [AnyCard] -> m Bool -- TODO: Encode limited game state about players' mulligan states and [Serum Powder].
-  , promptPickZO :: forall zone ot. IsZO zone ot => Object 'OTPlayer -> NonEmpty (ZO zone ot) -> m (ZO zone ot)
-  , promptPlayLand :: opaqueGameState m -> Object 'OTPlayer -> m (Maybe (Play OTLand))
-  , promptShuffle :: CardCount -> Object 'OTPlayer -> m [CardIndex]
+  , promptPerformMulligan :: Attempt -> Object 'OTPlayer -> [AnyCard] -> m Bool -- TODO: Encode limited game state about players' mulligan states and [Serum Powder].
+  , promptPickZO :: forall zone ot. IsZO zone ot => Attempt -> opaqueGameState m -> Object 'OTPlayer -> NonEmpty (ZO zone ot) -> m (ZO zone ot)
+  , promptPlayLand :: Attempt -> opaqueGameState m -> Object 'OTPlayer -> m (Maybe (Play OTLand))
+  , promptShuffle :: Attempt -> CardCount -> Object 'OTPlayer -> m [CardIndex]
   }
+
+data AbsoluteActivatedAbilityIndex :: Type where
+  AbsoluteActivatedAbilityIndex :: ObjectId -> RelativeAbilityIndex -> AbsoluteActivatedAbilityIndex
+  deriving (Eq, Ord, Show, Typeable)
 
 data SomeActivatedAbility (zone :: Zone) (ot :: Type) :: Type where
   SomeActivatedAbility ::
+    -- NOTE: Escaped `ot'` is here because modelled Activated abilities are indexed by the leaf object type, not the composite.
     (IsZO zone ot, IsZO zone ot') =>
     { someActivatedZO :: ZO zone ot
     , someActivatedAbility :: WithThisActivated zone ot'
     } ->
     SomeActivatedAbility zone ot
+
+instance Eq (SomeActivatedAbility zone ot) where
+  (==) x y = O.runEnvM (ordSomeActivatedAbility x y) == EQ
+
+instance Ord (SomeActivatedAbility zone ot) where
+  compare x y = O.runEnvM (ordSomeActivatedAbility x y)
+
+ordSomeActivatedAbility ::
+  forall zone ot.
+  SomeActivatedAbility zone ot ->
+  SomeActivatedAbility zone ot ->
+  O.EnvM Ordering
+ordSomeActivatedAbility x = case x of
+  SomeActivatedAbility zo1 withThis1 -> \case
+    SomeActivatedAbility zo2 withThis2' ->
+      let go ::
+            forall ot1 ot2.
+            IsZO zone ot1 =>
+            IsZO zone ot2 =>
+            WithThisActivated zone ot1 ->
+            WithThisActivated zone ot2 ->
+            O.EnvM Ordering
+          go _ _ = case cast withThis2' of
+            Nothing -> O.compareOT @ot1 @ot2
+            Just withThis2 ->
+              O.seqM
+                [ O.ordZoneObject zo1 zo2
+                , O.ordWithThisActivated withThis1 withThis2
+                ]
+       in go withThis1 withThis2'
 
 data Play (ot :: Type) :: Type where
   ActivateAbility :: IsZO zone ot => SomeActivatedAbility zone ot -> Play OTActivatedAbility

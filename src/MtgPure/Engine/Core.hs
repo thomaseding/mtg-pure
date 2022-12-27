@@ -9,7 +9,10 @@
 {-# HLINT ignore "Redundant pure" #-}
 
 module MtgPure.Engine.Core (
+  activatedToIndex,
   allControlledPermanentsOf,
+  allPermanents,
+  allPlayers,
   allZOActivatedAbilities,
   allZOs,
   findHandCard,
@@ -21,9 +24,8 @@ module MtgPure.Engine.Core (
   getAlivePlayerCount,
   getAPNAP,
   getPermanent,
-  allPermanents,
   getPlayer,
-  allPlayers,
+  indexToActivated,
   newObjectId,
   pushHandCard,
   pushLibraryCard,
@@ -32,6 +34,7 @@ module MtgPure.Engine.Core (
   rewindIllegal,
   setPermanent,
   setPlayer,
+  toZO,
 ) where
 
 import safe Control.Exception (assert)
@@ -59,8 +62,10 @@ import safe MtgPure.Engine.Monad (
   put,
  )
 import safe MtgPure.Engine.Prompt (
+  AbsoluteActivatedAbilityIndex (AbsoluteActivatedAbilityIndex),
   InternalLogicError (..),
   PlayerCount (..),
+  RelativeAbilityIndex (RelativeAbilityIndex),
   SomeActivatedAbility (..),
  )
 import safe MtgPure.Engine.State (
@@ -92,9 +97,9 @@ import safe MtgPure.Model.Recursive (
   fromSome,
  )
 import safe MtgPure.Model.Zone (IsZone (..), SZone (..), Zone (..))
-import safe MtgPure.Model.ZoneObject (IsZO, ZO)
+import safe MtgPure.Model.ZoneObject (IsZO, ZO, toZone)
 import safe MtgPure.Model.ZoneObject.Convert (
-  castOToZO,
+  castOToON,
   toZO0,
   zo0ToCard,
   zo0ToPermanent,
@@ -131,7 +136,7 @@ allControlledPermanentsOf oPlayer =
       pure $ permanentController perm == oPlayer
 
 rewindIllegal :: Monad m => Magic 'Private 'RW m Legality -> Magic 'Private 'RW m Bool
-rewindIllegal m = logCall 'rewindIllegal $ do
+rewindIllegal m = logCall 'rewindIllegal do
   -- (104.1) (727.1) XXX: Is it possible for GameResult to be thrown during an illegal action?
   -- If so, is should it sometimes/always/never be rewound?
   let m' = magicCatch m \case
@@ -180,6 +185,16 @@ allZOs = logCall 'allZOs case singZone @zone of
               pure $ DList.fromList oPerms <> DList.fromList oPlayers <> oRecs
        in DList.toList <$> goRec objectTypes
   _ -> undefined
+ where
+  castOToZO :: IsObjectType z => Object z -> Maybe (ZO zone ot)
+  castOToZO = fmap toZone . castOToON
+
+toZO :: (IsZO zone ot, Monad m) => ObjectId -> Magic 'Private 'RO m (Maybe (ZO zone ot))
+toZO i = logCall 'toZO do
+  -- TODO: Eventually optimize to avoid this slow implementation.
+  -- Don't want to build up allZOs and don't want linear scan.
+  -- Probably will end up implementing `allZOs` in terms of this.
+  List.find (\zo -> i == getObjectId zo) <$> allZOs
 
 allZOActivatedAbilities ::
   forall zone ot m.
@@ -220,6 +235,35 @@ getActivatedAbilitiesOf zo = logCall 'getActivatedAbilitiesOf do
                in go withThis
             _ -> Nothing
     _ -> undefined
+
+activatedToIndex ::
+  (IsZO zone ot, Monad m) =>
+  SomeActivatedAbility zone ot ->
+  Magic 'Private 'RO m AbsoluteActivatedAbilityIndex
+activatedToIndex ability = logCall 'activatedToIndex do
+  let zo = someActivatedZO ability
+      i = getObjectId zo
+  abilities <- getActivatedAbilitiesOf zo
+  pure case List.elemIndex ability abilities of
+    Nothing -> error $ show ObjectDoesNotHaveAbility
+    Just index -> AbsoluteActivatedAbilityIndex i $ RelativeAbilityIndex index
+
+indexToActivated ::
+  (IsZO zone ot, Monad m) =>
+  AbsoluteActivatedAbilityIndex ->
+  Magic 'Private 'RO m (Maybe (SomeActivatedAbility zone ot))
+indexToActivated absIndex = logCall 'indexToActivated do
+  let AbsoluteActivatedAbilityIndex i relIndex = absIndex
+      RelativeAbilityIndex index = relIndex
+  mZo <- toZO i
+  case mZo of
+    Nothing -> pure Nothing
+    Just zo -> do
+      abilities <- getActivatedAbilitiesOf zo
+      let len = length abilities
+      pure case 0 <= index && index < len of
+        False -> Nothing
+        True -> Just $ abilities !! index
 
 newObjectId :: Monad m => Magic 'Private 'RW m ObjectId
 newObjectId = logCall 'newObjectId do
@@ -293,7 +337,7 @@ findPermanent :: Monad m => ZO 'ZBattlefield OTPermanent -> Magic 'Private 'RO m
 findPermanent zoPerm = logCall 'findPermanent $ gets $ Map.lookup (toZO0 zoPerm) . magicPermanents
 
 getPermanent :: Monad m => ZO 'ZBattlefield OTPermanent -> Magic 'Private 'RO m Permanent
-getPermanent zoPerm = logCall 'getPermanent $ do
+getPermanent zoPerm = logCall 'getPermanent do
   findPermanent zoPerm <&> \case
     Nothing -> error $ show $ InvalidPermanent zoPerm
     Just perm -> perm

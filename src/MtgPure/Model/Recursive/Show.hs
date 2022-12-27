@@ -746,7 +746,7 @@ showColoredMana =
       pure $ pure "SumColoredMana " <> sSym <> pure " " <> sX <> pure " " <> sY
 
 showCompleteManaPool :: CompleteManaPool -> EnvM ParenItems
-showCompleteManaPool complete = yesParens $ do
+showCompleteManaPool complete = yesParens do
   sSnow <- parens <$> showManaPool snow
   sNonSnow <- dollar <$> showManaPool nonSnow
   pure $ pure "CompleteManaPool " <> sSnow <> sNonSnow
@@ -1280,7 +1280,7 @@ showNatList showX = \case
 
 -- showNonProxy :: NonProxy x -> EnvM ParenItems
 -- showNonProxy = \case
---   NonProxyElectEffectOneShot -> noParens $ do
+--   NonProxyElectEffectOneShot -> noParens do
 --     pure $ pure "NonProxyElectEffectOneShot"
 
 showO1 ::
@@ -1353,7 +1353,7 @@ showONImpl ::
   String ->
   (ObjectN ot -> z) ->
   EnvM ParenItems
-showONImpl fromObject plurality showM memo cont = yesParens $ do
+showONImpl fromObject plurality showM memo cont = yesParens do
   (objN, snap) <- newObjectN @a fromObject memo
   objName <-
     parens <$> do
@@ -1385,7 +1385,7 @@ showObject0 ::
   (IsZone zone) =>
   ON0 ->
   EnvM ParenItems
-showObject0 objN = yesParens $ do
+showObject0 objN = yesParens do
   pure $ pure $ fromString $ "toZO0 " ++ show i
  where
   i = getObjectId objN
@@ -1693,11 +1693,11 @@ showStaticAbility = \case
     sCost <- parens <$> showElect cost
     sEnchant <- dollar <$> showEnchant enchant
     pure $ pure "Bestow " <> sCost <> sEnchant
-  FirstStrike -> noParens $ do
+  FirstStrike -> noParens do
     pure $ pure "FirstStrike"
-  Flying -> noParens $ do
+  Flying -> noParens do
     pure $ pure "Flying"
-  Haste -> noParens $ do
+  Haste -> noParens do
     pure $ pure "Haste"
   StaticContinuous continuous -> yesParens do
     sContinuous <- dollar <$> showElect continuous
@@ -1729,7 +1729,7 @@ showTriggeredAbility = \case
     pure $ pure (fromString consName) <> sEventListener
 
 showTypeOf :: forall a. PrettyType a => Proxy a -> EnvM ParenItems
-showTypeOf _ = conditionalParens $ do
+showTypeOf _ = conditionalParens do
   pure $ pure $ fromString name
  where
   name = prettyType @a

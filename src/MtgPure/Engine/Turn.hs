@@ -77,8 +77,8 @@ determineStartingPlayer = logCall 'determineStartingPlayer do
   let prompt = magicPrompt st
       playerCount = Map.size $ magicPlayers st
   startingIndex <- lift $
-    untilJust \_ -> do
-      PlayerIndex playerIndex <- promptGetStartingPlayer prompt $ PlayerCount playerCount
+    untilJust \attempt -> do
+      PlayerIndex playerIndex <- promptGetStartingPlayer prompt attempt $ PlayerCount playerCount
       case playerIndex < playerCount of
         True -> pure $ Just playerIndex
         False -> do

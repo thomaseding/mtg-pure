@@ -34,6 +34,7 @@ import safe MtgPure.Engine.State (
   Magic,
   StackEntry (..),
   logCall,
+  mkOpaqueGameState,
  )
 import safe MtgPure.Model.OTN (OT0)
 import safe MtgPure.Model.Object (Object (..))
@@ -184,9 +185,10 @@ electA sel zoStack goElect oPlayer = logCall 'electA \case
     fromRO (zosSatisfying (RAnd reqs)) >>= \case
       [] -> pure Nothing
       zos@(zosHead : zosTail) -> do
+        opaque <- fromRO $ gets mkOpaqueGameState
         zo <- lift $
-          untilJust \_ -> do
-            zo <- promptPickZO prompt (zo1ToO oPlayer) $ zosHead :| zosTail
+          untilJust \attempt -> do
+            zo <- promptPickZO prompt attempt opaque (zo1ToO oPlayer) $ zosHead :| zosTail
             pure case zo `elem` zos of
               False -> Nothing
               True -> Just zo

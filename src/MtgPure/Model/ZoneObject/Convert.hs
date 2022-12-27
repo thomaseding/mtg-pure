@@ -20,22 +20,41 @@ module MtgPure.Model.ZoneObject.Convert (
   toZO10,
   toZO11,
   toZO12,
-  castOToZO,
+  castOToON,
   oToZO1,
+  AsActivatedOrTriggeredAbility,
+  AsAny,
   AsCard,
+  AsCreaturePlayerPlaneswalker,
+  AsDamageSource,
   AsPermanent,
+  AsSpell,
+  asActivatedOrTriggeredAbility,
+  asAny,
   asCard,
+  asCreaturePlayerPlaneswalker,
+  asDamageSource,
   asPermanent,
-  zo0ToPermanent,
+  asSpell,
+  zo0ToAny,
   zo0ToCard,
+  zo0ToPermanent,
+  zo0ToSpell,
 ) where
 
 import safe Data.Inst (
   Inst1,
+  Inst10,
+  Inst11,
+  Inst12,
   Inst2,
   Inst3,
   Inst4,
   Inst5,
+  Inst6,
+  Inst7,
+  Inst8,
+  Inst9,
  )
 import safe Data.Kind (Type)
 import safe Data.Monoid (First (..))
@@ -71,7 +90,15 @@ import safe MtgPure.Model.ObjectType (
   ObjectType (..),
   SObjectType (..),
  )
-import safe MtgPure.Model.ObjectType.Kind (OTCard, OTPermanent)
+import safe MtgPure.Model.ObjectType.Kind (
+  OTActivatedOrTriggeredAbility,
+  OTAny,
+  OTCard,
+  OTCreaturePlayerPlaneswalker,
+  OTDamageSource,
+  OTPermanent,
+  OTSpell,
+ )
 import safe MtgPure.Model.Recursive.Ord ()
 import safe MtgPure.Model.ToObjectN.Classes (
   ToObject1 (..),
@@ -89,7 +116,7 @@ import safe MtgPure.Model.ToObjectN.Classes (
  )
 import safe MtgPure.Model.VisitObjectN (VisitObjectN (..))
 import safe MtgPure.Model.Zone (IsZone (..), SZone (..), Zone (..))
-import safe MtgPure.Model.ZoneObject (IsZO, ZO, ZoneObject (..), toZone, zoToObjectN)
+import safe MtgPure.Model.ZoneObject (IsOT, ZO, ZoneObject (..), toZone, zoToObjectN)
 
 zo1ToO :: (IsObjectType a, IsZone zone) => ZO zone (OT1 a) -> Object a
 zo1ToO zo = case zoToObjectN zo of
@@ -172,14 +199,14 @@ toZO12 ::
 toZO12 = \case
   ZO sZone o -> ZO sZone $ toObject12 o
 
--- NB: Wrapper to get higher kinded types to type-check in `mapOT`.
-newtype MaybeObjectN (ot :: Type) = MaybeObjectN {unMaybeObjectN :: Maybe (ObjectN ot)}
-
 oToZO1 :: (IsZone zone, IsObjectType a) => Object a -> ZO zone (OT1 a)
 oToZO1 = toZone . O1
 
-castOToZO :: forall z zone ot. (IsObjectType z, IsZO zone ot) => Object z -> Maybe (ZO zone ot)
-castOToZO o = toZone <$> objN
+-- NB: Wrapper to get higher kinded types to type-check in `mapOT`.
+newtype MaybeObjectN (ot :: Type) = MaybeObjectN {unMaybeObjectN :: Maybe (ObjectN ot)}
+
+castOToON :: forall z ot. (IsObjectType z, IsOT ot) => Object z -> Maybe (ObjectN ot)
+castOToON o = objN
  where
   objN :: Maybe (ObjectN ot)
   objN = unMaybeObjectN $
@@ -229,18 +256,122 @@ castOToZO o = toZone <$> objN
                 , goCast $ O5e @a @b @c @d @e
                 ]
          in go ot
-      ot@OT6 -> undefined ot
-      ot@OT7 -> undefined ot
-      ot@OT8 -> undefined ot
-      ot@OT9 -> undefined ot
-      ot@OT10 -> undefined ot
-      ot@OT11 -> undefined ot
-      ot@OT12 -> undefined ot
+      ot@OT6 ->
+        let go :: forall a b c d e f. Inst6 IsObjectType a b c d e f => OT6 a b c d e f -> MaybeObjectN (OT6 a b c d e f)
+            go _ =
+              goConcat
+                [ goCast $ O6a @a @b @c @d @e @f
+                , goCast $ O6b @a @b @c @d @e @f
+                , goCast $ O6c @a @b @c @d @e @f
+                , goCast $ O6d @a @b @c @d @e @f
+                , goCast $ O6e @a @b @c @d @e @f
+                , goCast $ O6f @a @b @c @d @e @f
+                ]
+         in go ot
+      ot@OT7 ->
+        let go :: forall a b c d e f g. Inst7 IsObjectType a b c d e f g => OT7 a b c d e f g -> MaybeObjectN (OT7 a b c d e f g)
+            go _ =
+              goConcat
+                [ goCast $ O7a @a @b @c @d @e @f @g
+                , goCast $ O7b @a @b @c @d @e @f @g
+                , goCast $ O7c @a @b @c @d @e @f @g
+                , goCast $ O7d @a @b @c @d @e @f @g
+                , goCast $ O7e @a @b @c @d @e @f @g
+                , goCast $ O7f @a @b @c @d @e @f @g
+                , goCast $ O7g @a @b @c @d @e @f @g
+                ]
+         in go ot
+      ot@OT8 ->
+        let go :: forall a b c d e f g h. Inst8 IsObjectType a b c d e f g h => OT8 a b c d e f g h -> MaybeObjectN (OT8 a b c d e f g h)
+            go _ =
+              goConcat
+                [ goCast $ O8a @a @b @c @d @e @f @g @h
+                , goCast $ O8b @a @b @c @d @e @f @g @h
+                , goCast $ O8c @a @b @c @d @e @f @g @h
+                , goCast $ O8d @a @b @c @d @e @f @g @h
+                , goCast $ O8e @a @b @c @d @e @f @g @h
+                , goCast $ O8f @a @b @c @d @e @f @g @h
+                , goCast $ O8g @a @b @c @d @e @f @g @h
+                , goCast $ O8h @a @b @c @d @e @f @g @h
+                ]
+         in go ot
+      ot@OT9 ->
+        let go :: forall a b c d e f g h i. Inst9 IsObjectType a b c d e f g h i => OT9 a b c d e f g h i -> MaybeObjectN (OT9 a b c d e f g h i)
+            go _ =
+              goConcat
+                [ goCast $ O9a @a @b @c @d @e @f @g @h @i
+                , goCast $ O9b @a @b @c @d @e @f @g @h @i
+                , goCast $ O9c @a @b @c @d @e @f @g @h @i
+                , goCast $ O9d @a @b @c @d @e @f @g @h @i
+                , goCast $ O9e @a @b @c @d @e @f @g @h @i
+                , goCast $ O9f @a @b @c @d @e @f @g @h @i
+                , goCast $ O9g @a @b @c @d @e @f @g @h @i
+                , goCast $ O9h @a @b @c @d @e @f @g @h @i
+                , goCast $ O9i @a @b @c @d @e @f @g @h @i
+                ]
+         in go ot
+      ot@OT10 ->
+        let go :: forall a b c d e f g h i j. Inst10 IsObjectType a b c d e f g h i j => OT10 a b c d e f g h i j -> MaybeObjectN (OT10 a b c d e f g h i j)
+            go _ =
+              goConcat
+                [ goCast $ O10a @a @b @c @d @e @f @g @h @i @j
+                , goCast $ O10b @a @b @c @d @e @f @g @h @i @j
+                , goCast $ O10c @a @b @c @d @e @f @g @h @i @j
+                , goCast $ O10d @a @b @c @d @e @f @g @h @i @j
+                , goCast $ O10e @a @b @c @d @e @f @g @h @i @j
+                , goCast $ O10f @a @b @c @d @e @f @g @h @i @j
+                , goCast $ O10g @a @b @c @d @e @f @g @h @i @j
+                , goCast $ O10h @a @b @c @d @e @f @g @h @i @j
+                , goCast $ O10i @a @b @c @d @e @f @g @h @i @j
+                , goCast $ O10j @a @b @c @d @e @f @g @h @i @j
+                ]
+         in go ot
+      ot@OT11 ->
+        let go :: forall a b c d e f g h i j k. Inst11 IsObjectType a b c d e f g h i j k => OT11 a b c d e f g h i j k -> MaybeObjectN (OT11 a b c d e f g h i j k)
+            go _ =
+              goConcat
+                [ goCast $ O11a @a @b @c @d @e @f @g @h @i @j @k
+                , goCast $ O11b @a @b @c @d @e @f @g @h @i @j @k
+                , goCast $ O11c @a @b @c @d @e @f @g @h @i @j @k
+                , goCast $ O11d @a @b @c @d @e @f @g @h @i @j @k
+                , goCast $ O11e @a @b @c @d @e @f @g @h @i @j @k
+                , goCast $ O11f @a @b @c @d @e @f @g @h @i @j @k
+                , goCast $ O11g @a @b @c @d @e @f @g @h @i @j @k
+                , goCast $ O11h @a @b @c @d @e @f @g @h @i @j @k
+                , goCast $ O11i @a @b @c @d @e @f @g @h @i @j @k
+                , goCast $ O11j @a @b @c @d @e @f @g @h @i @j @k
+                , goCast $ O11k @a @b @c @d @e @f @g @h @i @j @k
+                ]
+         in go ot
+      ot@OT12 ->
+        let go :: forall a b c d e f g h i j k l. Inst12 IsObjectType a b c d e f g h i j k l => OT12 a b c d e f g h i j k l -> MaybeObjectN (OT12 a b c d e f g h i j k l)
+            go _ =
+              goConcat
+                [ goCast $ O12a @a @b @c @d @e @f @g @h @i @j @k @l
+                , goCast $ O12b @a @b @c @d @e @f @g @h @i @j @k @l
+                , goCast $ O12c @a @b @c @d @e @f @g @h @i @j @k @l
+                , goCast $ O12d @a @b @c @d @e @f @g @h @i @j @k @l
+                , goCast $ O12e @a @b @c @d @e @f @g @h @i @j @k @l
+                , goCast $ O12f @a @b @c @d @e @f @g @h @i @j @k @l
+                , goCast $ O12g @a @b @c @d @e @f @g @h @i @j @k @l
+                , goCast $ O12h @a @b @c @d @e @f @g @h @i @j @k @l
+                , goCast $ O12i @a @b @c @d @e @f @g @h @i @j @k @l
+                , goCast $ O12j @a @b @c @d @e @f @g @h @i @j @k @l
+                , goCast $ O12k @a @b @c @d @e @f @g @h @i @j @k @l
+                , goCast $ O12l @a @b @c @d @e @f @g @h @i @j @k @l
+                ]
+         in go ot
    where
     goConcat = MaybeObjectN . getFirst . mconcat . map First
 
     goCast :: Typeable z' => (Object z' -> ObjectN ot') -> Maybe (ObjectN ot')
     goCast f = f <$> cast o
+
+type AsActivatedOrTriggeredAbility ot =
+  ToObject2 ot 'OTActivatedAbility 'OTTriggeredAbility
+
+type AsCreaturePlayerPlaneswalker ot =
+  ToObject3 ot 'OTCreature 'OTPlaneswalker 'OTPlayer
 
 type AsPermanent ot =
   ToObject5
@@ -250,6 +381,16 @@ type AsPermanent ot =
     'OTEnchantment
     'OTLand
     'OTPlaneswalker
+
+type AsSpell ot =
+  ToObject6
+    ot
+    'OTArtifact
+    'OTCreature
+    'OTEnchantment
+    'OTInstant
+    'OTPlaneswalker
+    'OTSorcery
 
 type AsCard ot =
   ToObject7
@@ -262,14 +403,69 @@ type AsCard ot =
     'OTPlaneswalker
     'OTSorcery
 
+type AsDamageSource ot =
+  ToObject8
+    ot
+    'OTArtifact
+    'OTCreature
+    'OTEnchantment
+    'OTInstant
+    'OTLand
+    'OTPlaneswalker
+    'OTPlayer
+    'OTSorcery
+
+type AsAny ot =
+  ToObject12
+    ot
+    'OTActivatedAbility
+    'OTArtifact
+    'OTCreature
+    'OTEmblem
+    'OTEnchantment
+    'OTInstant
+    'OTLand
+    'OTPlaneswalker
+    'OTPlayer
+    'OTSorcery
+    'OTStaticAbility
+    'OTTriggeredAbility
+
+asActivatedOrTriggeredAbility ::
+  AsActivatedOrTriggeredAbility ot =>
+  ZO zone ot ->
+  ZO zone OTActivatedOrTriggeredAbility
+asActivatedOrTriggeredAbility = toZO2
+
+asCreaturePlayerPlaneswalker ::
+  AsCreaturePlayerPlaneswalker ot =>
+  ZO zone ot ->
+  ZO zone OTCreaturePlayerPlaneswalker
+asCreaturePlayerPlaneswalker = toZO3
+
 asPermanent :: AsPermanent ot => ZO zone ot -> ZO zone OTPermanent
 asPermanent = toZO5
+
+asSpell :: AsSpell ot => ZO zone ot -> ZO zone OTSpell
+asSpell = toZO6
 
 asCard :: AsCard ot => ZO zone ot -> ZO zone OTCard
 asCard = toZO7
 
+asDamageSource :: AsDamageSource ot => ZO zone ot -> ZO zone OTDamageSource
+asDamageSource = toZO8
+
+asAny :: AsAny ot => ZO zone ot -> ZO zone OTAny
+asAny = toZO12
+
 zo0ToPermanent :: ZO 'ZBattlefield OT0 -> ZO 'ZBattlefield OTPermanent
 zo0ToPermanent = asPermanent . ZO SZBattlefield . O1 . Object SLand . getUntypedObject
 
+zo0ToSpell :: forall zone. IsZone zone => ZO zone OT0 -> ZO zone OTSpell
+zo0ToSpell = asSpell . ZO (singZone @zone) . O1 . Object SArtifact . getUntypedObject
+
 zo0ToCard :: forall zone. IsZone zone => ZO zone OT0 -> ZO zone OTCard
 zo0ToCard = asCard . ZO (singZone @zone) . O1 . Object SLand . getUntypedObject
+
+zo0ToAny :: forall zone. IsZone zone => ZO zone OT0 -> ZO zone OTAny
+zo0ToAny = asAny . ZO (singZone @zone) . O1 . Object SLand . getUntypedObject

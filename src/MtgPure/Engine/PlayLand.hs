@@ -17,6 +17,7 @@ import safe Control.Exception (assert)
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
 import safe Control.Monad.Trans (lift)
 import safe Control.Monad.Trans.Except (throwE)
+import safe Control.Monad.Util (Attempt, Attempt' (..))
 import safe qualified Data.Map.Strict as Map
 import safe Data.Typeable (Typeable)
 import safe MtgPure.Engine.Fwd.Api (
@@ -112,21 +113,24 @@ getPlayLandReqs oPlayer = logCall 'getPlayLandReqs do
       }
 
 askPlayLand :: Monad m => Object 'OTPlayer -> MagicCont 'Private 'RW m () ()
-askPlayLand oPlayer = logCall 'askPlayLand do
+askPlayLand = logCall 'askPlayLand $ askPlayLand' $ Attempt 0
+
+askPlayLand' :: Monad m => Attempt -> Object 'OTPlayer -> MagicCont 'Private 'RW m () ()
+askPlayLand' attempt oPlayer = logCall 'askPlayLand' do
   reqs <- lift $ fromRO $ getPlayLandReqs oPlayer
   case reqs of
     PlayLandReqs_Satisfied -> do
       st <- lift $ fromRO get
       let opaque = mkOpaqueGameState st
           prompt = magicPrompt st
-      mSpecial <- lift $ lift $ promptPlayLand prompt opaque oPlayer
+      mSpecial <- lift $ lift $ promptPlayLand prompt attempt opaque oPlayer
       case mSpecial of
         Nothing -> pure ()
         Just special -> do
           isLegal <- lift $ rewindIllegal $ playLand oPlayer special
           throwE case isLegal of
             True -> gainPriority oPlayer -- (117.3c)
-            False -> runMagicCont (either id id) $ askPlayLand oPlayer
+            False -> runMagicCont (either id id) $ askPlayLand' attempt oPlayer
     _ -> pure ()
 
 playLand :: Monad m => Object 'OTPlayer -> Play OTLand -> Magic 'Private 'RW m Legality

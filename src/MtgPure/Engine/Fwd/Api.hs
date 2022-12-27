@@ -18,6 +18,7 @@ module MtgPure.Engine.Fwd.Api (
   eachLogged_,
   --
   activatedAbilitiesOf,
+  activatedToIndex,
   allControlledPermanentsOf,
   allPermanents,
   allPlayers,
@@ -42,6 +43,7 @@ module MtgPure.Engine.Fwd.Api (
   getPermanent,
   getPlayer,
   getPlayerWithPriority,
+  indexToActivated,
   modifyPlayer,
   newObjectId,
   pay,
@@ -75,6 +77,7 @@ import safe MtgPure.Engine.Monad (
   internalFromPrivate,
  )
 import safe MtgPure.Engine.Prompt (
+  AbsoluteActivatedAbilityIndex,
   Play,
   PlayerCount (..),
   SomeActivatedAbility,
@@ -129,6 +132,7 @@ fwd3 go a b c = do
   go fwd a b c
 
 data Api (m :: Type -> Type) (v :: Visibility) (rw :: ReadWrite) (ret :: Type) :: Type where
+  ActivatedToIndex :: IsZO zone ot => SomeActivatedAbility zone ot -> Api m 'Private 'RO AbsoluteActivatedAbilityIndex
   ActivatedAbilitiesOf :: IsZO zone ot => ZO zone ot -> Api m 'Private 'RO [SomeActivatedAbility zone ot]
   ActivePlayer :: Api m 'Public 'RO (Object 'OTPlayer)
   AlivePlayerCount :: Api m 'Public 'RO PlayerCount
@@ -145,9 +149,11 @@ data Api (m :: Type -> Type) (v :: Visibility) (rw :: ReadWrite) (ret :: Type) :
   FindPlayer :: Object 'OTPlayer -> Api m 'Private 'RO (Maybe Player)
   GainPriority :: Object 'OTPlayer -> Api m 'Private 'RW ()
   GetAPNAP :: Api m v 'RO (Stream.Stream (Object 'OTPlayer))
+  GetZoneOf :: ObjectId -> Api m 'Private 'RO Zone
   GetPermanent :: ZO 'ZBattlefield OTPermanent -> Api m 'Private 'RO Permanent
   GetPlayer :: Object 'OTPlayer -> Api m 'Private 'RO Player
   HasPriority :: Object 'OTPlayer -> Api m 'Public 'RO Bool
+  IndexToActivated :: IsZO zone ot => AbsoluteActivatedAbilityIndex -> Api m 'Private 'RO (Maybe (SomeActivatedAbility zone ot))
   ModifyPlayer :: Object 'OTPlayer -> (Player -> Player) -> Api m 'Private 'RW ()
   NewObjectId :: Api m 'Private 'RW ObjectId
   Pay :: Object 'OTPlayer -> Cost ot -> Api m 'Private 'RW Legality
@@ -164,6 +170,7 @@ data Api (m :: Type -> Type) (v :: Visibility) (rw :: ReadWrite) (ret :: Type) :
   SetPermanent :: ZO 'ZBattlefield OTPermanent -> Maybe Permanent -> Api m 'Private 'RW ()
   SetPlayer :: Object 'OTPlayer -> Player -> Api m 'Private 'RW ()
   StartGame :: Api m 'Private 'RW Void
+  ToZO :: IsZO zone ot => ObjectId -> Api m 'Private 'RO (Maybe (ZO zone ot))
   ZOsSatisfying :: IsZO zone ot => Requirement zone ot -> Api m 'Private 'RO [ZO zone ot]
 
 data ApiCont (v :: Visibility) (rw :: ReadWrite) (y :: Type) (z :: Type) :: Type where
@@ -173,6 +180,7 @@ data ApiCont (v :: Visibility) (rw :: ReadWrite) (y :: Type) (z :: Type) :: Type
 
 run :: Monad m => Api m v rw z -> Magic v rw m z
 run = \case
+  ActivatedToIndex a -> activatedToIndex a
   ActivatedAbilitiesOf a -> activatedAbilitiesOf a
   ActivePlayer -> getActivePlayer
   AlivePlayerCount -> getAlivePlayerCount
@@ -191,8 +199,10 @@ run = \case
   GetAPNAP -> getAPNAP
   GetPermanent a -> getPermanent a
   GetPlayer a -> getPlayer a
+  GetZoneOf a -> undefined a
   HasPriority a -> getHasPriority a
-  ModifyPlayer o f -> do p <- fromRO $ getPlayer o; setPlayer o $ f p
+  IndexToActivated a -> indexToActivated a
+  ModifyPlayer a b -> modifyPlayer a b
   NewObjectId -> newObjectId
   Pay a b -> pay a b
   PerformElections a b c -> performElections a (run . b) c
@@ -208,6 +218,7 @@ run = \case
   SetPermanent a b -> setPermanent a b
   SetPlayer a b -> setPlayer a b
   StartGame -> startGame
+  ToZO a -> toZO a
   ZOsSatisfying a -> zosSatisfying a
 
 runCont :: Monad m => ApiCont v rw y z -> MagicCont v rw m y z
@@ -222,7 +233,7 @@ runCont = \case
     fwd <- lift getFwd
     fwd_askPlayLand fwd p
 
--- generalize?: e.g. (Maybe x) or (Legality, a) (Bool, a)
+-- generalize?: e.g. (Maybe a) or (Either a a) or (Legality, a) or (Bool, a)
 rewindIllegal :: Monad m => Magic 'Private 'RW m Legality -> Magic 'Private 'RW m Bool
 rewindIllegal = fwd1 fwd_rewindIllegal
 
@@ -250,6 +261,12 @@ askPlayLand p = do
   fwd_askPlayLand fwd p
 
 ----------------------------------------
+
+activatedToIndex :: (IsZO zone ot, Monad m) => SomeActivatedAbility zone ot -> Magic 'Private 'RO m AbsoluteActivatedAbilityIndex
+activatedToIndex = fwd1 fwd_abilityToIndex
+
+activatedAbilitiesOf :: (IsZO zone ot, Monad m) => ZO zone ot -> Magic 'Private 'RO m [SomeActivatedAbility zone ot]
+activatedAbilitiesOf = fwd1 fwd_activatedAbilitiesOf
 
 allZOActivatedAbilities :: (IsZO zone ot, Monad m) => Magic 'Private 'RO m [SomeActivatedAbility zone ot]
 allZOActivatedAbilities = fwd0 fwd_allZOActivatedAbilities
@@ -296,9 +313,6 @@ findPlayer = fwd1 fwd_findPlayer
 gainPriority :: Monad m => Object 'OTPlayer -> Magic 'Private 'RW m ()
 gainPriority = fwd1 fwd_gainPriority
 
-activatedAbilitiesOf :: (IsZO zone ot, Monad m) => ZO zone ot -> Magic 'Private 'RO m [SomeActivatedAbility zone ot]
-activatedAbilitiesOf = fwd1 fwd_activatedAbilitiesOf
-
 getActivePlayer :: Monad m => Magic 'Public 'RO m (Object 'OTPlayer)
 getActivePlayer = fwd0 fwd_getActivePlayer
 
@@ -319,6 +333,9 @@ getPlayer = fwd1 fwd_getPlayer
 
 getPlayerWithPriority :: Monad m => Magic 'Public 'RO m (Maybe (Object 'OTPlayer))
 getPlayerWithPriority = fwd0 fwd_getPlayerWithPriority
+
+indexToActivated :: (IsZO zone ot, Monad m) => AbsoluteActivatedAbilityIndex -> Magic 'Private 'RO m (Maybe (SomeActivatedAbility zone ot))
+indexToActivated = fwd1 fwd_indexToAbility
 
 modifyPlayer :: Monad m => Object 'OTPlayer -> (Player -> Player) -> Magic 'Private 'RW m ()
 modifyPlayer o f = do
@@ -372,6 +389,9 @@ setPlayer = fwd2 fwd_setPlayer
 
 startGame :: Monad m => Magic 'Private 'RW m Void
 startGame = fwd0 fwd_startGame
+
+toZO :: (IsZO zone ot, Monad m) => ObjectId -> Magic 'Private 'RO m (Maybe (ZO zone ot))
+toZO = fwd1 fwd_toZO
 
 zosSatisfying :: (Monad m, IsZO zone ot) => Requirement zone ot -> Magic 'Private 'RO m [ZO zone ot]
 zosSatisfying = fwd1 fwd_zosSatisfying

@@ -6,7 +6,20 @@
 {-# HLINT ignore "Use const" #-}
 {-# HLINT ignore "Use if" #-}
 
-module MtgPure.Model.Recursive.Ord () where
+module MtgPure.Model.Recursive.Ord (
+  EnvM,
+  runEnvM,
+  seqM,
+  listM,
+  compareIndexM,
+  compareOT,
+  compareZone,
+  compareZoneOT,
+  --
+  ordAbility,
+  ordWithThisActivated,
+  ordZoneObject,
+) where
 
 import safe qualified Control.Monad.State.Strict as State
 import safe Data.ConsIndex (ConsIndex (consIndex))
@@ -156,6 +169,12 @@ instance (Typeable el, Typeable p, IsZO zone ot) => Eq (WithMaskedObject zone (E
 instance IsZO zone ot => Eq (WithThis zone Ability ot) where
   (==) x y = runEnvM (ordWithThis ordAbility x y) == EQ
 
+instance IsZO zone ot => Eq (WithThisActivated zone ot) where
+  (==) x y = runEnvM (ordWithThisActivated x y) == EQ
+
+instance IsZO zone ot => Eq (WithThisTriggered zone ot) where
+  (==) x y = runEnvM (ordWithThisTriggered x y) == EQ
+
 instance Eq (WAny ot) where
   (==) x y = runEnvM (ordWAny x y) == EQ
 
@@ -230,6 +249,12 @@ instance (Typeable el, Typeable p, IsZO zone ot) => Ord (WithMaskedObject zone (
 instance IsZO zone ot => Ord (WithThis zone Ability ot) where
   compare x y = runEnvM (ordWithThis ordAbility x y)
 
+instance IsZO zone ot => Ord (WithThisActivated zone ot) where
+  compare x y = runEnvM (ordWithThisActivated x y)
+
+instance IsZO zone ot => Ord (WithThisTriggered zone ot) where
+  compare x y = runEnvM (ordWithThisTriggered x y)
+
 instance Ord (WAny ot) where
   compare x y = runEnvM (ordWAny x y)
 
@@ -246,7 +271,13 @@ instance Ord (ZoneObject zone ot) where
 
 type EnvM = State.State Env
 
--- TODO: Smarts need to be added to handle Card loops
+-- TODO: Smarts need to be added to handle Card loops.
+-- For cards, rely on names being unique. (A linter tool can validate unique naming.)
+-- For tokens prolly use some recursion limit or encode unique names/tags into tokens.
+-- Add a toggle config to switch between unique naming technique and loop limit technique.
+-- Both are useful. Unique naming is faster. The loop limiter can be used to implement linter.
+-- Default Ord instances will rely on unique naming? Regardless this lower level `runEnvM` API
+-- can be exported too for finely controlled behavior.
 newtype Env = Env
   { nextRawId :: Int
   }
@@ -347,7 +378,7 @@ ordAbility x = case x of
             EnvM Ordering
           go _ _ = case cast ability2 of
             Nothing -> compareZoneOT @zone1 @zone2 @ot1 @ot2
-            Just ability2 -> ordWithThis ordElectEl ability1 ability2
+            Just ability2 -> ordWithThisActivated ability1 ability2
        in go ability1 ability2
     y -> compareIndexM x y
   Static ability1 -> \case
@@ -375,7 +406,7 @@ ordAbility x = case x of
             EnvM Ordering
           go _ _ = case cast ability2 of
             Nothing -> compareZoneOT @zone1 @zone2 @ot1 @ot2
-            Just ability2 -> ordWithThis ordTriggeredAbility ability1 ability2
+            Just ability2 -> ordWithThisTriggered ability1 ability2
        in go ability1 ability2
     y -> compareIndexM x y
 
@@ -1799,6 +1830,12 @@ ordWithThis ordM = \case
  where
   reqs1 = []
   reqs2 = []
+
+ordWithThisActivated :: IsZO zone ot => WithThisActivated zone ot -> WithThisActivated zone ot -> EnvM Ordering
+ordWithThisActivated = ordWithThis ordElectEl
+
+ordWithThisTriggered :: IsZO zone ot => WithThisTriggered zone ot -> WithThisTriggered zone ot -> EnvM Ordering
+ordWithThisTriggered = ordWithThis ordTriggeredAbility
 
 ordW2 ::
   forall witness ot1 a1 b1 ot2 a2 b2.

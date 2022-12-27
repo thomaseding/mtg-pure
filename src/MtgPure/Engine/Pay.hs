@@ -28,7 +28,7 @@ import safe MtgPure.Engine.Fwd.Api (
 import safe MtgPure.Engine.Legality (Legality (..), toLegality)
 import safe MtgPure.Engine.Monad (fromRO, gets)
 import safe MtgPure.Engine.Prompt (Prompt' (..))
-import safe MtgPure.Engine.State (GameState (..), Magic, logCall)
+import safe MtgPure.Engine.State (GameState (..), Magic, logCall, mkOpaqueGameState)
 import safe MtgPure.Model.Mana (IsManaNoVar, IsSnow, Mana)
 import safe MtgPure.Model.ManaCost (ManaCost (..))
 import safe MtgPure.Model.ManaPool (CompleteManaPool (..), ManaPool (..))
@@ -110,9 +110,10 @@ payTapCost oPlayer req = logCall 'payTapCost do
       lift $ promptDebugMessage prompt $ show ("payTapCost no zos satisfying" :: String)
       pure Illegal
     zos@(zosHead : zosTail) -> do
+      opaque <- fromRO $ gets mkOpaqueGameState
       zo <- lift $
-        untilJust \_ -> do
-          zo <- promptPickZO prompt oPlayer $ zosHead :| zosTail
+        untilJust \attempt -> do
+          zo <- promptPickZO prompt attempt opaque oPlayer $ zosHead :| zosTail
           pure case zo `elem` zos of
             False -> Nothing
             True -> Just zo

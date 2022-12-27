@@ -17,7 +17,7 @@ import safe Control.Exception (assert)
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
 import safe Control.Monad.Trans (lift)
 import safe Control.Monad.Trans.Except (throwE)
-import safe Control.Monad.Util (AndLike (..))
+import safe Control.Monad.Util (AndLike (..), Attempt, Attempt' (..))
 import safe Data.Kind (Type)
 import safe qualified Data.Map.Strict as Map
 import safe Data.Typeable (Typeable)
@@ -119,21 +119,24 @@ getActivateAbilityReqs oPlayer = logCall 'getActivateAbilityReqs do
       }
 
 askActivateAbility :: Monad m => Object 'OTPlayer -> MagicCont 'Private 'RW m () ()
-askActivateAbility oPlayer = logCall 'askActivateAbility do
+askActivateAbility = logCall 'askActivateAbility $ askActivateAbility' $ Attempt 0
+
+askActivateAbility' :: Monad m => Attempt -> Object 'OTPlayer -> MagicCont 'Private 'RW m () ()
+askActivateAbility' attempt oPlayer = logCall 'askActivateAbility' do
   reqs <- lift $ fromRO $ getActivateAbilityReqs oPlayer
   case reqs of
     ActivateAbilityReqs_Satisfied -> do
       st <- lift $ fromRO get
       let opaque = mkOpaqueGameState st
           prompt = magicPrompt st
-      mActivate <- lift $ lift $ promptActivateAbility prompt opaque oPlayer
+      mActivate <- lift $ lift $ promptActivateAbility prompt attempt opaque oPlayer
       case mActivate of
         Nothing -> pure ()
         Just activate -> do
           isLegal <- lift $ rewindIllegal $ activateAbility oPlayer activate
           throwE case isLegal of
             True -> gainPriority oPlayer -- (117.3c)
-            False -> runMagicCont (either id id) $ askActivateAbility oPlayer
+            False -> runMagicCont (either id id) $ askActivateAbility' ((1 +) <$> attempt) oPlayer
     _ -> pure ()
 
 newtype CastSpellReqs = CastSpellReqs
@@ -157,21 +160,24 @@ getCastSpellReqs oPlayer = logCall 'getCastSpellReqs do
       }
 
 askCastSpell :: Monad m => Object 'OTPlayer -> MagicCont 'Private 'RW m () ()
-askCastSpell oPlayer = logCall 'askCastSpell do
+askCastSpell = logCall 'askCastSpell $ askCastSpell' $ Attempt 0
+
+askCastSpell' :: Monad m => Attempt -> Object 'OTPlayer -> MagicCont 'Private 'RW m () ()
+askCastSpell' attempt oPlayer = logCall 'askCastSpell' do
   reqs <- lift $ fromRO $ getCastSpellReqs oPlayer
   case reqs of
     CastSpellReqs_Satisfied -> do
       st <- lift $ fromRO get
       let opaque = mkOpaqueGameState st
           prompt = magicPrompt st
-      mCast <- lift $ lift $ promptCastSpell prompt opaque oPlayer
+      mCast <- lift $ lift $ promptCastSpell prompt attempt opaque oPlayer
       case mCast of
         Nothing -> pure ()
         Just cast -> do
           isLegal <- lift $ rewindIllegal $ castSpell oPlayer cast
           throwE case isLegal of
             True -> gainPriority oPlayer -- (117.3c)
-            False -> runMagicCont (either id id) $ askCastSpell oPlayer
+            False -> runMagicCont (either id id) $ askCastSpell' ((1 +) <$> attempt) oPlayer
     _ -> pure ()
 
 data CastMeta (ot :: Type) :: Type where
@@ -374,10 +380,12 @@ activateAbility oPlayer = logCall 'activateAbility \case
               legalityToMaybe <$> do
                 let isThisInCorrectZone = True -- TODO
                     isController = True -- TODO
-                case (isThisInCorrectZone, isController) of
-                  (False, _) -> pure Illegal -- TODO prompt complaint
-                  (_, False) -> pure Illegal -- TODO prompt complaint
-                  (True, True) ->
+                    abilityExists = True -- TODO
+                case (isThisInCorrectZone, isController, abilityExists) of
+                  (False, _, _) -> pure Illegal -- TODO prompt complaint
+                  (_, False, _) -> pure Illegal -- TODO prompt complaint
+                  (_, _, False) -> pure Illegal -- TODO prompt complaint
+                  (True, True, True) ->
                     maybeToLegality <$> do
                       playPendingAbility
                         zoAbility

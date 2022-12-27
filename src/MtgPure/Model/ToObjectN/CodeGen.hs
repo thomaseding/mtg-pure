@@ -209,14 +209,14 @@ objectMsToObjectN desc = do
   lim = case desc of
     SymObject syms -> length syms
     SymLetter -> error "should be passed SymObject instead"
-  indexPairs = sortBy cmp $ do
+  indexPairs = sortBy cmp do
     m <- [1 .. lim]
     n <- [m .. lim]
     pure (m, n)
   cmp (a, b) (x, y) = compare (b, a) (y, x)
 
 generateObjectMsToObjectN :: SymDesc -> Int -> Int -> [String]
-generateObjectMsToObjectN desc m n = reverse $ do
+generateObjectMsToObjectN desc m n = reverse do
   symsM <- symsMs
   catMaybes [generateObjectMToObjectN desc symsM symsN]
  where

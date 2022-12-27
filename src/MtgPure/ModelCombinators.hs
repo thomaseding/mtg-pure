@@ -6,20 +6,10 @@
 module MtgPure.ModelCombinators (
   addManaAnyColor,
   addToBattlefield,
-  asActivatedOrTriggeredAbility,
-  AsActivatedOrTriggeredAbility,
-  asAny,
-  AsAny,
   AsCost (..),
-  asCreaturePlayerPlaneswalker,
-  AsCreaturePlayerPlaneswalker,
   AsDamage (..),
   AsIfThen (..),
   AsIfThenElse (..),
-  asPermanent,
-  AsPermanent,
-  asSpell,
-  AsSpell,
   AsWithLinkedObject (..),
   AsWithMaskedObject (..),
   AsWithMaskedObjects (..),
@@ -100,17 +90,12 @@ import safe MtgPure.Model.OTN (
   OT5,
   OT6,
  )
-import safe MtgPure.Model.ObjectType (ObjectType (..))
 import safe MtgPure.Model.ObjectType.Any (CoAny (..))
 import safe MtgPure.Model.ObjectType.Card (CoCard (..))
 import safe MtgPure.Model.ObjectType.Kind (
-  OTActivatedOrTriggeredAbility,
-  OTAny,
-  OTCreaturePlayerPlaneswalker,
   OTDamageSource,
   OTLand,
   OTPlayer,
-  OTSpell,
  )
 import safe MtgPure.Model.ObjectType.Permanent (CoPermanent (..))
 import safe MtgPure.Model.PrePost (PrePost (..))
@@ -143,13 +128,6 @@ import safe MtgPure.Model.Step (Step (..))
 import safe MtgPure.Model.TimePoint (TimePoint (..))
 import safe MtgPure.Model.ToManaCost (ToManaCost (..))
 import safe MtgPure.Model.ToManaPool (ToManaPool (..))
-import safe MtgPure.Model.ToObjectN.Classes (
-  ToObject12,
-  ToObject2,
-  ToObject3,
-  ToObject6,
-  ToObject8,
- )
 import safe MtgPure.Model.ToObjectN.Instances ()
 import safe MtgPure.Model.Variable (Var (Var), Variable)
 import safe MtgPure.Model.Zone (IsZone, Zone (..))
@@ -160,13 +138,18 @@ import safe MtgPure.Model.ZoneObject (
   ZOPlayer,
  )
 import safe MtgPure.Model.ZoneObject.Convert (
+  AsActivatedOrTriggeredAbility,
+  AsAny,
+  AsCreaturePlayerPlaneswalker,
+  AsDamageSource,
   AsPermanent,
+  AsSpell,
+  asActivatedOrTriggeredAbility,
+  asAny,
+  asCreaturePlayerPlaneswalker,
+  asDamageSource,
   asPermanent,
-  toZO12,
-  toZO2,
-  toZO3,
-  toZO6,
-  toZO8,
+  asSpell,
  )
 
 tyAp :: forall a f. f a -> f a
@@ -267,71 +250,6 @@ instance (IsZO zone (OT1 a), Inst1 IsObjectType a) => AsWithThis (OT1 a) zone li
 
 instance (IsZO zone (OT2 a b), Inst2 IsObjectType a b) => AsWithThis (OT2 a b) zone liftOT (ZO zone (OT1 a), ZO zone (OT1 b)) where
   thisObject = T2
-
-type AsActivatedOrTriggeredAbility ot =
-  ToObject2 ot 'OTActivatedAbility 'OTTriggeredAbility
-
-asActivatedOrTriggeredAbility ::
-  AsActivatedOrTriggeredAbility ot =>
-  ZO zone ot ->
-  ZO zone OTActivatedOrTriggeredAbility
-asActivatedOrTriggeredAbility = toZO2
-
-type AsAny ot =
-  ToObject12
-    ot
-    'OTActivatedAbility
-    'OTArtifact
-    'OTCreature
-    'OTEmblem
-    'OTEnchantment
-    'OTInstant
-    'OTLand
-    'OTPlaneswalker
-    'OTPlayer
-    'OTSorcery
-    'OTStaticAbility
-    'OTTriggeredAbility
-
-asAny :: AsAny ot => ZO zone ot -> ZO zone OTAny
-asAny = toZO12
-
-type AsDamageSource ot =
-  ToObject8
-    ot
-    'OTArtifact
-    'OTCreature
-    'OTEnchantment
-    'OTInstant
-    'OTLand
-    'OTPlaneswalker
-    'OTPlayer
-    'OTSorcery
-
-asDamageSource :: AsDamageSource ot => ZO zone ot -> ZO zone OTDamageSource
-asDamageSource = toZO8
-
-type AsSpell ot =
-  ToObject6
-    ot
-    'OTArtifact
-    'OTCreature
-    'OTEnchantment
-    'OTInstant
-    'OTPlaneswalker
-    'OTSorcery
-
-asSpell :: AsSpell ot => ZO zone ot -> ZO zone OTSpell
-asSpell = toZO6
-
-type AsCreaturePlayerPlaneswalker ot =
-  ToObject3 ot 'OTCreature 'OTPlaneswalker 'OTPlayer
-
-asCreaturePlayerPlaneswalker ::
-  AsCreaturePlayerPlaneswalker ot =>
-  ZO zone ot ->
-  ZO zone OTCreaturePlayerPlaneswalker
-asCreaturePlayerPlaneswalker = toZO3
 
 class AsDamage a where
   asDamage :: a -> Damage 'Var
