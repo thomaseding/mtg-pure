@@ -9,9 +9,9 @@ module MtgPure.Model.Exile (
 
 import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
-import safe MtgPure.Model.ObjectType.Kind (OTCard)
+import safe MtgPure.Model.Object.OTKind (OTCard)
 import safe MtgPure.Model.Zone (Zone (..))
-import safe MtgPure.Model.ZoneObject (ZO)
+import safe MtgPure.Model.ZoneObject.ZoneObject (ZO)
 
 newtype Exile :: Type where
   Exile :: [ZO 'ZExile OTCard] -> Exile

@@ -3,7 +3,7 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.OTN (
+module MtgPure.Model.Object.OTN (
   OT,
   OT0,
   OT1,
@@ -20,9 +20,9 @@ module MtgPure.Model.OTN (
   OT12,
 ) where
 
-import safe MtgPure.Model.IsObjectType (IsObjectType)
-import safe MtgPure.Model.OT (OT')
-import safe MtgPure.Model.OTKN (
+import safe MtgPure.Model.Object.IsObjectType (IsObjectType)
+import safe MtgPure.Model.Object.OT (OT')
+import safe MtgPure.Model.Object.OTKN (
   OTK0,
   OTK1,
   OTK10,

@@ -90,11 +90,11 @@ import safe MtgPure.Engine.State (
   logCall,
  )
 import safe MtgPure.Model.EffectType (EffectType (..))
-import safe MtgPure.Model.OTN (OT0)
-import safe MtgPure.Model.Object (Object)
-import safe MtgPure.Model.ObjectId (ObjectId)
-import safe MtgPure.Model.ObjectType (ObjectType (..))
-import safe MtgPure.Model.ObjectType.Kind (OTCard, OTPermanent, OTSpell)
+import safe MtgPure.Model.Object.OTKind (OTCard, OTPermanent, OTSpell)
+import safe MtgPure.Model.Object.OTN (OT0)
+import safe MtgPure.Model.Object.Object (Object)
+import safe MtgPure.Model.Object.ObjectId (ObjectId)
+import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Permanent (Permanent)
 import safe MtgPure.Model.Player (Player)
 import safe MtgPure.Model.Recursive (
@@ -106,7 +106,7 @@ import safe MtgPure.Model.Recursive (
   Requirement,
  )
 import safe MtgPure.Model.Zone (Zone (..))
-import safe MtgPure.Model.ZoneObject (IsZO, ZO)
+import safe MtgPure.Model.ZoneObject.ZoneObject (IsZO, ZO)
 
 getFwd :: (Monad m, IsReadWrite rw) => Magic v rw m (Fwd m)
 getFwd = internalFromPrivate $ fromRO $ gets magicFwd

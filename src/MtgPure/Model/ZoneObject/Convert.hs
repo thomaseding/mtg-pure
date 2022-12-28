@@ -59,10 +59,19 @@ import safe Data.Inst (
 import safe Data.Kind (Type)
 import safe Data.Monoid (First (..))
 import safe Data.Typeable (Typeable, cast)
-import safe MtgPure.Model.IsObjectType (IsObjectType)
-import safe MtgPure.Model.LitOT (LitOT (..))
-import safe MtgPure.Model.OT (OT' (..))
-import safe MtgPure.Model.OTN (
+import safe MtgPure.Model.Object.IsObjectType (IsObjectType)
+import safe MtgPure.Model.Object.LitOT (LitOT (..))
+import safe MtgPure.Model.Object.OT (OT' (..))
+import safe MtgPure.Model.Object.OTKind (
+  OTActivatedOrTriggeredAbility,
+  OTAny,
+  OTCard,
+  OTCreaturePlayerPlaneswalker,
+  OTDamageSource,
+  OTPermanent,
+  OTSpell,
+ )
+import safe MtgPure.Model.Object.OTN (
   OT0,
   OT1,
   OT10,
@@ -77,30 +86,22 @@ import safe MtgPure.Model.OTN (
   OT8,
   OT9,
  )
-import safe MtgPure.Model.Object (Object (..))
-import safe MtgPure.Model.ObjectId (
+import safe MtgPure.Model.Object.Object (Object (..))
+import safe MtgPure.Model.Object.ObjectId (
   GetObjectId (..),
   ObjectId (..),
   UntypedObject (..),
   getObjectId,
   pattern DefaultObjectDiscriminant,
  )
-import safe MtgPure.Model.ObjectN (ObjectN (..))
-import safe MtgPure.Model.ObjectType (
+import safe MtgPure.Model.Object.ObjectN (ObjectN (..))
+import safe MtgPure.Model.Object.ObjectType (
   ObjectType (..),
+ )
+import safe MtgPure.Model.Object.SObjectType (
   SObjectType (..),
  )
-import safe MtgPure.Model.ObjectType.Kind (
-  OTActivatedOrTriggeredAbility,
-  OTAny,
-  OTCard,
-  OTCreaturePlayerPlaneswalker,
-  OTDamageSource,
-  OTPermanent,
-  OTSpell,
- )
-import safe MtgPure.Model.Recursive.Ord ()
-import safe MtgPure.Model.ToObjectN.Classes (
+import safe MtgPure.Model.Object.ToObjectN.Classes (
   ToObject1 (..),
   ToObject10 (..),
   ToObject11 (..),
@@ -114,9 +115,10 @@ import safe MtgPure.Model.ToObjectN.Classes (
   ToObject8 (..),
   ToObject9 (..),
  )
-import safe MtgPure.Model.VisitObjectN (VisitObjectN (..))
+import safe MtgPure.Model.Object.VisitObjectN (VisitObjectN (..))
+import safe MtgPure.Model.Recursive.Ord ()
 import safe MtgPure.Model.Zone (IsZone (..), SZone (..), Zone (..))
-import safe MtgPure.Model.ZoneObject (IsOT, ZO, ZoneObject (..), toZone, zoToObjectN)
+import safe MtgPure.Model.ZoneObject.ZoneObject (IsOT, ZO, ZoneObject (..), toZone, zoToObjectN)
 
 zo1ToO :: (IsObjectType a, IsZone zone) => ZO zone (OT1 a) -> Object a
 zo1ToO zo = case zoToObjectN zo of

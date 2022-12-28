@@ -12,13 +12,14 @@
 module MtgPure.Engine.Orphans.ZO (
   ) where
 
-import safe MtgPure.Model.Object (Object (Object))
-import safe MtgPure.Model.ObjectId (GetObjectId (..))
-import safe MtgPure.Model.ObjectN (ObjectN)
-import safe MtgPure.Model.ObjectType (SObjectType (SLand))
-import safe MtgPure.Model.ZoneObject (ZO)
+import safe MtgPure.Model.Object.Object (Object (Object))
+import safe MtgPure.Model.Object.ObjectId (GetObjectId (..))
+import safe MtgPure.Model.Object.ObjectN (ObjectN)
+import safe MtgPure.Model.Object.SObjectType (SObjectType (SLand))
+import safe MtgPure.Model.ZoneObject.ZoneObject (ZO)
 
 instance GetObjectId (ObjectN ot) => Show (ZO zone ot) where
   show zo = "Z" ++ show o
    where
-    o = Object SLand $ getUntypedObject zo
+    arb = SLand
+    o = Object arb $ getUntypedObject zo

@@ -55,23 +55,25 @@ import safe MtgPure.Engine.State (
  )
 import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.IsCardList (containsCard)
-import safe MtgPure.Model.IsObjectType (IsObjectType (..))
-import safe MtgPure.Model.OTN (OT0, OT1)
-import safe MtgPure.Model.Object (Object)
-import safe MtgPure.Model.ObjectId (
-  ObjectId,
-  UntypedObject (..),
-  getObjectId,
-  pattern DefaultObjectDiscriminant,
- )
-import safe MtgPure.Model.ObjectN (ObjectN (O1))
-import safe MtgPure.Model.ObjectType (ObjectType (..))
-import safe MtgPure.Model.ObjectType.Kind (
+import safe MtgPure.Model.Object.IsObjectType (IsObjectType (..))
+import safe MtgPure.Model.Object.OTKind (
   OTActivatedAbility,
   OTInstant,
   OTSorcery,
   OTSpell,
  )
+import safe MtgPure.Model.Object.OTN (OT0, OT1)
+import safe MtgPure.Model.Object.Object (Object)
+import safe MtgPure.Model.Object.ObjectId (
+  ObjectId,
+  UntypedObject (..),
+  getObjectId,
+  pattern DefaultObjectDiscriminant,
+ )
+import safe MtgPure.Model.Object.ObjectN (ObjectN (O1))
+import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
+import safe MtgPure.Model.Object.ToObjectN.Classes (ToObject2' (..), ToObject6' (..))
+import safe MtgPure.Model.Object.VisitObjectN (VisitObjectN (promoteIdToObjectN))
 import safe MtgPure.Model.Player (Player (..))
 import safe MtgPure.Model.PrePost (PrePost (..))
 import safe MtgPure.Model.Recursive (
@@ -90,11 +92,9 @@ import safe MtgPure.Model.Recursive (
   YourCard (..),
  )
 import safe MtgPure.Model.Stack (Stack (..), StackObject (..))
-import safe MtgPure.Model.ToObjectN.Classes (ToObject2' (..), ToObject6' (..))
-import safe MtgPure.Model.VisitObjectN (VisitObjectN (promoteIdToObjectN))
 import safe MtgPure.Model.Zone (IsZone (..), SZone (..), Zone (..))
-import safe MtgPure.Model.ZoneObject (IsZO, ZO, ZOPlayer, ZoneObject (..))
 import safe MtgPure.Model.ZoneObject.Convert (asCard, oToZO1, toZO0)
+import safe MtgPure.Model.ZoneObject.ZoneObject (IsZO, ZO, ZOPlayer, ZoneObject (..))
 
 type Legality' = Maybe ()
 

@@ -55,9 +55,9 @@ import safe MtgPure.Engine.State (
   runMagicCont,
  )
 import safe MtgPure.Model.IsCardList (containsCard)
-import safe MtgPure.Model.Object (Object)
-import safe MtgPure.Model.ObjectType (ObjectType (..))
-import safe MtgPure.Model.ObjectType.Kind (OTLand)
+import safe MtgPure.Model.Object.OTKind (OTLand)
+import safe MtgPure.Model.Object.Object (Object)
+import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Permanent (cardToPermanent)
 import safe MtgPure.Model.PhaseStep (PhaseStep (..))
 import safe MtgPure.Model.Player (Player (..))
@@ -70,8 +70,8 @@ import safe MtgPure.Model.Recursive (
  )
 import safe MtgPure.Model.Stack (Stack (..))
 import safe MtgPure.Model.Zone (IsZone (..), SZone (..))
-import safe MtgPure.Model.ZoneObject (ZO, ZOPlayer)
 import safe MtgPure.Model.ZoneObject.Convert (asCard, oToZO1, toZO0, zo0ToPermanent)
+import safe MtgPure.Model.ZoneObject.ZoneObject (ZO, ZOPlayer)
 
 data PlayLandReqs = PlayLandReqs
   { playLandReqs_hasPriority :: Bool

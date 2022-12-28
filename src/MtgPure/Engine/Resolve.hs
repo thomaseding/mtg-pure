@@ -36,13 +36,13 @@ import safe MtgPure.Engine.State (
   logCall,
  )
 import safe MtgPure.Model.EffectType (EffectType (..))
-import safe MtgPure.Model.OTN (OT0)
+import safe MtgPure.Model.Object.OTN (OT0)
 import safe MtgPure.Model.PrePost (PrePost (..))
 import safe MtgPure.Model.Recursive (Effect (..), Elect (..))
 import safe MtgPure.Model.Stack (Stack (..), StackObject (..))
 import safe MtgPure.Model.Zone (Zone (..))
-import safe MtgPure.Model.ZoneObject (ZO)
 import safe MtgPure.Model.ZoneObject.Convert (toZO0)
+import safe MtgPure.Model.ZoneObject.ZoneObject (ZO)
 
 resolveTopOfStack :: Monad m => Magic 'Private 'RW m ()
 resolveTopOfStack = logCall 'resolveTopOfStack do

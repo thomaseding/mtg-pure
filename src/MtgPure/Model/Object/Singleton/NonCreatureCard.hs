@@ -3,7 +3,7 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.ObjectType.NonCreatureCard (
+module MtgPure.Model.Object.Singleton.NonCreatureCard (
   WNonCreatureCard (..),
   NonCreatureCardType (..),
   IsNonCreatureCardType (..),
@@ -15,14 +15,8 @@ import safe Data.Inst (Inst2, Inst3)
 import safe Data.Kind (Type)
 import safe Data.Proxy (Proxy)
 import safe Data.Typeable (Typeable)
-import safe MtgPure.Model.IsObjectType (IsObjectType)
-import safe MtgPure.Model.OTN (
-  OT1,
-  OT2,
-  OT3,
- )
-import safe MtgPure.Model.ObjectType (ObjectType (..))
-import safe MtgPure.Model.ObjectType.Kind (
+import safe MtgPure.Model.Object.IsObjectType (IsObjectType)
+import safe MtgPure.Model.Object.OTKind (
   OTArtifact,
   OTEnchantment,
   OTInstant,
@@ -31,7 +25,13 @@ import safe MtgPure.Model.ObjectType.Kind (
   OTPlaneswalker,
   OTSorcery,
  )
-import safe MtgPure.Model.ZoneObject (ZO)
+import safe MtgPure.Model.Object.OTN (
+  OT1,
+  OT2,
+  OT3,
+ )
+import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
+import safe MtgPure.Model.ZoneObject.ZoneObject (ZO)
 
 data NonCreatureCardType
   = NCTArtifact

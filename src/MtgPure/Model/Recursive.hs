@@ -68,16 +68,13 @@ import safe MtgPure.Model.Colors (Colors)
 import safe MtgPure.Model.CreatureType (CreatureType)
 import safe MtgPure.Model.Damage (Damage)
 import safe MtgPure.Model.EffectType (EffectType (..))
-import safe MtgPure.Model.IsObjectType (IsObjectType)
 import safe MtgPure.Model.LandType (LandType)
 import safe MtgPure.Model.Loyalty (Loyalty)
 import safe MtgPure.Model.Mana (Snow (..))
 import safe MtgPure.Model.ManaCost (ManaCost)
 import safe MtgPure.Model.ManaPool (ManaPool)
-import safe MtgPure.Model.OTN (OT1, OT2, OT3, OT4, OT5, OT6)
-import safe MtgPure.Model.ObjectType.Any (WAny)
-import safe MtgPure.Model.ObjectType.Card (WCard)
-import safe MtgPure.Model.ObjectType.Kind (
+import safe MtgPure.Model.Object.IsObjectType (IsObjectType)
+import safe MtgPure.Model.Object.OTKind (
   OTActivatedOrTriggeredAbility,
   OTAny,
   OTArtifact,
@@ -95,8 +92,11 @@ import safe MtgPure.Model.ObjectType.Kind (
   OTSorcery,
   OTSpell,
  )
-import safe MtgPure.Model.ObjectType.Permanent (CoPermanent, WPermanent)
-import safe MtgPure.Model.ObjectType.Spell (WSpell (..))
+import safe MtgPure.Model.Object.OTN (OT1, OT2, OT3, OT4, OT5, OT6)
+import safe MtgPure.Model.Object.Singleton.Any (WAny)
+import safe MtgPure.Model.Object.Singleton.Card (WCard)
+import safe MtgPure.Model.Object.Singleton.Permanent (CoPermanent, WPermanent)
+import safe MtgPure.Model.Object.Singleton.Spell (WSpell (..))
 import safe MtgPure.Model.Power (Power)
 import safe MtgPure.Model.PrePost (IsPrePost, PrePost (..))
 import safe MtgPure.Model.Rarity (Rarity)
@@ -104,7 +104,7 @@ import safe MtgPure.Model.TimePoint (TimePoint)
 import safe MtgPure.Model.Toughness (Toughness)
 import safe MtgPure.Model.Variable (Var (Var), Variable)
 import safe MtgPure.Model.Zone (Zone (..))
-import safe MtgPure.Model.ZoneObject (
+import safe MtgPure.Model.ZoneObject.ZoneObject (
   IsOT,
   IsZO,
   ZO,

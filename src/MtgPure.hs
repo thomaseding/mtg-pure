@@ -20,7 +20,7 @@ import safe MtgPure.Engine hiding (
   satisfies,
  )
 import safe MtgPure.Model
-import safe MtgPure.Model.ToObjectN.CodeGen (codeGenToObjectN)
+import safe MtgPure.Model.Object.ToObjectN.CodeGen (codeGenToObjectN)
 import safe MtgPure.ModelCombinators
 import safe MtgPure.Test.Direct ()
 import safe MtgPure.Test.MountainShock (mainMountainShock)

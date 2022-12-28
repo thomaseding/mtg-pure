@@ -19,9 +19,9 @@ import safe MtgPure.Model.Colors (Colors)
 import safe MtgPure.Model.Creature (Creature)
 import safe MtgPure.Model.Damage (Damage, Damage' (..))
 import safe MtgPure.Model.Land (Land (..))
-import safe MtgPure.Model.Object (Object (..))
-import safe MtgPure.Model.ObjectType (ObjectType (..))
-import safe MtgPure.Model.ObjectType.Kind (OTPermanent)
+import safe MtgPure.Model.Object.OTKind (OTPermanent)
+import safe MtgPure.Model.Object.Object (Object (..))
+import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Recursive (
   Ability,
   Card (..),

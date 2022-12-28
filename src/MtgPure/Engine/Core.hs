@@ -76,18 +76,18 @@ import safe MtgPure.Engine.State (
  )
 import safe MtgPure.Model.Hand (Hand (..))
 import safe MtgPure.Model.IsCardList (pushCard)
-import safe MtgPure.Model.IsObjectType (IsObjectType (..))
 import safe MtgPure.Model.Library (Library (..))
-import safe MtgPure.Model.Object (Object)
-import safe MtgPure.Model.ObjectId (
+import safe MtgPure.Model.Object.IndexOT (IndexOT (..))
+import safe MtgPure.Model.Object.IsObjectType (IsObjectType (..))
+import safe MtgPure.Model.Object.OTKind (OTCard, OTPermanent)
+import safe MtgPure.Model.Object.Object (Object)
+import safe MtgPure.Model.Object.ObjectId (
   ObjectId (..),
   UntypedObject (..),
   getObjectId,
   pattern DefaultObjectDiscriminant,
  )
-import safe MtgPure.Model.ObjectType (ObjectType (..))
-import safe MtgPure.Model.ObjectType.Index (IndexOT (..))
-import safe MtgPure.Model.ObjectType.Kind (OTCard, OTPermanent)
+import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Permanent (Permanent (..))
 import safe MtgPure.Model.Player (Player (..))
 import safe MtgPure.Model.Recursive (
@@ -97,13 +97,13 @@ import safe MtgPure.Model.Recursive (
   fromSome,
  )
 import safe MtgPure.Model.Zone (IsZone (..), SZone (..), Zone (..))
-import safe MtgPure.Model.ZoneObject (IsZO, ZO, toZone)
 import safe MtgPure.Model.ZoneObject.Convert (
   castOToON,
   toZO0,
   zo0ToCard,
   zo0ToPermanent,
  )
+import safe MtgPure.Model.ZoneObject.ZoneObject (IsZO, ZO, toZone)
 
 getAlivePlayerCount :: Monad m => Magic 'Public 'RO m PlayerCount
 getAlivePlayerCount = logCall 'getAlivePlayerCount $ PlayerCount . length <$> allPlayers

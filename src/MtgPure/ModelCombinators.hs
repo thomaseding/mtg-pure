@@ -77,12 +77,17 @@ import safe MtgPure.Model.Color (Color (..))
 import safe MtgPure.Model.ColorsLike (ColorsLike (..))
 import safe MtgPure.Model.Damage (Damage, Damage' (..))
 import safe MtgPure.Model.EffectType (EffectType (..))
-import safe MtgPure.Model.IsObjectType (IsObjectType)
 import safe MtgPure.Model.LandType (LandType (BasicLand))
 import safe MtgPure.Model.Mana (Snow (..))
 import safe MtgPure.Model.ManaCost (ManaCost)
 import safe MtgPure.Model.ManaSymbol (ManaSymbol (..))
-import safe MtgPure.Model.OTN (
+import safe MtgPure.Model.Object.IsObjectType (IsObjectType)
+import safe MtgPure.Model.Object.OTKind (
+  OTDamageSource,
+  OTLand,
+  OTPlayer,
+ )
+import safe MtgPure.Model.Object.OTN (
   OT1,
   OT2,
   OT3,
@@ -90,14 +95,10 @@ import safe MtgPure.Model.OTN (
   OT5,
   OT6,
  )
-import safe MtgPure.Model.ObjectType.Any (CoAny (..))
-import safe MtgPure.Model.ObjectType.Card (CoCard (..))
-import safe MtgPure.Model.ObjectType.Kind (
-  OTDamageSource,
-  OTLand,
-  OTPlayer,
- )
-import safe MtgPure.Model.ObjectType.Permanent (CoPermanent (..))
+import safe MtgPure.Model.Object.Singleton.Any (CoAny (..))
+import safe MtgPure.Model.Object.Singleton.Card (CoCard (..))
+import safe MtgPure.Model.Object.Singleton.Permanent (CoPermanent (..))
+import safe MtgPure.Model.Object.ToObjectN.Instances ()
 import safe MtgPure.Model.PrePost (PrePost (..))
 import safe MtgPure.Model.Recursive (
   Ability (..),
@@ -128,15 +129,8 @@ import safe MtgPure.Model.Step (Step (..))
 import safe MtgPure.Model.TimePoint (TimePoint (..))
 import safe MtgPure.Model.ToManaCost (ToManaCost (..))
 import safe MtgPure.Model.ToManaPool (ToManaPool (..))
-import safe MtgPure.Model.ToObjectN.Instances ()
 import safe MtgPure.Model.Variable (Var (Var), Variable)
 import safe MtgPure.Model.Zone (IsZone, Zone (..))
-import safe MtgPure.Model.ZoneObject (
-  IsOT,
-  IsZO,
-  ZO,
-  ZOPlayer,
- )
 import safe MtgPure.Model.ZoneObject.Convert (
   AsActivatedOrTriggeredAbility,
   AsAny,
@@ -150,6 +144,12 @@ import safe MtgPure.Model.ZoneObject.Convert (
   asDamageSource,
   asPermanent,
   asSpell,
+ )
+import safe MtgPure.Model.ZoneObject.ZoneObject (
+  IsOT,
+  IsZO,
+  ZO,
+  ZOPlayer,
  )
 
 tyAp :: forall a f. f a -> f a

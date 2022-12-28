@@ -11,7 +11,7 @@ module MtgPure.Model.CardType (
 
 import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
-import safe MtgPure.Model.ObjectType (ObjectType (..))
+import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 
 data CardType :: Type where
   CTArtifact :: CardType

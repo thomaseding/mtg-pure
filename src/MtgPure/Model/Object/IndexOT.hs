@@ -3,7 +3,7 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.ObjectType.Index (
+module MtgPure.Model.Object.IndexOT (
   IndexOT (..),
 ) where
 
@@ -22,8 +22,8 @@ import Data.Inst (
   Inst9,
  )
 import safe Data.Typeable (Typeable)
-import safe MtgPure.Model.IsObjectType (IsObjectType (..))
-import safe MtgPure.Model.OTN (
+import safe MtgPure.Model.Object.IsObjectType (IsObjectType (..))
+import safe MtgPure.Model.Object.OTN (
   OT0,
   OT1,
   OT10,
@@ -38,7 +38,7 @@ import safe MtgPure.Model.OTN (
   OT8,
   OT9,
  )
-import safe MtgPure.Model.ObjectType (ObjectType)
+import safe MtgPure.Model.Object.ObjectType (ObjectType)
 
 idx :: forall ot. IsObjectType ot => ObjectType
 idx = litObjectType @ot

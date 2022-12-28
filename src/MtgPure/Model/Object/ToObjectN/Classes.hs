@@ -4,7 +4,7 @@
 {-# HLINT ignore "Use const" #-}
 {-# HLINT ignore "Redundant bracket" #-}
 
-module MtgPure.Model.ToObjectN.Classes (
+module MtgPure.Model.Object.ToObjectN.Classes (
   ToObject1' (..),
   ToObject2' (..),
   ToObject3' (..),
@@ -45,10 +45,10 @@ import safe Data.Inst (
   Inst8,
   Inst9,
  )
-import safe MtgPure.Model.IsObjectType (
+import safe MtgPure.Model.Object.IsObjectType (
   IsObjectType (idToObject),
  )
-import safe MtgPure.Model.OTN (
+import safe MtgPure.Model.Object.OTN (
   OT0,
   OT1,
   OT10,
@@ -63,10 +63,10 @@ import safe MtgPure.Model.OTN (
   OT8,
   OT9,
  )
-import safe MtgPure.Model.Object (
+import safe MtgPure.Model.Object.Object (
   Object (..),
  )
-import safe MtgPure.Model.ObjectN (ObjectN (..))
+import safe MtgPure.Model.Object.ObjectN (ObjectN (..))
 
 class (IsObjectType z, Inst1 IsObjectType a) => ToObject1' z a where
   -- NOTE: This is the same as `O1` for N=1, but uniqueness is not guaranteed

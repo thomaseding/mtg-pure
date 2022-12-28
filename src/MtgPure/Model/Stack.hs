@@ -10,12 +10,12 @@ module MtgPure.Model.Stack (
 
 import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
-import safe MtgPure.Model.ObjectType.Kind (
+import safe MtgPure.Model.Object.OTKind (
   OTActivatedOrTriggeredAbility,
   OTSpell,
  )
 import safe MtgPure.Model.Zone (Zone (..))
-import safe MtgPure.Model.ZoneObject (ZO)
+import safe MtgPure.Model.ZoneObject.ZoneObject (ZO)
 
 data StackObject :: Type where
   StackAbility :: ZO 'ZStack OTActivatedOrTriggeredAbility -> StackObject

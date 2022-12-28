@@ -4,7 +4,7 @@
 {-# HLINT ignore "Use const" #-}
 
 -- TODO: Merge with Object.hs
-module MtgPure.Model.ObjectId (
+module MtgPure.Model.Object.ObjectId (
   UntypedObject (..),
   ObjectId (..),
   ObjectDiscriminant' (..),

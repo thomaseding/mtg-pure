@@ -65,8 +65,8 @@ import safe MtgPure.Engine.Satisfies (satisfies, zosSatisfying)
 import safe MtgPure.Engine.State (Fwd, Magic)
 import safe MtgPure.Engine.StateBasedActions (performStateBasedActions)
 import safe MtgPure.Engine.Turn (startGame)
-import safe MtgPure.Model.Object (Object)
-import safe MtgPure.Model.ObjectType (ObjectType (..))
+import safe MtgPure.Model.Object.Object (Object)
+import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 
 fwdImpl :: Monad m => Fwd m
 fwdImpl =

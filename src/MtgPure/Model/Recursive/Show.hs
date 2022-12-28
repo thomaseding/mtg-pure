@@ -48,14 +48,24 @@ import safe MtgPure.Model.Colors (Colors (..))
 import safe MtgPure.Model.CreatureType (CreatureType)
 import safe MtgPure.Model.Damage (Damage, Damage' (..))
 import safe MtgPure.Model.GenericMana (GenericMana (..))
-import safe MtgPure.Model.IsObjectType (IsObjectType (..))
 import safe MtgPure.Model.LandType (LandType (..))
 import safe MtgPure.Model.Loyalty (Loyalty)
 import safe MtgPure.Model.Mana (Mana (..))
 import safe MtgPure.Model.ManaCost (ManaCost (..))
 import safe MtgPure.Model.ManaPool (CompleteManaPool (..), ManaPool (..))
 import safe MtgPure.Model.ManaSymbol (ManaSymbol (..))
-import safe MtgPure.Model.OTN (
+import safe MtgPure.Model.Object.IsObjectType (IsObjectType (..))
+import safe MtgPure.Model.Object.OTKind (
+  OTAny,
+  OTCreaturePlaneswalker,
+  OTCreaturePlayer,
+  OTCreaturePlayerPlaneswalker,
+  OTDamageSource,
+  OTPermanent,
+  OTPlayerPlaneswalker,
+  OTSpell,
+ )
+import safe MtgPure.Model.Object.OTN (
   OT1,
   OT2,
   OT3,
@@ -63,14 +73,14 @@ import safe MtgPure.Model.OTN (
   OT5,
   OT6,
  )
-import safe MtgPure.Model.Object (Object (..))
-import safe MtgPure.Model.ObjectId (
+import safe MtgPure.Model.Object.Object (Object (..))
+import safe MtgPure.Model.Object.ObjectId (
   ObjectId (ObjectId),
   UntypedObject (..),
   getObjectId,
   pattern DefaultObjectDiscriminant,
  )
-import safe MtgPure.Model.ObjectN (
+import safe MtgPure.Model.Object.ObjectN (
   ON0,
   ON1,
   ON10,
@@ -86,21 +96,12 @@ import safe MtgPure.Model.ObjectN (
   ON9,
   ObjectN (..),
  )
-import safe MtgPure.Model.ObjectType (ObjectType (..))
-import safe MtgPure.Model.ObjectType.Any (WAny (..))
-import safe MtgPure.Model.ObjectType.Card (WCard (..))
-import safe MtgPure.Model.ObjectType.Kind (
-  OTAny,
-  OTCreaturePlaneswalker,
-  OTCreaturePlayer,
-  OTCreaturePlayerPlaneswalker,
-  OTDamageSource,
-  OTPermanent,
-  OTPlayerPlaneswalker,
-  OTSpell,
- )
-import safe MtgPure.Model.ObjectType.Permanent (WPermanent (..))
-import safe MtgPure.Model.ObjectType.Spell (WSpell (..))
+import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
+import safe MtgPure.Model.Object.Singleton.Any (WAny (..))
+import safe MtgPure.Model.Object.Singleton.Card (WCard (..))
+import safe MtgPure.Model.Object.Singleton.Permanent (WPermanent (..))
+import safe MtgPure.Model.Object.Singleton.Spell (WSpell (..))
+import safe MtgPure.Model.Object.VisitObjectN (KnownObjectN (..), VisitObjectN (..))
 import safe MtgPure.Model.Power (Power)
 import safe MtgPure.Model.PrettyType (PrettyType (..))
 import safe MtgPure.Model.Recursive (
@@ -147,9 +148,8 @@ import safe MtgPure.Model.Variable (
   VariableId' (..),
   getVariableId,
  )
-import safe MtgPure.Model.VisitObjectN (KnownObjectN (..), VisitObjectN (..))
 import safe MtgPure.Model.Zone (IsZone (..), Zone (..))
-import safe MtgPure.Model.ZoneObject (
+import safe MtgPure.Model.ZoneObject.ZoneObject (
   IsOT,
   IsZO,
   ZO,

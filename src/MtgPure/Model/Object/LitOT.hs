@@ -3,7 +3,7 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.LitOT (
+module MtgPure.Model.Object.LitOT (
   LitOT (..),
 ) where
 
@@ -22,9 +22,9 @@ import safe Data.Inst (
   Inst9,
  )
 import safe Data.Kind (Type)
-import safe MtgPure.Model.IsObjectType (IsObjectType)
-import safe MtgPure.Model.OT (OT' (..))
-import safe MtgPure.Model.OTN (
+import safe MtgPure.Model.Object.IsObjectType (IsObjectType)
+import safe MtgPure.Model.Object.OT (OT' (..))
+import safe MtgPure.Model.Object.OTN (
   OT,
   OT0,
   OT1,

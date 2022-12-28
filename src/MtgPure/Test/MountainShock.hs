@@ -64,11 +64,7 @@ import safe MtgPure.Model.Deck (Deck (..))
 import safe MtgPure.Model.Hand (Hand (..))
 import safe MtgPure.Model.Library (Library (..))
 import safe MtgPure.Model.Mulligan (Mulligan (..))
-import safe MtgPure.Model.Object (Object (..))
-import safe MtgPure.Model.ObjectId (GetObjectId, ObjectId (ObjectId), getObjectId)
-import safe MtgPure.Model.ObjectN (ObjectN)
-import safe MtgPure.Model.ObjectType (ObjectType (..))
-import safe MtgPure.Model.ObjectType.Kind (
+import safe MtgPure.Model.Object.OTKind (
   OTActivatedAbility,
   OTAny,
   OTCard,
@@ -76,14 +72,18 @@ import safe MtgPure.Model.ObjectType.Kind (
   OTPermanent,
   OTSpell,
  )
+import safe MtgPure.Model.Object.Object (Object (..))
+import safe MtgPure.Model.Object.ObjectId (GetObjectId, ObjectId (ObjectId), getObjectId)
+import safe MtgPure.Model.Object.ObjectN (ObjectN)
+import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
+import safe MtgPure.Model.Object.ToObjectN.Instances ()
+import safe MtgPure.Model.Object.VisitObjectN (VisitObjectN (promoteIdToObjectN))
 import safe MtgPure.Model.Player (Player (..))
 import safe MtgPure.Model.Recursive (AnyCard (..), Card (..), Requirement (..))
 import safe MtgPure.Model.Sideboard (Sideboard (..))
-import safe MtgPure.Model.ToObjectN.Instances ()
-import safe MtgPure.Model.VisitObjectN (VisitObjectN (promoteIdToObjectN))
 import safe MtgPure.Model.Zone (SZone (..), Zone (..))
-import safe MtgPure.Model.ZoneObject (ZO, ZoneObject (..))
 import safe MtgPure.Model.ZoneObject.Convert (toZO0, toZO1, zo0ToSpell)
+import safe MtgPure.Model.ZoneObject.ZoneObject (ZO, ZoneObject (..))
 import safe MtgPure.ModelCombinators (isTapped)
 import safe qualified System.IO as IO
 import safe System.Random (randomRIO)

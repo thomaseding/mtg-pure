@@ -36,15 +36,16 @@ import safe MtgPure.Engine.State (
   logCall,
   mkOpaqueGameState,
  )
-import safe MtgPure.Model.OTN (OT0)
-import safe MtgPure.Model.Object (Object (..))
-import safe MtgPure.Model.ObjectId (
+import safe MtgPure.Model.Object.OTKind (OTAny)
+import safe MtgPure.Model.Object.OTN (OT0)
+import safe MtgPure.Model.Object.Object (Object (..))
+import safe MtgPure.Model.Object.ObjectId (
   UntypedObject (..),
   getObjectId,
   pattern DefaultObjectDiscriminant,
  )
-import safe MtgPure.Model.ObjectType (ObjectType (..))
-import safe MtgPure.Model.ObjectType.Kind (OTAny)
+import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
+import safe MtgPure.Model.Object.VisitObjectN (VisitObjectN (..))
 import safe MtgPure.Model.Permanent (Permanent (..))
 import safe MtgPure.Model.PrePost (PrePost (..))
 import safe MtgPure.Model.Recursive (
@@ -56,15 +57,14 @@ import safe MtgPure.Model.Recursive (
   WithMaskedObjects (..),
  )
 import safe MtgPure.Model.Variable (Variable (..))
-import safe MtgPure.Model.VisitObjectN (VisitObjectN (..))
 import safe MtgPure.Model.Zone (IsZone (..), SZone (..), Zone (..))
-import safe MtgPure.Model.ZoneObject (IsZO, ZO, ZOPlayer, ZoneObject (ZO))
 import safe MtgPure.Model.ZoneObject.Convert (
   oToZO1,
   toZO0,
   zo0ToPermanent,
   zo1ToO,
  )
+import safe MtgPure.Model.ZoneObject.ZoneObject (IsZO, ZO, ZOPlayer, ZoneObject (ZO))
 
 performElections ::
   forall ot m p el x.

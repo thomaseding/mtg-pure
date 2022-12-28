@@ -3,7 +3,7 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.ObjectType.Kind (
+module MtgPure.Model.Object.OTKind (
   OTAbility,
   OTActivatedAbility,
   OTActivatedOrTriggeredAbility,
@@ -39,8 +39,8 @@ module MtgPure.Model.ObjectType.Kind (
   OTTriggeredAbility,
 ) where
 
-import safe MtgPure.Model.OTN (OT)
-import safe MtgPure.Model.ObjectType (
+import safe MtgPure.Model.Object.OTN (OT)
+import safe MtgPure.Model.Object.ObjectType (
   ObjectType (..),
  )
 

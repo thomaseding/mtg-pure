@@ -23,10 +23,22 @@ import safe Data.Inst (
  )
 import safe Data.Proxy (Proxy (Proxy))
 import safe Data.Typeable (TypeRep, Typeable, typeRep)
-import safe MtgPure.Model.IsObjectType (
+import safe MtgPure.Model.Object.IsObjectType (
   IsObjectType (litObjectType),
  )
-import safe MtgPure.Model.OTN (
+import safe MtgPure.Model.Object.OTKind (
+  OTAny,
+  OTArtifactCreature,
+  OTCreaturePlaneswalker,
+  OTCreaturePlayer,
+  OTCreaturePlayerPlaneswalker,
+  OTDamageSource,
+  OTEnchantmentCreature,
+  OTPermanent,
+  OTPlayerPlaneswalker,
+  OTSpell,
+ )
+import safe MtgPure.Model.Object.OTN (
   OT1,
   OT10,
   OT11,
@@ -40,20 +52,8 @@ import safe MtgPure.Model.OTN (
   OT8,
   OT9,
  )
-import safe MtgPure.Model.ObjectType (
+import safe MtgPure.Model.Object.ObjectType (
   ObjectType (..),
- )
-import safe MtgPure.Model.ObjectType.Kind (
-  OTAny,
-  OTArtifactCreature,
-  OTCreaturePlaneswalker,
-  OTCreaturePlayer,
-  OTCreaturePlayerPlaneswalker,
-  OTDamageSource,
-  OTEnchantmentCreature,
-  OTPermanent,
-  OTPlayerPlaneswalker,
-  OTSpell,
  )
 
 class Typeable ty => PrettyType ty where

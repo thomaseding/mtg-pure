@@ -3,7 +3,7 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.ObjectType.Card (
+module MtgPure.Model.Object.Singleton.Card (
   WCard (..),
   CardType (..),
   IsCardType (..),
@@ -20,14 +20,8 @@ import safe MtgPure.Model.CardType (
   ObjectTypeToCardType,
   SCardType (..),
  )
-import safe MtgPure.Model.IsObjectType (IsObjectType)
-import safe MtgPure.Model.OTN (
-  OT1,
-  OT2,
-  OT3,
- )
-import safe MtgPure.Model.ObjectType (ObjectType (..))
-import safe MtgPure.Model.ObjectType.Kind (
+import safe MtgPure.Model.Object.IsObjectType (IsObjectType)
+import safe MtgPure.Model.Object.OTKind (
   OTArtifact,
   OTCard,
   OTCreature,
@@ -37,7 +31,13 @@ import safe MtgPure.Model.ObjectType.Kind (
   OTPlaneswalker,
   OTSorcery,
  )
-import safe MtgPure.Model.ZoneObject (IsOT, ZO)
+import safe MtgPure.Model.Object.OTN (
+  OT1,
+  OT2,
+  OT3,
+ )
+import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
+import safe MtgPure.Model.ZoneObject.ZoneObject (IsOT, ZO)
 
 -- Witness type
 data WCard :: Type -> Type where

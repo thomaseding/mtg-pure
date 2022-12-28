@@ -30,10 +30,12 @@ import safe Data.Typeable (Typeable, cast, typeRep)
 import safe MtgPure.Model.Color (Color (..))
 import safe MtgPure.Model.Colors (Colors)
 import safe MtgPure.Model.Damage (Damage)
-import safe MtgPure.Model.IsObjectType (IsObjectType (..))
 import safe MtgPure.Model.ManaCost (ManaCost)
 import safe MtgPure.Model.ManaPool (ManaPool)
-import safe MtgPure.Model.OTN (
+import safe MtgPure.Model.Object.IndexOT (IndexOT (indexOT))
+import safe MtgPure.Model.Object.IsObjectType (IsObjectType (..))
+import safe MtgPure.Model.Object.OTKind (OTAny, OTDamageSource)
+import safe MtgPure.Model.Object.OTN (
   OT0,
   OT1,
   OT2,
@@ -42,22 +44,23 @@ import safe MtgPure.Model.OTN (
   OT5,
   OT6,
  )
-import safe MtgPure.Model.Object (Object (..))
-import safe MtgPure.Model.ObjectId (
+import safe MtgPure.Model.Object.Object (Object (..))
+import safe MtgPure.Model.Object.ObjectId (
   ObjectId (..),
   UntypedObject (..),
   getObjectId,
   pattern DefaultObjectDiscriminant,
  )
-import safe MtgPure.Model.ObjectN (ObjectN (..))
-import safe MtgPure.Model.ObjectType (ObjectType (..))
-import safe MtgPure.Model.ObjectType.Any (WAny (..))
-import safe MtgPure.Model.ObjectType.Card (WCard (..))
-import safe MtgPure.Model.ObjectType.Index (IndexOT (indexOT))
-import safe MtgPure.Model.ObjectType.Kind (OTAny, OTDamageSource)
-import safe MtgPure.Model.ObjectType.NonCreatureCard (WNonCreatureCard (..))
-import safe MtgPure.Model.ObjectType.Permanent (WPermanent (..))
-import safe MtgPure.Model.ObjectType.Spell (WSpell (..))
+import safe MtgPure.Model.Object.ObjectN (ObjectN (..))
+import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
+import safe MtgPure.Model.Object.Singleton.Any (WAny (..))
+import safe MtgPure.Model.Object.Singleton.Card (WCard (..))
+import safe MtgPure.Model.Object.Singleton.NonCreatureCard (WNonCreatureCard (..))
+import safe MtgPure.Model.Object.Singleton.Permanent (WPermanent (..))
+import safe MtgPure.Model.Object.Singleton.Spell (WSpell (..))
+import safe MtgPure.Model.Object.ToObjectN.Classes (ToObject1' (toObject1'))
+import safe MtgPure.Model.Object.ToObjectN.Instances ()
+import safe MtgPure.Model.Object.VisitObjectN (VisitObjectN (..))
 import safe MtgPure.Model.PrePost (IsPrePost (..), PrePost (..))
 import safe MtgPure.Model.Recursive (
   Ability (..),
@@ -96,16 +99,13 @@ import safe MtgPure.Model.Recursive (
   YourCard (..),
  )
 import safe MtgPure.Model.TimePoint (TimePoint (..))
-import safe MtgPure.Model.ToObjectN.Classes (ToObject1' (toObject1'))
-import safe MtgPure.Model.ToObjectN.Instances ()
 import safe MtgPure.Model.Variable (
   Variable (..),
   VariableId,
   VariableId' (..),
  )
-import safe MtgPure.Model.VisitObjectN (VisitObjectN (..))
 import safe MtgPure.Model.Zone (IsZone (..), Zone (..))
-import safe MtgPure.Model.ZoneObject (IsOT, IsZO, ZO, ZoneObject (..), toZone)
+import safe MtgPure.Model.ZoneObject.ZoneObject (IsOT, IsZO, ZO, ZoneObject (..), toZone)
 
 ----------------------------------------
 

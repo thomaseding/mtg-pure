@@ -4,7 +4,7 @@
 {-# HLINT ignore "Use const" #-}
 {-# HLINT ignore "Redundant multi-way if" #-}
 
-module MtgPure.Model.ObjectN (
+module MtgPure.Model.Object.ObjectN (
   ObjectN (..),
   ON0,
   ON1,
@@ -37,8 +37,8 @@ import safe Data.Inst (
  )
 import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
-import safe MtgPure.Model.IsObjectType (IsObjectType)
-import safe MtgPure.Model.OTN (
+import safe MtgPure.Model.Object.IsObjectType (IsObjectType)
+import safe MtgPure.Model.Object.OTN (
   OT0,
   OT1,
   OT10,
@@ -53,10 +53,10 @@ import safe MtgPure.Model.OTN (
   OT8,
   OT9,
  )
-import safe MtgPure.Model.Object (
+import safe MtgPure.Model.Object.Object (
   Object,
  )
-import safe MtgPure.Model.ObjectId (UntypedObject)
+import safe MtgPure.Model.Object.ObjectId (UntypedObject)
 
 type ON0 = ObjectN OT0
 
@@ -87,7 +87,6 @@ type ON12 a b c d e f g h i j k l = ObjectN (OT12 a b c d e f g h i j k l)
 -- TODO:
 -- The constructors should be private to disallow pattern matching during authoring
 -- Supply factory constructors for authoring
-
 data ObjectN (ot :: Type) :: Type where
   O0 :: UntypedObject -> ObjectN OT0
   --

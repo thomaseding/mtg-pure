@@ -3,7 +3,7 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.ObjectType.Any (
+module MtgPure.Model.Object.Singleton.Any (
   WAny (..),
   IsAnyType,
   CoAny (..),
@@ -12,9 +12,8 @@ module MtgPure.Model.ObjectType.Any (
 import safe Data.Inst (Inst2, Inst3, Inst4, Inst5, Inst6)
 import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
-import safe MtgPure.Model.IsObjectType (IsObjectType)
-import safe MtgPure.Model.OTN (OT2, OT3, OT4, OT5, OT6)
-import safe MtgPure.Model.ObjectType.Kind (
+import safe MtgPure.Model.Object.IsObjectType (IsObjectType)
+import safe MtgPure.Model.Object.OTKind (
   OTAny,
   OTArtifact,
   OTCreature,
@@ -25,7 +24,8 @@ import safe MtgPure.Model.ObjectType.Kind (
   OTPlayer,
   OTSorcery,
  )
-import safe MtgPure.Model.ZoneObject (IsOT)
+import safe MtgPure.Model.Object.OTN (OT2, OT3, OT4, OT5, OT6)
+import safe MtgPure.Model.ZoneObject.ZoneObject (IsOT)
 
 -- Witness type
 data WAny :: Type -> Type where

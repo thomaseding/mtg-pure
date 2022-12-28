@@ -79,15 +79,15 @@ import safe MtgPure.Engine.Prompt (
 import safe MtgPure.Model.Deck (Deck (..))
 import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.Mulligan (Mulligan)
-import safe MtgPure.Model.OTN (OT0)
-import safe MtgPure.Model.Object (Object)
-import safe MtgPure.Model.ObjectId (ObjectDiscriminant, ObjectId (..))
-import safe MtgPure.Model.ObjectType (
-  ObjectType (..),
- )
-import safe MtgPure.Model.ObjectType.Kind (
+import safe MtgPure.Model.Object.OTKind (
   OTInstant,
   OTSorcery,
+ )
+import safe MtgPure.Model.Object.OTN (OT0)
+import safe MtgPure.Model.Object.Object (Object)
+import safe MtgPure.Model.Object.ObjectId (ObjectDiscriminant, ObjectId (..))
+import safe MtgPure.Model.Object.ObjectType (
+  ObjectType (..),
  )
 import safe MtgPure.Model.Permanent (Permanent)
 import safe MtgPure.Model.PhaseStep (PhaseStep (..))
@@ -106,7 +106,7 @@ import safe MtgPure.Model.Recursive.Show ()
 import safe MtgPure.Model.Sideboard (Sideboard)
 import safe MtgPure.Model.Stack (Stack (..))
 import safe MtgPure.Model.Zone (Zone (..))
-import safe MtgPure.Model.ZoneObject (IsZO, ZO)
+import safe MtgPure.Model.ZoneObject.ZoneObject (IsZO, ZO)
 
 type Fwd m = Fwd' (GameResult m) (GameState m) m
 

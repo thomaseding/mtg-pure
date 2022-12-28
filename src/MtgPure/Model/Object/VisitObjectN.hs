@@ -4,7 +4,7 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.VisitObjectN (
+module MtgPure.Model.Object.VisitObjectN (
   VisitObjectN (..),
   ObjectVisitorN (..),
   KnownObjectN (..),
@@ -27,10 +27,10 @@ import safe Data.Inst (
 import safe Data.Kind (Type)
 import safe Data.Proxy (Proxy)
 import safe Data.Typeable (Typeable)
-import safe MtgPure.Model.IsObjectType (
+import safe MtgPure.Model.Object.IsObjectType (
   IsObjectType (singObjectType),
  )
-import safe MtgPure.Model.OTN (
+import safe MtgPure.Model.Object.OTN (
   OT0,
   OT1,
   OT10,
@@ -45,16 +45,16 @@ import safe MtgPure.Model.OTN (
   OT8,
   OT9,
  )
-import safe MtgPure.Model.Object (
+import safe MtgPure.Model.Object.Object (
   Object (..),
  )
-import safe MtgPure.Model.ObjectId (
+import safe MtgPure.Model.Object.ObjectId (
   GetObjectId (..),
   ObjectId (..),
   UntypedObject (..),
   pattern DefaultObjectDiscriminant,
  )
-import safe MtgPure.Model.ObjectN (
+import safe MtgPure.Model.Object.ObjectN (
   ON0,
   ON1,
   ON10,
@@ -70,7 +70,9 @@ import safe MtgPure.Model.ObjectN (
   ON9,
   ObjectN (..),
  )
-import safe MtgPure.Model.ObjectType (OTArbitrary)
+import safe MtgPure.Model.Object.ObjectType (ObjectType (OTLand))
+
+type OTArbitrary = 'OTLand
 
 data KnownObjectTypeN :: Type -> Type where
   KOT0 :: KnownObjectTypeN OT0

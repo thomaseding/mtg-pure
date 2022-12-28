@@ -5,7 +5,7 @@
 {-# HLINT ignore "Use if" #-}
 {-# HLINT ignore "Use lambda-case" #-}
 
-module MtgPure.Model.ZoneObject (
+module MtgPure.Model.ZoneObject.ZoneObject (
   IsOT,
   IsZO,
   ZO,
@@ -41,11 +41,9 @@ module MtgPure.Model.ZoneObject (
 import safe Data.ConsIndex (ConsIndex (..))
 import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
-import safe MtgPure.Model.LitOT (LitOT)
-import safe MtgPure.Model.ObjectId (GetObjectId (..))
-import safe MtgPure.Model.ObjectN (ObjectN (..))
-import safe MtgPure.Model.ObjectType.Index (IndexOT (..))
-import safe MtgPure.Model.ObjectType.Kind (
+import safe MtgPure.Model.Object.IndexOT (IndexOT (..))
+import safe MtgPure.Model.Object.LitOT (LitOT)
+import safe MtgPure.Model.Object.OTKind (
   OTAbility,
   OTActivatedAbility,
   OTActivatedOrTriggeredAbility,
@@ -71,8 +69,10 @@ import safe MtgPure.Model.ObjectType.Kind (
   OTStaticAbility,
   OTTriggeredAbility,
  )
+import safe MtgPure.Model.Object.ObjectId (GetObjectId (..))
+import safe MtgPure.Model.Object.ObjectN (ObjectN (..))
+import safe MtgPure.Model.Object.VisitObjectN (VisitObjectN (..))
 import safe MtgPure.Model.PrettyType (PrettyType (..))
-import safe MtgPure.Model.VisitObjectN (VisitObjectN (..))
 import safe MtgPure.Model.Zone (IsZone (..), SZone (..), Zone (..))
 
 type ZO = ZoneObject

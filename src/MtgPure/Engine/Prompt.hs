@@ -28,16 +28,16 @@ import safe Data.Kind (Type)
 import safe Data.List.NonEmpty (NonEmpty)
 import safe Data.Typeable (Typeable, cast)
 import safe MtgPure.Engine.Orphans.ZO ()
-import safe MtgPure.Model.Object (Object)
-import safe MtgPure.Model.ObjectId (ObjectId)
-import safe MtgPure.Model.ObjectType (ObjectType (..))
-import safe MtgPure.Model.ObjectType.Kind (OTActivatedAbility, OTLand, OTPermanent, OTSpell)
+import safe MtgPure.Model.Object.OTKind (OTActivatedAbility, OTLand, OTPermanent, OTSpell)
+import safe MtgPure.Model.Object.Object (Object)
+import safe MtgPure.Model.Object.ObjectId (ObjectId)
+import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Recursive (AnyCard, WithThisActivated)
 import safe MtgPure.Model.Recursive.Ord ()
 import safe qualified MtgPure.Model.Recursive.Ord as O
 import safe MtgPure.Model.Recursive.Show ()
 import safe MtgPure.Model.Zone (IsZone, Zone (..))
-import safe MtgPure.Model.ZoneObject (IsZO, ZO)
+import safe MtgPure.Model.ZoneObject.ZoneObject (IsZO, ZO)
 
 data InternalLogicError
   = CantHappenByConstruction

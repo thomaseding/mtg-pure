@@ -36,10 +36,10 @@ import safe MtgPure.Engine.State (
 import safe MtgPure.Model.Deck (Deck (..))
 import safe MtgPure.Model.Graveyard (Graveyard (..))
 import safe MtgPure.Model.Hand (Hand (..))
-import safe MtgPure.Model.IsObjectType (IsObjectType (..))
 import safe MtgPure.Model.Library (Library (..))
 import safe MtgPure.Model.Life (Life (..))
-import safe MtgPure.Model.ObjectId (
+import safe MtgPure.Model.Object.IsObjectType (IsObjectType (..))
+import safe MtgPure.Model.Object.ObjectId (
   ObjectId (..),
   UntypedObject (..),
   pattern DefaultObjectDiscriminant,

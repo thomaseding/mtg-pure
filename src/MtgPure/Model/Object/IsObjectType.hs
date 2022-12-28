@@ -3,17 +3,19 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.IsObjectType (
+module MtgPure.Model.Object.IsObjectType (
   IsObjectType (..),
   ObjectVisitor (..),
   visitObject',
 ) where
 
 import safe Data.Typeable (Typeable)
-import safe MtgPure.Model.Object (Object (..))
-import safe MtgPure.Model.ObjectId (ObjectId, UntypedObject (..))
-import safe MtgPure.Model.ObjectType (
+import safe MtgPure.Model.Object.Object (Object (..))
+import safe MtgPure.Model.Object.ObjectId (ObjectId, UntypedObject (..))
+import safe MtgPure.Model.Object.ObjectType (
   ObjectType (..),
+ )
+import safe MtgPure.Model.Object.SObjectType (
   SObjectType (..),
  )
 

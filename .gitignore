@@ -22,4 +22,4 @@ cabal.project.local~
 .HTF/
 .ghc.environment.*
 .output/
-src/MtgPure/Model/ToObjectN/Instances.hs
+src/MtgPure/Model/Object/ToObjectN/Instances.hs

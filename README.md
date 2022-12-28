@@ -48,7 +48,7 @@ Purely functional Haskell "Magic: The Gathering" card model and game engine.
 ### Quickstart (FIXME: this is outdated):
 ```
 $ cd src
-$ runhaskell MtgPure/Model/ToObjectN/CodeGen.hs > MtgPure/Model/ToObjectN/Instances.hs
+$ runhaskell MtgPure/Model/Object/ToObjectN/CodeGen.hs > MtgPure/Model/Object/ToObjectN/Instances.hs
 $ ghci -hidir .output -odir .output -fobject-code -Wall -Werror -Wno-type-defaults -XDataKinds -XOverloadedStrings -XTypeApplications MtgPure
 MtgPure> :i island
 island :: Card OTLand   -- Defined in `MtgPure.Cards'

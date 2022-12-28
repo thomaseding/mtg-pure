@@ -19,7 +19,7 @@ module MtgPure.Model.ObjectTypeN (
   ObjectType12,
 ) where
 
-import safe MtgPure.Model.ObjectType (ObjectType)
+import safe MtgPure.Model.Object.ObjectType (ObjectType)
 
 type ObjectType0 = ()
 
