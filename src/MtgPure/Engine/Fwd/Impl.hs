@@ -27,6 +27,7 @@ import safe MtgPure.Engine.Core (
   allPlayers,
   allZOActivatedAbilities,
   allZOs,
+  doesZoneObjectExist,
   findHandCard,
   findLibraryCard,
   findPermanent,
@@ -85,6 +86,7 @@ fwdImpl =
     , fwd_caseOf = caseOf
     , fwd_castSpell = castSpell
     , fwd_controllerOf = controllerOf
+    , fwd_doesZoneObjectExist = doesZoneObjectExist
     , fwd_enact = enact
     , fwd_findHandCard = findHandCard
     , fwd_findLibraryCard = findLibraryCard

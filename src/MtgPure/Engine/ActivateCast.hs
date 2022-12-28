@@ -22,6 +22,7 @@ import safe Data.Kind (Type)
 import safe qualified Data.Map.Strict as Map
 import safe Data.Typeable (Typeable)
 import safe MtgPure.Engine.Fwd.Api (
+  doesZoneObjectExist,
   gainPriority,
   getHasPriority,
   getPlayer,
@@ -162,7 +163,9 @@ getCastSpellReqs oPlayer = logCall 'getCastSpellReqs do
 askCastSpell :: Monad m => Object 'OTPlayer -> MagicCont 'Private 'RW m () ()
 askCastSpell = logCall 'askCastSpell $ askCastSpell' $ Attempt 0
 
-askCastSpell' :: Monad m => Attempt -> Object 'OTPlayer -> MagicCont 'Private 'RW m () ()
+-- XXX: This is buggy when provided Invalid input followed by Nothing input.
+-- This should advance to ask to play lands. Instead phase is advanced.
+askCastSpell' :: forall m. Monad m => Attempt -> Object 'OTPlayer -> MagicCont 'Private 'RW m () ()
 askCastSpell' attempt oPlayer = logCall 'askCastSpell' do
   reqs <- lift $ fromRO $ getCastSpellReqs oPlayer
   case reqs of
@@ -176,8 +179,15 @@ askCastSpell' attempt oPlayer = logCall 'askCastSpell' do
         Just cast -> do
           isLegal <- lift $ rewindIllegal $ castSpell oPlayer cast
           throwE case isLegal of
-            True -> gainPriority oPlayer -- (117.3c)
-            False -> runMagicCont (either id id) $ askCastSpell' ((1 +) <$> attempt) oPlayer
+            True -> do
+              lift $ promptDebugMessage prompt "gains priotity"
+              gainPriority oPlayer -- (117.3c)
+            False -> do
+              lift $ promptDebugMessage prompt "retry a"
+              runMagicCont (either id id) $ do
+                lift $ lift $ promptDebugMessage prompt "rmc"
+                askCastSpell' ((1 +) <$> attempt) oPlayer
+              lift $ promptDebugMessage prompt "retry b"
     _ -> pure ()
 
 data CastMeta (ot :: Type) :: Type where
@@ -345,15 +355,17 @@ activateAbility oPlayer = logCall 'activateAbility \case
     WithThisActivated zone ot ->
     Magic 'Private 'RW m Legality
   goSomeActivatedAbility zoThis' withThisActivated = logCall' "goSomeActivatedAbility" do
-    pure () -- TODO: Check that `zoThis'` actually has the `withThisActivated` and is in the correct zone
+    zoExists' <- fromRO $ doesZoneObjectExist zoThis'
+    pure () -- TODO: Check that `zoThis'` actually has the `withThisActivated`
     let oThis = promoteIdToObjectN @ot $ getObjectId zoThis'
         zoThis = ZO (singZone @zone) oThis
-    goWithThis zoThis
+    goWithThis zoExists' zoThis
    where
     goWithThis ::
+      Bool ->
       ZO zone ot ->
       Magic 'Private 'RW m Legality
-    goWithThis zoThis = logCall' "goWithThis" case withThisActivated of
+    goWithThis zoExists' zoThis = logCall' "goWithThis" case withThisActivated of
       T1 thisToElectActivated -> do
         let thisId = getObjectId zoThis
         goLegality thisToElectActivated (lensedThis thisId)
@@ -378,13 +390,13 @@ activateAbility oPlayer = logCall 'activateAbility \case
             goActivated :: ActivatedAbility zone ot -> Magic 'Private 'RW m Legality'
             goActivated activated = logCall' "goActivated" do
               legalityToMaybe <$> do
-                let isThisInCorrectZone = True -- TODO
-                    isController = True -- TODO
+                let isController = True -- TODO
                     abilityExists = True -- TODO
-                case (isThisInCorrectZone, isController, abilityExists) of
-                  (False, _, _) -> pure Illegal -- TODO prompt complaint
-                  (_, False, _) -> pure Illegal -- TODO prompt complaint
-                  (_, _, False) -> pure Illegal -- TODO prompt complaint
+                prompt <- fromRO $ gets magicPrompt
+                case (zoExists', isController, abilityExists) of
+                  (False, _, _) -> invalid $ exceptionZoneObjectDoesNotExist prompt zoThis'
+                  (_, False, _) -> invalid undefined
+                  (_, _, False) -> invalid undefined
                   (True, True, True) ->
                     maybeToLegality <$> do
                       playPendingAbility
@@ -395,6 +407,10 @@ activateAbility oPlayer = logCall 'activateAbility \case
                           legalityToMaybe <$> do
                             payElectedAndPutOnStack @ 'Activate $
                               ElectedActivatedAbility oPlayer zoThis cost effect
+
+            invalid complain = do
+              () <- lift complain
+              pure Illegal
 
         goElectActivated $ thisToElectAbility this
 

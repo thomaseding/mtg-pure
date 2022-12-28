@@ -7,7 +7,7 @@ module MtgPure.Model.Object.IndexOT (
   IndexOT (..),
 ) where
 
-import Data.Inst (
+import safe Data.Inst (
   Inst1,
   Inst10,
   Inst11,

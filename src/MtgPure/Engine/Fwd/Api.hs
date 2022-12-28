@@ -30,6 +30,7 @@ module MtgPure.Engine.Fwd.Api (
   caseOf,
   castSpell,
   controllerOf,
+  doesZoneObjectExist,
   enact,
   findHandCard,
   findLibraryCard,
@@ -142,6 +143,7 @@ data Api (m :: Type -> Type) (v :: Visibility) (rw :: ReadWrite) (ret :: Type) :
   AllZOs :: IsZO zone ot => Api m 'Private 'RO [ZO zone ot]
   CaseOf :: (x -> Api m 'Private 'RW a) -> Case x -> Api m 'Private 'RW a
   ControllerOf :: IsZO zone ot => ZO zone ot -> Api m 'Private 'RO (Object 'OTPlayer)
+  DoesZoneObjectExist :: IsZO zone ot => ZO zone ot -> Api m 'Private 'RO Bool
   Enact :: Effect 'OneShot -> Api m 'Private 'RW ()
   FindHandCard :: Object 'OTPlayer -> ZO 'ZHand OTCard -> Api m 'Private 'RW (Maybe AnyCard)
   FindLibraryCard :: Object 'OTPlayer -> ZO 'ZLibrary OTCard -> Api m 'Private 'RW (Maybe AnyCard)
@@ -190,6 +192,7 @@ run = \case
   AllZOs -> allZOs
   CaseOf a b -> caseOf (run . a) b
   ControllerOf a -> controllerOf a
+  DoesZoneObjectExist a -> doesZoneObjectExist a
   Enact a -> enact a
   FindHandCard a b -> findHandCard a b
   FindLibraryCard a b -> findLibraryCard a b
@@ -294,6 +297,9 @@ castSpell = fwd2 fwd_castSpell
 
 controllerOf :: (IsZO zone ot, Monad m) => ZO zone ot -> Magic 'Private 'RO m (Object 'OTPlayer)
 controllerOf = fwd1 fwd_controllerOf
+
+doesZoneObjectExist :: (IsZO zone ot, Monad m) => ZO zone ot -> Magic 'Private 'RO m Bool
+doesZoneObjectExist = fwd1 fwd_doesZoneObjectExist
 
 enact :: Monad m => Effect 'OneShot -> Magic 'Private 'RW m ()
 enact = fwd1 fwd_enact

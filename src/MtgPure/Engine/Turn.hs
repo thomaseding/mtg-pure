@@ -14,6 +14,7 @@ module MtgPure.Engine.Turn (
 ) where
 
 import safe Control.Exception (assert)
+import safe qualified Control.Monad as M
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
 import safe Control.Monad.Trans (lift)
 import safe Control.Monad.Util (untilJust)
@@ -76,7 +77,9 @@ determineStartingPlayer = logCall 'determineStartingPlayer do
   st <- fromRO get
   let prompt = magicPrompt st
       playerCount = Map.size $ magicPlayers st
-  startingIndex <- lift $
+  M.when (playerCount == 0) do
+    undefined -- TODO: complain and abort
+  logicalStartingIndex <- lift $
     untilJust \attempt -> do
       PlayerIndex playerIndex <- promptGetStartingPlayer prompt attempt $ PlayerCount playerCount
       case playerIndex < playerCount of
@@ -84,6 +87,7 @@ determineStartingPlayer = logCall 'determineStartingPlayer do
         False -> do
           exceptionInvalidStartingPlayer prompt (PlayerCount playerCount) $ PlayerIndex playerIndex
           pure Nothing
+  let startingIndex = logicalStartingIndex + playerCount - 1 -- This compensates for initial `advanceTurnState`
   let ps = Stream.drop startingIndex $ magicPlayerOrderTurn st
   put
     st

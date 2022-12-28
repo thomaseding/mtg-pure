@@ -70,6 +70,7 @@ import safe MtgPure.Model.Object.OTKind (
   OTCard,
   OTLand,
   OTPermanent,
+  OTPlayer,
   OTSpell,
  )
 import safe MtgPure.Model.Object.Object (Object (..))
@@ -79,12 +80,20 @@ import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Object.ToObjectN.Instances ()
 import safe MtgPure.Model.Object.VisitObjectN (VisitObjectN (promoteIdToObjectN))
 import safe MtgPure.Model.Player (Player (..))
-import safe MtgPure.Model.Recursive (AnyCard (..), Card (..), Requirement (..))
+import safe MtgPure.Model.Recursive (
+  ActivatedAbility (..),
+  AnyCard (..),
+  Card (..),
+  Cost (AndCosts),
+  Elect (Effect, ElectActivated),
+  Requirement (..),
+  WithThisActivated,
+ )
 import safe MtgPure.Model.Sideboard (Sideboard (..))
-import safe MtgPure.Model.Zone (SZone (..), Zone (..))
-import safe MtgPure.Model.ZoneObject.Convert (toZO0, toZO1, zo0ToSpell)
+import safe MtgPure.Model.Zone (IsZone, SZone (..), Zone (..))
+import safe MtgPure.Model.ZoneObject.Convert (toZO0, toZO1, zo0ToAny, zo0ToSpell)
 import safe MtgPure.Model.ZoneObject.ZoneObject (ZO, ZoneObject (..))
-import safe MtgPure.ModelCombinators (isTapped)
+import safe MtgPure.ModelCombinators (AsWithThis (thisObject), isTapped)
 import safe qualified System.IO as IO
 import safe System.Random (randomRIO)
 import safe Text.Read (readMaybe)
@@ -148,6 +157,7 @@ input =
           , exceptionInvalidPlayLand = \_ player msg -> liftIO $ print (player, msg)
           , exceptionInvalidShuffle = \_ _ -> liftIO $ putStrLn "exceptionInvalidShuffle"
           , exceptionInvalidStartingPlayer = \_ _ -> liftIO $ putStrLn "exceptionInvalidStartingPlayer"
+          , exceptionZoneObjectDoesNotExist = \zo -> liftIO $ print ("exceptionZoneObjectDoesNotExist", zo)
           , promptActivateAbility = if True then demoActivateAbilityUser else demoActivateAbilityRandom
           , promptCastSpell = if True then demoCastSpellUser else demoCastSpellRandom
           , promptDebugMessage = \msg -> liftIO $ putStrLn $ "DEBUG: " ++ msg
@@ -199,7 +209,7 @@ demoPlayThingUser k attempt opaque oPlayer = queryMagic opaque do
   M.lift $ printGameState opaque
   liftIO case attempt of
     Attempt 0 -> pure ()
-    _ -> putStrLn "Retrying..."
+    Attempt n -> putStrLn $ "Retrying[" ++ show n ++ "]..."
   zo <- liftIO do
     let s = case k of
           PlayLandK -> "PlayLand"
@@ -233,6 +243,11 @@ demoPlayLandUser = demoPlayThingUser PlayLandK
 
 -- TODO: Expose sufficient Public API to avoid need for `internalFromPrivate`
 demoCastSpellUser :: Attempt -> OpaqueGameState Demo -> Object 'OTPlayer -> Demo (Maybe (Play OTSpell))
+-- XXX: Buggy. Reproduction steps are:
+--    (a) Start game
+--    (b) Input garbage for P1 spell to cast
+--    (c) Input "0" for P1 spell to cast for the retry
+--    (d) Game should advance state but asks for P1 to cast spell. Entering 0 again does advance
 demoCastSpellUser = demoPlayThingUser CastSpellK
 
 -- TODO: Expose sufficient Public API to avoid need for `internalFromPrivate`
@@ -241,25 +256,37 @@ demoActivateAbilityUser attempt opaque oPlayer = queryMagic opaque do
   M.lift $ printGameState opaque
   liftIO case attempt of
     Attempt 0 -> pure ()
-    _ -> putStrLn "Retrying..."
+    Attempt n -> putStrLn $ "Retrying[" ++ show n ++ "]..."
   index <- liftIO do
     prompt $ "ActivateAbility " ++ show oPlayer ++ ": "
     text <- getLine
     let ReadActivated i j = case readMaybe @ReadActivated text of
           Nothing -> ReadActivated (-1) 0
           Just x -> x
+    liftIO $ print (text, i, j)
     pure $ AbsoluteActivatedAbilityIndex (ObjectId i) $ RelativeAbilityIndex j
-  mAbility <- internalFromPrivate $ indexToActivated index
-  case mAbility of
-    Nothing -> pure Nothing
-    Just ability -> do
-      let zo :: ZO 'ZBattlefield OTAny -- XXX: Use `getZoneOf` + `singZone` to generalize.
+  case getObjectId index of
+    ObjectId 0 -> pure Nothing
+    _ -> do
+      mAbility <- internalFromPrivate $ indexToActivated index
+      let ability = case mAbility of
+            Nothing -> SomeActivatedAbility dummyZo dummyActivatedAbility
+            Just x -> x
+          zo :: ZO 'ZBattlefield OTAny -- XXX: Use `getZoneOf` + `singZone` to generalize.
           zo = someActivatedZO ability
-      case getObjectId zo of
-        ObjectId 0 -> pure Nothing
-        _ -> do
-          liftIO $ print ("activating ability", zo)
-          pure $ Just $ ActivateAbility ability
+      liftIO $ print ("activating ability", zo)
+      pure $ Just $ ActivateAbility ability
+
+dummyZo :: IsZone zone => ZO zone OTAny
+dummyZo = zo0ToAny $ toZO0 $ ObjectId (-1)
+
+dummyActivatedAbility :: WithThisActivated 'ZBattlefield OTPlayer
+dummyActivatedAbility = thisObject \_this ->
+  ElectActivated $
+    Ability
+      { activated_cost = AndCosts []
+      , activated_effect = Effect []
+      }
 
 -- TODO: Expose sufficient Public API to avoid need for `internalFromPrivate`
 demoPlayLandRandom :: Attempt -> OpaqueGameState Demo -> Object 'OTPlayer -> Demo (Maybe (Play OTLand))

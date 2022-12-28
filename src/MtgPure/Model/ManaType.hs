@@ -9,7 +9,7 @@ module MtgPure.Model.ManaType (
   IsRealMana (..),
 ) where
 
-import Data.Typeable (Typeable)
+import safe Data.Typeable (Typeable)
 
 data ManaType
   = MTWhite

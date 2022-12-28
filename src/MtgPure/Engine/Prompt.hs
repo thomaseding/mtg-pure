@@ -30,7 +30,7 @@ import safe Data.Typeable (Typeable, cast)
 import safe MtgPure.Engine.Orphans.ZO ()
 import safe MtgPure.Model.Object.OTKind (OTActivatedAbility, OTLand, OTPermanent, OTSpell)
 import safe MtgPure.Model.Object.Object (Object)
-import safe MtgPure.Model.Object.ObjectId (ObjectId)
+import safe MtgPure.Model.Object.ObjectId (GetObjectId (getUntypedObject), ObjectId)
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Recursive (AnyCard, WithThisActivated)
 import safe MtgPure.Model.Recursive.Ord ()
@@ -87,6 +87,7 @@ data Prompt' (opaqueGameState :: (Type -> Type) -> Type) (m :: Type -> Type) = P
   , exceptionInvalidPlayLand :: opaqueGameState m -> Object 'OTPlayer -> InvalidPlayLand -> m ()
   , exceptionInvalidShuffle :: CardCount -> [CardIndex] -> m ()
   , exceptionInvalidStartingPlayer :: PlayerCount -> PlayerIndex -> m ()
+  , exceptionZoneObjectDoesNotExist :: forall zone ot. IsZO zone ot => ZO zone ot -> m ()
   , promptActivateAbility :: Attempt -> opaqueGameState m -> Object 'OTPlayer -> m (Maybe (Play OTActivatedAbility))
   , promptCastSpell :: Attempt -> opaqueGameState m -> Object 'OTPlayer -> m (Maybe (Play OTSpell))
   , promptDebugMessage :: String -> m ()
@@ -102,6 +103,9 @@ data Prompt' (opaqueGameState :: (Type -> Type) -> Type) (m :: Type -> Type) = P
 data AbsoluteActivatedAbilityIndex :: Type where
   AbsoluteActivatedAbilityIndex :: ObjectId -> RelativeAbilityIndex -> AbsoluteActivatedAbilityIndex
   deriving (Eq, Ord, Show, Typeable)
+
+instance GetObjectId AbsoluteActivatedAbilityIndex where
+  getUntypedObject (AbsoluteActivatedAbilityIndex i _) = getUntypedObject i
 
 data SomeActivatedAbility (zone :: Zone) (ot :: Type) :: Type where
   SomeActivatedAbility ::

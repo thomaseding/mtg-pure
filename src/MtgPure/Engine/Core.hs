@@ -15,6 +15,7 @@ module MtgPure.Engine.Core (
   allPlayers,
   allZOActivatedAbilities,
   allZOs,
+  doesZoneObjectExist,
   findHandCard,
   findLibraryCard,
   findPermanent,
@@ -40,6 +41,7 @@ module MtgPure.Engine.Core (
 import safe Control.Exception (assert)
 import safe qualified Control.Monad as M
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
+import Control.Monad.Trans (lift)
 import safe qualified Data.DList as DList
 import safe Data.Functor ((<&>))
 import safe qualified Data.List as List
@@ -65,6 +67,7 @@ import safe MtgPure.Engine.Prompt (
   AbsoluteActivatedAbilityIndex (AbsoluteActivatedAbilityIndex),
   InternalLogicError (..),
   PlayerCount (..),
+  Prompt' (promptDebugMessage),
   RelativeAbilityIndex (RelativeAbilityIndex),
   SomeActivatedAbility (..),
  )
@@ -143,9 +146,13 @@ rewindIllegal m = logCall 'rewindIllegal do
         GameResult{gameWinners = []} -> pure Illegal
         ex -> magicThrow ex
   st <- fromRO get
-  m' >>= \case
-    Legal -> pure True
-    Illegal -> put st >> pure False
+  ret <-
+    m' >>= \case
+      Legal -> pure True
+      Illegal -> put st >> pure False
+  prompt <- fromRO $ gets magicPrompt
+  lift $ promptDebugMessage prompt $ show ret
+  pure ret
 
 allZOs :: forall zone ot m. (Monad m, IsZO zone ot) => Magic 'Private 'RO m [ZO zone ot]
 allZOs = logCall 'allZOs case singZone @zone of
@@ -203,6 +210,12 @@ allZOActivatedAbilities ::
 allZOActivatedAbilities = logCall 'allZOActivatedAbilities do
   zos <- allZOs @zone @ot
   concat <$> T.for zos getActivatedAbilitiesOf
+
+doesZoneObjectExist :: forall zone ot m. (IsZO zone ot, Monad m) => ZO zone ot -> Magic 'Private 'RO m Bool
+doesZoneObjectExist zo = logCall 'doesZoneObjectExist do
+  toZO @zone @ot (getObjectId zo) <&> \case
+    Nothing -> False
+    Just{} -> True
 
 getActivatedAbilitiesOf ::
   forall zone ot m.

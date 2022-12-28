@@ -59,6 +59,7 @@ data Fwd' ex st m where
     , fwd_caseOf :: forall x a. (x -> Magic' ex st 'Private 'RW m a) -> Case x -> Magic' ex st 'Private 'RW m a
     , fwd_castSpell :: Object 'OTPlayer -> Play OTSpell -> Magic' ex st 'Private 'RW m Legality
     , fwd_controllerOf :: forall zone ot. IsZO zone ot => ZO zone ot -> Magic' ex st 'Private 'RO m (Object 'OTPlayer)
+    , fwd_doesZoneObjectExist :: forall zone ot. IsZO zone ot => ZO zone ot -> Magic' ex st 'Private 'RO m Bool
     , fwd_enact :: Effect 'OneShot -> Magic' ex st 'Private 'RW m ()
     , fwd_findHandCard :: Object 'OTPlayer -> ZO 'ZHand OTCard -> Magic' ex st 'Private 'RW m (Maybe AnyCard)
     , fwd_findLibraryCard :: Object 'OTPlayer -> ZO 'ZLibrary OTCard -> Magic' ex st 'Private 'RW m (Maybe AnyCard)
