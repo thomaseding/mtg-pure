@@ -40,6 +40,7 @@ import safe MtgPure.Engine.Monad (
   fromRO,
   get,
   gets,
+  liftCont,
   modify,
   put,
  )
@@ -109,7 +110,7 @@ drawStartingHand oPlayer = logCall 'drawStartingHand do
 
 setPhaseStep :: PhaseStep -> Monad m => MagicCont 'Private 'RW m Void ()
 setPhaseStep phaseStep = logCall 'setPhaseStep do
-  lift $ modify \st -> st{magicPhaseStep = phaseStep}
+  liftCont $ modify \st -> st{magicPhaseStep = phaseStep}
 
 -- NB: This hangs if there are not enough unique items.
 takeUnique :: Eq a => Int -> Stream.Stream a -> [a]
@@ -141,7 +142,7 @@ untapStep :: Monad m => MagicCont 'Private 'RW m Void Void
 untapStep = do
   logCall 'untapStep do
     setPhaseStep $ PSBeginningPhase UntapStep
-    lift do
+    liftCont do
       advanceTurnState
       oPlayer <- fromPublicRO getActivePlayer
       do
@@ -174,7 +175,7 @@ upkeepStep :: Monad m => MagicCont 'Private 'RW m Void Void
 upkeepStep = do
   logCall 'upkeepStep do
     setPhaseStep $ PSBeginningPhase UpkeepStep
-    lift do
+    liftCont do
       oActive <- fromPublicRO getActivePlayer
       gainPriority oActive
   drawStep
@@ -183,7 +184,7 @@ drawStep :: Monad m => MagicCont 'Private 'RW m Void Void
 drawStep = do
   logCall 'drawStep do
     setPhaseStep $ PSBeginningPhase DrawStep
-    lift do
+    liftCont do
       st <- fromRO get
       oActive <- fromPublicRO getActivePlayer
       case magicCurrentTurn st of
@@ -196,14 +197,14 @@ precombatMainPhase :: Monad m => MagicCont 'Private 'RW m Void Void
 precombatMainPhase = do
   logCall 'precombatMainPhase do
     setPhaseStep PSPreCombatMainPhase
-    lift mainPhaseCommon
+    liftCont mainPhaseCommon
   beginningOfCombatStep
 
 postcombatMainPhase :: Monad m => MagicCont 'Private 'RW m Void Void
 postcombatMainPhase = do
   logCall 'postcombatMainPhase do
     setPhaseStep PSPreCombatMainPhase
-    lift mainPhaseCommon
+    liftCont mainPhaseCommon
   endStep
 
 -- (505)
@@ -221,7 +222,7 @@ beginningOfCombatStep = do
   logCall 'beginningOfCombatStep do
     setPhaseStep $ PSCombatPhase BeginningOfCombatStep
     --_ <- undefined
-    lift do
+    liftCont do
       oActive <- fromPublicRO getActivePlayer
       gainPriority oActive
   declareAttackersStep
@@ -231,7 +232,7 @@ declareAttackersStep = do
   logCall 'declareAttackersStep do
     setPhaseStep $ PSCombatPhase DeclareAttackersStep
     --_ <- undefined
-    lift do
+    liftCont do
       oActive <- fromPublicRO getActivePlayer
       gainPriority oActive
   declareBlockersStep
@@ -241,7 +242,7 @@ declareBlockersStep = do
   logCall 'declareBlockersStep do
     setPhaseStep $ PSCombatPhase DeclareBlockersStep
     --_ <- undefined
-    lift do
+    liftCont do
       oActive <- fromPublicRO getActivePlayer
       gainPriority oActive
   combatDamageStep
@@ -251,7 +252,7 @@ combatDamageStep = do
   logCall 'combatDamageStep do
     setPhaseStep $ PSCombatPhase CombatDamageStep
     --_ <- undefined
-    lift do
+    liftCont do
       oActive <- fromPublicRO getActivePlayer
       gainPriority oActive
   endOfCombatStep
@@ -260,7 +261,7 @@ endOfCombatStep :: Monad m => MagicCont 'Private 'RW m Void Void
 endOfCombatStep = do
   logCall 'endOfCombatStep do
     setPhaseStep $ PSCombatPhase EndOfCombatStep
-    lift do
+    liftCont do
       oActive <- fromPublicRO getActivePlayer
       gainPriority oActive
   postcombatMainPhase
@@ -269,7 +270,7 @@ endStep :: Monad m => MagicCont 'Private 'RW m Void Void
 endStep = do
   logCall 'endStep do
     setPhaseStep $ PSEndingPhase EndStep
-    lift do
+    liftCont do
       oActive <- fromPublicRO getActivePlayer
       gainPriority oActive
   cleanupStep

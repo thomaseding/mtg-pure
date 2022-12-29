@@ -16,7 +16,6 @@ module MtgPure.Engine.ActivateCast (
 import safe Control.Exception (assert)
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
 import safe Control.Monad.Trans (lift)
-import safe Control.Monad.Trans.Except (throwE)
 import safe Control.Monad.Util (AndLike (..), Attempt, Attempt' (..))
 import safe Data.Kind (Type)
 import safe qualified Data.Map.Strict as Map
@@ -32,7 +31,7 @@ import safe MtgPure.Engine.Fwd.Api (
   rewindIllegal,
  )
 import safe MtgPure.Engine.Legality (Legality (..), legalityToMaybe, maybeToLegality)
-import safe MtgPure.Engine.Monad (fromPublic, fromRO, get, gets, modify)
+import safe MtgPure.Engine.Monad (fromPublic, fromRO, get, gets, liftCont, magicCont, modify)
 import safe MtgPure.Engine.Prompt (
   InvalidCastSpell (..),
   Play (..),
@@ -124,18 +123,18 @@ askActivateAbility = logCall 'askActivateAbility $ askActivateAbility' $ Attempt
 
 askActivateAbility' :: Monad m => Attempt -> Object 'OTPlayer -> MagicCont 'Private 'RW m () ()
 askActivateAbility' attempt oPlayer = logCall 'askActivateAbility' do
-  reqs <- lift $ fromRO $ getActivateAbilityReqs oPlayer
+  reqs <- liftCont $ fromRO $ getActivateAbilityReqs oPlayer
   case reqs of
     ActivateAbilityReqs_Satisfied -> do
-      st <- lift $ fromRO get
+      st <- liftCont $ fromRO get
       let opaque = mkOpaqueGameState st
           prompt = magicPrompt st
-      mActivate <- lift $ lift $ promptActivateAbility prompt attempt opaque oPlayer
+      mActivate <- liftCont $ lift $ promptActivateAbility prompt attempt opaque oPlayer
       case mActivate of
         Nothing -> pure ()
         Just activate -> do
-          isLegal <- lift $ rewindIllegal $ activateAbility oPlayer activate
-          throwE case isLegal of
+          isLegal <- liftCont $ rewindIllegal $ activateAbility oPlayer activate
+          magicCont case isLegal of
             True -> gainPriority oPlayer -- (117.3c)
             False -> runMagicCont (either id id) $ askActivateAbility' ((1 +) <$> attempt) oPlayer
     _ -> pure ()
@@ -167,25 +166,25 @@ askCastSpell = logCall 'askCastSpell $ askCastSpell' $ Attempt 0
 -- This should advance to ask to play lands. Instead phase is advanced.
 askCastSpell' :: forall m. Monad m => Attempt -> Object 'OTPlayer -> MagicCont 'Private 'RW m () ()
 askCastSpell' attempt oPlayer = logCall 'askCastSpell' do
-  reqs <- lift $ fromRO $ getCastSpellReqs oPlayer
+  reqs <- liftCont $ fromRO $ getCastSpellReqs oPlayer
   case reqs of
     CastSpellReqs_Satisfied -> do
-      st <- lift $ fromRO get
+      st <- liftCont $ fromRO get
       let opaque = mkOpaqueGameState st
           prompt = magicPrompt st
-      mCast <- lift $ lift $ promptCastSpell prompt attempt opaque oPlayer
+      mCast <- liftCont $ lift $ promptCastSpell prompt attempt opaque oPlayer
       case mCast of
         Nothing -> pure ()
         Just cast -> do
-          isLegal <- lift $ rewindIllegal $ castSpell oPlayer cast
-          throwE case isLegal of
+          isLegal <- liftCont $ rewindIllegal $ castSpell oPlayer cast
+          magicCont case isLegal of
             True -> do
               lift $ promptDebugMessage prompt "gains priotity"
               gainPriority oPlayer -- (117.3c)
             False -> do
               lift $ promptDebugMessage prompt "retry a"
               runMagicCont (either id id) $ do
-                lift $ lift $ promptDebugMessage prompt "rmc"
+                liftCont $ lift $ promptDebugMessage prompt "rmc"
                 askCastSpell' ((1 +) <$> attempt) oPlayer
               lift $ promptDebugMessage prompt "retry b"
     _ -> pure ()

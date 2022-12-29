@@ -15,8 +15,6 @@ module MtgPure.Engine.Priority (
 ) where
 
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
-import safe Control.Monad.Trans (lift)
-import safe Control.Monad.Trans.Except (throwE)
 import safe Data.Functor ((<&>))
 import safe qualified Data.Stream as Stream
 import safe Data.Void (Void, absurd)
@@ -35,6 +33,8 @@ import safe MtgPure.Engine.Monad (
   get,
   gets,
   internalFromPrivate,
+  liftCont,
+  magicCont,
   modify,
  )
 import safe MtgPure.Engine.Prompt (PlayerCount (..))
@@ -55,14 +55,14 @@ gainPriority oPlayer = do
 runPriorityQueue :: Monad m => MagicCont 'Private 'RW m () Void
 runPriorityQueue = do
   logCall 'runPriorityQueue do
-    lift (fromRO $ gets magicPlayerOrderPriority) >>= \case
-      [] -> throwE resolveTopOfStack -- (117.4)
+    liftCont (fromRO $ gets magicPlayerOrderPriority) >>= \case
+      [] -> magicCont resolveTopOfStack -- (117.4)
       oPlayer : oPlayers -> do
-        lift performStateBasedActions -- (117.5)
+        liftCont performStateBasedActions -- (117.5)
         askCastSpell oPlayer -- (117.1a)
         askActivateAbility oPlayer -- (117.1b) (117.1d)
         askSpecialAction oPlayer -- (117.1c)
-        lift $ modify \st -> st{magicPlayerOrderPriority = oPlayers} -- (117.3d)
+        liftCont $ modify \st -> st{magicPlayerOrderPriority = oPlayers} -- (117.3d)
   runPriorityQueue
 
 getPlayerWithPriority :: Monad m => Magic 'Public 'RO m (Maybe (Object 'OTPlayer))
@@ -81,7 +81,7 @@ getHasPriority oPlayer = logCall 'getHasPriority do
 -- (117.1c)
 askSpecialAction :: Monad m => Object 'OTPlayer -> MagicCont 'Private 'RW m () ()
 askSpecialAction oPlayer = logCall 'askSpecialAction do
-  st <- lift $ fromRO get
+  st <- liftCont $ fromRO get
   case unStack $ magicStack st of
     [] -> case isMainPhase $ magicPhaseStep st of
       True -> do

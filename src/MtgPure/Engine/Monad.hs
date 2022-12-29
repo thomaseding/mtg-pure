@@ -6,20 +6,20 @@
 
 module MtgPure.Engine.Monad (
   Magic',
-  MagicEx',
   MagicCont',
   EnvLogCall (..),
   runMagicRO,
   runMagicRW,
-  runMagicEx',
   runMagicCont',
   magicThrow,
   magicCatch,
+  magicCont,
   modify,
   put,
   get,
   gets,
   local,
+  liftCont,
   toPrivate,
   toRW,
   fromPublicRO,
@@ -56,6 +56,12 @@ import safe MtgPure.Engine.Prompt (
   CallFrameInfo (..),
   InternalLogicError (CorruptCallStackLogging),
  )
+
+data EnvLogCall ex st v rw m = EnvLogCall
+  { envLogCallCorruptCallStackLogging :: Magic' ex st v rw m ()
+  , envLogCallPromptPush :: CallFrameInfo -> Magic' ex st v rw m ()
+  , envLogCallPromptPop :: CallFrameInfo -> Magic' ex st v rw m ()
+  }
 
 data LogCallState = LogCallState
   { logCallDepth :: !Int
@@ -123,7 +129,17 @@ instance (IsReadWrite rw, MonadIO m) => MonadIO (Magic' ex st v rw m) where
 
 type MagicEx' ex st ex' v rw m = ExceptT ex' (Magic' ex st v rw m)
 
-type MagicCont' ex st v rw m a = MagicEx' ex st (Magic' ex st v rw m a) v rw m
+newtype MagicCont' ex st v rw m a b = MagicCont'
+  { unMagicCont' :: MagicEx' ex st (Magic' ex st v rw m a) v rw m b
+  }
+  deriving (Functor)
+
+instance (IsReadWrite rw, Monad m) => Applicative (MagicCont' ex st v rw m a) where
+  pure = MagicCont' . pure
+  MagicCont' f <*> MagicCont' a = MagicCont' $ f <*> a
+
+instance (IsReadWrite rw, Monad m) => Monad (MagicCont' ex st v rw m a) where
+  MagicCont' a >>= f = MagicCont' $ a >>= unMagicCont' . f
 
 magicThrow :: Monad m => ex -> Magic' ex st 'Private 'RW m b
 magicThrow ex = MagicRW $ throwE ex
@@ -134,6 +150,9 @@ magicCatch ::
   (ex -> Magic' ex st 'Private 'RW m a) ->
   Magic' ex st 'Private 'RW m a
 magicCatch (MagicRW m) f = MagicRW $ catchE m $ unMagicRW . f
+
+magicCont :: Monad m => Magic' ex st 'Private 'RW m a -> MagicCont' ex st 'Private 'RW m a b
+magicCont = MagicCont' . throwE
 
 runMagicRO :: Monad m => st -> Magic' ex st v 'RO m a -> m a
 runMagicRO st (MagicRO accessM) =
@@ -154,12 +173,6 @@ sanityCheckCallStackState :: (a, LogCallState) -> a
 sanityCheckCallStackState (a, st) = case st == emptyLogCallState of
   True -> a
   False -> error "corrupt call stack"
-
-data EnvLogCall ex st v rw m = EnvLogCall
-  { envLogCallCorruptCallStackLogging :: Magic' ex st v rw m ()
-  , envLogCallPromptPush :: CallFrameInfo -> Magic' ex st v rw m ()
-  , envLogCallPromptPop :: CallFrameInfo -> Magic' ex st v rw m ()
-  }
 
 runMagicEx' ::
   (IsReadWrite rw, Monad m) =>
@@ -185,11 +198,14 @@ runMagicCont' ::
   (Either a b -> c) ->
   MagicCont' ex st v rw m a b ->
   Magic' ex st v rw m c
-runMagicCont' env f = M.join . runMagicEx' env g
+runMagicCont' env f = M.join . runMagicEx' env g . unMagicCont'
  where
   g = \case
     Left cont -> f . Left <$> cont
     Right b -> pure $ f $ Right b
+
+liftCont :: (IsReadWrite rw, Monad m) => Magic' ex st v rw m b -> MagicCont' ex st v rw m a b
+liftCont = MagicCont' . lift
 
 internalLiftCallStackState ::
   forall ex st v rw m a.
@@ -200,27 +216,26 @@ internalLiftCallStackState = case singReadWrite @rw of
   SRO -> MagicRO . lift . lift
   SRW -> MagicRW . lift . lift . lift
 
--- XXX: Don't export this to keep Visbility and ReadWrite honest.
-liftState ::
+internalLiftState ::
   forall ex st v rw m a.
   (IsReadWrite rw, Monad m) =>
   State.StateT st (LogCallT m) a ->
   Magic' ex st v rw m a
-liftState = case singReadWrite @rw of
+internalLiftState = case singReadWrite @rw of
   SRO -> MagicRO . lift
   SRW -> MagicRW . lift . lift
 
 modify :: Monad m => (st -> st) -> Magic' ex st 'Private 'RW m ()
-modify = liftState . State.modify'
+modify = internalLiftState . State.modify'
 
 put :: Monad m => st -> Magic' ex st 'Private 'RW m ()
-put = liftState . State.put
+put = internalLiftState . State.put
 
 get :: Monad m => Magic' ex st 'Private 'RO m st
-get = liftState State.get
+get = internalLiftState State.get
 
 gets :: Monad m => (st -> a) -> Magic' ex st 'Private 'RO m a
-gets = liftState . State.gets
+gets = internalLiftState . State.gets
 
 local ::
   (IsReadWrite rw, Monad m) =>
@@ -228,10 +243,10 @@ local ::
   Magic' ex st v rw m a ->
   Magic' ex st v rw m a
 local f m = do
-  st <- liftState State.get
-  liftState $ State.modify f
+  st <- internalLiftState State.get
+  internalLiftState $ State.modify f
   x <- m
-  liftState $ State.put st
+  internalLiftState $ State.put st
   pure x
 
 toPrivate ::

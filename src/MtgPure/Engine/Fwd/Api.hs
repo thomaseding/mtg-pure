@@ -63,7 +63,6 @@ module MtgPure.Engine.Fwd.Api (
 ) where
 
 import safe Control.Monad.Access (IsReadWrite, ReadWrite (..), Visibility (..))
-import safe Control.Monad.Trans (lift)
 import safe Control.Monad.Util (AndLike)
 import safe qualified Data.Foldable as F
 import safe Data.Kind (Type)
@@ -76,6 +75,7 @@ import safe MtgPure.Engine.Monad (
   fromRO,
   gets,
   internalFromPrivate,
+  liftCont,
  )
 import safe MtgPure.Engine.Prompt (
   AbsoluteActivatedAbilityIndex,
@@ -227,13 +227,13 @@ run = \case
 runCont :: Monad m => ApiCont v rw y z -> MagicCont v rw m y z
 runCont = \case
   AskActivateAbility p -> do
-    fwd <- lift getFwd
+    fwd <- liftCont getFwd
     fwd_askActivateAbility fwd p
   AskCastSpell p -> do
-    fwd <- lift getFwd
+    fwd <- liftCont getFwd
     fwd_askCastSpell fwd p
   AskPlayLand p -> do
-    fwd <- lift getFwd
+    fwd <- liftCont getFwd
     fwd_askPlayLand fwd p
 
 -- generalize?: e.g. (Maybe a) or (Either a a) or (Legality, a) or (Bool, a)
@@ -250,17 +250,17 @@ eachLogged_ f = logCall 'eachLogged_ . F.for_ f
 
 askActivateAbility :: Monad m => Object 'OTPlayer -> MagicCont 'Private 'RW m () ()
 askActivateAbility p = do
-  fwd <- lift getFwd
+  fwd <- liftCont getFwd
   fwd_askActivateAbility fwd p
 
 askCastSpell :: Monad m => Object 'OTPlayer -> MagicCont 'Private 'RW m () ()
 askCastSpell p = do
-  fwd <- lift getFwd
+  fwd <- liftCont getFwd
   fwd_askCastSpell fwd p
 
 askPlayLand :: Monad m => Object 'OTPlayer -> MagicCont 'Private 'RW m () ()
 askPlayLand p = do
-  fwd <- lift getFwd
+  fwd <- liftCont getFwd
   fwd_askPlayLand fwd p
 
 ----------------------------------------

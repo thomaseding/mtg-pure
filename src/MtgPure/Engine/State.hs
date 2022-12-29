@@ -11,10 +11,8 @@
 module MtgPure.Engine.State (
   Fwd,
   Magic,
-  MagicEx,
   MagicCont,
   queryMagic,
-  runMagicEx,
   runMagicCont,
   logCall,
   --
@@ -55,15 +53,14 @@ import safe MtgPure.Engine.Monad (
   EnvLogCall (..),
   Magic',
   MagicCont',
-  MagicEx',
   fromRO,
   get,
   internalFromPrivate,
+  liftCont,
   logCallPop',
   logCallPush',
   logCallUnwind',
   runMagicCont',
-  runMagicEx',
   runMagicRO,
  )
 import safe MtgPure.Engine.Prompt (
@@ -235,8 +232,6 @@ data GameResult m = GameResult
 
 type Magic v rw m = Magic' (GameResult m) (GameState m) v rw m
 
-type MagicEx ex v rw m = MagicEx' (GameResult m) (GameState m) ex v rw m
-
 type MagicCont v rw m a = MagicCont' (GameResult m) (GameState m) v rw m a
 
 mkOpaqueGameState :: GameState m -> OpaqueGameState m
@@ -247,13 +242,6 @@ queryMagic' (OpaqueGameState st) = runMagicRO st
 
 queryMagic :: Monad m => OpaqueGameState m -> Magic 'Public 'RO m a -> m a
 queryMagic opaque = queryMagic' opaque . logCall 'queryMagic
-
-runMagicEx ::
-  (IsReadWrite rw, Monad m) =>
-  (Either ex a -> b) ->
-  MagicEx ex v rw m a ->
-  Magic v rw m b
-runMagicEx = runMagicEx' envLogCall
 
 runMagicCont ::
   (IsReadWrite rw, Monad m) =>
@@ -333,21 +321,21 @@ instance (IsReadWrite rw, Monad m) => LogCall (a -> b -> Magic p rw m z) where
 
 instance (IsReadWrite rw, Monad m) => LogCall (MagicCont p rw m y z) where
   logCall name action = do
-    _ <- lift $ logCallPush $ showNamed name
+    _ <- liftCont $ logCallPush $ showNamed name
     result <- action
-    _ <- lift logCallPop
+    _ <- liftCont logCallPop
     pure result
 
 instance (IsReadWrite rw, Monad m) => LogCall (a -> MagicCont p rw m y z) where
   logCall name action a = do
-    _ <- lift $ logCallPush $ showNamed name
+    _ <- liftCont $ logCallPush $ showNamed name
     result <- action a
-    _ <- lift logCallPop
+    _ <- liftCont logCallPop
     pure result
 
 instance (IsReadWrite rw, Monad m) => LogCall (a -> b -> MagicCont p rw m y z) where
   logCall name action a b = do
-    _ <- lift $ logCallPush $ showNamed name
+    _ <- liftCont $ logCallPush $ showNamed name
     result <- action a b
-    _ <- lift logCallPop
+    _ <- liftCont logCallPop
     pure result
