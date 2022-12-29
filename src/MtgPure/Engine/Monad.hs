@@ -154,7 +154,7 @@ magicCatch ::
   Magic' ex st 'Private 'RW m a
 magicCatch (MagicRW m) f = MagicRW $ catchE m $ unMagicRW . f
 
--- NOTE: This hijacks the current continuation.
+-- | NOTE: This hijacks the current continuation.
 -- Use `liftCont` instead of this if you need to preseve the current continuation.
 magicCont :: Monad m => Magic' ex st 'Private 'RW m a -> MagicCont' ex st 'Private 'RW m a b
 magicCont = MagicCont' . throwE
