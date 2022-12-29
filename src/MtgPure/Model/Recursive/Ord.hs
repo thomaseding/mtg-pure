@@ -269,7 +269,15 @@ instance Ord (ZoneObject zone ot) where
 
 ----------------------------------------
 
-type EnvM = State.State Env
+newtype EnvM a = EnvM {unEnvM :: State.State Env a}
+  deriving (Functor)
+
+instance Applicative EnvM where
+  pure = EnvM . pure
+  EnvM f <*> EnvM a = EnvM $ f <*> a
+
+instance Monad EnvM where
+  EnvM a >>= f = EnvM $ a >>= unEnvM . f
 
 -- TODO: Smarts need to be added to handle Card loops.
 -- For cards, rely on names being unique. (A linter tool can validate unique naming.)
@@ -289,7 +297,7 @@ mkEnv =
     }
 
 runEnvM :: EnvM a -> a
-runEnvM m = State.evalState m mkEnv
+runEnvM (EnvM m) = State.evalState m mkEnv
 
 seqM :: Monad m => [m Ordering] -> m Ordering
 seqM = \case
@@ -310,13 +318,13 @@ listM compareM xs ys = case (xs, ys) of
       ord -> pure ord
 
 newVariableId :: EnvM VariableId
-newVariableId = do
+newVariableId = EnvM do
   raw <- State.gets nextRawId
   State.modify' \st -> st{nextRawId = nextRawId st + 1}
   pure $ VariableId raw
 
 newObject :: forall a. IsObjectType a => EnvM (Object a)
-newObject = do
+newObject = EnvM do
   raw <- State.gets nextRawId
   let i = ObjectId raw
       obj = idToObject @a $ UntypedObject DefaultObjectDiscriminant i

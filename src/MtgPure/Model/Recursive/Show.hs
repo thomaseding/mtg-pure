@@ -332,13 +332,21 @@ mkEnv depth =
     , cardDepth = max 0 <$> depth
     }
 
-type EnvM = State.State Env
+newtype EnvM a = EnvM {unEnvM :: State.State Env a}
+  deriving (Functor)
+
+instance Applicative EnvM where
+  pure = EnvM . pure
+  EnvM f <*> EnvM a = EnvM $ f <*> a
+
+instance Monad EnvM where
+  EnvM a >>= f = EnvM $ a >>= unEnvM . f
 
 runEnvM :: CardDepth -> EnvM ParenItems -> String
 runEnvM depth m = concat $ State.evalState strsM $ mkEnv depth
  where
   itemsM = DList.toList . dropParens <$> m
-  strsM =
+  EnvM strsM =
     itemsM >>= \items -> do
       let used = getUsed items
       mapM (showItem used) items
@@ -394,7 +402,7 @@ getVarName :: Variable a -> Item
 getVarName = VariableItem . getVariableId
 
 getObjectName :: Object a -> EnvM Item
-getObjectName (Object _ (UntypedObject _ i)) = do
+getObjectName (Object _ (UntypedObject _ i)) = EnvM do
   gens <- State.gets objectGenerations
   case Map.lookup i gens of
     Nothing -> error "impossible"
@@ -404,7 +412,7 @@ newtype ObjectIdState = ObjectIdState ObjectId
 
 newObject ::
   forall a. IsObjectType a => String -> EnvM (Object a, ObjectIdState)
-newObject name = do
+newObject name = EnvM do
   i@(ObjectId raw) <- State.gets nextObjectId
   let obj = idToObject @a $ UntypedObject DefaultObjectDiscriminant i
   State.modify' \st ->
@@ -429,7 +437,7 @@ newObjectN make name = do
   (obj, snap) <- newObject @a name
   let i = objectToId obj
       objN = make obj
-  State.modify' \st ->
+  EnvM $ State.modify' \st ->
     st
       { originalObjectRep = Map.insert i (typeOf objN) $ originalObjectRep st
       }
@@ -452,7 +460,7 @@ lenseList = \case
   _ -> error "logic error: should not happen by construction"
 
 getObjectNamePrefix :: ObjectId -> EnvM String
-getObjectNamePrefix i =
+getObjectNamePrefix i = EnvM do
   State.gets (Map.findWithDefault "impossible" i . objectNames)
 
 showListM :: (a -> EnvM ParenItems) -> [a] -> EnvM ParenItems
@@ -504,8 +512,8 @@ showBasicLandType = noParens . pure . pure . fromString . show
 showCard :: Card ot -> EnvM ParenItems
 showCard = \case
   Card (CardName name) yourCard -> yesParens do
-    depth <- State.gets cardDepth
-    State.modify' \st -> st{cardDepth = subtract 1 <$> depth}
+    depth <- EnvM $ State.gets cardDepth
+    EnvM $ State.modify' \st -> st{cardDepth = subtract 1 <$> depth}
     let sName = pure (fromString $ show name)
     case depth of
       Just 0 -> pure $ pure "Card " <> sName <> pure " ..."
@@ -936,8 +944,8 @@ showElect = \case
   ChooseOption player natList varToElect -> yesParens do
     sPlayer <- parens <$> showZoneObject player
     sNatList <- parens <$> showNatList showCondition natList
-    discr <- State.gets nextVariableId
-    State.modify' \st -> st{nextVariableId = (1 +) <$> discr}
+    discr <- EnvM $ State.gets nextVariableId
+    EnvM $ State.modify' \st -> st{nextVariableId = (1 +) <$> discr}
     let var = ReifiedVariable discr FZ
         varName = getVarName var
         elect = varToElect var
@@ -1014,8 +1022,8 @@ showElect = \case
     pure $ pure "Target " <> sPlayer <> sWithObject
   VariableFromPower creature varToElect -> yesParens do
     sCreature <- parens <$> showZoneObject creature
-    discr <- State.gets nextVariableId
-    State.modify' \st -> st{nextVariableId = (1 +) <$> discr}
+    discr <- EnvM $ State.gets nextVariableId
+    EnvM $ State.modify' \st -> st{nextVariableId = (1 +) <$> discr}
     let var = ReifiedVariable discr 0
         varName = getVarName var
         elect = varToElect var
@@ -1028,8 +1036,8 @@ showElect = \case
         <> pure " -> "
         <> sElect
   VariableInt contElect -> yesParens do
-    discr <- State.gets nextVariableId
-    State.modify' \st -> st{nextVariableId = (1 +) <$> discr}
+    discr <- EnvM $ State.gets nextVariableId
+    EnvM $ State.modify' \st -> st{nextVariableId = (1 +) <$> discr}
     let var = ReifiedVariable discr 0
         varName = getVarName var
         elect = contElect var
@@ -1374,7 +1382,7 @@ showObjectNImpl ::
 showObjectNImpl objNRef prefix obj = do
   let i = objectToId obj
   sObj <- showObject obj
-  State.gets (Map.lookup i . originalObjectRep) >>= \case
+  EnvM (State.gets $ Map.lookup i . originalObjectRep) >>= \case
     Nothing -> error "impossible"
     Just originalRep -> case originalRep == objNRef of
       False -> yesParens $ pure $ pure prefix <> pure " " <> sObj
@@ -1779,8 +1787,8 @@ showWithList :: (ret -> EnvM ParenItems) -> WithList ret zone ot -> EnvM ParenIt
 showWithList showRet = \case
   CountOf zos cont -> yesParens do
     sZos <- parens <$> showZoneObjects zos
-    discr <- State.gets nextVariableId
-    State.modify' $ \st -> st{nextVariableId = (1 +) <$> discr}
+    discr <- EnvM $ State.gets nextVariableId
+    EnvM $ State.modify' $ \st -> st{nextVariableId = (1 +) <$> discr}
     let var = ReifiedVariable discr 0
         varName = getVarName var
         ret = cont var
