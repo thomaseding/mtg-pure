@@ -39,39 +39,35 @@ module MtgPure.Engine.State (
   --
   logCallPop,
   logCallPush,
-  logCallTop,
   logCallUnwind,
 ) where
 
 import safe Control.Monad.Access (IsReadWrite, ReadWrite (..), Visibility (..))
-import safe qualified Control.Monad.State.Strict as State
 import safe Control.Monad.Trans (lift)
-import safe Control.Monad.Util (untilJust)
 import safe Data.Kind (Type)
 import safe qualified Data.List as List
 import safe qualified Data.Map.Strict as Map
-import safe Data.Maybe (listToMaybe)
 import safe qualified Data.Stream as Stream
 import safe Data.Typeable (Typeable)
 import safe Language.Haskell.TH.Syntax (Name)
 import safe MtgPure.Engine.Fwd.Type (Fwd')
 import safe MtgPure.Engine.Monad (
   EnvLogCall (..),
-  LogCallState (..),
   Magic',
   MagicCont',
   MagicEx',
   fromRO,
   get,
   internalFromPrivate,
-  internalLiftCallStackState,
+  logCallPop',
+  logCallPush',
+  logCallUnwind',
   runMagicCont',
   runMagicEx',
   runMagicRO,
  )
 import safe MtgPure.Engine.Prompt (
   CallFrameId,
-  CallFrameInfo (..),
   InternalLogicError (..),
   PlayerIndex,
   Prompt' (..),
@@ -269,65 +265,25 @@ runMagicCont = runMagicCont' envLogCall
 envLogCall :: (IsReadWrite rw, Monad m) => EnvLogCall (GameResult m) (GameState m) v rw m
 envLogCall =
   EnvLogCall
-    { envLogCallTop = logCallTop
-    , envLogCallUnwind = logCallUnwind
-    , envLogCallCorruptCallStackLogging = error $ show CorruptCallStackLogging
+    { envLogCallCorruptCallStackLogging = error $ show CorruptCallStackLogging
+    , envLogCallPromptPush = \frame -> do
+        st <- internalFromPrivate $ fromRO get
+        let prompt = magicPrompt st
+        lift $ promptLogCallPush prompt (OpaqueGameState st) frame
+    , envLogCallPromptPop = \frame -> do
+        st <- internalFromPrivate $ fromRO get
+        let prompt = magicPrompt st
+        lift $ promptLogCallPop prompt (OpaqueGameState st) frame
     }
 
 logCallUnwind :: (IsReadWrite rw, Monad m) => Maybe CallFrameId -> Magic v rw m ()
-logCallUnwind top =
-  untilJust \_ -> do
-    top' <- logCallTop
-    case top == fmap callFrameId top' of
-      True -> pure $ Just ()
-      False -> do
-        success <- logCallPop
-        case success of
-          False -> error $ show CorruptCallStackLogging
-          True -> pure Nothing
+logCallUnwind = logCallUnwind' envLogCall
 
 logCallPush :: (IsReadWrite rw, Monad m) => String -> Magic v rw m CallFrameId
-logCallPush name = do
-  i <- internalLiftCallStackState $ State.gets logCallDepth
-  let frame =
-        CallFrameInfo
-          { callFrameId = i
-          , callFrameName = name
-          }
-  internalLiftCallStackState $
-    State.modify' \st ->
-      st
-        { logCallDepth = i + 1
-        , logCallFrames = frame : logCallFrames st
-        }
-  st <- internalFromPrivate $ fromRO get
-  let prompt = magicPrompt st
-  lift $ promptLogCallPush prompt (OpaqueGameState st) frame
-  pure i
+logCallPush = logCallPush' envLogCall
 
 logCallPop :: (IsReadWrite rw, Monad m) => Magic v rw m Bool
-logCallPop = do
-  frames <- internalLiftCallStackState $ State.gets logCallFrames
-  case frames of
-    [] -> pure False
-    frame : frames' -> do
-      internalLiftCallStackState $
-        State.modify' \st ->
-          st
-            { logCallDepth = logCallDepth st - 1
-            , logCallFrames = frames'
-            }
-      n <- internalLiftCallStackState $ State.gets logCallDepth
-      case n == callFrameId frame of
-        True -> pure ()
-        False -> error $ show CorruptCallStackLogging
-      st <- internalFromPrivate $ fromRO get
-      let prompt = magicPrompt st
-      lift $ promptLogCallPop prompt (OpaqueGameState st) frame
-      pure True
-
-logCallTop :: (IsReadWrite rw, Monad m) => Magic v rw m (Maybe CallFrameInfo)
-logCallTop = internalLiftCallStackState $ State.gets $ listToMaybe . logCallFrames
+logCallPop = logCallPop' envLogCall
 
 newtype Named :: Type where
   Named :: String -> Named

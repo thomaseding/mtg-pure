@@ -27,8 +27,10 @@ module MtgPure.Engine.Monad (
   fromRO,
   internalFromPrivate,
   internalFromRW,
-  internalLiftCallStackState,
-  LogCallState (..),
+  logCallPop',
+  logCallPush',
+  logCallTop,
+  logCallUnwind',
 ) where
 
 import safe qualified Control.Monad as M
@@ -43,11 +45,17 @@ import safe qualified Control.Monad.Access as Access
 import safe qualified Control.Monad.State.Strict as State
 import safe Control.Monad.Trans (MonadIO (..), MonadTrans (..))
 import safe Control.Monad.Trans.Except (ExceptT (ExceptT), catchE, runExceptT, throwE)
+import safe Control.Monad.Util (untilJust)
 import safe Data.Function (on)
 import safe Data.Functor ((<&>))
 import safe Data.Kind (Type)
+import safe Data.Maybe (listToMaybe)
 import safe Data.Typeable (Typeable)
-import safe MtgPure.Engine.Prompt (CallFrameId, CallFrameInfo (callFrameId))
+import safe MtgPure.Engine.Prompt (
+  CallFrameId,
+  CallFrameInfo (..),
+  InternalLogicError (CorruptCallStackLogging),
+ )
 
 data LogCallState = LogCallState
   { logCallDepth :: !Int
@@ -148,9 +156,9 @@ sanityCheckCallStackState (a, st) = case st == emptyLogCallState of
   False -> error "corrupt call stack"
 
 data EnvLogCall ex st v rw m = EnvLogCall
-  { envLogCallTop :: Magic' ex st v rw m (Maybe CallFrameInfo)
-  , envLogCallUnwind :: Maybe CallFrameId -> Magic' ex st v rw m ()
-  , envLogCallCorruptCallStackLogging :: Magic' ex st v rw m ()
+  { envLogCallCorruptCallStackLogging :: Magic' ex st v rw m ()
+  , envLogCallPromptPush :: CallFrameInfo -> Magic' ex st v rw m ()
+  , envLogCallPromptPop :: CallFrameInfo -> Magic' ex st v rw m ()
   }
 
 runMagicEx' ::
@@ -160,13 +168,12 @@ runMagicEx' ::
   MagicEx' ex st ex' v rw m a ->
   Magic' ex st v rw m b
 runMagicEx' env f action = do
-  top <- envLogCallTop env
+  top <- logCallTop
   eitherR <- runExceptT action
   case eitherR of
-    Left{} -> do
-      envLogCallUnwind env $ fmap callFrameId top
+    Left{} -> logCallUnwind' env $ fmap callFrameId top
     Right{} -> do
-      top' <- envLogCallTop env
+      top' <- logCallTop
       case on (==) (fmap callFrameId) top top' of
         True -> pure ()
         False -> envLogCallCorruptCallStackLogging env
@@ -293,3 +300,54 @@ internalFromRW f magic@(MagicRW m) = case singReadWrite @rw of
           Left ex -> f ex
           Right a -> a
   SRW -> magic
+
+logCallUnwind' :: (IsReadWrite rw, Monad m) => EnvLogCall ex st v rw m -> Maybe CallFrameId -> Magic' ex st v rw m ()
+logCallUnwind' env top =
+  untilJust \_ -> do
+    top' <- logCallTop
+    case top == fmap callFrameId top' of
+      True -> pure $ Just ()
+      False -> do
+        success <- logCallPop' env
+        case success of
+          False -> error $ show CorruptCallStackLogging
+          True -> pure Nothing
+
+logCallPush' :: (IsReadWrite rw, Monad m) => EnvLogCall ex st v rw m -> String -> Magic' ex st v rw m CallFrameId
+logCallPush' env name = do
+  i <- internalLiftCallStackState $ State.gets logCallDepth
+  let frame =
+        CallFrameInfo
+          { callFrameId = i
+          , callFrameName = name
+          }
+  internalLiftCallStackState $
+    State.modify' \st ->
+      st
+        { logCallDepth = i + 1
+        , logCallFrames = frame : logCallFrames st
+        }
+  envLogCallPromptPush env frame
+  pure i
+
+logCallPop' :: (IsReadWrite rw, Monad m) => EnvLogCall ex st v rw m -> Magic' ex st v rw m Bool
+logCallPop' env = do
+  frames <- internalLiftCallStackState $ State.gets logCallFrames
+  case frames of
+    [] -> pure False
+    frame : frames' -> do
+      internalLiftCallStackState $
+        State.modify' \st ->
+          st
+            { logCallDepth = logCallDepth st - 1
+            , logCallFrames = frames'
+            }
+      n <- internalLiftCallStackState $ State.gets logCallDepth
+      case n == callFrameId frame of
+        True -> pure ()
+        False -> error $ show CorruptCallStackLogging
+      envLogCallPromptPop env frame
+      pure True
+
+logCallTop :: (IsReadWrite rw, Monad m) => Magic' ex st v rw m (Maybe CallFrameInfo)
+logCallTop = internalLiftCallStackState $ State.gets $ listToMaybe . logCallFrames
