@@ -58,6 +58,7 @@ import safe MtgPure.Engine.State (
   electedObject_controller,
   electedObject_cost,
   logCall,
+  logCallRec,
   mkOpaqueGameState,
  )
 import safe MtgPure.Model.EffectType (EffectType (..))
@@ -129,7 +130,7 @@ askActivateAbility :: Monad m => Object 'OTPlayer -> MagicCont 'Private 'RW m ()
 askActivateAbility = logCall 'askActivateAbility $ askActivateAbility' $ Attempt 0
 
 askActivateAbility' :: Monad m => Attempt -> Object 'OTPlayer -> MagicCont 'Private 'RW m () ()
-askActivateAbility' attempt oPlayer = logCall 'askActivateAbility' do
+askActivateAbility' attempt oPlayer = logCallRec 'askActivateAbility' do
   reqs <- liftCont $ fromRO $ getActivateAbilityReqs oPlayer
   case reqs of
     ActivateAbilityReqs_Satisfied -> do
@@ -172,7 +173,7 @@ askCastSpell :: Monad m => Object 'OTPlayer -> MagicCont 'Private 'RW m () ()
 askCastSpell = logCall 'askCastSpell $ askCastSpell' $ Attempt 0
 
 askCastSpell' :: forall m. Monad m => Attempt -> Object 'OTPlayer -> MagicCont 'Private 'RW m () ()
-askCastSpell' attempt oPlayer = logCall 'askCastSpell' do
+askCastSpell' attempt oPlayer = logCallRec 'askCastSpell' do
   reqs <- liftCont $ fromRO $ getCastSpellReqs oPlayer
   case reqs of
     CastSpellReqs_Satisfied -> do

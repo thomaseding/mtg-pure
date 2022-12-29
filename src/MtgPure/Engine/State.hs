@@ -14,7 +14,6 @@ module MtgPure.Engine.State (
   MagicCont,
   queryMagic,
   runMagicCont,
-  logCall,
   --
   mkOpaqueGameState,
   OpaqueGameState,
@@ -35,13 +34,17 @@ module MtgPure.Engine.State (
   AnyElected (..),
   StackEntry (..),
   --
+  logCall,
+  logCallRec,
   logCallPop,
   logCallPush,
   logCallUnwind,
 ) where
 
+import safe qualified Control.Monad as M
 import safe Control.Monad.Access (IsReadWrite, ReadWrite (..), Visibility (..))
 import safe Control.Monad.Trans (lift)
+import safe Data.Functor ((<&>))
 import safe Data.Kind (Type)
 import safe qualified Data.List as List
 import safe qualified Data.Map.Strict as Map
@@ -59,12 +62,14 @@ import safe MtgPure.Engine.Monad (
   liftCont,
   logCallPop',
   logCallPush',
+  logCallTop,
   logCallUnwind',
   runMagicCont',
   runMagicRO,
  )
 import safe MtgPure.Engine.Prompt (
   CallFrameId,
+  CallFrameInfo (callFrameName),
   InternalLogicError (..),
   PlayerIndex,
   Prompt' (..),
@@ -267,10 +272,10 @@ envLogCall =
 logCallUnwind :: (IsReadWrite rw, Monad m) => Maybe CallFrameId -> Magic v rw m ()
 logCallUnwind = logCallUnwind' envLogCall
 
-logCallPush :: (IsReadWrite rw, Monad m) => String -> Magic v rw m CallFrameId
+logCallPush :: (IsReadWrite rw, Monad m) => String -> Magic v rw m CallFrameInfo
 logCallPush = logCallPush' envLogCall
 
-logCallPop :: (IsReadWrite rw, Monad m) => Magic v rw m Bool
+logCallPop :: (IsReadWrite rw, Monad m) => Magic v rw m (Maybe CallFrameInfo)
 logCallPop = logCallPop' envLogCall
 
 newtype Named :: Type where
@@ -295,47 +300,58 @@ showNamed :: IsNamed name => name -> String
 showNamed name = case toNamed name of
   Named s -> s
 
+type IsRec = Bool
+
 class LogCall x where
-  logCall :: IsNamed name => name -> x -> x
+  logCallImpl :: IsNamed name => IsRec -> name -> x -> x
+
+logCall :: (LogCall x, IsNamed name) => name -> x -> x
+logCall = logCallImpl False
+
+-- | Like `logCall` but doesn't log if the top frame has the same name.
+logCallRec :: (LogCall x, IsNamed name) => name -> x -> x
+logCallRec = logCallImpl True
+
+logCallImpl' ::
+  (IsNamed name, IsReadWrite rw, Monad m, Monad m') =>
+  (forall x. Magic v rw m' x -> m x) ->
+  Bool ->
+  name ->
+  m a ->
+  m a
+logCallImpl' lift' isRec name action = do
+  let name' = showNamed name
+  cond <- case isRec of
+    False -> pure True
+    True ->
+      lift' logCallTop <&> \case
+        Nothing -> True
+        Just frame -> callFrameName frame /= name'
+  mFrame <- case cond of
+    False -> pure Nothing
+    True -> fmap Just $ lift' $ logCallPush name'
+  result <- action
+  M.when cond do
+    mFrame' <- lift' logCallPop
+    case mFrame == mFrame' of
+      False -> error $ show CorruptCallStackLogging
+      True -> pure ()
+  pure result
 
 instance (IsReadWrite rw, Monad m) => LogCall (Magic p rw m z) where
-  logCall name action = do
-    _ <- logCallPush $ showNamed name
-    result <- action
-    _ <- logCallPop
-    pure result
-
-instance (IsReadWrite rw, Monad m) => LogCall (a -> Magic p rw m z) where
-  logCall name action a = do
-    _ <- logCallPush $ showNamed name
-    result <- action a
-    _ <- logCallPop
-    pure result
-
-instance (IsReadWrite rw, Monad m) => LogCall (a -> b -> Magic p rw m z) where
-  logCall name action a b = do
-    _ <- logCallPush $ showNamed name
-    result <- action a b
-    _ <- logCallPop
-    pure result
+  logCallImpl = logCallImpl' id
 
 instance (IsReadWrite rw, Monad m) => LogCall (MagicCont p rw m y z) where
-  logCall name action = do
-    _ <- liftCont $ logCallPush $ showNamed name
-    result <- action
-    _ <- liftCont logCallPop
-    pure result
+  logCallImpl = logCallImpl' liftCont
+
+instance (IsReadWrite rw, Monad m) => LogCall (a -> Magic p rw m z) where
+  logCallImpl isRec name action a = logCallImpl isRec name $ action a
 
 instance (IsReadWrite rw, Monad m) => LogCall (a -> MagicCont p rw m y z) where
-  logCall name action a = do
-    _ <- liftCont $ logCallPush $ showNamed name
-    result <- action a
-    _ <- liftCont logCallPop
-    pure result
+  logCallImpl isRec name action a = logCallImpl isRec name $ action a
+
+instance (IsReadWrite rw, Monad m) => LogCall (a -> b -> Magic p rw m z) where
+  logCallImpl isRec name action a b = logCallImpl isRec name $ action a b
 
 instance (IsReadWrite rw, Monad m) => LogCall (a -> b -> MagicCont p rw m y z) where
-  logCall name action a b = do
-    _ <- liftCont $ logCallPush $ showNamed name
-    result <- action a b
-    _ <- liftCont logCallPop
-    pure result
+  logCallImpl isRec name action a b = logCallImpl isRec name $ action a b

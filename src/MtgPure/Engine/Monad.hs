@@ -154,8 +154,7 @@ magicCatch ::
   Magic' ex st 'Private 'RW m a
 magicCatch (MagicRW m) f = MagicRW $ catchE m $ unMagicRW . f
 
--- NOTE:
--- This hijacks the current continuation.
+-- NOTE: This hijacks the current continuation.
 -- Use `liftCont` instead of this if you need to preseve the current continuation.
 magicCont :: Monad m => Magic' ex st 'Private 'RW m a -> MagicCont' ex st 'Private 'RW m a b
 magicCont = MagicCont' . throwE
@@ -324,17 +323,17 @@ internalFromRW f magic@(MagicRW m) = case singReadWrite @rw of
 
 logCallUnwind' :: (IsReadWrite rw, Monad m) => EnvLogCall ex st v rw m -> Maybe CallFrameId -> Magic' ex st v rw m ()
 logCallUnwind' env top =
-  untilJust \_ -> do
+  untilJust \_attempt -> do
     top' <- logCallTop
     case top == fmap callFrameId top' of
       True -> pure $ Just ()
       False -> do
         success <- logCallPop' env
         case success of
-          False -> error $ show CorruptCallStackLogging
-          True -> pure Nothing
+          Nothing -> error $ show CorruptCallStackLogging
+          Just _ -> pure Nothing
 
-logCallPush' :: (IsReadWrite rw, Monad m) => EnvLogCall ex st v rw m -> String -> Magic' ex st v rw m CallFrameId
+logCallPush' :: (IsReadWrite rw, Monad m) => EnvLogCall ex st v rw m -> String -> Magic' ex st v rw m CallFrameInfo
 logCallPush' env name = do
   i <- internalLiftCallStackState $ State.gets logCallDepth
   let frame =
@@ -349,13 +348,13 @@ logCallPush' env name = do
         , logCallFrames = frame : logCallFrames st
         }
   envLogCallPromptPush env frame
-  pure i
+  pure frame
 
-logCallPop' :: (IsReadWrite rw, Monad m) => EnvLogCall ex st v rw m -> Magic' ex st v rw m Bool
+logCallPop' :: (IsReadWrite rw, Monad m) => EnvLogCall ex st v rw m -> Magic' ex st v rw m (Maybe CallFrameInfo)
 logCallPop' env = do
   frames <- internalLiftCallStackState $ State.gets logCallFrames
   case frames of
-    [] -> pure False
+    [] -> pure Nothing
     frame : frames' -> do
       internalLiftCallStackState $
         State.modify' \st ->
@@ -368,7 +367,7 @@ logCallPop' env = do
         True -> pure ()
         False -> error $ show CorruptCallStackLogging
       envLogCallPromptPop env frame
-      pure True
+      pure $ Just frame
 
 logCallTop :: (IsReadWrite rw, Monad m) => Magic' ex st v rw m (Maybe CallFrameInfo)
 logCallTop = internalLiftCallStackState $ State.gets $ listToMaybe . logCallFrames

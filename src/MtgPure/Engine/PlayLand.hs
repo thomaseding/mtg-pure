@@ -52,6 +52,7 @@ import safe MtgPure.Engine.State (
   Magic,
   MagicCont,
   logCall,
+  logCallRec,
   mkOpaqueGameState,
  )
 import safe MtgPure.Model.IsCardList (containsCard)
@@ -116,7 +117,7 @@ askPlayLand :: Monad m => Object 'OTPlayer -> MagicCont 'Private 'RW m () ()
 askPlayLand = logCall 'askPlayLand $ askPlayLand' $ Attempt 0
 
 askPlayLand' :: Monad m => Attempt -> Object 'OTPlayer -> MagicCont 'Private 'RW m () ()
-askPlayLand' attempt oPlayer = logCall 'askPlayLand' do
+askPlayLand' attempt oPlayer = logCallRec 'askPlayLand' do
   reqs <- liftCont $ fromRO $ getPlayLandReqs oPlayer
   case reqs of
     PlayLandReqs_Satisfied -> do
