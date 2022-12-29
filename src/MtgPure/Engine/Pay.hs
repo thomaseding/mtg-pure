@@ -90,8 +90,8 @@ payManaCost oPlayer (forceVars -> cost) = logCall 'payManaCost do
           c = poolColorless pool - costColorless cost
           pool' = ManaPool w u b r g c
           isBad mana = case mana < 0 of
-            True -> Nothing
-            False -> Just ()
+            True -> Just ()
+            False -> Nothing
       case findMana pool' isBad of
         Just () -> pure Illegal
         Nothing -> do
