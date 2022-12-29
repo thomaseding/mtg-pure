@@ -141,6 +141,9 @@ instance (IsReadWrite rw, Monad m) => Applicative (MagicCont' ex st v rw m a) wh
 instance (IsReadWrite rw, Monad m) => Monad (MagicCont' ex st v rw m a) where
   MagicCont' a >>= f = MagicCont' $ a >>= unMagicCont' . f
 
+instance (IsReadWrite rw, MonadIO m) => MonadIO (MagicCont' ex st v rw m a) where
+  liftIO = liftCont . liftIO
+
 magicThrow :: Monad m => ex -> Magic' ex st 'Private 'RW m b
 magicThrow = MagicRW . throwE
 
