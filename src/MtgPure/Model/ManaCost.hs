@@ -21,7 +21,7 @@ data ManaCost (var :: Var) = ManaCost'
   , costGreen :: Mana var 'NonSnow 'MTGreen
   , costColorless :: Mana var 'NonSnow 'MTColorless
   , costGeneric :: Mana var 'NonSnow 'MTGeneric
-  , costSnow :: Mana var 'Snow 'MTGeneric -- NB: I could support RealManaType snow costs if I want.
+  , costSnow :: Mana var 'Snow 'MTGeneric -- NOTE: I could support RealManaType snow costs if I want.
   }
   deriving (Eq, Ord, Typeable) --  TODO: Make some of these orphans
 

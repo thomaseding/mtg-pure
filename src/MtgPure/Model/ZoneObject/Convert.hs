@@ -204,7 +204,7 @@ toZO12 = \case
 oToZO1 :: (IsZone zone, IsObjectType a) => Object a -> ZO zone (OT1 a)
 oToZO1 = toZone . O1
 
--- NB: Wrapper to get higher kinded types to type-check in `mapOT`.
+-- NOTE: Wrapper to get higher kinded types to type-check in `mapOT`.
 newtype MaybeObjectN (ot :: Type) = MaybeObjectN {unMaybeObjectN :: Maybe (ObjectN ot)}
 
 castOToON :: forall z ot. (IsObjectType z, IsOT ot) => Object z -> Maybe (ObjectN ot)

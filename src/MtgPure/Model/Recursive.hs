@@ -462,7 +462,7 @@ instance ConsIndex (Cost ot) where
 ----------------------------------------
 
 data Effect (ef :: EffectType) :: Type where
-  AddMana :: ZOPlayer -> ManaPool 'NonSnow -> Effect 'OneShot -- NB: Engine will reinterpret as Snow when source is Snow.
+  AddMana :: ZOPlayer -> ManaPool 'NonSnow -> Effect 'OneShot -- NOTE: Engine will reinterpret as Snow when source is Snow.
   AddToBattlefield :: IsOT ot => WPermanent ot -> ZOPlayer -> Token ot -> Effect 'OneShot
   CantBeRegenerated :: ZOCreature -> Effect 'Continuous
   ChangeTo :: IsOT ot => WPermanent ot -> ZOPermanent -> Card ot -> Effect 'Continuous
@@ -535,7 +535,7 @@ data Elect (p :: PrePost) (el :: Type) (ot :: Type) :: Type where
   ElectCard :: CardFacet ot -> Elect 'Pre (CardFacet ot) ot
   ElectCase :: Case (Elect p el ot) -> Elect p el ot
   Event :: Event -> Elect 'Post Event ot
-  If :: Condition -> Elect 'Post el ot -> Else el ot -> Elect 'Post el ot -- NB: It is probably correct to allow this constructor with CardTypeDef usage in order to encode split cards and such.
+  If :: Condition -> Elect 'Post el ot -> Else el ot -> Elect 'Post el ot -- NOTE: It is probably correct to allow this constructor with CardTypeDef usage in order to encode split cards and such.
   Listen :: EventListener -> Elect 'Post EventListener ot
   -- TODO: Add `IsZO zone ot` witness and change `'ZBattlefield` to `zone`.
   -- TODO: Prolly allow both 'Pre and 'Post
@@ -588,7 +588,7 @@ type ElectPrePost el ot = Elect 'Pre (Elect 'Post el ot) ot
 data Else (el :: Type) (ot :: Type) :: Type where
   ElseCost :: (el ~ Cost ot) => Elect 'Post el ot -> Else el ot
   ElseEffect :: (el ~ Effect 'OneShot) => Elect 'Post el ot -> Else el ot
-  -- NB: Events need linear history to make sense of election costs tied to it, hence this hole.
+  -- NOTE: Events need linear history to make sense of election costs tied to it, hence this hole.
   -- Imagine otherwise this were not the case. Then different parts of the branch could listen to different
   -- event types (without injecting yet another index/witness to prevent it). This is is dumb on its own
   -- and gets worse when the conditional has costs involved. You'd have to solve for the future to know what

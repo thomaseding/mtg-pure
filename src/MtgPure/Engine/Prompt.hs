@@ -148,7 +148,7 @@ ordSomeActivatedAbility x = case x of
 
 data Play (ot :: Type) :: Type where
   ActivateAbility :: IsZO zone ot => SomeActivatedAbility zone ot -> Play OTActivatedAbility
-  -- NB (305.9): Lands + other types can never be cast
+  -- NOTE (305.9): Lands + other types can never be cast
   -- Unfortuantely OTSpell intersects OTArtifactLand. Such is life.
   -- Prolly don't want to model `SomeButNot allowed disallowed`? Maybe `SomeButNot` is okay for Runtime,
   -- though it's probably unnecessary for Authoring (thankfully).

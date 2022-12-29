@@ -142,7 +142,7 @@ instance (IsReadWrite rw, Monad m) => Monad (MagicCont' ex st v rw m a) where
   MagicCont' a >>= f = MagicCont' $ a >>= unMagicCont' . f
 
 magicThrow :: Monad m => ex -> Magic' ex st 'Private 'RW m b
-magicThrow ex = MagicRW $ throwE ex
+magicThrow = MagicRW . throwE
 
 magicCatch ::
   Monad m =>
@@ -151,6 +151,9 @@ magicCatch ::
   Magic' ex st 'Private 'RW m a
 magicCatch (MagicRW m) f = MagicRW $ catchE m $ unMagicRW . f
 
+-- NOTE:
+-- This hijacks the current continuation.
+-- Use `liftCont` instead of this if you need to preseve the current continuation.
 magicCont :: Monad m => Magic' ex st 'Private 'RW m a -> MagicCont' ex st 'Private 'RW m a b
 magicCont = MagicCont' . throwE
 

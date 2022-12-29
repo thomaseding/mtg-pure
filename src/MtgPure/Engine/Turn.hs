@@ -112,7 +112,7 @@ setPhaseStep :: PhaseStep -> Monad m => MagicCont 'Private 'RW m Void ()
 setPhaseStep phaseStep = logCall 'setPhaseStep do
   liftCont $ modify \st -> st{magicPhaseStep = phaseStep}
 
--- NB: This hangs if there are not enough unique items.
+-- NOTE: This hangs if there are not enough unique items.
 takeUnique :: Eq a => Int -> Stream.Stream a -> [a]
 takeUnique n s = case n <= 0 of
   True -> []

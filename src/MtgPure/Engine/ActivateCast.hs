@@ -31,7 +31,15 @@ import safe MtgPure.Engine.Fwd.Api (
   rewindIllegal,
  )
 import safe MtgPure.Engine.Legality (Legality (..), legalityToMaybe, maybeToLegality)
-import safe MtgPure.Engine.Monad (fromPublic, fromRO, get, gets, liftCont, magicCont, modify)
+import safe MtgPure.Engine.Monad (
+  fromPublic,
+  fromRO,
+  get,
+  gets,
+  liftCont,
+  magicCont,
+  modify,
+ )
 import safe MtgPure.Engine.Prompt (
   InvalidCastSpell (..),
   Play (..),
@@ -51,7 +59,6 @@ import safe MtgPure.Engine.State (
   electedObject_cost,
   logCall,
   mkOpaqueGameState,
-  runMagicCont,
  )
 import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.IsCardList (containsCard)
@@ -134,9 +141,11 @@ askActivateAbility' attempt oPlayer = logCall 'askActivateAbility' do
         Nothing -> pure ()
         Just activate -> do
           isLegal <- liftCont $ rewindIllegal $ activateAbility oPlayer activate
-          magicCont case isLegal of
-            True -> gainPriority oPlayer -- (117.3c)
-            False -> runMagicCont (either id id) $ askActivateAbility' ((1 +) <$> attempt) oPlayer
+          case isLegal of
+            True -> magicCont do
+              gainPriority oPlayer -- (117.3c)
+            False -> do
+              askActivateAbility' ((1 +) <$> attempt) oPlayer
     _ -> pure ()
 
 newtype CastSpellReqs = CastSpellReqs
@@ -162,8 +171,6 @@ getCastSpellReqs oPlayer = logCall 'getCastSpellReqs do
 askCastSpell :: Monad m => Object 'OTPlayer -> MagicCont 'Private 'RW m () ()
 askCastSpell = logCall 'askCastSpell $ askCastSpell' $ Attempt 0
 
--- XXX: This is buggy when provided Invalid input followed by Nothing input.
--- This should advance to ask to play lands. Instead phase is advanced.
 askCastSpell' :: forall m. Monad m => Attempt -> Object 'OTPlayer -> MagicCont 'Private 'RW m () ()
 askCastSpell' attempt oPlayer = logCall 'askCastSpell' do
   reqs <- liftCont $ fromRO $ getCastSpellReqs oPlayer
@@ -177,16 +184,11 @@ askCastSpell' attempt oPlayer = logCall 'askCastSpell' do
         Nothing -> pure ()
         Just cast -> do
           isLegal <- liftCont $ rewindIllegal $ castSpell oPlayer cast
-          magicCont case isLegal of
-            True -> do
-              lift $ promptDebugMessage prompt "gains priotity"
+          case isLegal of
+            True -> magicCont do
               gainPriority oPlayer -- (117.3c)
             False -> do
-              lift $ promptDebugMessage prompt "retry a"
-              runMagicCont (either id id) $ do
-                liftCont $ lift $ promptDebugMessage prompt "rmc"
-                askCastSpell' ((1 +) <$> attempt) oPlayer
-              lift $ promptDebugMessage prompt "retry b"
+              askCastSpell' ((1 +) <$> attempt) oPlayer
     _ -> pure ()
 
 data CastMeta (ot :: Type) :: Type where

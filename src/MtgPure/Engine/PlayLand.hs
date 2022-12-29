@@ -53,7 +53,6 @@ import safe MtgPure.Engine.State (
   MagicCont,
   logCall,
   mkOpaqueGameState,
-  runMagicCont,
  )
 import safe MtgPure.Model.IsCardList (containsCard)
 import safe MtgPure.Model.Object.OTKind (OTLand)
@@ -129,9 +128,11 @@ askPlayLand' attempt oPlayer = logCall 'askPlayLand' do
         Nothing -> pure ()
         Just special -> do
           isLegal <- liftCont $ rewindIllegal $ playLand oPlayer special
-          magicCont case isLegal of
-            True -> gainPriority oPlayer -- (117.3c)
-            False -> runMagicCont (either id id) $ askPlayLand' attempt oPlayer
+          case isLegal of
+            True -> magicCont do
+              gainPriority oPlayer -- (117.3c)
+            False -> do
+              askPlayLand' ((1 +) <$> attempt) oPlayer
     _ -> pure ()
 
 playLand :: Monad m => Object 'OTPlayer -> Play OTLand -> Magic 'Private 'RW m Legality

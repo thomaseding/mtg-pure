@@ -243,11 +243,6 @@ demoPlayLandUser = demoPlayThingUser PlayLandK
 
 -- TODO: Expose sufficient Public API to avoid need for `internalFromPrivate`
 demoCastSpellUser :: Attempt -> OpaqueGameState Demo -> Object 'OTPlayer -> Demo (Maybe (Play OTSpell))
--- XXX: Buggy. Reproduction steps are:
---    (a) Start game
---    (b) Input garbage for P1 spell to cast
---    (c) Input "0" for P1 spell to cast for the retry
---    (d) Game should advance state but asks for P1 to cast spell. Entering 0 again does advance
 demoCastSpellUser = demoPlayThingUser CastSpellK
 
 -- TODO: Expose sufficient Public API to avoid need for `internalFromPrivate`
