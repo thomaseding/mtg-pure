@@ -28,6 +28,7 @@ ghci -hidir .output -odir .output -fobject-code^
  -XSafe^
  -XScopedTypeVariables^
  -XStandaloneDeriving^
+ -XStrictData^
  -XTemplateHaskellQuotes^
  -XTypeApplications^
  -XTypeFamilyDependencies^

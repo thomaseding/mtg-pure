@@ -1687,7 +1687,6 @@ ordWithLinkedObject ::
 ordWithLinkedObject ordM x = case x of
   LProxy reqs1 -> \case
     LProxy reqs2 -> ordRequirements reqs1 reqs2
-    y -> compareIndexM x y
   --
   L1 NonProxyElectEffect reqs1 cont1 -> \case
     L1 NonProxyElectEffect reqs2 cont2 ->

@@ -51,6 +51,7 @@ library
         Safe,
         ScopedTypeVariables,
         StandaloneDeriving,
+        StrictData,
         TemplateHaskellQuotes,
         TypeApplications,
         TypeFamilyDependencies,

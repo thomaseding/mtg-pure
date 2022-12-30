@@ -258,7 +258,9 @@ runMagicCont = runMagicCont' envLogCall
 envLogCall :: (IsReadWrite rw, Monad m) => EnvLogCall (GameResult m) (GameState m) v rw m
 envLogCall =
   EnvLogCall
-    { envLogCallCorruptCallStackLogging = error $ show CorruptCallStackLogging
+    { envLogCallCorruptCallStackLogging = do
+        pure () -- this introduces enough laziness to not crash strict data field
+        error $ show CorruptCallStackLogging
     , envLogCallPromptPush = \frame -> do
         st <- internalFromPrivate $ fromRO get
         let prompt = magicPrompt st
