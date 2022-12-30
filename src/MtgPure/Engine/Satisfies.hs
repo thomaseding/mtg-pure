@@ -15,17 +15,14 @@ module MtgPure.Engine.Satisfies (
 
 import safe qualified Control.Monad as M
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
-import safe Control.Monad.Trans (lift)
 import safe Data.Functor ((<&>))
 import safe MtgPure.Engine.Fwd.Api (
   allZOs,
   findPermanent,
   getPermanent,
  )
-import safe MtgPure.Engine.Monad (fromRO, gets)
 import safe MtgPure.Engine.Orphans ()
-import safe MtgPure.Engine.Prompt (Prompt' (..))
-import safe MtgPure.Engine.State (GameState (..), Magic, logCall)
+import safe MtgPure.Engine.State (Magic, logCall)
 import safe MtgPure.Model.Land (Land (landTypes))
 import safe MtgPure.Model.LandType (LandType)
 import safe MtgPure.Model.Object.OTKind (OTLand)
@@ -77,19 +74,13 @@ controlledBy' ::
   Magic 'Private 'RO m Bool
 controlledBy' zo zoPlayer = logCall 'controlledBy' case singZone @zone of
   SZBattlefield -> do
-    result <-
-      findPermanent (zo0ToPermanent $ toZO0 zo) <&> \case
-        Nothing -> getObjectId zo == getObjectId zoPlayer -- TODO: [Mindslaver]
-        Just perm -> getObjectId (permanentController perm) == getObjectId zoPlayer
-    prompt <- gets magicPrompt
-    lift $ promptDebugMessage prompt $ show (zo, zoPlayer, result)
-    pure result
+    findPermanent (zo0ToPermanent $ toZO0 zo) <&> \case
+      Nothing -> getObjectId zo == getObjectId zoPlayer -- TODO: [Mindslaver]
+      Just perm -> getObjectId (permanentController perm) == getObjectId zoPlayer
   _ -> undefined
 
 is' :: (Monad m, IsZO zone ot) => ZO zone ot -> ZO zone ot -> Magic 'Private 'RO m Bool
 is' zo zo' = logCall 'is' do
-  prompt <- fromRO $ gets magicPrompt
-  lift $ promptDebugMessage prompt $ show (zo, zo')
   pure $ getObjectId zo == getObjectId zo' -- XXX: Also check for ObjectId liveliness?
 
 not' ::

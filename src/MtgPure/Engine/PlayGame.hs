@@ -116,7 +116,8 @@ mkGameState fwd input = case playerObjects of
         , magicPlayerOrderTurn = Stream.cycle playerObjects
         , magicPrompt = gameInput_prompt input
         , magicStack = Stack []
-        , magicStackEntryMap = mempty
+        , magicStackEntryTargetsMap = mempty
+        , magicStackEntryElectedMap = mempty
         , magicStartingPlayer = oPlayer
         , magicTargetProperties = mempty
         }

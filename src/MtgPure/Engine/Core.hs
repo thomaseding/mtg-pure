@@ -41,7 +41,6 @@ module MtgPure.Engine.Core (
 import safe Control.Exception (assert)
 import safe qualified Control.Monad as M
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
-import Control.Monad.Trans (lift)
 import safe qualified Data.DList as DList
 import safe Data.Functor ((<&>))
 import safe qualified Data.List as List
@@ -67,7 +66,6 @@ import safe MtgPure.Engine.Prompt (
   AbsoluteActivatedAbilityIndex (AbsoluteActivatedAbilityIndex),
   InternalLogicError (..),
   PlayerCount (..),
-  Prompt' (promptDebugMessage),
   RelativeAbilityIndex (RelativeAbilityIndex),
   SomeActivatedAbility (..),
  )
@@ -146,13 +144,9 @@ rewindIllegal m = logCall 'rewindIllegal do
         GameResult{gameWinners = []} -> pure Illegal
         ex -> magicThrow ex
   st <- fromRO get
-  ret <-
-    m' >>= \case
-      Legal -> pure True
-      Illegal -> put st >> pure False
-  prompt <- fromRO $ gets magicPrompt
-  lift $ promptDebugMessage prompt $ show ret
-  pure ret
+  m' >>= \case
+    Legal -> pure True
+    Illegal -> put st >> pure False
 
 allZOs :: forall zone ot m. (Monad m, IsZO zone ot) => Magic 'Private 'RO m [ZO zone ot]
 allZOs = logCall 'allZOs case singZone @zone of
@@ -258,7 +252,7 @@ activatedToIndex ability = logCall 'activatedToIndex do
       i = getObjectId zo
   abilities <- getActivatedAbilitiesOf zo
   pure case List.elemIndex ability abilities of
-    Nothing -> error $ show ObjectDoesNotHaveAbility
+    Nothing -> error $ show $ ObjectDoesNotHaveAbility ability
     Just index -> AbsoluteActivatedAbilityIndex i $ RelativeAbilityIndex index
 
 indexToActivated ::

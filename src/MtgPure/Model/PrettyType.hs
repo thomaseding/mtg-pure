@@ -39,6 +39,7 @@ import safe MtgPure.Model.Object.OTKind (
   OTSpell,
  )
 import safe MtgPure.Model.Object.OTN (
+  OT0,
   OT1,
   OT10,
   OT11,
@@ -64,6 +65,9 @@ instance IsObjectType a => PrettyType a where
 
 getRep :: forall a. Typeable a => TypeRep
 getRep = typeRep (Proxy @a)
+
+instance PrettyType OT0 where
+  prettyType = "OT0"
 
 instance IsObjectType a => PrettyType (OT1 a) where
   prettyType = case litObjectType @a of

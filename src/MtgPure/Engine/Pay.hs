@@ -104,12 +104,10 @@ payTapCost ::
   Requirement 'ZBattlefield ot ->
   Magic 'Private 'RW m Legality
 payTapCost oPlayer req = logCall 'payTapCost do
-  prompt <- fromRO $ gets magicPrompt
   fromRO (zosSatisfying req') >>= \case
-    [] -> do
-      lift $ promptDebugMessage prompt $ show ("payTapCost no zos satisfying" :: String)
-      pure Illegal
+    [] -> pure Illegal
     zos@(zosHead : zosTail) -> do
+      prompt <- fromRO $ gets magicPrompt
       opaque <- fromRO $ gets mkOpaqueGameState
       zo <- lift $
         untilJust \attempt -> do
@@ -118,11 +116,7 @@ payTapCost oPlayer req = logCall 'payTapCost do
             False -> Nothing
             True -> Just zo
       let oPerm = zo0ToPermanent $ toZO0 zo
-      shouldBeUntapped <- fromRO $ satisfies oPerm isTapped <&> toLegality
-      lift $ promptDebugMessage prompt $ show ("payTapCost tapping..." :: String, shouldBeUntapped)
       enact $ Tap oPerm
-      shouldBeTapped <- fromRO $ satisfies oPerm isTapped <&> toLegality
-      lift $ promptDebugMessage prompt $ show ("...payTapCost done" :: String, shouldBeTapped)
       fromRO $ satisfies oPerm isTapped <&> toLegality
  where
   req' =

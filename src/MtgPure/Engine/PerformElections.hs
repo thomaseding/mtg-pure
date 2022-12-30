@@ -32,7 +32,6 @@ import safe MtgPure.Engine.State (
   AnyRequirement (..),
   GameState (..),
   Magic,
-  StackEntry (..),
   logCall,
   mkOpaqueGameState,
  )
@@ -141,19 +140,19 @@ newTarget zoStack zoTargetBase req = logCall 'newTarget do
           assert (oldDisc == DefaultObjectDiscriminant) $ Object wit (UntypedObject discr i)
       objN' = mapObjectN go objN
       zoTarget = ZO sZone objN'
-  modify $ \st ->
+  modify \st ->
     let targetId = getObjectId zoTarget
         propMap = magicTargetProperties st
         propMap' = Map.insert targetId (AnyRequirement req) propMap
-        entry = case Map.lookup zoStack $ magicStackEntryMap st of
-          Just x -> x
-          Nothing -> error $ show ExpectedStackObjectToExist
-        entry' = entry{stackEntryTargets = targetId : stackEntryTargets entry}
-        itemMap = magicStackEntryMap st
-        itemMap' = Map.insert zoStack entry' itemMap
+        targetIds = case Map.lookup zoStack $ magicStackEntryTargetsMap st of
+          Just ts -> ts
+          Nothing -> error $ show $ ExpectedStackObjectToExist zoStack
+        targetIds' = targetId : targetIds
+        targetsMap = magicStackEntryTargetsMap st
+        targetsMap' = Map.insert zoStack targetIds' targetsMap
      in st
           { magicNextObjectDiscriminant = (+ 1) <$> discr
-          , magicStackEntryMap = itemMap'
+          , magicStackEntryTargetsMap = targetsMap'
           , magicTargetProperties = propMap'
           }
   pure zoTarget

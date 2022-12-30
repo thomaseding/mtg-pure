@@ -25,6 +25,7 @@ import safe qualified Control.Monad.Trans.State.Strict as State
 import safe Control.Monad.Util (Attempt, Attempt' (..))
 import safe Data.Char (isSpace)
 import safe Data.List.NonEmpty (NonEmpty (..))
+import safe qualified Data.List.NonEmpty as NonEmpty
 import safe qualified Data.Map.Strict as Map
 import safe qualified Data.Set as Set
 import safe qualified Data.Traversable as T
@@ -93,7 +94,7 @@ import safe MtgPure.Model.Recursive (
 import safe MtgPure.Model.Sideboard (Sideboard (..))
 import safe MtgPure.Model.Zone (IsZone, SZone (..), Zone (..))
 import safe MtgPure.Model.ZoneObject.Convert (toZO0, toZO1, zo0ToAny, zo0ToSpell)
-import safe MtgPure.Model.ZoneObject.ZoneObject (ZO, ZoneObject (..))
+import safe MtgPure.Model.ZoneObject.ZoneObject (IsZO, ZO, ZoneObject (..))
 import safe MtgPure.ModelCombinators (AsWithThis (thisObject), isTapped)
 import safe qualified System.IO as IO
 import safe System.Random (randomRIO)
@@ -176,7 +177,7 @@ gameInput =
           , promptLogCallPop = demoLogCallPop
           , promptLogCallPush = demoLogCallPush
           , promptPerformMulligan = \_attempt _p _hand -> pure False
-          , promptPickZO = \_attempt _opaque _p zos -> pure case zos of zo :| _ -> zo
+          , promptPickZO = demoPickZo
           , promptPlayLand = if True then demoPlayLandUser else demoPlayLandRandom
           , promptShuffle = \_attempt (CardCount n) _player -> pure $ map CardIndex [0 .. n - 1]
           }
@@ -199,6 +200,18 @@ prompt msg = do
       State.modify' \st -> st{demo_replayInputs = ss}
       liftIO $ putStrLn s
       pure s
+
+demoPickZo ::
+  (IsZO zone ot, Monad m) =>
+  Attempt ->
+  OpaqueGameState m ->
+  Object 'OTPlayer ->
+  NonEmpty (ZO zone ot) ->
+  Demo (ZO zone ot)
+demoPickZo _attempt _opaque _p zos = case zos of
+  zo :| _ -> do
+    liftIO $ print ("picked", zo, "from", NonEmpty.toList zos)
+    pure zo
 
 data ReadActivated = ReadActivated Int Int
 
@@ -274,7 +287,6 @@ demoActivateAbilityUser attempt opaque oPlayer = queryMagic opaque do
     let ReadActivated i j = case readMaybe @ReadActivated text of
           Nothing -> ReadActivated (-1) 0
           Just x -> x
-    liftIO $ print (text, i, j)
     pure $ AbsoluteActivatedAbilityIndex (ObjectId i) $ RelativeAbilityIndex j
   case getObjectId index of
     ObjectId 0 -> pure Nothing
@@ -365,9 +377,9 @@ demoLogCallPush opaque frame = case name == show 'queryMagic of
   True -> State.modify' \st -> st{demo_logDisabled = demo_logDisabled st + 1}
   False ->
     State.gets demo_logDisabled >>= \case
-      0 -> case Set.member name logIgnore of
-        True -> pure ()
-        False -> do
+      0 -> case Map.lookup name logIgnore of
+        Just _ -> pure ()
+        Nothing -> do
           let indent = replicate (tabWidth * i) ' '
           liftIO $ putStrLn $ indent ++ "+" ++ name ++ ": " ++ show i
           case Set.member name logDetailed of
@@ -383,9 +395,9 @@ demoLogCallPop _opaque frame = case name == show 'queryMagic of
   True -> State.modify' \st -> assert (demo_logDisabled st > 0) st{demo_logDisabled = demo_logDisabled st - 1}
   False ->
     State.gets demo_logDisabled >>= \case
-      0 -> case Set.member name logIgnore of
-        True -> pure ()
-        False -> do
+      0 -> case Map.lookup name logIgnore of
+        Just _ -> pure ()
+        _ -> do
           let indent = replicate (tabWidth * i) ' '
           liftIO $ putStrLn $ indent ++ "-" ++ name ++ ": " ++ show i
       _ -> pure ()
@@ -457,22 +469,25 @@ logDetailed =
     , "MtgPure.Engine.Turn.precombatMainPhase"
     ]
 
-logIgnore :: Set.Set String
+-- TODO: Make these actually do something
+data IgnoreBehavior = IgnoreAll -- IgnoreNested
+
+logIgnore :: Map.Map String IgnoreBehavior
 logIgnore =
-  Set.fromList
-    [ ""
-    , "MtgPure.Engine.Core.findHandCard"
-    , "MtgPure.Engine.Core.findLibraryCard"
-    , "MtgPure.Engine.Core.findPlayer"
-    , "MtgPure.Engine.Core.getActivePlayer"
-    , "MtgPure.Engine.Core.getAlivePlayerCount"
-    , "MtgPure.Engine.Core.getAPNAP"
-    , "MtgPure.Engine.Core.getPlayer"
-    , "MtgPure.Engine.Core.getPlayers"
-    , "MtgPure.Engine.Core.newObjectId"
-    , "MtgPure.Engine.Core.pushHandCard"
-    , "MtgPure.Engine.Core.pushLibraryCard"
-    , "MtgPure.Engine.Core.removeHandCard"
-    , "MtgPure.Engine.Core.removeLibraryCard"
-    , "MtgPure.Engine.Core.setPlayer"
+  Map.fromList
+    [ ("", IgnoreAll)
+    , ("MtgPure.Engine.Core.findHandCard", IgnoreAll)
+    , ("MtgPure.Engine.Core.findLibraryCard", IgnoreAll)
+    , ("MtgPure.Engine.Core.findPlayer", IgnoreAll)
+    , ("MtgPure.Engine.Core.getActivePlayer", IgnoreAll)
+    , ("MtgPure.Engine.Core.getAlivePlayerCount", IgnoreAll)
+    , ("MtgPure.Engine.Core.getAPNAP", IgnoreAll)
+    , ("MtgPure.Engine.Core.getPlayer", IgnoreAll)
+    , ("MtgPure.Engine.Core.getPlayers", IgnoreAll)
+    , ("MtgPure.Engine.Core.newObjectId", IgnoreAll)
+    , ("MtgPure.Engine.Core.pushHandCard", IgnoreAll)
+    , ("MtgPure.Engine.Core.pushLibraryCard", IgnoreAll)
+    , ("MtgPure.Engine.Core.removeHandCard", IgnoreAll)
+    , ("MtgPure.Engine.Core.removeLibraryCard", IgnoreAll)
+    , ("MtgPure.Engine.Core.setPlayer", IgnoreAll)
     ]

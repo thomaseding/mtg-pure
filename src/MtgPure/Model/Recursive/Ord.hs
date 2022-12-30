@@ -1168,7 +1168,7 @@ ordEventListener' ordM x = case x of
     y -> compareIndexM x y
 
 ordEvent :: Event -> Event -> EnvM Ordering
-ordEvent = ordEventListener' $ \Proxy -> pure $ pure EQ
+ordEvent = ordEventListener' \Proxy -> pure $ pure EQ
 
 ordEventListener :: EventListener -> EventListener -> EnvM Ordering
 ordEventListener = ordEventListener' ordElectEl

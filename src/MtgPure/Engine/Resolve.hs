@@ -31,7 +31,6 @@ import safe MtgPure.Engine.State (
   GameState (..),
   Magic,
   PendingReady (..),
-  StackEntry (..),
   electedObject_effect,
   logCall,
  )
@@ -39,9 +38,8 @@ import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.Object.OTN (OT0)
 import safe MtgPure.Model.PrePost (PrePost (..))
 import safe MtgPure.Model.Recursive (Effect (..), Elect (..))
-import safe MtgPure.Model.Stack (Stack (..), StackObject (..))
+import safe MtgPure.Model.Stack (Stack (..), stackObjectToZo0)
 import safe MtgPure.Model.Zone (Zone (..))
-import safe MtgPure.Model.ZoneObject.Convert (toZO0)
 import safe MtgPure.Model.ZoneObject.ZoneObject (ZO)
 
 resolveTopOfStack :: Monad m => Magic 'Private 'RW m ()
@@ -50,24 +48,24 @@ resolveTopOfStack = logCall 'resolveTopOfStack do
   case stack of -- (117.4) (405.5)
     [] -> pure ()
     item : items -> do
-      modify $ \st -> st{magicStack = Stack items}
-      resolveStackObject item
+      let zoStack = stackObjectToZo0 item
+      modify \st -> st{magicStack = Stack items}
+      resolveStackObject zoStack
+      modify \st ->
+        st
+          { magicStackEntryTargetsMap = Map.delete zoStack $ magicStackEntryTargetsMap st
+          , magicStackEntryElectedMap = Map.delete zoStack $ magicStackEntryElectedMap st
+          }
       oActive <- fromPublicRO getActivePlayer
       gainPriority oActive
 
-resolveStackObject :: forall m. Monad m => StackObject -> Magic 'Private 'RW m ()
-resolveStackObject = logCall 'resolveStackObject \case
-  StackAbility zoAbility -> resolve $ toZO0 zoAbility
-  StackSpell zoSpell -> resolve $ toZO0 zoSpell
- where
-  resolve :: ZO 'ZStack OT0 -> Magic 'Private 'RW m ()
-  resolve zoStack = do
-    let go :: AnyElected 'Pre -> Magic 'Private 'RW m ()
-        go (AnyElected elected) = resolveElected zoStack elected
-    st <- fromRO get
-    case Map.lookup zoStack $ magicStackEntryMap st of
-      Nothing -> error $ show NotSureWhatThisEntails
-      Just entry -> go $ stackEntryElected entry
+resolveStackObject :: forall m. Monad m => ZO 'ZStack OT0 -> Magic 'Private 'RW m ()
+resolveStackObject zoStack = logCall 'resolveStackObject do
+  st <- fromRO get
+  case Map.lookup zoStack $ magicStackEntryElectedMap st of
+    Nothing -> error $ show NotSureWhatThisEntails
+    Just anyElected -> case anyElected of
+      AnyElected elected -> resolveElected zoStack elected
 
 resolveElected ::
   forall ot m.
@@ -82,4 +80,3 @@ resolveElected zoStack elected = logCall 'resolveElected do
       goEffect :: Effect 'OneShot -> Magic 'Private 'RW m (Maybe Void)
       goEffect = fmap (const Nothing) . enact
   goElectEffect $ unPending $ electedObject_effect elected
-  pure () -- TODO: GC stack stuff

@@ -191,7 +191,7 @@ playLandZO oPlayer zoLand = logCall 'playLandZO do
             SZGraveyard -> undefined -- TODO: [Crucible of Worlds]
             SZHand -> do
               removeHandCard oPlayer (asCard zoLand) >>= \case
-                Nothing -> error $ show ObjectIdExistsAndAlsoDoesNotExist
+                Nothing -> error $ show $ ObjectIdExistsAndAlsoDoesNotExist zoLand
                 Just{} -> pure ()
           modifyPlayer oPlayer \p -> p{playerLandsPlayedThisTurn = playerLandsPlayedThisTurn p + 1}
           i <- newObjectId
@@ -200,7 +200,6 @@ playLandZO oPlayer zoLand = logCall 'playLandZO do
                 Nothing -> error $ show ExpectedCardToBeAPermanentCard
                 Just perm' -> perm'
           setPermanent oLand' $ Just perm
-          lift $ promptDebugMessage prompt "successfully played land"
           pure Legal
 
   case reqs of

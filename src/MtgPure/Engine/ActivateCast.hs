@@ -54,7 +54,6 @@ import safe MtgPure.Engine.State (
   MagicCont,
   Pending,
   PendingReady (..),
-  StackEntry (..),
   electedObject_controller,
   electedObject_cost,
   logCall,
@@ -303,7 +302,9 @@ castSpellCard oCaster card = logCall 'castSpellCard case card of
     let zoSpell = toZO0 @ 'ZStack spellId
 
         goElectFacet :: Elect 'Pre (CardFacet ot) ot -> Magic 'Private 'RW m Legality
-        goElectFacet = fmap maybeToLegality . performElections zoSpell goFacet
+        goElectFacet elect = do
+          seedStackEntryTargets zoSpell
+          maybeToLegality <$> performElections zoSpell goFacet elect
 
         goFacet :: CardFacet ot -> Magic 'Private 'RW m Legality'
         goFacet facet = case facet of
@@ -329,11 +330,11 @@ castSpellCard oCaster card = logCall 'castSpellCard case card of
             case singSpecificCard @ot of
               InstantCard ->
                 legalityToMaybe <$> do
-                  payElectedAndPutOnStack @ 'Cast $
+                  payElectedAndPutOnStack @ 'Cast zoSpell $
                     castMeta_Elected meta oCaster card facet cost effect
               SorceryCard ->
                 legalityToMaybe <$> do
-                  payElectedAndPutOnStack @ 'Cast $
+                  payElectedAndPutOnStack @ 'Cast zoSpell $
                     castMeta_Elected meta oCaster card facet cost effect
               _ -> undefined
 
@@ -385,9 +386,9 @@ activateAbility oPlayer = logCall 'activateAbility \case
         let zoAbility = toZO0 @ 'ZStack abilityId
 
             goElectActivated :: Elect 'Pre (ActivatedAbility zone ot) ot -> Magic 'Private 'RW m Legality
-            goElectActivated =
-              logCall' "goElectedActivated" $
-                fmap maybeToLegality . performElections zoAbility goActivated
+            goElectActivated elect = logCall' "goElectedActivated" do
+              seedStackEntryTargets zoAbility
+              maybeToLegality <$> performElections zoAbility goActivated elect
 
             goActivated :: ActivatedAbility zone ot -> Magic 'Private 'RW m Legality'
             goActivated activated = logCall' "goActivated" do
@@ -407,7 +408,7 @@ activateAbility oPlayer = logCall 'activateAbility \case
                         (activated_effect activated)
                         \cost effect ->
                           legalityToMaybe <$> do
-                            payElectedAndPutOnStack @ 'Activate $
+                            payElectedAndPutOnStack @ 'Activate zoAbility $
                               ElectedActivatedAbility oPlayer zoThis cost effect
 
             invalid complain = do
@@ -450,68 +451,55 @@ playPendingAbility ::
 playPendingAbility _zoStack cost electEffect cont = logCall 'playPendingAbility do
   cont cost $ Pending electEffect
 
-setElectedObject_cost ::
-  Elected pEffect ot ->
-  Cost ot ->
-  Elected pEffect ot
-setElectedObject_cost elected cost = case elected of
-  ElectedActivatedAbility{} -> elected{electedActivatedAbility_cost = cost}
-  ElectedInstant{} -> elected{electedInstant_cost = cost}
-  ElectedSorcery{} -> elected{electedSorcery_cost = cost}
-
 data ActivateCast = Activate | Cast
 
 class PayElected (ac :: ActivateCast) (ot :: Type) where
-  payElectedAndPutOnStack :: Monad m => Elected 'Pre ot -> Magic 'Private 'RW m Legality
+  payElectedAndPutOnStack :: Monad m => ZO 'ZStack OT0 -> Elected 'Pre ot -> Magic 'Private 'RW m Legality
 
 instance PayElected 'Activate ot where
-  payElectedAndPutOnStack =
+  payElectedAndPutOnStack zo =
     logCall 'payElectedAndPutOnStack $
-      payElectedAndPutOnStack' $
+      payElectedAndPutOnStack' zo $
         StackAbility . ZO SZStack . toObject2' . idToObject @ 'OTActivatedAbility . UntypedObject DefaultObjectDiscriminant
 
 instance PayElected 'Cast OTInstant where
-  payElectedAndPutOnStack =
+  payElectedAndPutOnStack zo =
     logCall 'payElectedAndPutOnStack $
-      payElectedAndPutOnStack' $
+      payElectedAndPutOnStack' zo $
         StackSpell . ZO SZStack . toObject6' . idToObject @ 'OTInstant . UntypedObject DefaultObjectDiscriminant
 
 instance PayElected 'Cast OTSorcery where
-  payElectedAndPutOnStack =
+  payElectedAndPutOnStack zo =
     logCall 'payElectedAndPutOnStack $
-      payElectedAndPutOnStack' $
+      payElectedAndPutOnStack' zo $
         StackSpell . ZO SZStack . toObject6' . idToObject @ 'OTSorcery . UntypedObject DefaultObjectDiscriminant
 
 payElectedAndPutOnStack' ::
   forall ot m.
   Monad m =>
+  ZO 'ZStack OT0 ->
   (ObjectId -> StackObject) ->
   Elected 'Pre ot ->
   Magic 'Private 'RW m Legality
-payElectedAndPutOnStack' idToStackObject elected = logCall 'payElectedAndPutOnStack' do
-  stackId <- newObjectId
-  let stackItem = idToStackObject stackId
-
-      goCost :: Monad m => Cost ot -> Magic 'Private 'RW m Legality
-      goCost cost =
-        pay (electedObject_controller elected) cost >>= \case
-          Illegal -> pure Illegal
-          Legal -> do
-            let entry =
-                  StackEntry
-                    { stackEntryTargets = []
-                    , stackEntryElected = AnyElected $ setElectedObject_cost elected cost
-                    }
-            modify \st ->
-              st
-                { magicStack = Stack $ stackItem : unStack (magicStack st)
-                , magicStackEntryMap = Map.insert (toZO0 stackId) entry $ magicStackEntryMap st
-                }
-            pure Legal
-
-  legality <- goCost $ electedObject_cost elected
-  prompt <- fromRO $ gets magicPrompt
-  lift $ promptDebugMessage prompt $ show ("pay and put on stack", legality)
+payElectedAndPutOnStack' zoStack idToStackObject elected = logCall 'payElectedAndPutOnStack' do
+  let stackId = getObjectId zoStack
+      stackItem = idToStackObject stackId
+  modify \st ->
+    st
+      { magicStack = Stack $ stackItem : unStack (magicStack st)
+      , magicStackEntryElectedMap = Map.insert zoStack (AnyElected elected) $ magicStackEntryElectedMap st
+      }
+  legality <- pay (electedObject_controller elected) $ electedObject_cost elected
   case legality of
     Legal -> pure Legal
-    Illegal -> pure Illegal -- TODO: GC stack object stuff if Illegal
+    Illegal -> do
+      -- TODO: GC stack object stuff if Illegal
+      -- XXX: GC actually might not be necessary since this is ultimately bracketed by rewindIllegal
+      pure Illegal
+
+seedStackEntryTargets :: Monad m => ZO 'ZStack OT0 -> Magic 'Private 'RW m ()
+seedStackEntryTargets zoStack = logCall 'seedStackEntryTargets do
+  modify \st ->
+    st
+      { magicStackEntryTargetsMap = Map.insert zoStack [] $ magicStackEntryTargetsMap st
+      }

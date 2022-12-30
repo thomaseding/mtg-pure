@@ -22,7 +22,6 @@ import safe MtgPure.Engine.State (
   Elected (..),
   GameResult (..),
   GameState (..),
-  StackEntry (..),
  )
 import safe MtgPure.Model.Artifact (Artifact (..))
 import safe MtgPure.Model.CardName (HasCardName (getCardName))
@@ -97,8 +96,6 @@ deriving instance Show (SomeTerm Token ot)
 
 deriving instance Show Stack
 
-deriving instance Show StackEntry
-
 deriving instance Show StackObject
 
 instance Show Deck where
@@ -120,7 +117,8 @@ instance Show (GameState m) where
     tellPrint ("graveMapSize", graveMapSize)
     tellPrint ("handMapSize", handMapSize)
     tellPrint ("libMapSize", libMapSize)
-    tellPrint ("stackEntryMapSize", stackEntryMapSize)
+    tellPrint ("stackEntryTargetsMapSize", stackEntryTargetsMapSize)
+    tellPrint ("stackEntryElectedMapSize", stackEntryElectedMapSize)
     tellPrint ("targetMapSize", targetMapSize)
     tellLine ""
     tellPrint ("nextDiscr", nextDiscr)
@@ -162,7 +160,8 @@ instance Show (GameState m) where
       , magicPlayerOrderTurn = turnOrder
       , magicPrompt = _
       , magicStack = stack
-      , magicStackEntryMap = (Map.size -> stackEntryMapSize)
+      , magicStackEntryTargetsMap = (Map.size -> stackEntryTargetsMapSize)
+      , magicStackEntryElectedMap = (Map.size -> stackEntryElectedMapSize)
       , magicStartingPlayer = startingPlayer
       , magicTargetProperties = (Map.size -> targetMapSize)
       } = st

@@ -444,7 +444,7 @@ newObjectN make name = do
   pure (objN, snap)
 
 restoreObject :: ObjectIdState -> EnvM ()
---restoreObject (ObjectIdState i) = State.modify' $ \st -> st {nextObjectId = i}
+--restoreObject (ObjectIdState i) = State.modify' \st -> st {nextObjectId = i}
 restoreObject _ = pure ()
 
 data Plurality = Singular | Plural
@@ -1788,7 +1788,7 @@ showWithList showRet = \case
   CountOf zos cont -> yesParens do
     sZos <- parens <$> showZoneObjects zos
     discr <- EnvM $ State.gets nextVariableId
-    EnvM $ State.modify' $ \st -> st{nextVariableId = (1 +) <$> discr}
+    EnvM $ State.modify' \st -> st{nextVariableId = (1 +) <$> discr}
     let var = ReifiedVariable discr 0
         varName = getVarName var
         ret = cont var
@@ -2048,12 +2048,12 @@ showYourCard = \case
     x <- action you
     restoreObject snap
     pure x
-  goPerm cont consName = withYou $ \you -> yesParens do
+  goPerm cont consName = withYou \you -> yesParens do
     sYou <- parens <$> showZoneObject you
     let facet = cont you
     sFacet <- dollar <$> showCardFacet facet
     pure $ pure consName <> pure " $ \\" <> sYou <> pure " -> " <> sFacet
-  goSpell cont consName = withYou $ \you -> yesParens do
+  goSpell cont consName = withYou \you -> yesParens do
     sYou <- parens <$> showZoneObject you
     let electFacet = cont you
     sFacet <- dollar <$> showElect electFacet

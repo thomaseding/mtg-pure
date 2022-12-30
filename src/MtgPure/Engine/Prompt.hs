@@ -39,22 +39,18 @@ import safe MtgPure.Model.Recursive.Show ()
 import safe MtgPure.Model.Zone (IsZone, Zone (..))
 import safe MtgPure.Model.ZoneObject.ZoneObject (IsZO, ZO)
 
-data InternalLogicError
-  = CantHappenByConstruction
-  | CorruptCallStackLogging
-  | ExpectedCardToBeAPermanentCard
-  | ExpectedStackObjectToExist
-  | ImpossibleGameOver
-  | InvalidPermanent (ZO 'ZBattlefield OTPermanent)
-  | InvalidPlayer (Object 'OTPlayer)
-  | NotSureWhatThisEntails
-  | ObjectDoesNotHaveAbility -- XXX: GADTify this so this can squirrel away more info
-  | ObjectIdExistsAndAlsoDoesNotExist
+data InternalLogicError :: Type where
+  CantHappenByConstruction :: InternalLogicError
+  CorruptCallStackLogging :: InternalLogicError
+  ExpectedCardToBeAPermanentCard :: InternalLogicError
+  ExpectedStackObjectToExist :: IsZO zone ot => ZO zone ot -> InternalLogicError
+  ImpossibleGameOver :: InternalLogicError
+  InvalidPermanent :: ZO 'ZBattlefield OTPermanent -> InternalLogicError
+  InvalidPlayer :: Object 'OTPlayer -> InternalLogicError
+  NotSureWhatThisEntails :: InternalLogicError
+  ObjectDoesNotHaveAbility :: IsZO zone ot => SomeActivatedAbility zone ot -> InternalLogicError
+  ObjectIdExistsAndAlsoDoesNotExist :: IsZO zone ot => ZO zone ot -> InternalLogicError
   deriving (Typeable)
-
-deriving instance Eq InternalLogicError
-
-deriving instance Ord InternalLogicError
 
 deriving instance Show InternalLogicError
 
@@ -115,6 +111,8 @@ data SomeActivatedAbility (zone :: Zone) (ot :: Type) :: Type where
     , someActivatedAbility :: WithThisActivated zone ot'
     } ->
     SomeActivatedAbility zone ot
+
+deriving instance Show (SomeActivatedAbility zone ot)
 
 instance Eq (SomeActivatedAbility zone ot) where
   (==) x y = O.runEnvM (ordSomeActivatedAbility x y) == EQ

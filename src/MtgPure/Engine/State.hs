@@ -32,7 +32,6 @@ module MtgPure.Engine.State (
   electedObject_cost,
   electedObject_effect,
   AnyElected (..),
-  StackEntry (..),
   --
   logCall,
   logCallRec,
@@ -182,11 +181,6 @@ data AnyElected (pEffect :: PrePost) :: Type where
   AnyElected :: Elected pEffect ot -> AnyElected pEffect
   deriving (Typeable)
 
-data StackEntry = StackEntry
-  { stackEntryTargets :: [TargetId]
-  , stackEntryElected :: AnyElected 'Pre
-  }
-
 data GameState (m :: Type -> Type) where
   GameState ::
     { magicCurrentTurn :: Int
@@ -205,7 +199,9 @@ data GameState (m :: Type -> Type) where
     , magicPlayerOrderTurn :: Stream.Stream (Object 'OTPlayer) -- does not contain losers
     , magicPrompt :: Prompt m
     , magicStack :: Stack
-    , magicStackEntryMap :: Map.Map (ZO 'ZStack OT0) StackEntry
+    , -- This is not bundled with the AnyElected map because the Cost hasn't necessarily been determined when targets are being built
+      magicStackEntryTargetsMap :: Map.Map (ZO 'ZStack OT0) [TargetId]
+    , magicStackEntryElectedMap :: Map.Map (ZO 'ZStack OT0) (AnyElected 'Pre)
     , magicStartingPlayer :: Object 'OTPlayer
     , magicTargetProperties :: Map.Map TargetId AnyRequirement
     } ->

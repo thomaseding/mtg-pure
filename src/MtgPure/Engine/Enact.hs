@@ -133,7 +133,7 @@ drawCard' oPlayer = logCall 'drawCard' do
     Just (libCard, _) -> do
       mCard <- removeLibraryCard oPlayer libCard
       let card = case mCard of
-            Nothing -> error $ show ObjectIdExistsAndAlsoDoesNotExist
+            Nothing -> error $ show CantHappenByConstruction
             Just c -> c
       M.void $ pushHandCard oPlayer card
 
