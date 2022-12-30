@@ -9,6 +9,7 @@
 {-# HLINT ignore "Use if" #-}
 {-# HLINT ignore "Redundant pure" #-}
 {-# HLINT ignore "Redundant fmap" #-}
+{-# HLINT ignore "Evaluate" #-}
 
 module MtgPure.Test.MountainShock (
   main,
@@ -103,7 +104,7 @@ main = mainMountainShock
 
 -- NOTE: Still a WIP
 mainMountainShock :: IO ()
-mainMountainShock = runDemo (playGame input) >>= print
+mainMountainShock = runDemo (playGame gameInput) >>= print
 
 deck :: Deck
 deck =
@@ -126,6 +127,7 @@ side =
 data DemoState = DemoState
   { demo_ :: ()
   , demo_logDisabled :: !Int
+  , demo_replayInputs :: ![String]
   }
 
 type Demo = State.StateT DemoState IO
@@ -138,14 +140,23 @@ runDemo demo = do
       DemoState
         { demo_ = ()
         , demo_logDisabled = 0
+        , demo_replayInputs = replayInputs
         }
   case demo_logDisabled st of
     0 -> pure ()
     _ -> error $ show CorruptCallStackLogging
   pure x
 
-input :: GameInput Demo
-input =
+replayInputs :: [String]
+replayInputs =
+  []
+    ++ replicate 10 "0"
+    ++ ["8", "0", "11 0"]
+    ++ replicate 4 "0"
+    ++ ["7"]
+
+gameInput :: GameInput Demo
+gameInput =
   GameInput
     { gameInput_decks = replicate 2 (deck, side)
     , gameInput_gameFormat = Vintage
@@ -177,10 +188,17 @@ tabWidth = 2
 pause :: MonadIO m => m ()
 pause = M.void $ liftIO getLine
 
-prompt :: MonadIO m => String -> m ()
-prompt s = liftIO do
-  putStr s
-  IO.hFlush IO.stdout
+prompt :: String -> Demo String
+prompt msg = do
+  liftIO do
+    putStr msg
+    IO.hFlush IO.stdout
+  State.gets demo_replayInputs >>= \case
+    [] -> liftIO getLine
+    s : ss -> do
+      State.modify' \st -> st{demo_replayInputs = ss}
+      liftIO $ putStrLn s
+      pure s
 
 data ReadActivated = ReadActivated Int Int
 
@@ -210,12 +228,11 @@ demoPlayThingUser k attempt opaque oPlayer = queryMagic opaque do
   liftIO case attempt of
     Attempt 0 -> pure ()
     Attempt n -> putStrLn $ "Retrying[" ++ show n ++ "]..."
-  zo <- liftIO do
+  zo <- do
     let s = case k of
           PlayLandK -> "PlayLand"
           CastSpellK -> "CastSpell"
-    prompt $ s ++ " " ++ show oPlayer ++ ": "
-    text <- getLine
+    text <- M.lift $ prompt $ s ++ " " ++ show oPlayer ++ ": "
     let i = case readMaybe @Int text of
           Nothing -> -1
           Just x -> x
@@ -252,9 +269,8 @@ demoActivateAbilityUser attempt opaque oPlayer = queryMagic opaque do
   liftIO case attempt of
     Attempt 0 -> pure ()
     Attempt n -> putStrLn $ "Retrying[" ++ show n ++ "]..."
-  index <- liftIO do
-    prompt $ "ActivateAbility " ++ show oPlayer ++ ": "
-    text <- getLine
+  index <- do
+    text <- M.lift $ prompt $ "ActivateAbility " ++ show oPlayer ++ ": "
     let ReadActivated i j = case readMaybe @ReadActivated text of
           Nothing -> ReadActivated (-1) 0
           Just x -> x
