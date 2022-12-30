@@ -362,60 +362,56 @@ activateAbility oPlayer = logCall 'activateAbility \case
     pure () -- TODO: Check that `zoThis'` actually has the `withThisActivated`
     let oThis = promoteIdToObjectN @ot $ getObjectId zoThis'
         zoThis = ZO (singZone @zone) oThis
-    goWithThis zoExists' zoThis
-   where
-    goWithThis ::
-      Bool ->
-      ZO zone ot ->
-      Magic 'Private 'RW m Legality
-    goWithThis zoExists' zoThis = logCall' "goWithThis" case withThisActivated of
-      T1 thisToElectActivated -> do
-        let thisId = getObjectId zoThis
-        goLegality thisToElectActivated (lensedThis thisId)
-      T2 thisToElectActivated -> do
-        let thisId = getObjectId zoThis
-        goLegality thisToElectActivated (lensedThis thisId, lensedThis thisId)
-     where
-      goLegality ::
-        forall this.
-        (this -> Elect 'Pre (ActivatedAbility zone ot) ot) ->
-        this ->
-        Magic 'Private 'RW m Legality
-      goLegality thisToElectAbility this = logCall' "goLegality" do
-        abilityId <- newObjectId
-        let zoAbility = toZO0 @ 'ZStack abilityId
+        thisId = getObjectId zoThis
 
-            goElectActivated :: Elect 'Pre (ActivatedAbility zone ot) ot -> Magic 'Private 'RW m Legality
-            goElectActivated elect = logCall' "goElectedActivated" do
-              seedStackEntryTargets zoAbility
-              maybeToLegality <$> performElections zoAbility goActivated elect
+        invalid :: m () -> Magic 'Private 'RW m Legality
+        invalid complain = do
+          () <- lift complain
+          pure Illegal
 
-            goActivated :: ActivatedAbility zone ot -> Magic 'Private 'RW m Legality'
-            goActivated activated = logCall' "goActivated" do
-              legalityToMaybe <$> do
-                let isController = True -- TODO
-                    abilityExists = True -- TODO
-                prompt <- fromRO $ gets magicPrompt
-                case (zoExists', isController, abilityExists) of
-                  (False, _, _) -> invalid $ exceptionZoneObjectDoesNotExist prompt zoThis'
-                  (_, False, _) -> invalid undefined
-                  (_, _, False) -> invalid undefined
-                  (True, True, True) ->
-                    maybeToLegality <$> do
-                      playPendingAbility
-                        zoAbility
-                        (activated_cost activated)
-                        (activated_effect activated)
-                        \cost effect ->
-                          legalityToMaybe <$> do
-                            payElectedAndPutOnStack @ 'Activate zoAbility $
-                              ElectedActivatedAbility oPlayer zoThis cost effect
+        goWithThisActivated :: Magic 'Private 'RW m Legality
+        goWithThisActivated = case withThisActivated of
+          T1 thisToElectActivated -> do
+            goThisToElectAbility thisToElectActivated (lensedThis thisId)
+          T2 thisToElectActivated -> do
+            goThisToElectAbility thisToElectActivated (lensedThis thisId, lensedThis thisId)
 
-            invalid complain = do
-              () <- lift complain
-              pure Illegal
+        goThisToElectAbility ::
+          (this -> Elect 'Pre (ActivatedAbility zone ot) ot) ->
+          this ->
+          Magic 'Private 'RW m Legality
+        goThisToElectAbility thisToElectAbility this = logCall' "goThisToElectAbility" do
+          abilityId <- newObjectId
+          let zoAbility = toZO0 @ 'ZStack abilityId
+          goElectActivated zoAbility $ thisToElectAbility this
 
-        goElectActivated $ thisToElectAbility this
+        goElectActivated :: ZO 'ZStack OT0 -> Elect 'Pre (ActivatedAbility zone ot) ot -> Magic 'Private 'RW m Legality
+        goElectActivated zoAbility elect = logCall' "goElectedActivated" do
+          seedStackEntryTargets zoAbility
+          maybeToLegality <$> performElections zoAbility (goActivated zoAbility) elect
+
+        goActivated :: ZO 'ZStack OT0 -> ActivatedAbility zone ot -> Magic 'Private 'RW m Legality'
+        goActivated zoAbility activated = logCall' "goActivated" do
+          legalityToMaybe <$> do
+            let isController = True -- TODO
+                abilityExists = True -- TODO
+            prompt <- fromRO $ gets magicPrompt
+            case (zoExists', isController, abilityExists) of
+              (False, _, _) -> invalid $ exceptionZoneObjectDoesNotExist prompt zoThis'
+              (_, False, _) -> invalid undefined
+              (_, _, False) -> invalid undefined
+              (True, True, True) ->
+                maybeToLegality <$> do
+                  playPendingAbility
+                    zoAbility
+                    (activated_cost activated)
+                    (activated_effect activated)
+                    \cost effect ->
+                      legalityToMaybe <$> do
+                        payElectedAndPutOnStack @ 'Activate zoAbility $
+                          ElectedActivatedAbility oPlayer zoThis cost effect
+
+    goWithThisActivated
 
 playPendingSpell ::
   forall m ot x.
