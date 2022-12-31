@@ -203,7 +203,7 @@ precombatMainPhase = do
 postcombatMainPhase :: Monad m => MagicCont 'Private 'RW m Void Void
 postcombatMainPhase = do
   logCall 'postcombatMainPhase do
-    setPhaseStep PSPreCombatMainPhase
+    setPhaseStep PSPostCombatMainPhase
     liftCont mainPhaseCommon
   endStep
 

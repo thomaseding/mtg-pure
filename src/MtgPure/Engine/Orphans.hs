@@ -114,9 +114,14 @@ instance Show (GameState m) where
     tellPrint ("manaBurn", manaBurn)
     tellPrint ("allPlayerIds", allPlayerIds)
     tellLine ""
-    tellPrint ("graveMapSize", graveMapSize)
-    tellPrint ("handMapSize", handMapSize)
+    tellPrint ("graveMapSize", Map.size graveMap)
+    tellPrint ("graveMap", graveMap)
+    tellLine ""
+    tellPrint ("handMapSize", Map.size handMap)
+    tellPrint ("handMap", handMap)
+    tellLine ""
     tellPrint ("libMapSize", libMapSize)
+    tellLine ""
     tellPrint ("stackEntryTargetsMapSize", stackEntryTargetsMapSize)
     tellPrint ("stackEntryElectedMapSize", stackEntryElectedMapSize)
     tellPrint ("targetMapSize", targetMapSize)
@@ -127,7 +132,6 @@ instance Show (GameState m) where
     tellPrint ("turnOrder", Stream.take aliveCount turnOrder)
     tellPrint ("turn", turn)
     tellPrint ("phaseStep", phaseStep)
-    tellLine ""
     tellPrint ("apnapOrder", Stream.take aliveCount apnapOrder)
     tellPrint ("priorityOrder", priorityOrder)
     tellLine ""
@@ -146,8 +150,8 @@ instance Show (GameState m) where
     GameState
       { magicCurrentTurn = turn
       , magicFwd = _
-      , magicGraveyardCards = (Map.size -> graveMapSize)
-      , magicHandCards = (Map.size -> handMapSize)
+      , magicGraveyardCards = (fmap getCardName -> graveMap)
+      , magicHandCards = (fmap getCardName -> handMap)
       , magicLibraryCards = (Map.size -> libMapSize)
       , magicManaBurn = manaBurn
       , magicNextObjectDiscriminant = nextDiscr

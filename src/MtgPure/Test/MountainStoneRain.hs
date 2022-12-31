@@ -11,32 +11,33 @@
 {-# HLINT ignore "Redundant fmap" #-}
 {-# HLINT ignore "Evaluate" #-}
 
-module MtgPure.Test.MountainShock (
+module MtgPure.Test.MountainStoneRain (
   main,
-  mainMountainShock,
+  mainMountainStoneRain,
 ) where
 
-import safe MtgPure.Cards (mountain, shock)
+import safe MtgPure.Cards (mountain, stoneRain)
 import safe MtgPure.Model.Deck (Deck (..))
 import safe MtgPure.Model.Recursive (AnyCard (..))
 import safe MtgPure.Model.Sideboard (Sideboard (..))
 import safe MtgPure.Test.Demo (runDemo)
 
 main :: IO ()
-main = mainMountainShock
+main = mainMountainStoneRain
 
 -- NOTE: Still a WIP
-mainMountainShock :: IO ()
-mainMountainShock = runDemo replayLog replayInputs $ replicate 2 (deck, side)
+-- FIXME: currently only R gets removed from mana pool instead of RRR
+mainMountainStoneRain :: IO ()
+mainMountainStoneRain = runDemo replayLog replayInputs $ replicate 2 (deck, side)
 
 deck :: Deck
 deck =
   Deck $
     concat $
       replicate
-        (if True then 1 else 30)
+        (if False then 1 else 30)
         [ AnyCard mountain
-        , AnyCard shock
+        , AnyCard stoneRain
         ]
 
 side :: Sideboard
@@ -44,16 +45,27 @@ side =
   Sideboard $
     concat
       [ replicate (if True then 1 else 7) $ AnyCard mountain
-      , replicate (if True then 1 else 8) $ AnyCard shock
+      , replicate (if True then 1 else 8) $ AnyCard stoneRain
       ]
 
 replayLog :: Maybe FilePath
-replayLog = Nothing
+replayLog = Nothing -- Just "replay-mountain-stone-rain.log"
 
 replayInputs :: [String]
 replayInputs =
   []
     ++ replicate 10 "0"
-    ++ ["8", "0", "11 0"]
+    ++ ["128"]
+    ++ replicate 84 "0"
+    ++ ["124"]
+    ++ replicate 84 "0"
+    ++ ["126"]
+    ++ ["0"]
+    ++ ["137 0"]
+    ++ ["0"]
+    ++ ["140 0"]
+    ++ ["0"]
+    ++ ["143 0"]
+    ++ replicate 12 "0"
+    ++ ["123"]
     ++ replicate 4 "0"
-    ++ ["7"]

@@ -99,14 +99,18 @@ import safe Text.Read (readMaybe)
 
 data DemoState = DemoState
   { demo_ :: ()
-  , demo_logDisabled :: !Int
-  , demo_replayInputs :: ![String]
+  , demo_logDisabled :: Int
+  , demo_replayInputs :: [String]
+  , demo_replayLog :: Maybe FilePath
   }
 
 type Demo = State.StateT DemoState IO
 
-runDemo :: [String] -> [(Deck, Sideboard)] -> IO ()
-runDemo replayInputs decks = do
+runDemo :: Maybe FilePath -> [String] -> [(Deck, Sideboard)] -> IO ()
+runDemo replayLog replayInputs decks = do
+  case replayLog of
+    Nothing -> pure ()
+    Just file -> appendFile file "---------------------\n"
   (result, st') <- State.runStateT action st
   case demo_logDisabled st' of
     0 -> pure ()
@@ -119,7 +123,11 @@ runDemo replayInputs decks = do
       { demo_ = ()
       , demo_logDisabled = 0
       , demo_replayInputs = replayInputs
+      , demo_replayLog = replayLog
       }
+
+useUserInput :: Bool
+useUserInput = True
 
 gameInput :: [(Deck, Sideboard)] -> GameInput Demo
 gameInput decks =
@@ -135,15 +143,15 @@ gameInput decks =
           , exceptionInvalidShuffle = \_ _ -> liftIO $ putStrLn "exceptionInvalidShuffle"
           , exceptionInvalidStartingPlayer = \_ _ -> liftIO $ putStrLn "exceptionInvalidStartingPlayer"
           , exceptionZoneObjectDoesNotExist = \zo -> liftIO $ print ("exceptionZoneObjectDoesNotExist", zo)
-          , promptActivateAbility = if True then demoActivateAbilityUser else demoActivateAbilityRandom
-          , promptCastSpell = if True then demoCastSpellUser else demoCastSpellRandom
+          , promptActivateAbility = if useUserInput then demoActivateAbilityUser else demoActivateAbilityRandom
+          , promptCastSpell = if useUserInput then demoCastSpellUser else demoCastSpellRandom
           , promptDebugMessage = \msg -> liftIO $ putStrLn $ "DEBUG: " ++ msg
           , promptGetStartingPlayer = \_attempt _count -> pure $ PlayerIndex 0
           , promptLogCallPop = demoLogCallPop
           , promptLogCallPush = demoLogCallPush
           , promptPerformMulligan = \_attempt _p _hand -> pure False
           , promptPickZO = demoPickZo
-          , promptPlayLand = if True then demoPlayLandUser else demoPlayLandRandom
+          , promptPlayLand = if useUserInput then demoPlayLandUser else demoPlayLandRandom
           , promptShuffle = \_attempt (CardCount n) _player -> pure $ map CardIndex [0 .. n - 1]
           }
     }
@@ -159,12 +167,17 @@ prompt msg = do
   liftIO do
     putStr msg
     IO.hFlush IO.stdout
-  State.gets demo_replayInputs >>= \case
+  st <- State.get
+  result <- case demo_replayInputs st of
     [] -> liftIO getLine
     s : ss -> do
-      State.modify' \st -> st{demo_replayInputs = ss}
+      State.modify' \st' -> st'{demo_replayInputs = ss}
       liftIO $ putStrLn s
       pure s
+  case demo_replayLog st of
+    Nothing -> pure ()
+    Just file -> liftIO $ appendFile file $ result ++ "\n"
+  pure result
 
 demoPickZo ::
   (IsZO zone ot, Monad m) =>

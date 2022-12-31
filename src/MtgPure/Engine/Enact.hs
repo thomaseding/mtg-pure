@@ -53,12 +53,13 @@ import safe MtgPure.Model.Recursive (Effect (..))
 import safe MtgPure.Model.Variable (forceVars)
 import safe MtgPure.Model.Zone (Zone (..))
 import safe MtgPure.Model.ZoneObject.Convert (toZO0, zo0ToPermanent, zo1ToO)
-import safe MtgPure.Model.ZoneObject.ZoneObject (ZO, ZOCreaturePlayerPlaneswalker, ZOPlayer)
+import safe MtgPure.Model.ZoneObject.ZoneObject (ZO, ZOCreaturePlayerPlaneswalker, ZOPermanent, ZOPlayer)
 
 enact :: Monad m => Effect 'OneShot -> Magic 'Private 'RW m ()
 enact = logCall 'enact \case
   AddMana oPlayer mana -> addMana' oPlayer mana
   DealDamage oSource oVictim damage -> dealDamage' oSource oVictim damage
+  Destroy oPerm -> destroy' oPerm
   DrawCards oPlayer amount -> drawCards' amount $ zo1ToO oPlayer
   EffectCase case_ -> caseOf enact case_
   Sequence effects -> mapM_ enact effects
@@ -70,7 +71,7 @@ enact = logCall 'enact \case
 addMana' :: Monad m => ZOPlayer -> ManaPool 'NonSnow -> Magic 'Private 'RW m ()
 addMana' oPlayer mana = logCall 'addMana' do
   fromRO (findPlayer $ zo1ToO oPlayer) >>= \case
-    Nothing -> pure ()
+    Nothing -> pure () -- Don't complain. This can naturally happen if a player loses before `enact` resolves.
     Just player -> do
       let mana' = playerMana player + mempty{poolNonSnow = mana}
       setPlayer (zo1ToO oPlayer) player{playerMana = mana'}
@@ -85,6 +86,7 @@ dealDamage' _oSource oVictim (forceVars -> Damage damage) = logCall 'dealDamage'
   fromRO (findPermanent $ zo0ToPermanent $ toZO0 oVictim) >>= \case
     Nothing -> pure ()
     Just perm -> do
+      pure () -- TODO: indestructable
       -- XXX: What happens if damage is dealt to a permanent that is both a creature and a planeswalker?
       case permanentCreature perm of
         Nothing -> pure ()
@@ -105,6 +107,17 @@ dealDamage' _oSource oVictim (forceVars -> Damage damage) = logCall 'dealDamage'
       player <- fromRO $ getPlayer oPlayer
       let life = unLife $ playerLife player
       setPlayer oPlayer player{playerLife = Life $ life - damage}
+
+destroy' ::
+  Monad m =>
+  ZOPermanent ->
+  Magic 'Private 'RW m ()
+destroy' oPerm = logCall 'destroy' do
+  fromRO (findPermanent oPerm) >>= \case
+    Nothing -> pure ()
+    Just _perm -> do
+      pure () -- TODO: indestructable
+      setPermanent oPerm Nothing
 
 shuffleLibrary' :: Monad m => Object 'OTPlayer -> Magic 'Private 'RW m ()
 shuffleLibrary' oPlayer = logCall 'shuffleLibrary' do

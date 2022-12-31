@@ -8,6 +8,7 @@ module MtgPure (
   module MtgPure.ModelCombinators,
   codeGenToObjectN,
   mainMountainShock,
+  mainMountainStoneRain,
 ) where
 
 import safe MtgPure.AllCards
@@ -25,5 +26,6 @@ import safe MtgPure.ModelCombinators
 import safe MtgPure.Test.Direct ()
 import safe MtgPure.Test.MagicContUnit ()
 import safe MtgPure.Test.MountainShock (mainMountainShock)
+import safe MtgPure.Test.MountainStoneRain (mainMountainStoneRain)
 import safe MtgPure.Test.Variabled ()
 import safe MtgPure.Test.VariabledMonad ()
