@@ -12,7 +12,7 @@ module MtgPure.Test.MagicContUnit (
 ) where
 
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
-import Control.Monad.Trans (MonadIO (liftIO))
+import safe Control.Monad.Trans (MonadIO (liftIO))
 import safe MtgPure.Engine.Monad (
   EnvLogCall (..),
   MagicCont',

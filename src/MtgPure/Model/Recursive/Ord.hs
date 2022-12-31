@@ -769,8 +769,8 @@ ordEffect x = case x of
   EffectCase case1 -> \case
     EffectCase case2 -> ordCase ordEffect case1 case2
     y -> compareIndexM x y
-  Gain any1 obj1 ability1 -> \case
-    Gain any2 obj2 ability2 ->
+  GainAbility any1 obj1 ability1 -> \case
+    GainAbility any2 obj2 ability2 ->
       let go ::
             forall zone1 zone2 ot1 ot2.
             zone1 ~ 'ZBattlefield =>
@@ -790,8 +790,8 @@ ordEffect x = case x of
                 ]
        in go obj1 obj2
     y -> compareIndexM x y
-  Lose any1 obj1 ability1 -> \case
-    Lose any2 obj2 ability2 ->
+  LoseAbility any1 obj1 ability1 -> \case
+    LoseAbility any2 obj2 ability2 ->
       let go ::
             forall zone1 zone2 ot1 ot2.
             zone1 ~ 'ZBattlefield =>

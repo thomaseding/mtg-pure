@@ -160,7 +160,7 @@ import safe MtgPure.ModelCombinators (
   dealDamage,
   destroy,
   event,
-  gain,
+  gainAbility,
   hasAbility,
   ifElse,
   is,
@@ -610,7 +610,7 @@ pradeshGypsies = Card "Pradesh Gypsies" $
                         , activated_effect =
                             effect $
                               untilEndOfTurn $
-                                gain creature $
+                                gainAbility creature $
                                   Static $
                                     StaticContinuous $
                                       effect $

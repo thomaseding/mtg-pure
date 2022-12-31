@@ -29,7 +29,7 @@ module MtgPure.ModelCombinators (
   destroy,
   ElectEffect (..),
   event,
-  gain,
+  gainAbility,
   hasAbility,
   HasLandType (..),
   ifElse,
@@ -38,7 +38,7 @@ module MtgPure.ModelCombinators (
   is,
   isBasic,
   isTapped,
-  lose,
+  loseAbility,
   -- mkCard,
   -- mkToken,
   noCost,
@@ -492,11 +492,11 @@ untilEndOfTurn :: Effect 'Continuous -> Effect 'OneShot
 untilEndOfTurn =
   EffectContinuous . Until (event $ TimePoint (StepBegin CleanupStep) Proxy)
 
-gain :: CoAny ot => ZO 'ZBattlefield ot -> Ability ot -> Effect 'Continuous
-gain = Gain coAny
+gainAbility :: CoAny ot => ZO 'ZBattlefield ot -> Ability ot -> Effect 'Continuous
+gainAbility = GainAbility coAny
 
-lose :: CoAny ot => ZO 'ZBattlefield ot -> Ability ot -> Effect 'Continuous
-lose = Lose coAny
+loseAbility :: CoAny ot => ZO 'ZBattlefield ot -> Ability ot -> Effect 'Continuous
+loseAbility = LoseAbility coAny
 
 class HasLandType a where
   hasLandType :: IsZone zone => a -> Requirement zone OTLand

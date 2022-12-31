@@ -473,8 +473,8 @@ data Effect (ef :: EffectType) :: Type where
   DrawCards :: ZOPlayer -> Int -> Effect 'OneShot
   EffectCase :: Case (Effect ef) -> Effect ef
   EffectContinuous :: Effect 'Continuous -> Effect 'OneShot -- 611.2
-  Gain :: IsOT ot => WAny ot -> ZO 'ZBattlefield ot -> Ability ot -> Effect 'Continuous
-  Lose :: IsOT ot => WAny ot -> ZO 'ZBattlefield ot -> Ability ot -> Effect 'Continuous
+  GainAbility :: IsOT ot => WAny ot -> ZO 'ZBattlefield ot -> Ability ot -> Effect 'Continuous
+  LoseAbility :: IsOT ot => WAny ot -> ZO 'ZBattlefield ot -> Ability ot -> Effect 'Continuous
   PutOntoBattlefield :: IsZO zone ot => WPermanent ot -> ZOPlayer -> ZO zone ot -> Effect 'OneShot -- TODO: zone /= 'ZBattlefield
   Sacrifice :: IsOT ot => WPermanent ot -> ZOPlayer -> [Requirement 'ZBattlefield ot] -> Effect 'OneShot
   SearchLibrary :: IsOT ot => WCard ot -> ZOPlayer -> WithLinkedObject 'ZLibrary (Elect 'Post (Effect 'OneShot)) ot -> Effect 'OneShot
@@ -500,8 +500,8 @@ instance ConsIndex (Effect ef) where
     DrawCards{} -> 9
     EffectCase{} -> 10
     EffectContinuous{} -> 11
-    Gain{} -> 12
-    Lose{} -> 13
+    GainAbility{} -> 12
+    LoseAbility{} -> 13
     PutOntoBattlefield{} -> 14
     Sacrifice{} -> 15
     SearchLibrary{} -> 16

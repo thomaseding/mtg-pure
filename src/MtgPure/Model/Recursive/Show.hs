@@ -873,16 +873,16 @@ showEffect = \case
   EffectContinuous effect -> yesParens do
     sEffect <- dollar <$> showEffect effect
     pure $ pure "EffectContinuous" <> sEffect
-  Gain wAny obj ability -> yesParens do
+  GainAbility wAny obj ability -> yesParens do
     sWAny <- parens <$> showWAny wAny
     sObj <- parens <$> showZoneObject obj
     sAbility <- dollar <$> showAbility ability
-    pure $ pure "Gain " <> sWAny <> pure " " <> sObj <> sAbility
-  Lose wAny obj ability -> yesParens do
+    pure $ pure "GainAbility " <> sWAny <> pure " " <> sObj <> sAbility
+  LoseAbility wAny obj ability -> yesParens do
     sWAny <- parens <$> showWAny wAny
     sObj <- parens <$> showZoneObject obj
     sAbility <- dollar <$> showAbility ability
-    pure $ pure "Lose " <> sWAny <> pure " " <> sObj <> sAbility
+    pure $ pure "LoseAbility " <> sWAny <> pure " " <> sObj <> sAbility
   PutOntoBattlefield wPerm player obj -> yesParens do
     sWPerm <- parens <$> showWPermanent wPerm
     sPlayer <- parens <$> showZoneObject player
