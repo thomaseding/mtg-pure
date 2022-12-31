@@ -66,6 +66,7 @@ module MtgPure.Model (
   module MtgPure.Model.Variable,
   module MtgPure.Model.Object.VisitObjectN,
   module MtgPure.Model.Zone,
+  module MtgPure.Model.ZoneObject.Convert,
   module MtgPure.Model.ZoneObject.ZoneObject,
 ) where
 
@@ -143,4 +144,5 @@ import safe MtgPure.Model.ToManaPool
 import safe MtgPure.Model.Toughness
 import safe MtgPure.Model.Variable
 import safe MtgPure.Model.Zone
+import safe MtgPure.Model.ZoneObject.Convert
 import safe MtgPure.Model.ZoneObject.ZoneObject

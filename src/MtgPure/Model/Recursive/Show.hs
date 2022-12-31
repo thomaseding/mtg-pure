@@ -1424,11 +1424,11 @@ showObject2 objN = visitObjectN' visit objN
   visit =
     showObjectNImpl rep $
       if
-          | rep == typeRep (Proxy @(ZO zone OTCreaturePlaneswalker)) ->
+          | rep == typeRep (Proxy @(ObjectN OTCreaturePlaneswalker)) ->
             "asCreaturePlaneswalker"
-          | rep == typeRep (Proxy @(ZO zone OTCreaturePlayer)) ->
+          | rep == typeRep (Proxy @(ObjectN OTCreaturePlayer)) ->
             "asCreaturePlayer"
-          | rep == typeRep (Proxy @(ZO zone OTPlayerPlaneswalker)) ->
+          | rep == typeRep (Proxy @(ObjectN OTPlayerPlaneswalker)) ->
             "asPlayerPlaneswalker"
           | otherwise ->
             "toZO2"
@@ -1445,7 +1445,7 @@ showObject3 objN = visitObjectN' visit objN
   visit =
     showObjectNImpl rep $
       if
-          | rep == typeRep (Proxy @(ZO zone OTCreaturePlayerPlaneswalker)) ->
+          | rep == typeRep (Proxy @(ObjectN OTCreaturePlayerPlaneswalker)) ->
             "asCreaturePlayerPlaneswalker"
           | otherwise ->
             "toZO3"
@@ -1476,7 +1476,7 @@ showObject5 objN = visitObjectN' visit objN
   visit =
     showObjectNImpl rep $
       if
-          | rep == typeRep (Proxy @(ZO zone OTPermanent)) -> "asPermanent"
+          | rep == typeRep (Proxy @(ObjectN OTPermanent)) -> "asPermanent"
           | otherwise -> "toZO5"
 
 showObject6 ::
@@ -1491,7 +1491,7 @@ showObject6 objN = visitObjectN' visit objN
   visit =
     showObjectNImpl rep $
       if
-          | rep == typeRep (Proxy @(ZO zone OTSpell)) -> "asSpell"
+          | rep == typeRep (Proxy @(ObjectN OTSpell)) -> "asSpell"
           | otherwise -> "toZO6"
 
 showObject7 ::
@@ -1520,7 +1520,7 @@ showObject8 objN = visitObjectN' visit objN
   visit =
     showObjectNImpl rep $
       if
-          | rep == typeRep (Proxy @(ZO zone OTDamageSource)) -> "asDamageSource"
+          | rep == typeRep (Proxy @(ObjectN OTDamageSource)) -> "asDamageSource"
           | otherwise -> "toZO8"
 
 showObject9 ::
@@ -1577,7 +1577,7 @@ showObject12 objN = visitObjectN' visit objN
   visit =
     showObjectNImpl rep $
       if
-          | rep == typeRep (Proxy @(ZO zone OTAny)) -> "asAny"
+          | rep == typeRep (Proxy @(ObjectN OTAny)) -> "asAny"
           | otherwise -> "toZO12"
 
 showObjectN :: forall zone ot. (IsZone zone, VisitObjectN ot) => ObjectN ot -> EnvM ParenItems
@@ -2051,12 +2051,12 @@ showYourCard = \case
   goPerm cont consName = withYou \you -> yesParens do
     sYou <- parens <$> showZoneObject you
     let facet = cont you
-    sFacet <- dollar <$> showCardFacet facet
+    sFacet <- dropParens <$> showCardFacet facet
     pure $ pure consName <> pure " $ \\" <> sYou <> pure " -> " <> sFacet
   goSpell cont consName = withYou \you -> yesParens do
     sYou <- parens <$> showZoneObject you
     let electFacet = cont you
-    sFacet <- dollar <$> showElect electFacet
+    sFacet <- dropParens <$> showElect electFacet
     pure $ pure consName <> pure " $ \\" <> sYou <> pure " -> " <> sFacet
 
 showZoneObject :: forall zone ot. IsZO zone ot => ZO zone ot -> EnvM ParenItems
