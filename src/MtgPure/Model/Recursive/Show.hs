@@ -1677,7 +1677,7 @@ showRequirement = \case
     sReqsD <- parens <$> showRequirements reqsD
     sReqsE <- dollar <$> showRequirements reqsE
     pure $
-      pure "R4 "
+      pure "R5 "
         <> sReqsA
         <> pure " "
         <> sReqsB

@@ -47,10 +47,14 @@ import safe MtgPure.ModelCombinators (isTapped)
 pay :: Monad m => Object 'OTPlayer -> Cost ot -> Magic 'Private 'RW m Legality
 pay oPlayer = logCall 'pay \case
   AndCosts costs -> payAndCosts oPlayer costs
+  CostCase{} -> undefined
+  DiscardRandomCost{} -> undefined
+  LoyaltyCost{} -> undefined
   ManaCost manaCost -> payManaCost oPlayer manaCost
   OrCosts costs -> payOrCosts oPlayer costs
+  PayLife{} -> undefined
+  SacrificeCost{} -> undefined
   TapCost reqs -> payTapCost oPlayer $ RAnd reqs
-  _ -> undefined
 
 class FindMana manas var | manas -> var where
   findMana ::

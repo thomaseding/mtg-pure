@@ -15,6 +15,8 @@ module MtgPure.Engine.Core (
   allPlayers,
   allZOActivatedAbilities,
   allZOs,
+  doesObjectIdExist,
+  doesObjectNExist,
   doesZoneObjectExist,
   findHandCard,
   findLibraryCard,
@@ -81,6 +83,7 @@ import safe MtgPure.Model.Library (Library (..))
 import safe MtgPure.Model.Object.IndexOT (IndexOT (..))
 import safe MtgPure.Model.Object.IsObjectType (IsObjectType (..))
 import safe MtgPure.Model.Object.OTKind (OTCard, OTPermanent)
+import safe MtgPure.Model.Object.OTN (OT0)
 import safe MtgPure.Model.Object.Object (Object)
 import safe MtgPure.Model.Object.ObjectId (
   ObjectId (..),
@@ -88,7 +91,9 @@ import safe MtgPure.Model.Object.ObjectId (
   getObjectId,
   pattern DefaultObjectDiscriminant,
  )
+import safe MtgPure.Model.Object.ObjectN (ObjectN (O0))
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
+import safe MtgPure.Model.Object.ToObjectN (toObject1, toObjectNAny)
 import safe MtgPure.Model.Permanent (Permanent (..))
 import safe MtgPure.Model.Player (Player (..))
 import safe MtgPure.Model.Recursive (
@@ -104,7 +109,7 @@ import safe MtgPure.Model.ZoneObject.Convert (
   zo0ToCard,
   zo0ToPermanent,
  )
-import safe MtgPure.Model.ZoneObject.ZoneObject (IsZO, ZO, toZone)
+import safe MtgPure.Model.ZoneObject.ZoneObject (IsOT, IsZO, ZO, ZoneObject (ZO), toZone)
 
 getAlivePlayerCount :: Monad m => Magic 'Public 'RO m PlayerCount
 getAlivePlayerCount = logCall 'getAlivePlayerCount $ PlayerCount . length <$> allPlayers
@@ -195,7 +200,7 @@ toZO i = logCall 'toZO do
   -- TODO: Eventually optimize to avoid this slow implementation.
   -- Don't want to build up allZOs and don't want linear scan.
   -- Probably will end up implementing `allZOs` in terms of this.
-  List.find (\zo -> i == getObjectId zo) <$> allZOs
+  allZOs <&> List.find \zo -> i == getObjectId zo
 
 allZOActivatedAbilities ::
   forall zone ot m.
@@ -210,6 +215,27 @@ doesZoneObjectExist zo = logCall 'doesZoneObjectExist do
   toZO @zone @ot (getObjectId zo) <&> \case
     Nothing -> False
     Just{} -> True
+
+doesObjectNExist :: forall ot m. (IsOT ot, Monad m) => ObjectN ot -> Magic 'Private 'RO m Bool
+doesObjectNExist o = logCall 'doesObjectNExist do
+  or -- XXX: Use monadic `orM`
+    <$> sequence
+      [ doesZoneObjectExist $ ZO SZBattlefield o
+      , doesZoneObjectExist $ ZO SZExile o
+      , doesZoneObjectExist $ ZO SZGraveyard o
+      , doesZoneObjectExist $ ZO SZHand o
+      , doesZoneObjectExist $ ZO SZLibrary o
+      , doesZoneObjectExist $ ZO SZStack o
+      ]
+
+type OTArbitrary = 'OTLand
+
+doesObjectIdExist :: Monad m => ObjectId -> Magic 'Private 'RO m Bool
+doesObjectIdExist i = logCall 'doesObjectIdExist do
+  doesObjectNExist $ toObjectNAny o1
+ where
+  o0 = O0 $ UntypedObject DefaultObjectDiscriminant i
+  o1 = toObject1 @OT0 @OTArbitrary o0
 
 getActivatedAbilitiesOf ::
   forall zone ot m.

@@ -58,15 +58,22 @@ import safe MtgPure.Model.ZoneObject.ZoneObject (ZO, ZOCreaturePlayerPlaneswalke
 enact :: Monad m => Effect 'OneShot -> Magic 'Private 'RW m ()
 enact = logCall 'enact \case
   AddMana oPlayer mana -> addMana' oPlayer mana
+  AddToBattlefield{} -> undefined
+  CounterAbility{} -> undefined
+  CounterSpell{} -> undefined
   DealDamage oSource oVictim damage -> dealDamage' oSource oVictim damage
   Destroy oPerm -> destroy' oPerm
   DrawCards oPlayer amount -> drawCards' amount $ zo1ToO oPlayer
   EffectCase case_ -> caseOf enact case_
+  EffectContinuous{} -> undefined
+  PutOntoBattlefield{} -> undefined
+  Sacrifice{} -> undefined
+  SearchLibrary{} -> undefined
   Sequence effects -> mapM_ enact effects
   ShuffleLibrary oPlayer -> shuffleLibrary' $ zo1ToO oPlayer
   Tap oPerm -> M.void $ tap' oPerm
   Untap oPerm -> M.void $ untap' oPerm
-  _ -> undefined
+  WithList{} -> undefined
 
 addMana' :: Monad m => ZOPlayer -> ManaPool 'NonSnow -> Magic 'Private 'RW m ()
 addMana' oPlayer mana = logCall 'addMana' do

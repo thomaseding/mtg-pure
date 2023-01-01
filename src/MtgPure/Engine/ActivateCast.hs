@@ -42,6 +42,7 @@ import safe MtgPure.Engine.Prompt (
   Prompt' (..),
   SomeActivatedAbility (..),
  )
+import MtgPure.Engine.Resolve (resolveManaAbility)
 import safe MtgPure.Engine.State (
   AnyElected (..),
   Elected (..),
@@ -273,17 +274,22 @@ castSpellCard oCaster card = logCall 'castSpellCard case card of
           zoSpell
           (castMeta_cost meta facet)
           (castMeta_effect meta facet)
-          \cost effect -> do
-            case singSpecificCard @ot of
-              InstantCard ->
-                legalityToMaybe <$> do
-                  payElectedAndPutOnStack @ 'Cast zoSpell $
-                    castMeta_Elected meta oCaster card facet cost effect
-              SorceryCard ->
-                legalityToMaybe <$> do
-                  payElectedAndPutOnStack @ 'Cast zoSpell $
-                    castMeta_Elected meta oCaster card facet cost effect
-              _ -> undefined
+          \cost effect ->
+            legalityToMaybe <$> case singSpecificCard @ot of
+              ArtifactCard{} -> undefined
+              ArtifactCreatureCard{} -> undefined
+              ArtifactLandCard{} -> undefined
+              CreatureCard{} -> undefined
+              EnchantmentCard{} -> undefined
+              EnchantmentCreatureCard{} -> undefined
+              InstantCard -> do
+                payElectedAndPutOnStack @ 'Cast zoSpell $
+                  castMeta_Elected meta oCaster card facet cost effect
+              LandCard{} -> undefined
+              PlaneswalkerCard{} -> undefined
+              SorceryCard -> do
+                payElectedAndPutOnStack @ 'Cast zoSpell $
+                  castMeta_Elected meta oCaster card facet cost effect
 
     goElectFacet electFacet
 
@@ -348,16 +354,16 @@ activateAbility oPlayer = logCall 'activateAbility \case
               (False, _, _) -> invalid $ exceptionZoneObjectDoesNotExist prompt zoThis'
               (_, False, _) -> invalid undefined
               (_, _, False) -> invalid undefined
-              (True, True, True) ->
-                maybeToLegality <$> do
-                  playPendingAbility
-                    zoAbility
-                    (activated_cost activated)
-                    (activated_effect activated)
-                    \cost effect ->
-                      legalityToMaybe <$> do
-                        payElectedAndPutOnStack @ 'Activate zoAbility $
-                          ElectedActivatedAbility oPlayer zoThis cost effect
+              (True, True, True) -> do
+                let goPay cost effect = do
+                      let elected = ElectedActivatedAbility oPlayer zoThis cost effect
+                          isManaAbility = False -- TODO -- (605.1a)
+                      legalityToMaybe <$> case isManaAbility of
+                        True -> payElectedManaAbilityAndResolve elected
+                        False -> payElectedAndPutOnStack @ 'Activate zoAbility elected
+                let cost = activated_cost activated
+                    effect = activated_effect activated
+                maybeToLegality <$> playPendingAbility zoAbility cost effect goPay
 
     goWithThisActivated
 
@@ -394,6 +400,24 @@ playPendingAbility ::
   Magic 'Private 'RW m (Maybe x)
 playPendingAbility _zoStack cost electEffect cont = logCall 'playPendingAbility do
   cont cost $ Pending electEffect
+
+payElected ::
+  forall ot m.
+  Monad m =>
+  Elected 'Pre ot ->
+  Magic 'Private 'RW m Legality
+payElected elected = logCall 'payElected do
+  pay (electedObject_controller elected) $ electedObject_cost elected
+
+payElectedManaAbilityAndResolve ::
+  forall ot m.
+  Monad m =>
+  Elected 'Pre ot ->
+  Magic 'Private 'RW m Legality
+payElectedManaAbilityAndResolve elected = logCall 'payElectedManaAbilityAndResolve do
+  payElected elected >>= \case
+    Illegal -> pure Illegal
+    Legal -> resolveManaAbility elected
 
 data ActivateCast = Activate | Cast
 
@@ -433,13 +457,7 @@ payElectedAndPutOnStack' zoStack idToStackObject elected = logCall 'payElectedAn
       { magicStack = Stack $ stackItem : unStack (magicStack st)
       , magicStackEntryElectedMap = Map.insert zoStack (AnyElected elected) $ magicStackEntryElectedMap st
       }
-  legality <- pay (electedObject_controller elected) $ electedObject_cost elected
-  case legality of
-    Legal -> pure Legal
-    Illegal -> do
-      -- TODO: GC stack object stuff if Illegal
-      -- XXX: GC actually might not be necessary since this is ultimately bracketed by rewindIllegal
-      pure Illegal
+  payElected elected
 
 seedStackEntryTargets :: Monad m => ZO 'ZStack OT0 -> Magic 'Private 'RW m ()
 seedStackEntryTargets zoStack = logCall 'seedStackEntryTargets do

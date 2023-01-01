@@ -43,13 +43,13 @@ import safe MtgPure.Model.Zone (IsZone, Zone (..))
 import safe MtgPure.Model.ZoneObject.ZoneObject (IsZO, ZO)
 
 data InternalLogicError :: Type where
-  CantHappenByConstruction :: InternalLogicError
+  CantHappenByConstruction :: InternalLogicError -- TODO: ditch this for informative constructors
   CorruptCallStackLogging :: InternalLogicError
   ExpectedCardToBeAPermanentCard :: InternalLogicError
   ExpectedStackObjectToExist :: IsZO zone ot => ZO zone ot -> InternalLogicError
-  ImpossibleGameOver :: InternalLogicError
   InvalidPermanent :: ZO 'ZBattlefield OTPermanent -> InternalLogicError
   InvalidPlayer :: Object 'OTPlayer -> InternalLogicError
+  ManaAbilitiesDontHaveTargetsSoNoZoShouldBeNeeded :: InternalLogicError
   NotSureWhatThisEntails :: InternalLogicError
   ObjectDoesNotHaveAbility :: IsZO zone ot => SomeActivatedAbility zone ot -> InternalLogicError
   ObjectIdExistsAndAlsoDoesNotExist :: IsZO zone ot => ZO zone ot -> InternalLogicError

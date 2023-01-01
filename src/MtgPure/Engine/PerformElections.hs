@@ -172,7 +172,7 @@ electA sel zoStack goElect oPlayer = logCall 'electA \case
   M3 reqs zoToElect -> go reqs zoToElect
   M4 reqs zoToElect -> go reqs zoToElect
   M5 reqs zoToElect -> go reqs zoToElect
-  _ -> undefined
+  M6 reqs zoToElect -> go reqs zoToElect
  where
   go ::
     (IsZO zone ot', Eq (ZO zone ot')) =>
@@ -209,7 +209,7 @@ electAll goElect = logCall 'electAll \case
   M3s reqs zosToElect -> go reqs zosToElect
   M4s reqs zosToElect -> go reqs zosToElect
   M5s reqs zosToElect -> go reqs zosToElect
-  _ -> undefined
+  M6s reqs zosToElect -> go reqs zosToElect
  where
   go ::
     (IsZO zone ot', Eq (ZO zone ot')) =>

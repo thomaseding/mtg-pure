@@ -10,6 +10,7 @@
 
 module MtgPure.Engine.Resolve (
   resolveTopOfStack,
+  resolveManaAbility,
 ) where
 
 import safe qualified Control.Monad as M
@@ -22,6 +23,7 @@ import safe MtgPure.Engine.Fwd.Api (
   getActivePlayer,
   performElections,
  )
+import safe MtgPure.Engine.Legality (Legality (..))
 import safe MtgPure.Engine.Monad (fromPublicRO, fromRO, get, gets, modify)
 import safe MtgPure.Engine.Orphans ()
 import safe MtgPure.Engine.Prompt (InternalLogicError (..))
@@ -59,7 +61,7 @@ resolveTopOfStack = logCall 'resolveTopOfStack do
       oActive <- fromPublicRO getActivePlayer
       gainPriority oActive
 
-resolveStackObject :: forall m. Monad m => ZO 'ZStack OT0 -> Magic 'Private 'RW m ()
+resolveStackObject :: Monad m => ZO 'ZStack OT0 -> Magic 'Private 'RW m ()
 resolveStackObject zoStack = logCall 'resolveStackObject do
   st <- fromRO get
   case Map.lookup zoStack $ magicStackEntryElectedMap st of
@@ -67,12 +69,17 @@ resolveStackObject zoStack = logCall 'resolveStackObject do
     Just anyElected -> case anyElected of
       AnyElected elected -> resolveElected zoStack elected
 
-resolveElected ::
-  forall ot m.
-  Monad m =>
-  ZO 'ZStack OT0 ->
-  Elected 'Pre ot ->
-  Magic 'Private 'RW m ()
+resolveManaAbility :: Monad m => Elected 'Pre ot -> Magic 'Private 'RW m Legality
+resolveManaAbility elected = logCall 'resolveManaAbility do
+  let isManaAbility = True -- TODO
+  case isManaAbility of
+    False -> pure Illegal
+    True -> do
+      let zoStack = error $ show ManaAbilitiesDontHaveTargetsSoNoZoShouldBeNeeded
+      resolveElected zoStack elected
+      pure Legal
+
+resolveElected :: forall ot m. Monad m => ZO 'ZStack OT0 -> Elected 'Pre ot -> Magic 'Private 'RW m ()
 resolveElected zoStack elected = logCall 'resolveElected do
   let goElectEffect :: Elect 'Post (Effect 'OneShot) ot -> Magic 'Private 'RW m ()
       goElectEffect = M.void . performElections zoStack goEffect

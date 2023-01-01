@@ -44,13 +44,21 @@ satisfies ::
   Magic 'Private 'RO m Bool
 satisfies zo = logCall 'satisfies \case
   ControlledBy zoPlayer -> controlledBy' zo zoPlayer
+  ControlsA{} -> undefined
+  HasAbility{} -> undefined
   HasLandType landType -> hasLandType' zo landType
   Is _wAny zo' -> is' zo zo'
   IsTapped _wPerm -> isTapped' zo
   Not req -> not' zo req
+  OfColors{} -> undefined
+  OwnedBy{} -> undefined
+  PlayerPays{} -> undefined
   RAnd reqs -> rAnd' zo reqs
   ROr reqs -> rOr' zo reqs
-  _ -> undefined
+  R2{} -> undefined
+  R3{} -> undefined
+  R4{} -> undefined
+  R5{} -> undefined
 
 hasLandType' :: forall zone m. (Monad m, IsZone zone) => ZO zone OTLand -> LandType -> Magic 'Private 'RO m Bool
 hasLandType' zo landType = logCall 'hasLandType' case singZone @zone of
