@@ -20,12 +20,16 @@ import safe MtgPure.Engine.Legality (Legality)
 import safe MtgPure.Engine.Monad (Magic', MagicCont')
 import safe MtgPure.Engine.Prompt (
   AbsoluteActivatedAbilityIndex,
-  Play,
+  ActivateAbility,
+  CastSpell,
+  PlayLand,
   PlayerCount (..),
+  PriorityAction,
   SomeActivatedAbility,
+  SpecialAction,
  )
 import safe MtgPure.Model.EffectType (EffectType (..))
-import safe MtgPure.Model.Object.OTKind (OTCard, OTPermanent, OTSpell)
+import safe MtgPure.Model.Object.OTKind (OTCard, OTPermanent)
 import safe MtgPure.Model.Object.OTN (OT0)
 import safe MtgPure.Model.Object.Object (Object)
 import safe MtgPure.Model.Object.ObjectId (ObjectId)
@@ -47,17 +51,16 @@ data Fwd' ex st m where
   Fwd ::
     { fwd_ :: ()
     , fwd_abilityToIndex :: forall zone ot. IsZO zone ot => SomeActivatedAbility zone ot -> Magic' ex st 'Private 'RO m AbsoluteActivatedAbilityIndex
+    , fwd_activateAbility :: Object 'OTPlayer -> PriorityAction ActivateAbility -> Magic' ex st 'Private 'RW m Legality
     , fwd_activatedAbilitiesOf :: forall zone ot. IsZO zone ot => ZO zone ot -> Magic' ex st 'Private 'RO m [SomeActivatedAbility zone ot]
     , fwd_allControlledPermanentsOf :: Object 'OTPlayer -> Magic' ex st 'Public 'RO m [ZO 'ZBattlefield OTPermanent]
     , fwd_allPermanents :: Magic' ex st 'Public 'RO m [ZO 'ZBattlefield OTPermanent]
     , fwd_allPlayers :: Magic' ex st 'Public 'RO m [Object 'OTPlayer]
     , fwd_allZOActivatedAbilities :: forall zone ot. IsZO zone ot => Magic' ex st 'Private 'RO m [SomeActivatedAbility zone ot]
     , fwd_allZOs :: forall zone ot. IsZO zone ot => Magic' ex st 'Private 'RO m [ZO zone ot]
-    , fwd_askActivateAbility :: Object 'OTPlayer -> MagicCont' ex st 'Private 'RW m () ()
-    , fwd_askCastSpell :: Object 'OTPlayer -> MagicCont' ex st 'Private 'RW m () ()
-    , fwd_askPlayLand :: Object 'OTPlayer -> MagicCont' ex st 'Private 'RW m () ()
+    , fwd_askPriorityAction :: Object 'OTPlayer -> MagicCont' ex st 'Private 'RW m () ()
     , fwd_caseOf :: forall x a. (x -> Magic' ex st 'Private 'RW m a) -> Case x -> Magic' ex st 'Private 'RW m a
-    , fwd_castSpell :: Object 'OTPlayer -> Play OTSpell -> Magic' ex st 'Private 'RW m Legality
+    , fwd_castSpell :: Object 'OTPlayer -> PriorityAction CastSpell -> Magic' ex st 'Private 'RW m Legality
     , fwd_controllerOf :: forall zone ot. IsZO zone ot => ZO zone ot -> Magic' ex st 'Private 'RO m (Object 'OTPlayer)
     , fwd_doesZoneObjectExist :: forall zone ot. IsZO zone ot => ZO zone ot -> Magic' ex st 'Private 'RO m Bool
     , fwd_enact :: Effect 'OneShot -> Magic' ex st 'Private 'RW m ()
@@ -78,7 +81,7 @@ data Fwd' ex st m where
     , fwd_pay :: forall ot. Object 'OTPlayer -> Cost ot -> Magic' ex st 'Private 'RW m Legality
     , fwd_performElections :: forall ot p el x. AndLike (Maybe x) => ZO 'ZStack OT0 -> (el -> Magic' ex st 'Private 'RW m (Maybe x)) -> Elect p el ot -> Magic' ex st 'Private 'RW m (Maybe x)
     , fwd_performStateBasedActions :: Magic' ex st 'Private 'RW m ()
-    , fwd_play :: forall ot. Object 'OTPlayer -> Play ot -> Magic' ex st 'Private 'RW m Legality
+    , fwd_playLand :: Object 'OTPlayer -> SpecialAction PlayLand -> Magic' ex st 'Private 'RW m Legality
     , fwd_pushHandCard :: Object 'OTPlayer -> AnyCard -> Magic' ex st 'Private 'RW m (ZO 'ZHand OTCard)
     , fwd_pushLibraryCard :: Object 'OTPlayer -> AnyCard -> Magic' ex st 'Private 'RW m (ZO 'ZLibrary OTCard)
     , fwd_removeHandCard :: Object 'OTPlayer -> ZO 'ZHand OTCard -> Magic' ex st 'Private 'RW m (Maybe AnyCard)

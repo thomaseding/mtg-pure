@@ -49,23 +49,7 @@ side =
       ]
 
 replayLog :: Maybe FilePath
-replayLog = Nothing -- Just "replay-mountain-stone-rain.log"
+replayLog = Nothing -- Just "replay-Mountain-StoneRain.log"
 
 replayInputs :: [String]
-replayInputs =
-  []
-    ++ replicate 10 "0"
-    ++ ["128"]
-    ++ replicate 84 "0"
-    ++ ["124"]
-    ++ replicate 84 "0"
-    ++ ["126"]
-    ++ ["0"]
-    ++ ["137 0"]
-    ++ ["0"]
-    ++ ["140 0"]
-    ++ ["0"]
-    ++ ["143 0"]
-    ++ replicate 12 "0"
-    ++ ["123"]
-    ++ replicate 4 "0"
+replayInputs = []

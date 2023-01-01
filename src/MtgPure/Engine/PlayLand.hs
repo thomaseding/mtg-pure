@@ -9,25 +9,21 @@
 {-# HLINT ignore "Redundant pure" #-}
 
 module MtgPure.Engine.PlayLand (
-  askPlayLand,
   playLand,
 ) where
 
 import safe Control.Exception (assert)
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
 import safe Control.Monad.Trans (lift)
-import safe Control.Monad.Util (Attempt, Attempt' (..))
 import safe qualified Data.Map.Strict as Map
 import safe Data.Typeable (Typeable)
 import safe MtgPure.Engine.Fwd.Api (
-  gainPriority,
   getActivePlayer,
   getHasPriority,
   getPlayer,
   modifyPlayer,
   newObjectId,
   removeHandCard,
-  rewindIllegal,
   setPermanent,
  )
 import safe MtgPure.Engine.Legality (Legality (..))
@@ -37,22 +33,19 @@ import safe MtgPure.Engine.Monad (
   get,
   gets,
   internalFromPrivate,
-  liftCont,
-  magicCont,
  )
 import safe MtgPure.Engine.Orphans ()
 import safe MtgPure.Engine.Prompt (
   InternalLogicError (..),
   InvalidPlayLand (..),
-  Play (..),
+  PlayLand,
   Prompt' (..),
+  SpecialAction (PlayLand),
  )
 import safe MtgPure.Engine.State (
   GameState (..),
   Magic,
-  MagicCont,
   logCall,
-  logCallRec,
   mkOpaqueGameState,
  )
 import safe MtgPure.Model.IsCardList (containsCard)
@@ -113,30 +106,7 @@ getPlayLandReqs oPlayer = logCall 'getPlayLandReqs do
       , playLandReqs_atMaxLands = landsPlayed >= maxLands -- (305.2)
       }
 
-askPlayLand :: Monad m => Object 'OTPlayer -> MagicCont 'Private 'RW m () ()
-askPlayLand = logCall 'askPlayLand $ askPlayLand' $ Attempt 0
-
-askPlayLand' :: Monad m => Attempt -> Object 'OTPlayer -> MagicCont 'Private 'RW m () ()
-askPlayLand' attempt oPlayer = logCallRec 'askPlayLand' do
-  reqs <- liftCont $ fromRO $ getPlayLandReqs oPlayer
-  case reqs of
-    PlayLandReqs_Satisfied -> do
-      st <- liftCont $ fromRO get
-      let opaque = mkOpaqueGameState st
-          prompt = magicPrompt st
-      mSpecial <- liftCont $ lift $ promptPlayLand prompt attempt opaque oPlayer
-      case mSpecial of
-        Nothing -> pure ()
-        Just special -> do
-          isLegal <- liftCont $ rewindIllegal $ playLand oPlayer special
-          case isLegal of
-            True -> magicCont do
-              gainPriority oPlayer -- (117.3c)
-            False -> do
-              askPlayLand' ((1 +) <$> attempt) oPlayer
-    _ -> pure ()
-
-playLand :: Monad m => Object 'OTPlayer -> Play OTLand -> Magic 'Private 'RW m Legality
+playLand :: Monad m => Object 'OTPlayer -> SpecialAction PlayLand -> Magic 'Private 'RW m Legality
 playLand oPlayer (PlayLand oLand) = logCall 'playLand do
   playLandZO oPlayer oLand
 

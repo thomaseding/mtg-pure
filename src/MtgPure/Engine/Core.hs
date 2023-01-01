@@ -225,23 +225,23 @@ getActivatedAbilitiesOf zo = logCall 'getActivatedAbilitiesOf do
         Nothing -> []
         Just perm -> catMaybes $ flip map (permanentAbilities perm) \ability ->
           fromSome ability \case
-            Activated withThis ->
-              let go ::
-                    forall zone' ot'.
-                    IsZO zone' ot' =>
-                    WithThisActivated zone' ot' ->
-                    Maybe (SomeActivatedAbility zone ot)
-                  go withThis' = case cast withThis' of
-                    Nothing -> Nothing
-                    Just (withThis'' :: WithThisActivated zone ot') ->
-                      Just
-                        SomeActivatedAbility
-                          { someActivatedZO = zo
-                          , someActivatedAbility = withThis''
-                          }
-               in go withThis
+            Activated withThis -> go withThis
             _ -> Nothing
     _ -> undefined
+ where
+  go ::
+    forall zone' ot'.
+    IsZO zone' ot' =>
+    WithThisActivated zone' ot' ->
+    Maybe (SomeActivatedAbility zone ot)
+  go withThis = case cast withThis of
+    Nothing -> Nothing
+    Just (withThis' :: WithThisActivated zone ot') ->
+      Just
+        SomeActivatedAbility
+          { someActivatedZO = zo
+          , someActivatedAbility = withThis'
+          }
 
 activatedToIndex ::
   (IsZO zone ot, Monad m) =>

@@ -7,8 +7,6 @@
 {-# HLINT ignore "Redundant pure" #-}
 
 module MtgPure.Engine.ActivateCast (
-  askActivateAbility,
-  askCastSpell,
   activateAbility,
   castSpell,
 ) where
@@ -16,19 +14,17 @@ module MtgPure.Engine.ActivateCast (
 import safe Control.Exception (assert)
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
 import safe Control.Monad.Trans (lift)
-import safe Control.Monad.Util (AndLike (..), Attempt, Attempt' (..))
+import safe Control.Monad.Util (AndLike (..))
 import safe Data.Kind (Type)
 import safe qualified Data.Map.Strict as Map
 import safe Data.Typeable (Typeable)
 import safe MtgPure.Engine.Fwd.Api (
   doesZoneObjectExist,
-  gainPriority,
   getHasPriority,
   getPlayer,
   newObjectId,
   pay,
   performElections,
-  rewindIllegal,
  )
 import safe MtgPure.Engine.Legality (Legality (..), legalityToMaybe, maybeToLegality)
 import safe MtgPure.Engine.Monad (
@@ -36,13 +32,13 @@ import safe MtgPure.Engine.Monad (
   fromRO,
   get,
   gets,
-  liftCont,
-  magicCont,
   modify,
  )
 import safe MtgPure.Engine.Prompt (
+  ActivateAbility,
+  CastSpell,
   InvalidCastSpell (..),
-  Play (..),
+  PriorityAction (ActivateAbility, CastSpell),
   Prompt' (..),
   SomeActivatedAbility (..),
  )
@@ -51,20 +47,17 @@ import safe MtgPure.Engine.State (
   Elected (..),
   GameState (..),
   Magic,
-  MagicCont,
   Pending,
   PendingReady (..),
   electedObject_controller,
   electedObject_cost,
   logCall,
-  logCallRec,
   mkOpaqueGameState,
  )
 import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.IsCardList (containsCard)
 import safe MtgPure.Model.Object.IsObjectType (IsObjectType (..))
 import safe MtgPure.Model.Object.OTKind (
-  OTActivatedAbility,
   OTInstant,
   OTSorcery,
   OTSpell,
@@ -111,11 +104,11 @@ newtype ActivateAbilityReqs = ActivateAbilityReqs
   deriving (Eq, Ord, Show, Typeable)
 
 -- Unfortunately pattern synonyms won't contribute to exhaustiveness checking.
-pattern ActivateAbilityReqs_Satisfied :: ActivateAbilityReqs
-pattern ActivateAbilityReqs_Satisfied =
-  ActivateAbilityReqs
-    { activateAbilityReqs_hasPriority = True
-    }
+-- pattern ActivateAbilityReqs_Satisfied :: ActivateAbilityReqs
+-- pattern ActivateAbilityReqs_Satisfied =
+--   ActivateAbilityReqs
+--     { activateAbilityReqs_hasPriority = True
+--     }
 
 getActivateAbilityReqs :: Monad m => Object 'OTPlayer -> Magic 'Private 'RO m ActivateAbilityReqs
 getActivateAbilityReqs oPlayer = logCall 'getActivateAbilityReqs do
@@ -124,29 +117,6 @@ getActivateAbilityReqs oPlayer = logCall 'getActivateAbilityReqs do
     ActivateAbilityReqs
       { activateAbilityReqs_hasPriority = hasPriority -- (116.2a)
       }
-
-askActivateAbility :: Monad m => Object 'OTPlayer -> MagicCont 'Private 'RW m () ()
-askActivateAbility = logCall 'askActivateAbility $ askActivateAbility' $ Attempt 0
-
-askActivateAbility' :: Monad m => Attempt -> Object 'OTPlayer -> MagicCont 'Private 'RW m () ()
-askActivateAbility' attempt oPlayer = logCallRec 'askActivateAbility' do
-  reqs <- liftCont $ fromRO $ getActivateAbilityReqs oPlayer
-  case reqs of
-    ActivateAbilityReqs_Satisfied -> do
-      st <- liftCont $ fromRO get
-      let opaque = mkOpaqueGameState st
-          prompt = magicPrompt st
-      mActivate <- liftCont $ lift $ promptActivateAbility prompt attempt opaque oPlayer
-      case mActivate of
-        Nothing -> pure ()
-        Just activate -> do
-          isLegal <- liftCont $ rewindIllegal $ activateAbility oPlayer activate
-          case isLegal of
-            True -> magicCont do
-              gainPriority oPlayer -- (117.3c)
-            False -> do
-              askActivateAbility' ((1 +) <$> attempt) oPlayer
-    _ -> pure ()
 
 newtype CastSpellReqs = CastSpellReqs
   { castSpellReqs_hasPriority :: Bool
@@ -167,29 +137,6 @@ getCastSpellReqs oPlayer = logCall 'getCastSpellReqs do
     CastSpellReqs
       { castSpellReqs_hasPriority = hasPriority -- (116.2a)
       }
-
-askCastSpell :: Monad m => Object 'OTPlayer -> MagicCont 'Private 'RW m () ()
-askCastSpell = logCall 'askCastSpell $ askCastSpell' $ Attempt 0
-
-askCastSpell' :: forall m. Monad m => Attempt -> Object 'OTPlayer -> MagicCont 'Private 'RW m () ()
-askCastSpell' attempt oPlayer = logCallRec 'askCastSpell' do
-  reqs <- liftCont $ fromRO $ getCastSpellReqs oPlayer
-  case reqs of
-    CastSpellReqs_Satisfied -> do
-      st <- liftCont $ fromRO get
-      let opaque = mkOpaqueGameState st
-          prompt = magicPrompt st
-      mCast <- liftCont $ lift $ promptCastSpell prompt attempt opaque oPlayer
-      case mCast of
-        Nothing -> pure ()
-        Just cast -> do
-          isLegal <- liftCont $ rewindIllegal $ castSpell oPlayer cast
-          case isLegal of
-            True -> magicCont do
-              gainPriority oPlayer -- (117.3c)
-            False -> do
-              askCastSpell' ((1 +) <$> attempt) oPlayer
-    _ -> pure ()
 
 data CastMeta (ot :: Type) :: Type where
   CastMeta ::
@@ -224,7 +171,7 @@ sorceryCastMeta =
 lensedThis :: (IsZone zone, IsObjectType a) => ObjectId -> ZO zone (OT1 a)
 lensedThis = ZO singZone . O1 . idToObject . UntypedObject DefaultObjectDiscriminant
 
-castSpell :: forall m. Monad m => Object 'OTPlayer -> Play OTSpell -> Magic 'Private 'RW m Legality
+castSpell :: forall m. Monad m => Object 'OTPlayer -> PriorityAction CastSpell -> Magic 'Private 'RW m Legality
 castSpell oCaster = logCall 'castSpell \case
   CastSpell zoSpell -> goSpell zoSpell
  where
@@ -343,7 +290,7 @@ castSpellCard oCaster card = logCall 'castSpellCard case card of
 -- TODO: Generalize for TriggeredAbility as well. Prolly make an AbilityMeta type that is analogous to CastMeta.
 -- NOTE: A TriggeredAbility is basically the same as an ActivatedAbility that the game activates automatically.
 -- TODO: This needs to validate ActivateAbilityReqs
-activateAbility :: forall m. Monad m => Object 'OTPlayer -> Play OTActivatedAbility -> Magic 'Private 'RW m Legality
+activateAbility :: forall m. Monad m => Object 'OTPlayer -> PriorityAction ActivateAbility -> Magic 'Private 'RW m Legality
 activateAbility oPlayer = logCall 'activateAbility \case
   ActivateAbility someActivated -> case someActivated of
     SomeActivatedAbility zoThis withThisActivated -> do
@@ -360,6 +307,7 @@ activateAbility oPlayer = logCall 'activateAbility \case
   goSomeActivatedAbility zoThis' withThisActivated = logCall' "goSomeActivatedAbility" do
     zoExists' <- fromRO $ doesZoneObjectExist zoThis'
     pure () -- TODO: Check that `zoThis'` actually has the `withThisActivated`
+    _reqs <- fromRO $ getActivateAbilityReqs oPlayer -- TODO: validate reqs
     let oThis = promoteIdToObjectN @ot $ getObjectId zoThis'
         zoThis = ZO (singZone @zone) oThis
         thisId = getObjectId zoThis

@@ -26,6 +26,7 @@ main :: IO ()
 main = mainMountainShock
 
 -- NOTE: Still a WIP
+-- TODO: Mana abilities should elide stack
 mainMountainShock :: IO ()
 mainMountainShock = runDemo replayLog replayInputs $ replicate 2 (deck, side)
 
@@ -48,12 +49,19 @@ side =
       ]
 
 replayLog :: Maybe FilePath
-replayLog = Nothing
+replayLog = Nothing -- Just "replay-Mountain-Shock.log"
 
 replayInputs :: [String]
 replayInputs =
-  []
-    ++ replicate 10 "0"
-    ++ ["8", "0", "11 0"]
-    ++ replicate 4 "0"
-    ++ ["7"]
+  [ "Pass"
+  , "Pass"
+  , "Pass"
+  , "Pass"
+  , "PlayLand 8"
+  , "ActivateAbility 11 0"
+  , "Pass" -- XXX: mana abilities should not use stack
+  , "Pass" -- XXX: mana abilities should not use stack
+  , "CastSpell 7"
+  , "Pass"
+  , "Pass"
+  ]

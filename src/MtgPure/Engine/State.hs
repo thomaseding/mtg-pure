@@ -182,6 +182,9 @@ data AnyElected (pEffect :: PrePost) :: Type where
   deriving (Typeable)
 
 data GameState (m :: Type -> Type) where
+  -- TODO: there should be a field that tracks which ObjectIds have been known to each player.
+  -- This would allow the Public API to query game state a given player knows about without leaking hidden information.
+  -- Simply knowing that a non-visible ID exists allow players to cheat (clients could spam it and then glean zone information and whatnot).
   GameState ::
     { magicCurrentTurn :: Int
     , magicFwd :: Fwd m

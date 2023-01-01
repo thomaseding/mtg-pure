@@ -9,23 +9,27 @@
 {-# HLINT ignore "Redundant pure" #-}
 
 module MtgPure.Engine.Priority (
+  askPriorityAction,
   gainPriority,
-  getPlayerWithPriority,
   getHasPriority,
+  getPlayerWithPriority,
 ) where
 
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
+import qualified Control.Monad.Trans as M
+import safe Control.Monad.Util (Attempt, Attempt' (..))
 import safe Data.Functor ((<&>))
 import safe qualified Data.Stream as Stream
 import safe Data.Void (Void, absurd)
 import safe MtgPure.Engine.Fwd.Api (
-  askActivateAbility,
-  askCastSpell,
-  askPlayLand,
+  activateAbility,
+  castSpell,
   getAPNAP,
   getAlivePlayerCount,
   performStateBasedActions,
+  playLand,
   resolveTopOfStack,
+  rewindIllegal,
  )
 import safe MtgPure.Engine.Monad (
   fromPublicRO,
@@ -37,12 +41,26 @@ import safe MtgPure.Engine.Monad (
   magicCont,
   modify,
  )
-import safe MtgPure.Engine.Prompt (PlayerCount (..))
-import safe MtgPure.Engine.State (GameState (..), Magic, MagicCont, logCall, runMagicCont)
+import safe MtgPure.Engine.Prompt (
+  ActivateAbility,
+  CastSpell,
+  PlayLand,
+  PlayerCount (..),
+  PriorityAction (..),
+  Prompt' (promptPriorityAction),
+  SpecialAction (..),
+ )
+import safe MtgPure.Engine.State (
+  GameState (..),
+  Magic,
+  MagicCont,
+  logCall,
+  logCallRec,
+  mkOpaqueGameState,
+  runMagicCont,
+ )
 import safe MtgPure.Model.Object.Object (Object)
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
-import safe MtgPure.Model.PhaseStep (isMainPhase)
-import safe MtgPure.Model.Stack (Stack (..))
 
 gainPriority :: Monad m => Object 'OTPlayer -> Magic 'Private 'RW m ()
 gainPriority oPlayer = do
@@ -59,9 +77,7 @@ runPriorityQueue = do
       [] -> magicCont resolveTopOfStack -- (117.4)
       oPlayer : oPlayers -> do
         liftCont performStateBasedActions -- (117.5)
-        askCastSpell oPlayer -- (117.1a)
-        askActivateAbility oPlayer -- (117.1b) (117.1d)
-        askSpecialAction oPlayer -- (117.1c)
+        askPriorityAction oPlayer
         liftCont $ modify \st -> st{magicPlayerOrderPriority = oPlayers} -- (117.3d)
   runPriorityQueue
 
@@ -78,13 +94,66 @@ getHasPriority oPlayer = logCall 'getHasPriority do
     Nothing -> False
     Just p -> oPlayer == p
 
--- (117.1c)
-askSpecialAction :: Monad m => Object 'OTPlayer -> MagicCont 'Private 'RW m () ()
-askSpecialAction oPlayer = logCall 'askSpecialAction do
+askPriorityAction :: Monad m => Object 'OTPlayer -> MagicCont 'Private 'RW m () ()
+askPriorityAction = logCall 'askPriorityAction $ askPriorityAction' $ Attempt 0
+
+askPriorityAction' :: Monad m => Attempt -> Object 'OTPlayer -> MagicCont 'Private 'RW m () ()
+askPriorityAction' attempt oPlayer = logCallRec 'askPriorityAction' do
   st <- liftCont $ fromRO get
-  case unStack $ magicStack st of
-    [] -> case isMainPhase $ magicPhaseStep st of
-      True -> do
-        askPlayLand oPlayer
-      False -> pure ()
-    _ -> pure ()
+  let opaque = mkOpaqueGameState st
+      prompt = magicPrompt st
+  action <- liftCont $ M.lift $ promptPriorityAction prompt attempt opaque oPlayer
+  performPriorityActionCont oPlayer action >>= \case
+    Pass -> pure ()
+    TryAgain -> askPriorityAction' ((1 +) <$> attempt) oPlayer
+
+-- No need to encode success results, since the continuation is hijacked in such a case.
+data PriorityActionResult
+  = Pass
+  | TryAgain
+
+performPriorityActionCont ::
+  forall m.
+  Monad m =>
+  Object 'OTPlayer ->
+  PriorityAction () ->
+  MagicCont 'Private 'RW m () PriorityActionResult
+performPriorityActionCont oPlayer action = logCall 'performPriorityActionCont do
+  let f :: MagicCont 'Private 'RW m () () -> MagicCont 'Private 'RW m () PriorityActionResult
+      f m = m >> pure TryAgain
+
+      go :: PriorityAction a -> MagicCont 'Private 'RW m () PriorityActionResult
+      go x = case x of
+        ActivateAbility{} -> f $ activateAbilityCont oPlayer x -- (117.1b) (117.1d)
+        AskPriorityActionAgain -> pure TryAgain
+        CastSpell{} -> f $ castSpellCont oPlayer x -- (117.1a)
+        PassPriority -> pure Pass
+        SpecialAction y -> f $ specialActionCont oPlayer y -- (117.1c)
+        PriorityAction y -> go y
+  go action
+
+activateAbilityCont :: Monad m => Object 'OTPlayer -> PriorityAction ActivateAbility -> MagicCont 'Private 'RW m () ()
+activateAbilityCont oPlayer activate = logCall 'activateAbilityCont do
+  isLegal <- liftCont $ rewindIllegal $ activateAbility oPlayer activate
+  case isLegal of
+    True -> magicCont $ gainPriority oPlayer -- (117.3c)
+    False -> pure ()
+
+castSpellCont :: Monad m => Object 'OTPlayer -> PriorityAction CastSpell -> MagicCont 'Private 'RW m () ()
+castSpellCont oPlayer cast = logCall 'castSpellCont do
+  isLegal <- liftCont $ rewindIllegal $ castSpell oPlayer cast
+  case isLegal of
+    True -> magicCont $ gainPriority oPlayer -- (117.3c)
+    False -> pure ()
+
+playLandCont :: Monad m => Object 'OTPlayer -> SpecialAction PlayLand -> MagicCont 'Private 'RW m () ()
+playLandCont oPlayer special = logCall 'playLandCont do
+  isLegal <- liftCont $ rewindIllegal $ playLand oPlayer special
+  case isLegal of
+    True -> magicCont $ gainPriority oPlayer -- (117.3c)
+    False -> pure ()
+
+-- (117.1c)
+specialActionCont :: Monad m => Object 'OTPlayer -> SpecialAction a -> MagicCont 'Private 'RW m () ()
+specialActionCont oPlayer action = logCall 'specialActionCont case action of
+  PlayLand{} -> playLandCont oPlayer action
