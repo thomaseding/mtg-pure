@@ -487,11 +487,15 @@ showAbilities = showListM showAbility
 
 showAnyCard :: AnyCard -> EnvM ParenItems
 showAnyCard = \case
-  AnyCard card -> showCard card
+  AnyCard card -> yesParens do
+    sCard <- dollar <$> showCard card
+    pure $ pure "AnyCard" <> sCard
 
 showAnyToken :: AnyToken -> EnvM ParenItems
 showAnyToken = \case
-  AnyToken card -> showToken card
+  AnyToken token -> yesParens do
+    sToken <- dollar <$> showToken token
+    pure $ pure "AnyToken" <> sToken
 
 showActivatedAbility :: ActivatedAbility zone ot -> EnvM ParenItems
 showActivatedAbility = \case
@@ -919,7 +923,9 @@ showEffect = \case
     sElectEvent <- parens <$> showElect electEvent
     sEffect <- dollar <$> showEffect effect
     pure $ pure "Until " <> sElectEvent <> sEffect
-  WithList withList -> showWithList showEffect withList
+  WithList withList -> yesParens do
+    sWithList <- dollar <$> showWithList showEffect withList
+    pure $ pure "WithList" <> sWithList
 
 showEffects :: [Effect e] -> EnvM ParenItems
 showEffects = showListM showEffect
@@ -1152,6 +1158,7 @@ showManaCost cost = yesParens do
         , costGreen = g
         , costColorless = c
         , costGeneric = x
+        , costSnow = s
         } = cost
       lits =
         sequence
@@ -1162,15 +1169,17 @@ showManaCost cost = yesParens do
           , literalMana g
           , literalMana c
           , literalMana x
+          , literalMana s
           ]
   case lits of
-    Just [litW, litU, litB, litR, litG, litC, litX] -> do
+    Just [litW, litU, litB, litR, litG, litC, litX, litS] -> do
       let numW = (W, litW)
           numU = (U, litU)
           numB = (B, litB)
           numR = (R, litR)
           numG = (G, litG)
           numC = (C, litC)
+          numS = (S, litS)
           numX = litX
           go (sym, num) = case num of
             0 -> Nothing
@@ -1180,7 +1189,7 @@ showManaCost cost = yesParens do
             0 -> Nothing
             _ -> Just $ show num
           manas' =
-            [go' numX, go numW, go numU, go numB, go numR, go numG, go numC]
+            [go' numX, go numW, go numU, go numB, go numR, go numG, go numC, go numS]
           manas = catMaybes manas'
           sManas = case manas of
             [] -> "0"
@@ -1195,6 +1204,7 @@ showManaCost cost = yesParens do
       sG <- parens <$> showMana g
       sC <- parens <$> showMana c
       sX <- parens <$> showMana x
+      sS <- parens <$> showMana s
       pure $
         pure (fromString "ManaCost' ")
           <> sW
@@ -1210,6 +1220,8 @@ showManaCost cost = yesParens do
           <> sC
           <> pure " "
           <> sX
+          <> pure " "
+          <> sS
 
 showManaPool :: ManaPool snow -> EnvM ParenItems
 showManaPool pool = yesParens do

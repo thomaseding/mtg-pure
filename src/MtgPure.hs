@@ -7,11 +7,13 @@ module MtgPure (
   module MtgPure.Engine,
   module MtgPure.Model,
   module MtgPure.ModelCombinators,
+  NatList (..),
   codeGenToObjectN,
   mainMountainShock,
   mainMountainStoneRain,
 ) where
 
+import safe Data.Nat (NatList (..))
 import safe MtgPure.AllCards
 import safe MtgPure.Cards
 import safe MtgPure.Client.Console

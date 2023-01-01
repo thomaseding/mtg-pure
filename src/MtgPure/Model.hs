@@ -8,11 +8,11 @@ module MtgPure.Model (
   module MtgPure.Model.CardSet,
   module MtgPure.Model.CardType,
   module MtgPure.Model.Color,
-  module MtgPure.Model.ColorToManaType,
   module MtgPure.Model.ColoredMana,
   module MtgPure.Model.ColorlessMana,
   module MtgPure.Model.Colors,
   module MtgPure.Model.ColorsLike,
+  module MtgPure.Model.ColorToManaType,
   module MtgPure.Model.Creature,
   module MtgPure.Model.CreatureType,
   module MtgPure.Model.Damage,
@@ -34,17 +34,26 @@ module MtgPure.Model (
   module MtgPure.Model.ManaSymbol,
   module MtgPure.Model.ManaType,
   module MtgPure.Model.ManaTypeToColor,
+  module MtgPure.Model.Object.IndexOT,
+  module MtgPure.Model.Object.IsObjectType,
+  module MtgPure.Model.Object.LitOT,
   module MtgPure.Model.Object.Object,
-  module MtgPure.Model.Object.ObjectType,
-  module MtgPure.Model.Object.SObjectType,
   module MtgPure.Model.Object.ObjectId,
   module MtgPure.Model.Object.ObjectN,
+  module MtgPure.Model.Object.ObjectType,
+  module MtgPure.Model.Object.ObjectTypeN,
+  module MtgPure.Model.Object.OT,
+  module MtgPure.Model.Object.OTKind,
+  module MtgPure.Model.Object.OTKN,
+  module MtgPure.Model.Object.OTN,
   module MtgPure.Model.Object.Singleton.Any,
   module MtgPure.Model.Object.Singleton.Card,
-  module MtgPure.Model.Object.OTKind,
   module MtgPure.Model.Object.Singleton.NonCreatureCard,
   module MtgPure.Model.Object.Singleton.Permanent,
   module MtgPure.Model.Object.Singleton.Spell,
+  module MtgPure.Model.Object.SObjectType,
+  module MtgPure.Model.Object.ToObjectN,
+  module MtgPure.Model.Object.VisitObjectN,
   module MtgPure.Model.Permanent,
   module MtgPure.Model.Phase,
   module MtgPure.Model.PhaseStep,
@@ -61,10 +70,8 @@ module MtgPure.Model (
   module MtgPure.Model.ToMana,
   module MtgPure.Model.ToManaCost,
   module MtgPure.Model.ToManaPool,
-  module MtgPure.Model.Object.ToObjectN,
   module MtgPure.Model.Toughness,
   module MtgPure.Model.Variable,
-  module MtgPure.Model.Object.VisitObjectN,
   module MtgPure.Model.Zone,
   module MtgPure.Model.ZoneObject.Convert,
   module MtgPure.Model.ZoneObject.ZoneObject,
@@ -110,11 +117,18 @@ import safe MtgPure.Model.ManaPool
 import safe MtgPure.Model.ManaSymbol
 import safe MtgPure.Model.ManaType
 import safe MtgPure.Model.ManaTypeToColor
+import safe MtgPure.Model.Object.IndexOT
+import safe MtgPure.Model.Object.IsObjectType
+import safe MtgPure.Model.Object.LitOT
+import safe MtgPure.Model.Object.OT
+import safe MtgPure.Model.Object.OTKN
 import safe MtgPure.Model.Object.OTKind
+import safe MtgPure.Model.Object.OTN
 import safe MtgPure.Model.Object.Object
 import safe MtgPure.Model.Object.ObjectId
 import safe MtgPure.Model.Object.ObjectN
 import safe MtgPure.Model.Object.ObjectType
+import safe MtgPure.Model.Object.ObjectTypeN
 import safe MtgPure.Model.Object.SObjectType
 import safe MtgPure.Model.Object.Singleton.Any
 import safe MtgPure.Model.Object.Singleton.Card

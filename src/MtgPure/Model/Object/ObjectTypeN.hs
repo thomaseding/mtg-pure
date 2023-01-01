@@ -3,7 +3,7 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.ObjectTypeN (
+module MtgPure.Model.Object.ObjectTypeN (
   ObjectType0,
   ObjectType1,
   ObjectType2,
