@@ -3,6 +3,7 @@
 module MtgPure (
   module MtgPure.AllCards,
   module MtgPure.Cards,
+  module MtgPure.Client.Console,
   module MtgPure.Engine,
   module MtgPure.Model,
   module MtgPure.ModelCombinators,
@@ -13,6 +14,7 @@ module MtgPure (
 
 import safe MtgPure.AllCards
 import safe MtgPure.Cards
+import safe MtgPure.Client.Console
 import safe MtgPure.Engine hiding (
   ActivePlayer,
   ControllerOf,

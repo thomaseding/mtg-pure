@@ -17,10 +17,10 @@ module MtgPure.Test.MountainStoneRain (
 ) where
 
 import safe MtgPure.Cards (mountain, stoneRain)
+import safe MtgPure.Client.Console (ConsoleInput (..), playConsoleGame, runConsole)
 import safe MtgPure.Model.Deck (Deck (..))
 import safe MtgPure.Model.Recursive (AnyCard (..))
 import safe MtgPure.Model.Sideboard (Sideboard (..))
-import safe MtgPure.Test.Demo (runDemo)
 
 main :: IO ()
 main = mainMountainStoneRain
@@ -28,7 +28,15 @@ main = mainMountainStoneRain
 -- NOTE: Still a WIP
 -- FIXME: currently only R gets removed from mana pool instead of RRR
 mainMountainStoneRain :: IO ()
-mainMountainStoneRain = runDemo replayLog replayInputs $ replicate 2 (deck, side)
+mainMountainStoneRain = runConsole input do
+  playConsoleGame $ replicate 2 (deck, side)
+ where
+  input =
+    ConsoleInput
+      { consoleInput_ = ()
+      , consoleInput_replayInputs = replayInputs
+      , consoleInput_replayLog = replayLog
+      }
 
 deck :: Deck
 deck =

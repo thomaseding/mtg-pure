@@ -10,8 +10,11 @@
 {-# HLINT ignore "Redundant pure" #-}
 {-# HLINT ignore "Redundant fmap" #-}
 
-module MtgPure.Test.Demo (
-  runDemo,
+module MtgPure.Client.Console (
+  ConsoleInput (..),
+  Console,
+  runConsole,
+  playConsoleGame,
 ) where
 
 import safe Control.Exception (assert)
@@ -83,37 +86,58 @@ import safe MtgPure.Model.ZoneObject.ZoneObject (IsZO, ZO)
 import safe qualified System.IO as IO
 import safe Text.Read (readMaybe)
 
-data DemoState = DemoState
-  { demo_ :: ()
-  , demo_logDisabled :: Int
-  , demo_replayInputs :: [String]
-  , demo_replayLog :: Maybe FilePath
+data ConsoleInput = ConsoleInput
+  { consoleInput_ :: ()
+  , consoleInput_replayInputs :: [String]
+  , consoleInput_replayLog :: Maybe FilePath
   }
 
--- TODO: rename this to Console and move outside of Test and into Client
-type Demo = State.StateT DemoState IO
+data ConsoleState = ConsoleState
+  { console_ :: ()
+  , console_logDisabled :: Int
+  , console_replayInputs :: [String]
+  , console_replayLog :: Maybe FilePath
+  }
 
-runDemo :: Maybe FilePath -> [String] -> [(Deck, Sideboard)] -> IO ()
-runDemo replayLog replayInputs decks = do
-  case replayLog of
-    Nothing -> pure ()
-    Just file -> appendFile file "---------------------\n"
-  (result, st') <- State.runStateT action st
-  case demo_logDisabled st' of
-    0 -> pure ()
+newtype Console a = Console
+  { unConsole :: State.StateT ConsoleState IO a
+  }
+  deriving (Functor)
+
+instance Applicative Console where
+  pure = Console . pure
+  Console f <*> Console a = Console $ f <*> a
+
+instance Monad Console where
+  Console a >>= f = Console $ a >>= unConsole . f
+
+instance MonadIO Console where
+  liftIO = Console . liftIO
+
+runConsole :: ConsoleInput -> Console a -> IO a
+runConsole input action = do
+  (result, st') <- State.runStateT (unConsole action) st
+  case console_logDisabled st' of
+    0 -> pure result
     _ -> error $ show CorruptCallStackLogging
-  print result
  where
-  action = playGame $ gameInput decks
   st =
-    DemoState
-      { demo_ = ()
-      , demo_logDisabled = 0
-      , demo_replayInputs = replayInputs
-      , demo_replayLog = replayLog
+    ConsoleState
+      { console_ = ()
+      , console_logDisabled = 0
+      , console_replayInputs = consoleInput_replayInputs input
+      , console_replayLog = consoleInput_replayLog input
       }
 
-gameInput :: [(Deck, Sideboard)] -> GameInput Demo
+playConsoleGame :: [(Deck, Sideboard)] -> Console ()
+playConsoleGame decks = do
+  Console (State.gets console_replayLog) >>= \case
+    Nothing -> pure ()
+    Just file -> liftIO $ appendFile file "---------------------\n"
+  result <- playGame $ gameInput decks
+  liftIO $ print result
+
+gameInput :: [(Deck, Sideboard)] -> GameInput Console
 gameInput decks =
   GameInput
     { gameInput_decks = decks
@@ -129,11 +153,11 @@ gameInput decks =
           , exceptionZoneObjectDoesNotExist = \zo -> liftIO $ print ("exceptionZoneObjectDoesNotExist", zo)
           , promptDebugMessage = \msg -> liftIO $ putStrLn $ "DEBUG: " ++ msg
           , promptGetStartingPlayer = \_attempt _count -> pure $ PlayerIndex 0
-          , promptLogCallPop = demoLogCallPop
-          , promptLogCallPush = demoLogCallPush
+          , promptLogCallPop = consoleLogCallPop
+          , promptLogCallPush = consoleLogCallPush
           , promptPerformMulligan = \_attempt _p _hand -> pure False
-          , promptPickZO = demoPickZo
-          , promptPriorityAction = demoPriorityAction
+          , promptPickZO = consolePickZo
+          , promptPriorityAction = consolePriorityAction
           , promptShuffle = \_attempt (CardCount n) _player -> pure $ map CardIndex [0 .. n - 1]
           }
     }
@@ -144,26 +168,26 @@ tabWidth = 2
 pause :: MonadIO m => m ()
 pause = M.void $ liftIO getLine
 
-prompt :: String -> Demo String
+prompt :: String -> Console String
 prompt msg = do
   liftIO do
     putStr msg
     IO.hFlush IO.stdout
-  State.gets demo_replayInputs >>= \case
+  Console (State.gets console_replayInputs) >>= \case
     [] -> liftIO getLine
     s : ss -> do
-      State.modify' \st' -> st'{demo_replayInputs = ss}
+      Console $ State.modify' \st' -> st'{console_replayInputs = ss}
       liftIO $ putStrLn s
       pure s
 
-demoPickZo ::
+consolePickZo ::
   (IsZO zone ot, Monad m) =>
   Attempt ->
   OpaqueGameState m ->
   Object 'OTPlayer ->
   NonEmpty (ZO zone ot) ->
-  Demo (ZO zone ot)
-demoPickZo _attempt _opaque _p zos = case zos of
+  Console (ZO zone ot)
+consolePickZo _attempt _opaque _p zos = case zos of
   zo :| _ -> do
     liftIO $ print ("picked", zo, "from", NonEmpty.toList zos)
     pure zo
@@ -230,8 +254,8 @@ parseCommandInput (CommandInput raw) = case raw of
   _ -> pure AskPriorityActionAgain
 
 -- TODO: Expose sufficient Public API to avoid need for `internalFromPrivate`
-demoPriorityAction :: Attempt -> OpaqueGameState Demo -> Object 'OTPlayer -> Demo (PriorityAction ())
-demoPriorityAction attempt opaque oPlayer = do
+consolePriorityAction :: Attempt -> OpaqueGameState Console -> Object 'OTPlayer -> Console (PriorityAction ())
+consolePriorityAction attempt opaque oPlayer = do
   (action, commandInput) <- queryMagic opaque do
     M.lift $ printGameState opaque
     liftIO case attempt of
@@ -243,16 +267,16 @@ demoPriorityAction attempt opaque oPlayer = do
           Just x -> x
     action <- parseCommandInput commandInput
     pure (action, commandInput)
-  State.gets demo_replayLog >>= \case
+  Console (State.gets console_replayLog) >>= \case
     Nothing -> pure ()
     Just file -> liftIO $ appendFile file $ show commandInput ++ "\n"
   pure action
 
-demoLogCallPush :: OpaqueGameState Demo -> CallFrameInfo -> Demo ()
-demoLogCallPush opaque frame = case name == show 'queryMagic of
-  True -> State.modify' \st -> st{demo_logDisabled = demo_logDisabled st + 1}
+consoleLogCallPush :: OpaqueGameState Console -> CallFrameInfo -> Console ()
+consoleLogCallPush opaque frame = case name == show 'queryMagic of
+  True -> Console $ State.modify' \st -> st{console_logDisabled = console_logDisabled st + 1}
   False ->
-    State.gets demo_logDisabled >>= \case
+    Console (State.gets console_logDisabled) >>= \case
       0 -> case Map.lookup name logIgnore of
         Just _ -> pure ()
         Nothing -> do
@@ -266,11 +290,12 @@ demoLogCallPush opaque frame = case name == show 'queryMagic of
   name = callFrameName frame
   i = callFrameId frame
 
-demoLogCallPop :: OpaqueGameState Demo -> CallFrameInfo -> Demo ()
-demoLogCallPop _opaque frame = case name == show 'queryMagic of
-  True -> State.modify' \st -> assert (demo_logDisabled st > 0) st{demo_logDisabled = demo_logDisabled st - 1}
+consoleLogCallPop :: OpaqueGameState Console -> CallFrameInfo -> Console ()
+consoleLogCallPop _opaque frame = case name == show 'queryMagic of
+  True -> Console $ State.modify' \st ->
+    assert (console_logDisabled st > 0) st{console_logDisabled = console_logDisabled st - 1}
   False ->
-    State.gets demo_logDisabled >>= \case
+    Console (State.gets console_logDisabled) >>= \case
       0 -> case Map.lookup name logIgnore of
         Just _ -> pure ()
         _ -> do
@@ -293,7 +318,7 @@ horizLine = do
   putStrLn $ replicate 20 '-'
 
 -- TODO: Expose sufficient Public API to avoid need for `internalFromPrivate`
-printGameState :: OpaqueGameState Demo -> Demo ()
+printGameState :: OpaqueGameState Console -> Console ()
 printGameState opaque = queryMagic opaque case dumpEverything of
   True -> do
     st <- internalFromPrivate get
@@ -323,12 +348,12 @@ printGameState opaque = queryMagic opaque case dumpEverything of
  where
   dumpEverything = True
 
-printHand :: Hand -> Magic 'Public 'RO Demo ()
+printHand :: Hand -> Magic 'Public 'RO Console ()
 printHand (Hand zos) = do
   names <- T.for zos getHandCardName
   liftIO $ print ("hand", names)
 
-getHandCardName :: ZO 'ZHand OTCard -> Magic 'Public 'RO Demo String
+getHandCardName :: ZO 'ZHand OTCard -> Magic 'Public 'RO Console String
 getHandCardName zo = do
   let zo0 = toZO0 zo
   handCards <- internalFromPrivate $ gets magicHandCards

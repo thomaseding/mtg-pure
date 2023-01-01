@@ -17,10 +17,10 @@ module MtgPure.Test.MountainShock (
 ) where
 
 import safe MtgPure.Cards (mountain, shock)
+import safe MtgPure.Client.Console (ConsoleInput (..), playConsoleGame, runConsole)
 import safe MtgPure.Model.Deck (Deck (..))
 import safe MtgPure.Model.Recursive (AnyCard (..))
 import safe MtgPure.Model.Sideboard (Sideboard (..))
-import safe MtgPure.Test.Demo (runDemo)
 
 main :: IO ()
 main = mainMountainShock
@@ -28,7 +28,15 @@ main = mainMountainShock
 -- NOTE: Still a WIP
 -- TODO: Mana abilities should elide stack
 mainMountainShock :: IO ()
-mainMountainShock = runDemo replayLog replayInputs $ replicate 2 (deck, side)
+mainMountainShock = runConsole input do
+  playConsoleGame $ replicate 2 (deck, side)
+ where
+  input =
+    ConsoleInput
+      { consoleInput_ = ()
+      , consoleInput_replayInputs = replayInputs
+      , consoleInput_replayLog = replayLog
+      }
 
 deck :: Deck
 deck =
