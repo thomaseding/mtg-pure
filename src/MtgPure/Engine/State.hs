@@ -76,11 +76,11 @@ import safe MtgPure.Engine.Prompt (
 import safe MtgPure.Model.Deck (Deck (..))
 import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.Mulligan (Mulligan)
-import safe MtgPure.Model.Object.OTKind (
+import safe MtgPure.Model.Object.OTN (OT0)
+import safe MtgPure.Model.Object.OTNAliases (
   OTInstant,
   OTSorcery,
  )
-import safe MtgPure.Model.Object.OTN (OT0)
 import safe MtgPure.Model.Object.Object (Object)
 import safe MtgPure.Model.Object.ObjectId (ObjectDiscriminant, ObjectId (..))
 import safe MtgPure.Model.Object.ObjectType (

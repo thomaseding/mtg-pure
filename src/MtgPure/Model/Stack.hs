@@ -11,11 +11,11 @@ module MtgPure.Model.Stack (
 
 import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
-import safe MtgPure.Model.Object.OTKind (
+import safe MtgPure.Model.Object.OTN (OT0)
+import safe MtgPure.Model.Object.OTNAliases (
   OTActivatedOrTriggeredAbility,
   OTSpell,
  )
-import safe MtgPure.Model.Object.OTN (OT0)
 import safe MtgPure.Model.Zone (Zone (..))
 import safe MtgPure.Model.ZoneObject.Convert (toZO0)
 import safe MtgPure.Model.ZoneObject.ZoneObject (ZO)

@@ -21,7 +21,12 @@ import safe MtgPure.Model.CardType (
   SCardType (..),
  )
 import safe MtgPure.Model.Object.IsObjectType (IsObjectType)
-import safe MtgPure.Model.Object.OTKind (
+import safe MtgPure.Model.Object.OTN (
+  OT1,
+  OT2,
+  OT3,
+ )
+import safe MtgPure.Model.Object.OTNAliases (
   OTArtifact,
   OTCard,
   OTCreature,
@@ -30,11 +35,6 @@ import safe MtgPure.Model.Object.OTKind (
   OTLand,
   OTPlaneswalker,
   OTSorcery,
- )
-import safe MtgPure.Model.Object.OTN (
-  OT1,
-  OT2,
-  OT3,
  )
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.ZoneObject.ZoneObject (IsOT, ZO)

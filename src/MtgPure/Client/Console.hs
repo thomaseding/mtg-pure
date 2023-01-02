@@ -66,7 +66,7 @@ import safe MtgPure.Model.Deck (Deck (..))
 import safe MtgPure.Model.Hand (Hand (..))
 import safe MtgPure.Model.Library (Library (..))
 import safe MtgPure.Model.Mulligan (Mulligan (..))
-import safe MtgPure.Model.Object.OTKind (
+import safe MtgPure.Model.Object.OTNAliases (
   OTAny,
   OTCard,
  )

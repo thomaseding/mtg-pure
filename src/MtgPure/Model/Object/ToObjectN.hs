@@ -8,7 +8,7 @@ module MtgPure.Model.Object.ToObjectN (
   toObjectNAny,
 ) where
 
-import safe MtgPure.Model.Object.OTKind (OTAny)
+import safe MtgPure.Model.Object.OTNAliases (OTAny)
 import safe MtgPure.Model.Object.ObjectN (ObjectN)
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Object.ToObjectN.Classes

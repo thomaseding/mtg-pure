@@ -16,7 +16,13 @@ import safe Data.Kind (Type)
 import safe Data.Proxy (Proxy)
 import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.Object.IsObjectType (IsObjectType)
-import safe MtgPure.Model.Object.OTKind (
+import safe MtgPure.Model.Object.OTN (
+  OT1,
+  OT2,
+  OT3,
+  OT4,
+ )
+import safe MtgPure.Model.Object.OTNAliases (
   OTArtifact,
   OTCreature,
   OTEnchantment,
@@ -24,12 +30,6 @@ import safe MtgPure.Model.Object.OTKind (
   OTPlaneswalker,
   OTSorcery,
   OTSpell,
- )
-import safe MtgPure.Model.Object.OTN (
-  OT1,
-  OT2,
-  OT3,
-  OT4,
  )
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.ZoneObject.ZoneObject (ZO)

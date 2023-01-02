@@ -23,9 +23,7 @@ import safe Data.Inst (
  )
 import safe Data.Kind (Type)
 import safe MtgPure.Model.Object.IsObjectType (IsObjectType)
-import safe MtgPure.Model.Object.OT (OT' (..))
 import safe MtgPure.Model.Object.OTN (
-  OT,
   OT0,
   OT1,
   OT10,
@@ -39,11 +37,13 @@ import safe MtgPure.Model.Object.OTN (
   OT7,
   OT8,
   OT9,
+  OTN,
  )
+import safe MtgPure.Model.Object.OTN_ (OTN' (..))
 
 class LitOT (ot :: Type) where
   litOT :: ot
-  mapOT :: (forall k (otk :: k). OT otk -> liftOT (OT otk)) -> liftOT ot
+  mapOT :: (forall k (otk :: k). OTN otk -> liftOT (OTN otk)) -> liftOT ot
 
 instance LitOT OT0 where
   litOT = OT0

@@ -58,12 +58,12 @@ import safe MtgPure.Engine.State (
 import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.IsCardList (containsCard)
 import safe MtgPure.Model.Object.IsObjectType (IsObjectType (..))
-import safe MtgPure.Model.Object.OTKind (
+import safe MtgPure.Model.Object.OTN (OT0, OT1)
+import safe MtgPure.Model.Object.OTNAliases (
   OTInstant,
   OTSorcery,
   OTSpell,
  )
-import safe MtgPure.Model.Object.OTN (OT0, OT1)
 import safe MtgPure.Model.Object.Object (Object)
 import safe MtgPure.Model.Object.ObjectId (
   ObjectId,

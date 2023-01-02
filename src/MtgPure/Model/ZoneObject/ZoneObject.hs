@@ -43,7 +43,7 @@ import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.Object.IndexOT (IndexOT (..))
 import safe MtgPure.Model.Object.LitOT (LitOT)
-import safe MtgPure.Model.Object.OTKind (
+import safe MtgPure.Model.Object.OTNAliases (
   OTAbility,
   OTActivatedAbility,
   OTActivatedOrTriggeredAbility,

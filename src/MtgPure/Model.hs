@@ -42,10 +42,11 @@ module MtgPure.Model (
   module MtgPure.Model.Object.ObjectN,
   module MtgPure.Model.Object.ObjectType,
   module MtgPure.Model.Object.ObjectTypeN,
-  module MtgPure.Model.Object.OT,
-  module MtgPure.Model.Object.OTKind,
   module MtgPure.Model.Object.OTKN,
+  module MtgPure.Model.Object.OTKN_,
   module MtgPure.Model.Object.OTN,
+  module MtgPure.Model.Object.OTNAliases,
+  module MtgPure.Model.Object.OTN_,
   module MtgPure.Model.Object.Singleton.Any,
   module MtgPure.Model.Object.Singleton.Card,
   module MtgPure.Model.Object.Singleton.NonCreatureCard,
@@ -120,10 +121,11 @@ import safe MtgPure.Model.ManaTypeToColor
 import safe MtgPure.Model.Object.IndexOT
 import safe MtgPure.Model.Object.IsObjectType
 import safe MtgPure.Model.Object.LitOT
-import safe MtgPure.Model.Object.OT
 import safe MtgPure.Model.Object.OTKN
-import safe MtgPure.Model.Object.OTKind
+import safe MtgPure.Model.Object.OTKN_
 import safe MtgPure.Model.Object.OTN
+import safe MtgPure.Model.Object.OTNAliases
+import safe MtgPure.Model.Object.OTN_
 import safe MtgPure.Model.Object.Object
 import safe MtgPure.Model.Object.ObjectId
 import safe MtgPure.Model.Object.ObjectN

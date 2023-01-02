@@ -3,7 +3,7 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.Object.OTKind (
+module MtgPure.Model.Object.OTNAliases (
   OTAbility,
   OTActivatedAbility,
   OTActivatedOrTriggeredAbility,
@@ -39,7 +39,7 @@ module MtgPure.Model.Object.OTKind (
   OTTriggeredAbility,
 ) where
 
-import safe MtgPure.Model.Object.OTN (OT)
+import safe MtgPure.Model.Object.OTN (OTN)
 import safe MtgPure.Model.Object.ObjectType (
   ObjectType (..),
  )
@@ -47,42 +47,42 @@ import safe MtgPure.Model.Object.ObjectType (
 -- GHC doesn't seem to do the injectivity... simplify for bug report
 --
 -- type family MkOT (x :: k1) = (y :: k2) | y -> x where
---   MkOT a = '(OT, a :: ObjectType)
---   MkOT '(a, b) = '(OT, a :: ObjectType, b :: ObjectType)
---   MkOT '(a, b, c) = '(OT, a :: ObjectType, b :: ObjectType, c :: ObjectType)
---   MkOT '(a, b, c, d) = '(OT, a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType)
---   MkOT '(a, b, c, d, e) = '(OT, a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType)
---   MkOT '(a, b, c, d, e, f) = '(OT, a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType)
---   MkOT '(a, b, c, d, e, f, g) = '(OT, a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType)
+--   MkOT a = '(OTN, a :: ObjectType)
+--   MkOT '(a, b) = '(OTN, a :: ObjectType, b :: ObjectType)
+--   MkOT '(a, b, c) = '(OTN, a :: ObjectType, b :: ObjectType, c :: ObjectType)
+--   MkOT '(a, b, c, d) = '(OTN, a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType)
+--   MkOT '(a, b, c, d, e) = '(OTN, a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType)
+--   MkOT '(a, b, c, d, e, f) = '(OTN, a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType)
+--   MkOT '(a, b, c, d, e, f, g) = '(OTN, a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType)
 
-type OTActivatedAbility = OT '( '(), 'OTActivatedAbility)
+type OTActivatedAbility = OTN '( '(), 'OTActivatedAbility)
 
-type OTArtifact = OT '( '(), 'OTArtifact)
+type OTArtifact = OTN '( '(), 'OTArtifact)
 
-type OTCreature = OT '( '(), 'OTCreature)
+type OTCreature = OTN '( '(), 'OTCreature)
 
-type OTEmblem = OT '( '(), 'OTEmblem)
+type OTEmblem = OTN '( '(), 'OTEmblem)
 
-type OTEnchantment = OT '( '(), 'OTEnchantment)
+type OTEnchantment = OTN '( '(), 'OTEnchantment)
 
-type OTInstant = OT '( '(), 'OTInstant)
+type OTInstant = OTN '( '(), 'OTInstant)
 
-type OTLand = OT '( '(), 'OTLand)
+type OTLand = OTN '( '(), 'OTLand)
 
-type OTPlaneswalker = OT '( '(), 'OTPlaneswalker)
+type OTPlaneswalker = OTN '( '(), 'OTPlaneswalker)
 
-type OTPlayer = OT '( '(), 'OTPlayer)
+type OTPlayer = OTN '( '(), 'OTPlayer)
 
-type OTSorcery = OT '( '(), 'OTSorcery)
+type OTSorcery = OTN '( '(), 'OTSorcery)
 
-type OTStaticAbility = OT '( '(), 'OTStaticAbility)
+type OTStaticAbility = OTN '( '(), 'OTStaticAbility)
 
-type OTTriggeredAbility = OT '( '(), 'OTTriggeredAbility)
+type OTTriggeredAbility = OTN '( '(), 'OTTriggeredAbility)
 
 type OTToken = OTPermanent
 
 type OTAbility =
-  OT
+  OTN
     '( '()
      , 'OTActivatedAbility
      , 'OTStaticAbility
@@ -90,56 +90,56 @@ type OTAbility =
      )
 
 type OTActivatedOrTriggeredAbility =
-  OT
+  OTN
     '( '()
      , 'OTActivatedAbility
      , 'OTTriggeredAbility
      )
 
 type OTArtifactCreature =
-  OT
+  OTN
     '( '()
      , 'OTArtifact
      , 'OTCreature
      )
 
 type OTArtifactLand =
-  OT
+  OTN
     '( '()
      , 'OTArtifact
      , 'OTLand
      )
 
 type OTCreaturePlayer =
-  OT
+  OTN
     '( '()
      , 'OTCreature
      , 'OTPlayer
      )
 
 type OTCreaturePlaneswalker =
-  OT
+  OTN
     '( '()
      , 'OTCreature
      , 'OTPlaneswalker
      )
 
 type OTPlayerPlaneswalker =
-  OT
+  OTN
     '( '()
      , 'OTPlaneswalker
      , 'OTPlayer
      )
 
 type OTEnchantmentCreature =
-  OT
+  OTN
     '( '()
      , 'OTCreature
      , 'OTEnchantment
      )
 
 type OTCreaturePlayerPlaneswalker =
-  OT
+  OTN
     '( '()
      , 'OTCreature
      , 'OTPlaneswalker
@@ -147,7 +147,7 @@ type OTCreaturePlayerPlaneswalker =
      )
 
 type OTNonArtifactPermanent =
-  OT
+  OTN
     '( '()
      , 'OTCreature
      , 'OTEnchantment
@@ -156,7 +156,7 @@ type OTNonArtifactPermanent =
      )
 
 type OTNonCreaturePermanent =
-  OT
+  OTN
     '( '()
      , 'OTArtifact
      , 'OTEnchantment
@@ -165,7 +165,7 @@ type OTNonCreaturePermanent =
      )
 
 type OTNonEnchantmentPermanent =
-  OT
+  OTN
     '( '()
      , 'OTArtifact
      , 'OTCreature
@@ -174,7 +174,7 @@ type OTNonEnchantmentPermanent =
      )
 
 type OTNonLandPermanent =
-  OT
+  OTN
     '( '()
      , 'OTArtifact
      , 'OTCreature
@@ -183,7 +183,7 @@ type OTNonLandPermanent =
      )
 
 type OTNonPlaneswalkerPermanent =
-  OT
+  OTN
     '( '()
      , 'OTArtifact
      , 'OTCreature
@@ -192,7 +192,7 @@ type OTNonPlaneswalkerPermanent =
      )
 
 type OTPermanent =
-  OT
+  OTN
     '( '()
      , 'OTArtifact
      , 'OTCreature
@@ -202,7 +202,7 @@ type OTPermanent =
      )
 
 type OTNonCreature =
-  OT
+  OTN
     '( '()
      , 'OTArtifact
      , 'OTEnchantment
@@ -213,7 +213,7 @@ type OTNonCreature =
      )
 
 type OTSpell =
-  OT
+  OTN
     '( '()
      , 'OTArtifact
      , 'OTCreature
@@ -224,7 +224,7 @@ type OTSpell =
      )
 
 type OTCard =
-  OT
+  OTN
     '( '()
      , 'OTArtifact
      , 'OTCreature
@@ -236,7 +236,7 @@ type OTCard =
      )
 
 type OTDamageSource =
-  OT
+  OTN
     '( '()
      , 'OTArtifact
      , 'OTCreature
@@ -249,7 +249,7 @@ type OTDamageSource =
      )
 
 type OTAny =
-  OT
+  OTN
     '( '()
      , 'OTActivatedAbility
      , 'OTArtifact

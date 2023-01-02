@@ -82,8 +82,8 @@ import safe MtgPure.Model.IsCardList (pushCard)
 import safe MtgPure.Model.Library (Library (..))
 import safe MtgPure.Model.Object.IndexOT (IndexOT (..))
 import safe MtgPure.Model.Object.IsObjectType (IsObjectType (..))
-import safe MtgPure.Model.Object.OTKind (OTCard, OTPermanent)
 import safe MtgPure.Model.Object.OTN (OT0)
+import safe MtgPure.Model.Object.OTNAliases (OTCard, OTPermanent)
 import safe MtgPure.Model.Object.Object (Object)
 import safe MtgPure.Model.Object.ObjectId (
   ObjectId (..),

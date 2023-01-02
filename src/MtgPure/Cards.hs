@@ -57,7 +57,8 @@ import safe MtgPure.Model.Damage (Damage' (..))
 import safe MtgPure.Model.GenericMana (GenericMana (..))
 import safe MtgPure.Model.LandType (LandType (..))
 import safe MtgPure.Model.ManaSymbol (ManaSymbol (..))
-import safe MtgPure.Model.Object.OTKind (
+import safe MtgPure.Model.Object.OTN (OT3)
+import safe MtgPure.Model.Object.OTNAliases (
   OTActivatedOrTriggeredAbility,
   OTArtifactCreature,
   OTCreature,
@@ -72,7 +73,6 @@ import safe MtgPure.Model.Object.OTKind (
   OTSorcery,
   OTSpell,
  )
-import safe MtgPure.Model.Object.OTN (OT3)
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Object.ToObjectN.Instances ()
 import safe MtgPure.Model.Power (Power (..))

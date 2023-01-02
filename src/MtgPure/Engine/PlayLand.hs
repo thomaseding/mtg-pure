@@ -49,7 +49,7 @@ import safe MtgPure.Engine.State (
   mkOpaqueGameState,
  )
 import safe MtgPure.Model.IsCardList (containsCard)
-import safe MtgPure.Model.Object.OTKind (OTLand)
+import safe MtgPure.Model.Object.OTNAliases (OTLand)
 import safe MtgPure.Model.Object.Object (Object)
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Permanent (cardToPermanent)

@@ -82,11 +82,6 @@ import safe MtgPure.Model.Mana (Snow (..))
 import safe MtgPure.Model.ManaCost (ManaCost)
 import safe MtgPure.Model.ManaSymbol (ManaSymbol (..))
 import safe MtgPure.Model.Object.IsObjectType (IsObjectType)
-import safe MtgPure.Model.Object.OTKind (
-  OTDamageSource,
-  OTLand,
-  OTPlayer,
- )
 import safe MtgPure.Model.Object.OTN (
   OT1,
   OT2,
@@ -94,6 +89,11 @@ import safe MtgPure.Model.Object.OTN (
   OT4,
   OT5,
   OT6,
+ )
+import safe MtgPure.Model.Object.OTNAliases (
+  OTDamageSource,
+  OTLand,
+  OTPlayer,
  )
 import safe MtgPure.Model.Object.Singleton.Any (CoAny (..))
 import safe MtgPure.Model.Object.Singleton.Card (CoCard (..))

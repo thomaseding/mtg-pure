@@ -74,7 +74,8 @@ import safe MtgPure.Model.Mana (Snow (..))
 import safe MtgPure.Model.ManaCost (ManaCost)
 import safe MtgPure.Model.ManaPool (ManaPool)
 import safe MtgPure.Model.Object.IsObjectType (IsObjectType)
-import safe MtgPure.Model.Object.OTKind (
+import safe MtgPure.Model.Object.OTN (OT1, OT2, OT3, OT4, OT5, OT6)
+import safe MtgPure.Model.Object.OTNAliases (
   OTActivatedOrTriggeredAbility,
   OTAny,
   OTArtifact,
@@ -92,7 +93,6 @@ import safe MtgPure.Model.Object.OTKind (
   OTSorcery,
   OTSpell,
  )
-import safe MtgPure.Model.Object.OTN (OT1, OT2, OT3, OT4, OT5, OT6)
 import safe MtgPure.Model.Object.Singleton.Any (WAny)
 import safe MtgPure.Model.Object.Singleton.Card (WCard)
 import safe MtgPure.Model.Object.Singleton.Permanent (CoPermanent, WPermanent)

@@ -67,7 +67,7 @@ header =
   \  )\n\
   \import safe MtgPure.Model.Object.IsObjectType (IsObjectType)\n\
   \import safe MtgPure.Model.Object.ObjectN (ObjectN (..))\n\
-  \import safe MtgPure.Model.Object.OTN (OT)\n\
+  \import safe MtgPure.Model.Object.OTN (OTN)\n\
   \import safe MtgPure.Model.Object.ToObjectN.Classes\n\
   \  ( ToObject1'(..),\n\
   \    ToObject2'(..),\n\
@@ -266,7 +266,7 @@ generateObjectMToObjectN desc symsM symsN =
     unwords $
       ["instance", "Inst" ++ show n, "IsObjectType"]
         ++ map (interpretSym desc) symsN
-        ++ ["=>", "ToObject" ++ show n, "(OT '(Z, " ++ seqSymsM ++ "))"]
+        ++ ["=>", "ToObject" ++ show n, "(OTN '(Z, " ++ seqSymsM ++ "))"]
         ++ map (interpretSym desc) symsN
         ++ ["where"]
 
@@ -281,7 +281,7 @@ telescopeToObjectN desc acc symsM symsN = case m < n of
   newSym = head $ symsN \\ symsM
   symsSucc = sort $ newSym : symsM
   typeSucc =
-    "(ON (OT '(Z, " ++ commas (map (interpretSym desc) symsSucc) ++ ")))"
+    "(ON (OTN '(Z, " ++ commas (map (interpretSym desc) symsSucc) ++ ")))"
   acc' = "(" ++ toObjectSucc ++ " " ++ acc ++ " :: " ++ typeSucc ++ ")"
 
 commas :: [String] -> String

@@ -46,7 +46,7 @@ import safe MtgPure.Engine.Monad (
  )
 import safe MtgPure.Engine.Prompt (PlayerCount (..), PlayerIndex (..), Prompt' (..))
 import safe MtgPure.Engine.State (GameState (..), Magic, MagicCont, logCall, runMagicCont)
-import safe MtgPure.Model.Object.OTKind (OTPermanent)
+import safe MtgPure.Model.Object.OTNAliases (OTPermanent)
 import safe MtgPure.Model.Object.Object (Object)
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Permanent (Permanent (..), Phased (..))

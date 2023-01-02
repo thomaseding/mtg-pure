@@ -11,7 +11,7 @@ module MtgPure.Model.Hand (
 import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.IsCardList (IsCardList (..))
-import safe MtgPure.Model.Object.OTKind (OTCard)
+import safe MtgPure.Model.Object.OTNAliases (OTCard)
 import safe MtgPure.Model.Zone (Zone (..))
 import safe MtgPure.Model.ZoneObject.ZoneObject (ZO)
 

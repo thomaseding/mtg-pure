@@ -26,18 +26,6 @@ import safe Data.Typeable (TypeRep, Typeable, typeRep)
 import safe MtgPure.Model.Object.IsObjectType (
   IsObjectType (litObjectType),
  )
-import safe MtgPure.Model.Object.OTKind (
-  OTAny,
-  OTArtifactCreature,
-  OTCreaturePlaneswalker,
-  OTCreaturePlayer,
-  OTCreaturePlayerPlaneswalker,
-  OTDamageSource,
-  OTEnchantmentCreature,
-  OTPermanent,
-  OTPlayerPlaneswalker,
-  OTSpell,
- )
 import safe MtgPure.Model.Object.OTN (
   OT0,
   OT1,
@@ -52,6 +40,18 @@ import safe MtgPure.Model.Object.OTN (
   OT7,
   OT8,
   OT9,
+ )
+import safe MtgPure.Model.Object.OTNAliases (
+  OTAny,
+  OTArtifactCreature,
+  OTCreaturePlaneswalker,
+  OTCreaturePlayer,
+  OTCreaturePlayerPlaneswalker,
+  OTDamageSource,
+  OTEnchantmentCreature,
+  OTPermanent,
+  OTPlayerPlaneswalker,
+  OTSpell,
  )
 import safe MtgPure.Model.Object.ObjectType (
   ObjectType (..),
@@ -98,7 +98,7 @@ instance Inst2 IsObjectType a b => PrettyType (OT2 a b) where
         | rep == getRep @OTPlayerPlaneswalker ->
           "OTPlayerPlaneswalker"
         | otherwise ->
-          "OT '( '(), "
+          "OTN '( '(), "
             ++ show (getRep @a)
             ++ ", "
             ++ show (getRep @b)
@@ -112,7 +112,7 @@ instance Inst3 IsObjectType a b c => PrettyType (OT3 a b c) where
         | rep == getRep @OTCreaturePlayerPlaneswalker ->
           "OTCreaturePlayerPlaneswalker"
         | otherwise ->
-          "OT '( '(), "
+          "OTN '( '(), "
             ++ show (getRep @a)
             ++ ", "
             ++ show (getRep @b)
@@ -126,7 +126,7 @@ instance Inst4 IsObjectType a b c d => PrettyType (OT4 a b c d) where
   prettyType =
     if
         | otherwise ->
-          "OT '( '(), "
+          "OTN '( '(), "
             ++ show (getRep @a)
             ++ ", "
             ++ show (getRep @b)
@@ -144,7 +144,7 @@ instance Inst5 IsObjectType a b c d e => PrettyType (OT5 a b c d e) where
         | rep == getRep @OTPermanent ->
           "OTPermanent"
         | otherwise ->
-          "OT '( '(), "
+          "OTN '( '(), "
             ++ show (getRep @a)
             ++ ", "
             ++ show (getRep @b)
@@ -164,7 +164,7 @@ instance Inst6 IsObjectType a b c d e f => PrettyType (OT6 a b c d e f) where
         | rep == getRep @OTSpell ->
           "OTSpell"
         | otherwise ->
-          "OT '( '(), "
+          "OTN '( '(), "
             ++ show (getRep @a)
             ++ ", "
             ++ show (getRep @b)
@@ -184,7 +184,7 @@ instance Inst7 IsObjectType a b c d e f g => PrettyType (OT7 a b c d e f g) wher
   prettyType =
     if
         | otherwise ->
-          "OT '(),  '("
+          "OTN '(),  '("
             ++ show (getRep @a)
             ++ ", "
             ++ show (getRep @b)
@@ -208,7 +208,7 @@ instance Inst8 IsObjectType a b c d e f g h => PrettyType (OT8 a b c d e f g h) 
         | rep == getRep @OTDamageSource ->
           "OTDamageSource"
         | otherwise ->
-          "OT '( '(), "
+          "OTN '( '(), "
             ++ show (getRep @a)
             ++ ", "
             ++ show (getRep @b)
@@ -232,7 +232,7 @@ instance Inst9 IsObjectType a b c d e f g h i => PrettyType (OT9 a b c d e f g h
   prettyType =
     if
         | otherwise ->
-          "OT '( '(), "
+          "OTN '( '(), "
             ++ show (getRep @a)
             ++ ", "
             ++ show (getRep @b)
@@ -258,7 +258,7 @@ instance Inst10 IsObjectType a b c d e f g h i j => PrettyType (OT10 a b c d e f
   prettyType =
     if
         | otherwise ->
-          "OT '( '(), "
+          "OTN '( '(), "
             ++ show (getRep @a)
             ++ ", "
             ++ show (getRep @b)
@@ -286,7 +286,7 @@ instance Inst11 IsObjectType a b c d e f g h i j k => PrettyType (OT11 a b c d e
   prettyType =
     if
         | otherwise ->
-          "OT '( '(), "
+          "OTN '( '(), "
             ++ show (getRep @a)
             ++ ", "
             ++ show (getRep @b)
@@ -318,7 +318,7 @@ instance Inst12 IsObjectType a b c d e f g h i j k l => PrettyType (OT12 a b c d
         | rep == getRep @OTAny ->
           "OTAny"
         | otherwise ->
-          "OT '( '(), "
+          "OTN '( '(), "
             ++ show (getRep @a)
             ++ ", "
             ++ show (getRep @b)

@@ -35,8 +35,8 @@ import safe MtgPure.Engine.State (
   logCall,
   mkOpaqueGameState,
  )
-import safe MtgPure.Model.Object.OTKind (OTAny)
 import safe MtgPure.Model.Object.OTN (OT0)
+import safe MtgPure.Model.Object.OTNAliases (OTAny)
 import safe MtgPure.Model.Object.Object (Object (..))
 import safe MtgPure.Model.Object.ObjectId (
   UntypedObject (..),

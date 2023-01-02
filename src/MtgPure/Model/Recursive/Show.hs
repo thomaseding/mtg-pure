@@ -55,7 +55,15 @@ import safe MtgPure.Model.ManaCost (ManaCost (..))
 import safe MtgPure.Model.ManaPool (CompleteManaPool (..), ManaPool (..))
 import safe MtgPure.Model.ManaSymbol (ManaSymbol (..))
 import safe MtgPure.Model.Object.IsObjectType (IsObjectType (..))
-import safe MtgPure.Model.Object.OTKind (
+import safe MtgPure.Model.Object.OTN (
+  OT1,
+  OT2,
+  OT3,
+  OT4,
+  OT5,
+  OT6,
+ )
+import safe MtgPure.Model.Object.OTNAliases (
   OTAny,
   OTCreaturePlaneswalker,
   OTCreaturePlayer,
@@ -64,14 +72,6 @@ import safe MtgPure.Model.Object.OTKind (
   OTPermanent,
   OTPlayerPlaneswalker,
   OTSpell,
- )
-import safe MtgPure.Model.Object.OTN (
-  OT1,
-  OT2,
-  OT3,
-  OT4,
-  OT5,
-  OT6,
  )
 import safe MtgPure.Model.Object.Object (Object (..))
 import safe MtgPure.Model.Object.ObjectId (

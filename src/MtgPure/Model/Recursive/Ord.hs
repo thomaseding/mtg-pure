@@ -34,7 +34,6 @@ import safe MtgPure.Model.ManaCost (ManaCost)
 import safe MtgPure.Model.ManaPool (ManaPool)
 import safe MtgPure.Model.Object.IndexOT (IndexOT (indexOT))
 import safe MtgPure.Model.Object.IsObjectType (IsObjectType (..))
-import safe MtgPure.Model.Object.OTKind (OTAny, OTDamageSource)
 import safe MtgPure.Model.Object.OTN (
   OT0,
   OT1,
@@ -44,6 +43,7 @@ import safe MtgPure.Model.Object.OTN (
   OT5,
   OT6,
  )
+import safe MtgPure.Model.Object.OTNAliases (OTAny, OTDamageSource)
 import safe MtgPure.Model.Object.Object (Object (..))
 import safe MtgPure.Model.Object.ObjectId (
   ObjectId (..),

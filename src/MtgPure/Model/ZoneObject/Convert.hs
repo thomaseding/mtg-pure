@@ -61,16 +61,6 @@ import safe Data.Monoid (First (..))
 import safe Data.Typeable (Typeable, cast)
 import safe MtgPure.Model.Object.IsObjectType (IsObjectType)
 import safe MtgPure.Model.Object.LitOT (LitOT (..))
-import safe MtgPure.Model.Object.OT (OT' (..))
-import safe MtgPure.Model.Object.OTKind (
-  OTActivatedOrTriggeredAbility,
-  OTAny,
-  OTCard,
-  OTCreaturePlayerPlaneswalker,
-  OTDamageSource,
-  OTPermanent,
-  OTSpell,
- )
 import safe MtgPure.Model.Object.OTN (
   OT0,
   OT1,
@@ -86,6 +76,16 @@ import safe MtgPure.Model.Object.OTN (
   OT8,
   OT9,
  )
+import safe MtgPure.Model.Object.OTNAliases (
+  OTActivatedOrTriggeredAbility,
+  OTAny,
+  OTCard,
+  OTCreaturePlayerPlaneswalker,
+  OTDamageSource,
+  OTPermanent,
+  OTSpell,
+ )
+import safe MtgPure.Model.Object.OTN_ (OTN' (..))
 import safe MtgPure.Model.Object.Object (Object (..))
 import safe MtgPure.Model.Object.ObjectId (
   GetObjectId (..),

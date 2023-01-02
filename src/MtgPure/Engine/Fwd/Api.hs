@@ -95,8 +95,8 @@ import safe MtgPure.Engine.State (
   logCall,
  )
 import safe MtgPure.Model.EffectType (EffectType (..))
-import safe MtgPure.Model.Object.OTKind (OTCard, OTPermanent)
 import safe MtgPure.Model.Object.OTN (OT0)
+import safe MtgPure.Model.Object.OTNAliases (OTCard, OTPermanent)
 import safe MtgPure.Model.Object.Object (Object)
 import safe MtgPure.Model.Object.ObjectId (ObjectId)
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
