@@ -28,6 +28,7 @@ module MtgPure.Model.ZoneObject.Convert (
   AsCreaturePlayerPlaneswalker,
   AsDamageSource,
   AsPermanent,
+  AsSpell',
   AsSpell,
   asActivatedOrTriggeredAbility,
   asAny,
@@ -111,6 +112,7 @@ import safe MtgPure.Model.Object.ToObjectN.Classes (
   ToObject4 (..),
   ToObject5 (..),
   ToObject6 (..),
+  ToObject6',
   ToObject7 (..),
   ToObject8 (..),
   ToObject9 (..),
@@ -383,6 +385,16 @@ type AsPermanent ot =
     'OTEnchantment
     'OTLand
     'OTPlaneswalker
+
+type AsSpell' ot =
+  ToObject6'
+    ot
+    'OTArtifact
+    'OTCreature
+    'OTEnchantment
+    'OTInstant
+    'OTPlaneswalker
+    'OTSorcery
 
 type AsSpell ot =
   ToObject6

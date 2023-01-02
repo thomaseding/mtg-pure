@@ -15,13 +15,17 @@ module MtgPure.Engine.Resolve (
 
 import safe qualified Control.Monad as M
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
+import safe Data.Kind (Type)
 import safe qualified Data.Map.Strict as Map
+import safe Data.Typeable (Typeable)
 import safe Data.Void (Void)
 import safe MtgPure.Engine.Fwd.Api (
   enact,
   gainPriority,
   getActivePlayer,
+  newObjectId,
   performElections,
+  setPermanent,
  )
 import safe MtgPure.Engine.Legality (Legality (..))
 import safe MtgPure.Engine.Monad (fromPublicRO, fromRO, get, gets, modify)
@@ -29,20 +33,23 @@ import safe MtgPure.Engine.Orphans ()
 import safe MtgPure.Engine.Prompt (InternalLogicError (..))
 import safe MtgPure.Engine.State (
   AnyElected (..),
-  Elected,
+  Elected (..),
   GameState (..),
   Magic,
   PendingReady (..),
-  electedObject_effect,
   logCall,
  )
 import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.Object.OTN (OT0)
+import safe MtgPure.Model.Object.Object (Object)
+import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
+import safe MtgPure.Model.Permanent (cardToPermanent)
 import safe MtgPure.Model.PrePost (PrePost (..))
-import safe MtgPure.Model.Recursive (Effect (..), Elect (..))
+import safe MtgPure.Model.Recursive (Card, CardFacet, Effect (..), Elect (..))
 import safe MtgPure.Model.Stack (Stack (..), stackObjectToZo0)
 import safe MtgPure.Model.Zone (Zone (..))
-import safe MtgPure.Model.ZoneObject.ZoneObject (ZO)
+import safe MtgPure.Model.ZoneObject.Convert (toZO0, zo0ToPermanent)
+import safe MtgPure.Model.ZoneObject.ZoneObject (IsOT, ZO)
 
 resolveTopOfStack :: Monad m => Magic 'Private 'RW m ()
 resolveTopOfStack = logCall 'resolveTopOfStack do
@@ -69,7 +76,7 @@ resolveStackObject zoStack = logCall 'resolveStackObject do
     Just anyElected -> case anyElected of
       AnyElected elected -> resolveElected zoStack elected
 
-resolveManaAbility :: Monad m => Elected 'Pre ot -> Magic 'Private 'RW m Legality
+resolveManaAbility :: (IsOT ot, Monad m) => Elected 'Pre ot -> Magic 'Private 'RW m Legality
 resolveManaAbility elected = logCall 'resolveManaAbility do
   let isManaAbility = True -- TODO
   case isManaAbility of
@@ -79,11 +86,47 @@ resolveManaAbility elected = logCall 'resolveManaAbility do
       resolveElected zoStack elected
       pure Legal
 
-resolveElected :: forall ot m. Monad m => ZO 'ZStack OT0 -> Elected 'Pre ot -> Magic 'Private 'RW m ()
+resolveElected :: forall ot m. (IsOT ot, Monad m) => ZO 'ZStack OT0 -> Elected 'Pre ot -> Magic 'Private 'RW m ()
 resolveElected zoStack elected = logCall 'resolveElected do
-  let goElectEffect :: Elect 'Post (Effect 'OneShot) ot -> Magic 'Private 'RW m ()
-      goElectEffect = M.void . performElections zoStack goEffect
+  case elected of
+    ElectedActivatedAbility{} -> resolveOneShot zoStack $ unPending $ electedActivatedAbility_effect elected
+    ElectedSpell{} -> case electedSpell_effect elected of
+      Just effect -> resolveOneShot zoStack $ unPending effect
+      Nothing ->
+        let electedPerm =
+              ElectedPermanent
+                { electedPermanent_controller = electedSpell_controller elected
+                , electedPermanent_card = electedSpell_card elected
+                , electedPermanent_facet = electedSpell_facet elected
+                }
+         in resolvePermanent electedPerm
 
-      goEffect :: Effect 'OneShot -> Magic 'Private 'RW m (Maybe Void)
-      goEffect = fmap (const Nothing) . enact
-  goElectEffect $ unPending $ electedObject_effect elected
+resolveOneShot :: Monad m => ZO 'ZStack OT0 -> Elect 'Post (Effect 'OneShot) ot -> Magic 'Private 'RW m ()
+resolveOneShot zoStack = logCall 'resolveOneShot $ M.void . performElections zoStack goEffect
+ where
+  goEffect :: Monad m => Effect 'OneShot -> Magic 'Private 'RW m (Maybe Void)
+  goEffect = fmap (const Nothing) . enact
+
+data ElectedPermanent (ot :: Type) :: Type where
+  ElectedPermanent ::
+    { electedPermanent_controller :: Object 'OTPlayer
+    , electedPermanent_card :: Card ot
+    , electedPermanent_facet :: CardFacet ot
+    } ->
+    ElectedPermanent ot
+  deriving (Typeable)
+
+resolvePermanent :: (IsOT ot, Monad m) => ElectedPermanent ot -> Magic 'Private 'RW m ()
+resolvePermanent elected = logCall 'resolvePermanent do
+  i <- newObjectId
+  let oPerm = zo0ToPermanent $ toZO0 i
+      perm = case cardToPermanent oPlayer card facet of
+        Nothing -> error $ show ExpectedCardToBeAPermanentCard
+        Just perm' -> perm'
+  setPermanent oPerm $ Just perm
+ where
+  ElectedPermanent
+    { electedPermanent_controller = oPlayer
+    , electedPermanent_card = card
+    , electedPermanent_facet = facet
+    } = elected

@@ -466,9 +466,9 @@ ordCardFacet = \case
         , pure $ compare creatTypes1 creatTypes2
         , ordAbilities abilities1 abilities2
         ]
-  ArtifactCreatureFacet colors1 cost1 artTypes1 creatTypes1 power1 toughness1 artAbils1 creatAbils1 ->
+  ArtifactCreatureFacet colors1 cost1 artTypes1 creatTypes1 power1 toughness1 artAbils1 creatAbils1 bothAbils1 ->
     \case
-      ArtifactCreatureFacet colors2 cost2 artTypes2 creatTypes2 power2 toughness2 artAbils2 creatAbils2 ->
+      ArtifactCreatureFacet colors2 cost2 artTypes2 creatTypes2 power2 toughness2 artAbils2 creatAbils2 bothAbils2 ->
         seqM
           [ ordColors colors1 colors2
           , ordCost cost1 cost2
@@ -478,16 +478,18 @@ ordCardFacet = \case
           , pure $ compare toughness1 toughness2
           , ordAbilities artAbils1 artAbils2
           , ordAbilities creatAbils1 creatAbils2
+          , ordAbilities bothAbils1 bothAbils2
           ]
-  ArtifactLandFacet artTypes1 creatTypes1 landTypes1 artAbils1 landAbils1 ->
+  ArtifactLandFacet artTypes1 creatTypes1 landTypes1 artAbils1 landAbils1 bothAbils1 ->
     \case
-      ArtifactLandFacet artTypes2 creatTypes2 landTypes2 artAbils2 landAbils2 ->
+      ArtifactLandFacet artTypes2 creatTypes2 landTypes2 artAbils2 landAbils2 bothAbils2 ->
         seqM
           [ pure $ compare artTypes1 artTypes2
           , pure $ compare creatTypes1 creatTypes2
           , pure $ compare landTypes1 landTypes2
           , ordAbilities artAbils1 artAbils2
           , ordAbilities landAbils1 landAbils2
+          , ordAbilities bothAbils1 bothAbils2
           ]
   CreatureFacet colors1 cost1 creatTypes1 power1 toughness1 abilities1 -> \case
     CreatureFacet colors2 cost2 creatTypes2 power2 toughness2 abilities2 ->
@@ -508,13 +510,14 @@ ordCardFacet = \case
         , ordEnchantmentTypes enchantTypes1 enchantTypes2
         , ordAbilities abilities1 abilities2
         ]
-  EnchantmentCreatureFacet colors1 cost1 creatTypes1 power1 toughness1 creatAbils1 enchAbils1 bothAbils1 ->
+  EnchantmentCreatureFacet colors1 cost1 creatTypes1 enchantTypes1 power1 toughness1 creatAbils1 enchAbils1 bothAbils1 ->
     \case
-      EnchantmentCreatureFacet colors2 cost2 creatTypes2 power2 toughness2 creatAbils2 enchAbils2 bothAbils2 ->
+      EnchantmentCreatureFacet colors2 cost2 creatTypes2 enchantTypes2 power2 toughness2 creatAbils2 enchAbils2 bothAbils2 ->
         seqM
           [ ordColors colors1 colors2
           , ordCost cost1 cost2
           , pure $ compare creatTypes1 creatTypes2
+          , ordEnchantmentTypes enchantTypes1 enchantTypes2
           , pure $ compare power1 power2
           , pure $ compare toughness1 toughness2
           , ordAbilities creatAbils1 creatAbils2

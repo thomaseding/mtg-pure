@@ -30,7 +30,6 @@ module MtgPure.Engine.State (
   Elected (..),
   electedObject_controller,
   electedObject_cost,
-  electedObject_effect,
   AnyElected (..),
   --
   logCall,
@@ -77,10 +76,6 @@ import safe MtgPure.Model.Deck (Deck (..))
 import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.Mulligan (Mulligan)
 import safe MtgPure.Model.Object.OTN (OT0)
-import safe MtgPure.Model.Object.OTNAliases (
-  OTInstant,
-  OTSorcery,
- )
 import safe MtgPure.Model.Object.Object (Object)
 import safe MtgPure.Model.Object.ObjectId (ObjectDiscriminant, ObjectId (..))
 import safe MtgPure.Model.Object.ObjectType (
@@ -103,7 +98,7 @@ import safe MtgPure.Model.Recursive.Show ()
 import safe MtgPure.Model.Sideboard (Sideboard)
 import safe MtgPure.Model.Stack (Stack (..))
 import safe MtgPure.Model.Zone (Zone (..))
-import safe MtgPure.Model.ZoneObject.ZoneObject (IsZO, ZO)
+import safe MtgPure.Model.ZoneObject.ZoneObject (IsOT, IsZO, ZO)
 
 type Fwd m = Fwd' (GameResult m) (GameState m) m
 
@@ -141,44 +136,28 @@ data Elected (pEffect :: PrePost) (ot :: Type) :: Type where
     , electedActivatedAbility_effect :: PendingReady pEffect (Effect 'OneShot) ot
     } ->
     Elected pEffect ot
-  ElectedInstant ::
-    { electedInstant_controller :: Object 'OTPlayer
-    , electedInstant_card :: Card OTInstant
-    , electedInstant_facet :: CardFacet OTInstant
-    , electedInstant_cost :: Cost OTInstant
-    , electedInstant_effect :: PendingReady pEffect (Effect 'OneShot) OTInstant
+  ElectedSpell ::
+    { electedSpell_controller :: Object 'OTPlayer
+    , electedSpell_card :: Card ot
+    , electedSpell_facet :: CardFacet ot
+    , electedSpell_cost :: Cost ot
+    , electedSpell_effect :: Maybe (PendingReady pEffect (Effect 'OneShot) ot)
     } ->
-    Elected pEffect OTInstant
-  ElectedSorcery ::
-    { electedSorcery_controller :: Object 'OTPlayer
-    , electedSorcery_card :: Card OTSorcery
-    , electedSorcery_facet :: CardFacet OTSorcery
-    , electedSorcery_cost :: Cost OTSorcery
-    , electedSorcery_effect :: PendingReady pEffect (Effect 'OneShot) OTSorcery
-    } ->
-    Elected pEffect OTSorcery
+    Elected pEffect ot
   deriving (Typeable)
 
 electedObject_controller :: Elected pEffect ot -> Object 'OTPlayer
 electedObject_controller elected = ($ elected) case elected of
   ElectedActivatedAbility{} -> electedActivatedAbility_controller
-  ElectedInstant{} -> electedInstant_controller
-  ElectedSorcery{} -> electedSorcery_controller
+  ElectedSpell{} -> electedSpell_controller
 
 electedObject_cost :: Elected pEffect ot -> Cost ot
 electedObject_cost elected = ($ elected) case elected of
   ElectedActivatedAbility{} -> electedActivatedAbility_cost
-  ElectedInstant{} -> electedInstant_cost
-  ElectedSorcery{} -> electedSorcery_cost
-
-electedObject_effect :: Elected pEffect ot -> PendingReady pEffect (Effect 'OneShot) ot
-electedObject_effect elected = ($ elected) case elected of
-  ElectedActivatedAbility{} -> electedActivatedAbility_effect
-  ElectedInstant{} -> electedInstant_effect
-  ElectedSorcery{} -> electedSorcery_effect
+  ElectedSpell{} -> electedSpell_cost
 
 data AnyElected (pEffect :: PrePost) :: Type where
-  AnyElected :: Elected pEffect ot -> AnyElected pEffect
+  AnyElected :: IsOT ot => Elected pEffect ot -> AnyElected pEffect
   deriving (Typeable)
 
 data GameState (m :: Type -> Type) where

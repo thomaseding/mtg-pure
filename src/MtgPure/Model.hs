@@ -18,6 +18,7 @@ module MtgPure.Model (
   module MtgPure.Model.Damage,
   module MtgPure.Model.Deck,
   module MtgPure.Model.EffectType,
+  module MtgPure.Model.Enchantment,
   module MtgPure.Model.Exile,
   module MtgPure.Model.GenericMana,
   module MtgPure.Model.Graveyard,
@@ -58,6 +59,7 @@ module MtgPure.Model (
   module MtgPure.Model.Permanent,
   module MtgPure.Model.Phase,
   module MtgPure.Model.PhaseStep,
+  module MtgPure.Model.Planeswalker,
   module MtgPure.Model.Player,
   module MtgPure.Model.Power,
   module MtgPure.Model.PrePost,
@@ -102,6 +104,7 @@ import safe MtgPure.Model.CreatureType
 import safe MtgPure.Model.Damage
 import safe MtgPure.Model.Deck
 import safe MtgPure.Model.EffectType
+import safe MtgPure.Model.Enchantment
 import safe MtgPure.Model.Exile
 import safe MtgPure.Model.GenericMana
 import safe MtgPure.Model.Graveyard
@@ -142,6 +145,7 @@ import safe MtgPure.Model.Object.VisitObjectN
 import safe MtgPure.Model.Permanent
 import safe MtgPure.Model.Phase
 import safe MtgPure.Model.PhaseStep
+import safe MtgPure.Model.Planeswalker
 import safe MtgPure.Model.Player
 import safe MtgPure.Model.Power
 import safe MtgPure.Model.PrePost

@@ -27,12 +27,14 @@ import safe MtgPure.Model.Artifact (Artifact (..))
 import safe MtgPure.Model.CardName (HasCardName (getCardName))
 import safe MtgPure.Model.Creature (Creature (..))
 import safe MtgPure.Model.Deck (Deck (..))
+import safe MtgPure.Model.Enchantment (AnyEnchantmentType (..), Enchantment (..))
 import safe MtgPure.Model.Graveyard (Graveyard (..))
 import safe MtgPure.Model.Hand (Hand (..))
 import safe MtgPure.Model.Land (Land (..))
 import safe MtgPure.Model.Library (Library (..))
 import safe MtgPure.Model.Permanent (Permanent (..))
 import safe MtgPure.Model.PhaseStep (PhaseStep (..))
+import safe MtgPure.Model.Planeswalker (Planeswalker (..))
 import safe MtgPure.Model.Player (Player (..))
 import safe MtgPure.Model.Recursive (
   Ability,
@@ -62,6 +64,10 @@ deriving instance Show Creature
 
 deriving instance Show (Elected pEffect ot)
 
+deriving instance Show Enchantment
+
+deriving instance Show AnyEnchantmentType
+
 deriving instance Show (GameResult m)
 
 deriving instance Show Graveyard
@@ -75,6 +81,8 @@ deriving instance Show Library
 deriving instance Show Permanent
 
 deriving instance Show PhaseStep
+
+deriving instance Show Planeswalker
 
 deriving instance Show Player
 

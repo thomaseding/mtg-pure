@@ -106,7 +106,7 @@ dealDamage' _oSource oVictim (forceVars -> Damage damage) = logCall 'dealDamage'
                 }
       case permanentPlaneswalker perm of
         Nothing -> pure ()
-        Just () -> undefined
+        Just{} -> undefined
   oPlayers <- fromPublicRO allPlayers
   M.forM_ oPlayers \oPlayer -> case getObjectId oVictim == getObjectId oPlayer of
     False -> pure ()

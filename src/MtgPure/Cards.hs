@@ -540,6 +540,7 @@ nyxbornRollicker = Card "Nyxborn Rollicker" $
       { enchantmentCreature_colors = toColors R
       , enchantmentCreature_cost = spellCost R
       , enchantmentCreature_creatureTypes = [Satyr]
+      , enchantmentCreature_enchantmentTypes = []
       , enchantmentCreature_power = Power 1
       , enchantmentCreature_toughness = Toughness 1
       , enchantmentCreature_creatureAbilities = []
@@ -564,6 +565,7 @@ ornithopter = Card "Ornithopter" $
       , artifactCreature_toughness = Toughness 2
       , artifactCreature_artifactAbilities = []
       , artifactCreature_creatureAbilities = [Static Flying]
+      , artifactCreature_artifactCreatureAbilities = []
       }
 
 plains :: Card OTLand

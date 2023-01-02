@@ -196,6 +196,9 @@ instance Show (Effect ef) where
 instance Show (Elect p el ot) where
   show = runEnvM defaultDepthLimit . showElect
 
+instance Show (EnchantmentType ot) where
+  show = runEnvM defaultDepthLimit . showEnchantmentType
+
 instance Show EventListener where
   show = runEnvM defaultDepthLimit . showEventListener
 
@@ -546,7 +549,7 @@ showCardFacet = \case
         <> pure " "
         <> sCreatTypes
         <> sAbilities
-  ArtifactCreatureFacet colors cost artTypes creatTypes power toughness artAbils creatAbils ->
+  ArtifactCreatureFacet colors cost artTypes creatTypes power toughness artAbils creatAbils bothAbils ->
     yesParens do
       sColors <- parens <$> showColors colors
       sCost <- parens <$> showCost cost
@@ -555,7 +558,8 @@ showCardFacet = \case
       sPower <- parens <$> showPower power
       sToughness <- parens <$> showToughness toughness
       sArtAbils <- parens <$> showAbilities artAbils
-      sCreatAbils <- dollar <$> showAbilities creatAbils
+      sCreatAbils <- parens <$> showAbilities creatAbils
+      sBothAbils <- dollar <$> showAbilities bothAbils
       pure $
         pure "ArtifactCreatureFacet "
           <> sColors
@@ -571,14 +575,17 @@ showCardFacet = \case
           <> sToughness
           <> pure " "
           <> sArtAbils
+          <> pure " "
           <> sCreatAbils
-  ArtifactLandFacet artTypes creatTypes landTypes artAbils landAbils ->
+          <> sBothAbils
+  ArtifactLandFacet artTypes creatTypes landTypes artAbils landAbils bothAbils ->
     yesParens do
       sArtTypes <- parens <$> showArtifactTypes artTypes
       sCreatTypes <- parens <$> showCreatureTypes creatTypes
       sLandTypes <- parens <$> showLandTypes landTypes
       sArtAbils <- parens <$> showAbilities artAbils
-      sLandAbils <- dollar <$> showAbilities landAbils
+      sLandAbils <- parens <$> showAbilities landAbils
+      sBothAbils <- dollar <$> showAbilities bothAbils
       pure $
         pure "ArtifactLandFacet "
           <> sArtTypes
@@ -588,7 +595,9 @@ showCardFacet = \case
           <> sLandTypes
           <> pure " "
           <> sArtAbils
+          <> pure " "
           <> sLandAbils
+          <> sBothAbils
   CreatureFacet colors cost creatureTypes power toughness abilities ->
     yesParens do
       sColors <- parens <$> showColors colors
@@ -624,11 +633,12 @@ showCardFacet = \case
         <> pure " "
         <> sEnchantTypes
         <> sAbilities
-  EnchantmentCreatureFacet colors cost creatTypes power toughness creatAbils enchAbils bothAbils ->
+  EnchantmentCreatureFacet colors cost creatTypes enchantTypes power toughness creatAbils enchAbils bothAbils ->
     yesParens do
       sColors <- parens <$> showColors colors
       sCost <- parens <$> showCost cost
       sCreatTypes <- parens <$> showCreatureTypes creatTypes
+      sEnchantTypes <- parens <$> showEnchantmentTypes enchantTypes
       sPower <- parens <$> showPower power
       sToughness <- parens <$> showToughness toughness
       sCreatAbils <- parens <$> showAbilities creatAbils
@@ -641,6 +651,8 @@ showCardFacet = \case
           <> sCost
           <> pure " "
           <> sCreatTypes
+          <> pure " "
+          <> sEnchantTypes
           <> pure " "
           <> sPower
           <> pure " "

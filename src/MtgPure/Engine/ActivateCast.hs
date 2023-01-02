@@ -37,6 +37,7 @@ import safe MtgPure.Engine.Monad (
 import safe MtgPure.Engine.Prompt (
   ActivateAbility,
   CastSpell,
+  InternalLogicError (CantHappenByConstruction),
   InvalidCastSpell (..),
   PriorityAction (ActivateAbility, CastSpell),
   Prompt' (..),
@@ -60,7 +61,13 @@ import safe MtgPure.Model.IsCardList (containsCard)
 import safe MtgPure.Model.Object.IsObjectType (IsObjectType (..))
 import safe MtgPure.Model.Object.OTN (OT0, OT1)
 import safe MtgPure.Model.Object.OTNAliases (
+  OTArtifact,
+  OTArtifactCreature,
+  OTCreature,
+  OTEnchantment,
+  OTEnchantmentCreature,
   OTInstant,
+  OTPlaneswalker,
   OTSorcery,
   OTSpell,
  )
@@ -94,8 +101,8 @@ import safe MtgPure.Model.Recursive (
  )
 import safe MtgPure.Model.Stack (Stack (..), StackObject (..))
 import safe MtgPure.Model.Zone (IsZone (..), SZone (..), Zone (..))
-import safe MtgPure.Model.ZoneObject.Convert (asCard, oToZO1, toZO0)
-import safe MtgPure.Model.ZoneObject.ZoneObject (IsZO, ZO, ZOPlayer, ZoneObject (..))
+import safe MtgPure.Model.ZoneObject.Convert (AsSpell', asCard, oToZO1, toZO0)
+import safe MtgPure.Model.ZoneObject.ZoneObject (IsOT, IsZO, ZO, ZOPlayer, ZoneObject (..))
 
 type Legality' = Maybe ()
 
@@ -141,31 +148,64 @@ getCastSpellReqs oPlayer = logCall 'getCastSpellReqs do
 
 data CastMeta (ot :: Type) :: Type where
   CastMeta ::
-    { castMeta_Elected ::
-        Object 'OTPlayer ->
-        Card ot ->
-        CardFacet ot ->
-        Cost ot ->
-        PendingReady 'Pre (Effect 'OneShot) ot ->
-        Elected 'Pre ot
-    , castMeta_effect :: CardFacet ot -> WithThisOneShot ot
+    { castMeta_effect :: Maybe (CardFacet ot -> WithThisOneShot ot)
     , castMeta_cost :: CardFacet ot -> Cost ot
     } ->
     CastMeta ot
 
+artifactCastMeta :: CastMeta OTArtifact
+artifactCastMeta =
+  CastMeta
+    { castMeta_effect = Nothing
+    , castMeta_cost = artifact_cost
+    }
+
+artifactCreatureCastMeta :: CastMeta OTArtifactCreature
+artifactCreatureCastMeta =
+  CastMeta
+    { castMeta_effect = Nothing
+    , castMeta_cost = artifactCreature_cost
+    }
+
+creatureCastMeta :: CastMeta OTCreature
+creatureCastMeta =
+  CastMeta
+    { castMeta_effect = Nothing
+    , castMeta_cost = creature_cost
+    }
+
+enchantmentCastMeta :: CastMeta OTEnchantment
+enchantmentCastMeta =
+  CastMeta
+    { castMeta_effect = Nothing
+    , castMeta_cost = enchantment_cost
+    }
+
+enchantmentCreatureCastMeta :: CastMeta OTEnchantmentCreature
+enchantmentCreatureCastMeta =
+  CastMeta
+    { castMeta_effect = Nothing
+    , castMeta_cost = enchantmentCreature_cost
+    }
+
 instantCastMeta :: CastMeta OTInstant
 instantCastMeta =
   CastMeta
-    { castMeta_Elected = ElectedInstant
-    , castMeta_effect = instant_effect
+    { castMeta_effect = Just instant_effect
     , castMeta_cost = instant_cost
+    }
+
+planeswalkerCastMeta :: CastMeta OTPlaneswalker
+planeswalkerCastMeta =
+  CastMeta
+    { castMeta_effect = Nothing
+    , castMeta_cost = planeswalker_cost
     }
 
 sorceryCastMeta :: CastMeta OTSorcery
 sorceryCastMeta =
   CastMeta
-    { castMeta_Elected = ElectedSorcery
-    , castMeta_effect = sorcery_effect
+    { castMeta_effect = Just sorcery_effect
     , castMeta_cost = sorcery_cost
     }
 
@@ -259,37 +299,51 @@ castSpellCard oCaster card = logCall 'castSpellCard case card of
           ArtifactLandFacet{} -> undefined -- TODO: Not a spell
           LandFacet{} -> undefined -- TODO: Not a spell
           --
-          ArtifactFacet{} -> goFacet' facet undefined
-          ArtifactCreatureFacet{} -> goFacet' facet undefined
-          CreatureFacet{} -> goFacet' facet undefined
-          EnchantmentFacet{} -> goFacet' facet undefined
-          EnchantmentCreatureFacet{} -> goFacet' facet undefined
-          PlaneswalkerFacet{} -> goFacet' facet undefined
-          --
+          ArtifactFacet{} -> goFacet' facet artifactCastMeta
+          ArtifactCreatureFacet{} -> goFacet' facet artifactCreatureCastMeta
+          CreatureFacet{} -> goFacet' facet creatureCastMeta
+          EnchantmentFacet{} -> goFacet' facet enchantmentCastMeta
+          EnchantmentCreatureFacet{} -> goFacet' facet enchantmentCreatureCastMeta
           InstantFacet{} -> goFacet' facet instantCastMeta
+          PlaneswalkerFacet{} -> goFacet' facet planeswalkerCastMeta
           SorceryFacet{} -> goFacet' facet sorceryCastMeta
 
         goFacet' :: CardFacet ot -> CastMeta ot -> Magic 'Private 'RW m Legality'
-        goFacet' facet meta = playPendingSpell
-          zoSpell
-          (castMeta_cost meta facet)
-          (castMeta_effect meta facet)
-          \cost effect ->
-            legalityToMaybe <$> case singSpecificCard @ot of
-              ArtifactCard{} -> undefined
-              ArtifactCreatureCard{} -> undefined
-              ArtifactLandCard{} -> undefined
-              CreatureCard{} -> undefined
-              EnchantmentCard{} -> undefined
-              EnchantmentCreatureCard{} -> undefined
-              InstantCard -> do
-                payElectedAndPutOnStack @ 'Cast zoSpell $
-                  castMeta_Elected meta oCaster card facet cost effect
-              LandCard{} -> undefined
-              PlaneswalkerCard{} -> undefined
-              SorceryCard -> do
-                payElectedAndPutOnStack @ 'Cast zoSpell $
-                  castMeta_Elected meta oCaster card facet cost effect
+        goFacet' facet meta = do
+          let goPay cost mEffect = do
+                legalityToMaybe <$> case singSpecificCard @ot of
+                  ArtifactLandCard{} -> error $ show CantHappenByConstruction
+                  LandCard{} -> error $ show CantHappenByConstruction
+                  --
+                  ArtifactCard{} ->
+                    payElectedAndPutOnStack @ 'Cast @ot zoSpell $
+                      ElectedSpell oCaster card facet cost mEffect
+                  ArtifactCreatureCard{} -> do
+                    payElectedAndPutOnStack @ 'Cast @ot zoSpell $
+                      ElectedSpell oCaster card facet cost mEffect
+                  CreatureCard{} -> do
+                    payElectedAndPutOnStack @ 'Cast @ot zoSpell $
+                      ElectedSpell oCaster card facet cost mEffect
+                  EnchantmentCard{} -> do
+                    payElectedAndPutOnStack @ 'Cast @ot zoSpell $
+                      ElectedSpell oCaster card facet cost mEffect
+                  EnchantmentCreatureCard{} -> do
+                    payElectedAndPutOnStack @ 'Cast @ot zoSpell $
+                      ElectedSpell oCaster card facet cost mEffect
+                  InstantCard -> do
+                    payElectedAndPutOnStack @ 'Cast @ot zoSpell $
+                      ElectedSpell oCaster card facet cost mEffect
+                  PlaneswalkerCard{} -> do
+                    payElectedAndPutOnStack @ 'Cast @ot zoSpell $
+                      ElectedSpell oCaster card facet cost mEffect
+                  SorceryCard -> do
+                    payElectedAndPutOnStack @ 'Cast @ot zoSpell $
+                      ElectedSpell oCaster card facet cost mEffect
+          case castMeta_effect meta of
+            Just facetToEffect -> do
+              playPendingOneShot zoSpell (castMeta_cost meta facet) (facetToEffect facet) goPay
+            Nothing -> do
+              playPendingPermanent zoSpell (castMeta_cost meta facet) goPay
 
     goElectFacet electFacet
 
@@ -360,23 +414,23 @@ activateAbility oPlayer = logCall 'activateAbility \case
                           isManaAbility = False -- TODO -- (605.1a)
                       legalityToMaybe <$> case isManaAbility of
                         True -> payElectedManaAbilityAndResolve elected
-                        False -> payElectedAndPutOnStack @ 'Activate zoAbility elected
+                        False -> payElectedAndPutOnStack @ 'Activate @ot zoAbility elected
                 let cost = activated_cost activated
                     effect = activated_effect activated
                 maybeToLegality <$> playPendingAbility zoAbility cost effect goPay
 
     goWithThisActivated
 
-playPendingSpell ::
+playPendingOneShot ::
   forall m ot x.
   (AndLike x, AndLike (Maybe x)) =>
   Monad m =>
   ZO 'ZStack OT0 ->
   Cost ot ->
   WithThisOneShot ot ->
-  (Cost ot -> Pending (Effect 'OneShot) ot -> Magic 'Private 'RW m (Maybe x)) ->
+  (Cost ot -> Maybe (Pending (Effect 'OneShot) ot) -> Magic 'Private 'RW m (Maybe x)) ->
   Magic 'Private 'RW m (Maybe x)
-playPendingSpell _zoStack cost withThisElectEffect cont = logCall 'playPendingSpell do
+playPendingOneShot _zoStack cost withThisElectEffect cont = logCall 'playPendingOneShot do
   goWithThis withThisElectEffect
  where
   goWithThis = \case
@@ -387,7 +441,18 @@ playPendingSpell _zoStack cost withThisElectEffect cont = logCall 'playPendingSp
       thisId <- newObjectId
       goElectEffect $ thisToElectEffect (lensedThis thisId, lensedThis thisId)
 
-  goElectEffect = cont cost . Pending
+  goElectEffect = cont cost . Just . Pending
+
+playPendingPermanent ::
+  forall m ot x.
+  (AndLike x, AndLike (Maybe x)) =>
+  Monad m =>
+  ZO 'ZStack OT0 ->
+  Cost ot ->
+  (Cost ot -> Maybe (Pending (Effect 'OneShot) ot) -> Magic 'Private 'RW m (Maybe x)) ->
+  Magic 'Private 'RW m (Maybe x)
+playPendingPermanent _zoStack cost cont = logCall 'playPendingPermanent do
+  cont cost Nothing
 
 playPendingAbility ::
   forall m ot x.
@@ -411,7 +476,7 @@ payElected elected = logCall 'payElected do
 
 payElectedManaAbilityAndResolve ::
   forall ot m.
-  Monad m =>
+  (IsOT ot, Monad m) =>
   Elected 'Pre ot ->
   Magic 'Private 'RW m Legality
 payElectedManaAbilityAndResolve elected = logCall 'payElectedManaAbilityAndResolve do
@@ -421,35 +486,76 @@ payElectedManaAbilityAndResolve elected = logCall 'payElectedManaAbilityAndResol
 
 data ActivateCast = Activate | Cast
 
-class PayElected (ac :: ActivateCast) (ot :: Type) where
-  payElectedAndPutOnStack :: Monad m => ZO 'ZStack OT0 -> Elected 'Pre ot -> Magic 'Private 'RW m Legality
+payElectedAndPutOnStack ::
+  forall (ac :: ActivateCast) ot m.
+  (PayElected ac ot ot, Monad m) =>
+  ZO 'ZStack OT0 ->
+  Elected 'Pre ot ->
+  Magic 'Private 'RW m Legality
+payElectedAndPutOnStack zo elected = logCall 'payElectedAndPutOnStack do
+  payElectedAndPutOnStack' @ac @ot @ot zo elected
 
-instance PayElected 'Activate ot where
-  payElectedAndPutOnStack zo =
-    logCall 'payElectedAndPutOnStack $
-      payElectedAndPutOnStack' zo $
-        StackAbility . ZO SZStack . toObject2' . idToObject @ 'OTActivatedAbility . UntypedObject DefaultObjectDiscriminant
+-- NOTE: `otdummy` exists to circumvent `The constraint ‘A’ is no smaller than the instance head ‘B’` issues
+class ot ~ otdummy => PayElected (ac :: ActivateCast) (ot :: Type) (otdummy :: Type) where
+  payElectedAndPutOnStack' :: Monad m => ZO 'ZStack OT0 -> Elected 'Pre ot -> Magic 'Private 'RW m Legality
 
-instance PayElected 'Cast OTInstant where
-  payElectedAndPutOnStack zo =
-    logCall 'payElectedAndPutOnStack $
-      payElectedAndPutOnStack' zo $
-        StackSpell . ZO SZStack . toObject6' . idToObject @ 'OTInstant . UntypedObject DefaultObjectDiscriminant
+instance IsOT ot => PayElected 'Activate ot ot where
+  payElectedAndPutOnStack' = payElectedAndPutOnStackAbility @ot
 
-instance PayElected 'Cast OTSorcery where
-  payElectedAndPutOnStack zo =
-    logCall 'payElectedAndPutOnStack $
-      payElectedAndPutOnStack' zo $
-        StackSpell . ZO SZStack . toObject6' . idToObject @ 'OTSorcery . UntypedObject DefaultObjectDiscriminant
+instance PayElected 'Cast OTArtifact OTArtifact where
+  payElectedAndPutOnStack' = payElectedAndPutOnStackSpell @ 'OTArtifact
 
-payElectedAndPutOnStack' ::
+instance PayElected 'Cast OTArtifactCreature OTArtifactCreature where
+  payElectedAndPutOnStack' = payElectedAndPutOnStackSpell @ 'OTCreature
+
+instance PayElected 'Cast OTCreature OTCreature where
+  payElectedAndPutOnStack' = payElectedAndPutOnStackSpell @ 'OTCreature
+
+instance PayElected 'Cast OTEnchantment OTEnchantment where
+  payElectedAndPutOnStack' = payElectedAndPutOnStackSpell @ 'OTEnchantment
+
+instance PayElected 'Cast OTEnchantmentCreature OTEnchantmentCreature where
+  payElectedAndPutOnStack' = payElectedAndPutOnStackSpell @ 'OTCreature
+
+instance PayElected 'Cast OTInstant OTInstant where
+  payElectedAndPutOnStack' = payElectedAndPutOnStackSpell @ 'OTInstant
+
+instance PayElected 'Cast OTPlaneswalker OTPlaneswalker where
+  payElectedAndPutOnStack' = payElectedAndPutOnStackSpell @ 'OTPlaneswalker
+
+instance PayElected 'Cast OTSorcery OTSorcery where
+  payElectedAndPutOnStack' = payElectedAndPutOnStackSpell @ 'OTSorcery
+
+payElectedAndPutOnStackAbility ::
   forall ot m.
-  Monad m =>
+  (IsOT ot, Monad m) =>
+  ZO 'ZStack OT0 ->
+  Elected 'Pre ot ->
+  Magic 'Private 'RW m Legality
+payElectedAndPutOnStackAbility zo = payElectedAndPutOnStackImpl zo \i ->
+  let toObjectActivatedTriggered' = toObject2'
+      o = idToObject @ 'OTActivatedAbility $ UntypedObject DefaultObjectDiscriminant i
+   in StackAbility $ ZO SZStack $ toObjectActivatedTriggered' o
+
+payElectedAndPutOnStackSpell ::
+  forall a ot m.
+  (IsObjectType a, AsSpell' a, IsOT ot, Monad m) =>
+  ZO 'ZStack OT0 ->
+  Elected 'Pre ot ->
+  Magic 'Private 'RW m Legality
+payElectedAndPutOnStackSpell zo = payElectedAndPutOnStackImpl zo \i ->
+  let toObjectSpell' = toObject6'
+      o = idToObject @a $ UntypedObject DefaultObjectDiscriminant i
+   in StackSpell $ ZO SZStack $ toObjectSpell' o
+
+payElectedAndPutOnStackImpl ::
+  forall ot m.
+  (IsOT ot, Monad m) =>
   ZO 'ZStack OT0 ->
   (ObjectId -> StackObject) ->
   Elected 'Pre ot ->
   Magic 'Private 'RW m Legality
-payElectedAndPutOnStack' zoStack idToStackObject elected = logCall 'payElectedAndPutOnStack' do
+payElectedAndPutOnStackImpl zoStack idToStackObject elected = do
   let stackId = getObjectId zoStack
       stackItem = idToStackObject stackId
   modify \st ->

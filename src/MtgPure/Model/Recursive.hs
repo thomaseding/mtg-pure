@@ -304,7 +304,7 @@ data CardFacet (ot :: Type) :: Type where
     , artifactCreature_toughness :: Toughness
     , artifactCreature_artifactAbilities :: [Ability OTArtifact]
     , artifactCreature_creatureAbilities :: [Ability OTCreature]
-    -- , artifactCreature_artifactCreatureAbilities :: [Ability OTArtifactCreature]
+    , artifactCreature_artifactCreatureAbilities :: [Ability OTArtifactCreature]
     } ->
     CardFacet OTArtifactCreature
   ArtifactLandFacet ::
@@ -313,7 +313,7 @@ data CardFacet (ot :: Type) :: Type where
     , artifactLand_landTypes :: [LandType]
     , artifactLand_artifactAbilities :: [Ability OTArtifact]
     , artifactLand_landAbilities :: [Ability OTLand]
-    -- , artifactLand_artifactLandAbilities :: [Ability OTArtifactLand]
+    , artifactLand_artifactLandAbilities :: [Ability OTArtifactLand]
     } ->
     CardFacet OTArtifactLand
   CreatureFacet ::
@@ -337,12 +337,12 @@ data CardFacet (ot :: Type) :: Type where
     { enchantmentCreature_colors :: Colors
     , enchantmentCreature_cost :: Cost OTEnchantmentCreature
     , enchantmentCreature_creatureTypes :: [CreatureType]
+    , enchantmentCreature_enchantmentTypes :: [EnchantmentType OTEnchantmentCreature]
     , enchantmentCreature_power :: Power
     , enchantmentCreature_toughness :: Toughness
     , enchantmentCreature_creatureAbilities :: [Ability OTCreature]
     , enchantmentCreature_enchantmentAbilities :: [Ability OTEnchantment]
     , enchantmentCreature_enchantmentCreatureAbilities :: [Ability OTEnchantmentCreature]
-    -- , enchantmentCreature_enchantmentTypes :: [EnchantmentType OTEnchantmentCreature]
     } ->
     CardFacet OTEnchantmentCreature
   InstantFacet ::
