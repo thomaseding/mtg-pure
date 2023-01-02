@@ -49,7 +49,7 @@ import safe MtgPure.Engine.Core (
 import safe MtgPure.Engine.Enact (enact)
 import safe MtgPure.Engine.Fwd.Type (Fwd' (..))
 import safe MtgPure.Engine.Pay (pay)
-import safe MtgPure.Engine.PerformElections (controllerOf, performElections)
+import safe MtgPure.Engine.PerformElections (controllerOf, performElections, requiresTargets)
 import safe MtgPure.Engine.PlayLand (playLand)
 import safe MtgPure.Engine.Priority (
   askPriorityAction,
@@ -57,7 +57,7 @@ import safe MtgPure.Engine.Priority (
   getHasPriority,
   getPlayerWithPriority,
  )
-import safe MtgPure.Engine.Resolve (resolveTopOfStack)
+import safe MtgPure.Engine.Resolve (resolveOneShot, resolveTopOfStack)
 import safe MtgPure.Engine.Satisfies (satisfies, zosSatisfying)
 import safe MtgPure.Engine.State (Fwd)
 import safe MtgPure.Engine.StateBasedActions (performStateBasedActions)
@@ -103,6 +103,8 @@ fwdImpl =
     , fwd_pushLibraryCard = pushLibraryCard
     , fwd_removeHandCard = removeHandCard
     , fwd_removeLibraryCard = removeLibraryCard
+    , fwd_requiresTargets = requiresTargets
+    , fwd_resolveOneShot = resolveOneShot
     , fwd_resolveTopOfStack = resolveTopOfStack
     , fwd_rewindIllegal = rewindIllegal
     , fwd_satisfies = satisfies

@@ -47,7 +47,6 @@ import safe Control.Monad.Trans (MonadIO (..), MonadTrans (..))
 import safe Control.Monad.Trans.Except (ExceptT (ExceptT), catchE, runExceptT, throwE)
 import safe Control.Monad.Util (untilJust)
 import safe Data.Function (on)
-import safe Data.Functor ((<&>))
 import safe Data.Kind (Type)
 import safe Data.Maybe (listToMaybe)
 import safe Data.Typeable (Typeable)
@@ -309,16 +308,14 @@ internalFromPrivate = \case
 internalFromRW ::
   forall ex st v rw m a.
   (IsReadWrite rw, Monad m) =>
-  (ex -> a) ->
+  (ex -> Magic' ex st v 'RO m a) ->
   Magic' ex st v 'RW m a ->
   Magic' ex st v rw m a
 internalFromRW f magic@(MagicRW m) = case singReadWrite @rw of
   SRO ->
-    MagicRO $
-      Access.unsafeFromRW $
-        runExceptT m <&> \case
-          Left ex -> f ex
-          Right a -> a
+    MagicRO (Access.unsafeFromRW $ runExceptT m) >>= \case
+      Left ex -> f ex
+      Right a -> pure a
   SRW -> magic
 
 logCallUnwind' :: (IsReadWrite rw, Monad m) => EnvLogCall ex st v rw m -> Maybe CallFrameId -> Magic' ex st v rw m ()

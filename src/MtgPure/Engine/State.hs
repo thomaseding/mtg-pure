@@ -32,6 +32,8 @@ module MtgPure.Engine.State (
   electedObject_cost,
   AnyElected (..),
   --
+  withHeadlessPrompt,
+  --
   logCall,
   logCallRec,
   logCallPop,
@@ -45,6 +47,7 @@ import safe Control.Monad.Trans (lift)
 import safe Data.Functor ((<&>))
 import safe Data.Kind (Type)
 import safe qualified Data.List as List
+import safe qualified Data.List.NonEmpty as NonEmpty
 import safe qualified Data.Map.Strict as Map
 import safe qualified Data.Stream as Stream
 import safe Data.Typeable (Typeable)
@@ -68,8 +71,11 @@ import safe MtgPure.Engine.Monad (
 import safe MtgPure.Engine.Prompt (
   CallFrameId,
   CallFrameInfo (callFrameName),
+  CardCount (..),
+  CardIndex (..),
   InternalLogicError (..),
-  PlayerIndex,
+  PlayerIndex (..),
+  PriorityAction (..),
   Prompt' (..),
  )
 import safe MtgPure.Model.Deck (Deck (..))
@@ -233,6 +239,37 @@ runMagicCont ::
   Magic v rw m c
 runMagicCont = runMagicCont' envLogCall
 
+headlessPrompt :: Monad m => Prompt m
+headlessPrompt =
+  Prompt
+    { exceptionCantBeginGameWithoutPlayers = pure ()
+    , exceptionInvalidCastSpell = \_ _ _ -> pure ()
+    , exceptionInvalidPlayLand = \_ _ _ -> pure ()
+    , exceptionInvalidShuffle = \_ _ -> pure ()
+    , exceptionInvalidStartingPlayer = \_ _ -> pure ()
+    , exceptionZoneObjectDoesNotExist = \_ -> pure ()
+    , promptPriorityAction = \_ _ _ -> pure PassPriority
+    , promptDebugMessage = \_ -> pure ()
+    , promptGetStartingPlayer = \_ _ -> pure $ PlayerIndex 0
+    , promptLogCallPop = \_ _ -> pure ()
+    , promptLogCallPush = \_ _ -> pure ()
+    , promptPerformMulligan = \_ _ _ -> pure False
+    , promptPickZO = \_ _ _ -> pure . NonEmpty.head
+    , promptShuffle = \_ (CardCount count) _ -> pure $ map CardIndex [0 .. count - 1]
+    }
+
+withHeadlessPrompt :: Monad m => GameState m -> GameState m
+withHeadlessPrompt st =
+  let prompt = magicPrompt st
+   in st
+        { magicPrompt =
+            headlessPrompt
+              { promptDebugMessage = promptDebugMessage prompt
+              , promptLogCallPop = promptLogCallPop prompt
+              , promptLogCallPush = promptLogCallPush prompt
+              }
+        }
+
 envLogCall :: (IsReadWrite rw, Monad m) => EnvLogCall (GameResult m) (GameState m) v rw m
 envLogCall =
   EnvLogCall
@@ -335,3 +372,9 @@ instance (IsReadWrite rw, Monad m) => LogCall (a -> b -> Magic p rw m z) where
 
 instance (IsReadWrite rw, Monad m) => LogCall (a -> b -> MagicCont p rw m y z) where
   logCallImpl isRec name action a b = logCallImpl isRec name $ action a b
+
+instance (IsReadWrite rw, Monad m) => LogCall (a -> b -> c -> Magic p rw m z) where
+  logCallImpl isRec name action a b c = logCallImpl isRec name $ action a b c
+
+instance (IsReadWrite rw, Monad m) => LogCall (a -> b -> c -> MagicCont p rw m y z) where
+  logCallImpl isRec name action a b c = logCallImpl isRec name $ action a b c

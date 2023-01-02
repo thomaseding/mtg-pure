@@ -5,6 +5,7 @@
 {-# HLINT ignore "Use const" #-}
 {-# HLINT ignore "Use if" #-}
 {-# HLINT ignore "Redundant pure" #-}
+{-# HLINT ignore "Replace case with maybe" #-}
 
 module MtgPure.Engine.ActivateCast (
   activateAbility,
@@ -25,6 +26,8 @@ import safe MtgPure.Engine.Fwd.Api (
   newObjectId,
   pay,
   performElections,
+  requiresTargets,
+  resolveOneShot,
  )
 import safe MtgPure.Engine.Legality (Legality (..), legalityToMaybe, maybeToLegality)
 import safe MtgPure.Engine.Monad (
@@ -32,12 +35,15 @@ import safe MtgPure.Engine.Monad (
   fromRO,
   get,
   gets,
+  internalFromRW,
+  local,
   modify,
  )
 import safe MtgPure.Engine.Prompt (
   ActivateAbility,
   CastSpell,
-  InternalLogicError (CantHappenByConstruction),
+  EnactInfo (enactInfo_couldAddMana),
+  InternalLogicError (..),
   InvalidCastSpell (..),
   PriorityAction (ActivateAbility, CastSpell),
   Prompt' (..),
@@ -55,6 +61,7 @@ import safe MtgPure.Engine.State (
   electedObject_cost,
   logCall,
   mkOpaqueGameState,
+  withHeadlessPrompt,
  )
 import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.IsCardList (containsCard)
@@ -411,15 +418,31 @@ activateAbility oPlayer = logCall 'activateAbility \case
               (True, True, True) -> do
                 let goPay cost effect = do
                       let elected = ElectedActivatedAbility oPlayer zoThis cost effect
-                          isManaAbility = False -- TODO -- (605.1a)
-                      legalityToMaybe <$> case isManaAbility of
-                        True -> payElectedManaAbilityAndResolve elected
-                        False -> payElectedAndPutOnStack @ 'Activate @ot zoAbility elected
+                      fmap legalityToMaybe $
+                        fromRO (isManaAbility effect) >>= \case
+                          True -> payElectedManaAbilityAndResolve elected
+                          False -> payElectedAndPutOnStack @ 'Activate @ot zoAbility elected
                 let cost = activated_cost activated
                     effect = activated_effect activated
                 maybeToLegality <$> playPendingAbility zoAbility cost effect goPay
 
     goWithThisActivated
+
+-- (605.1a)
+isManaAbility :: Monad m => Pending (Effect 'OneShot) ot -> Magic 'Private 'RO m Bool
+isManaAbility (Pending effect) = logCall 'isManaAbility do
+  requiresTargets effect >>= \case
+    True -> pure False
+    False -> internalFromRW goGameResult $ local withHeadlessPrompt do
+      mEnactInfo <- resolveOneShot zoStack effect
+      pure case mEnactInfo of
+        Nothing -> False -- XXX: It could still be a mana ability despite failing to be legal at the moment.
+        Just enactInfo -> enactInfo_couldAddMana enactInfo
+ where
+  zoStack :: ZO 'ZStack OT0
+  zoStack = error $ show ManaAbilitiesDontHaveTargetsSoNoZoShouldBeNeeded
+
+  goGameResult _ = pure False -- It would be really weird if this code path actually gets hit.
 
 playPendingOneShot ::
   forall m ot x.

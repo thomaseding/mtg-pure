@@ -12,8 +12,9 @@ module MtgPure.Engine.Pay (
   pay,
 ) where
 
+import safe qualified Control.Monad as M
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
-import safe Control.Monad.Trans (lift)
+import safe qualified Control.Monad.Trans as M
 import safe Control.Monad.Util (untilJust)
 import safe Data.Functor ((<&>))
 import safe Data.List.NonEmpty (NonEmpty (..))
@@ -113,14 +114,14 @@ payTapCost oPlayer req = logCall 'payTapCost do
     zos@(zosHead : zosTail) -> do
       prompt <- fromRO $ gets magicPrompt
       opaque <- fromRO $ gets mkOpaqueGameState
-      zo <- lift $
+      zo <- M.lift $
         untilJust \attempt -> do
           zo <- promptPickZO prompt attempt opaque oPlayer $ zosHead :| zosTail
           pure case zo `elem` zos of
             False -> Nothing
             True -> Just zo
       let oPerm = zo0ToPermanent $ toZO0 zo
-      enact $ Tap oPerm
+      M.void $ enact $ Tap oPerm
       fromRO $ satisfies oPerm isTapped <&> toLegality
  where
   req' =

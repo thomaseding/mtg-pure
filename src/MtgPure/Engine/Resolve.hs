@@ -11,6 +11,7 @@
 module MtgPure.Engine.Resolve (
   resolveTopOfStack,
   resolveManaAbility,
+  resolveOneShot,
 ) where
 
 import safe qualified Control.Monad as M
@@ -18,7 +19,6 @@ import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
 import safe Data.Kind (Type)
 import safe qualified Data.Map.Strict as Map
 import safe Data.Typeable (Typeable)
-import safe Data.Void (Void)
 import safe MtgPure.Engine.Fwd.Api (
   enact,
   gainPriority,
@@ -30,7 +30,7 @@ import safe MtgPure.Engine.Fwd.Api (
 import safe MtgPure.Engine.Legality (Legality (..))
 import safe MtgPure.Engine.Monad (fromPublicRO, fromRO, get, gets, modify)
 import safe MtgPure.Engine.Orphans ()
-import safe MtgPure.Engine.Prompt (InternalLogicError (..))
+import safe MtgPure.Engine.Prompt (EnactInfo, InternalLogicError (..))
 import safe MtgPure.Engine.State (
   AnyElected (..),
   Elected (..),
@@ -89,9 +89,9 @@ resolveManaAbility elected = logCall 'resolveManaAbility do
 resolveElected :: forall ot m. (IsOT ot, Monad m) => ZO 'ZStack OT0 -> Elected 'Pre ot -> Magic 'Private 'RW m ()
 resolveElected zoStack elected = logCall 'resolveElected do
   case elected of
-    ElectedActivatedAbility{} -> resolveOneShot zoStack $ unPending $ electedActivatedAbility_effect elected
+    ElectedActivatedAbility{} -> M.void $ resolveOneShot zoStack $ unPending $ electedActivatedAbility_effect elected
     ElectedSpell{} -> case electedSpell_effect elected of
-      Just effect -> resolveOneShot zoStack $ unPending effect
+      Just effect -> M.void $ resolveOneShot zoStack $ unPending effect
       Nothing ->
         let electedPerm =
               ElectedPermanent
@@ -101,11 +101,12 @@ resolveElected zoStack elected = logCall 'resolveElected do
                 }
          in resolvePermanent electedPerm
 
-resolveOneShot :: Monad m => ZO 'ZStack OT0 -> Elect 'Post (Effect 'OneShot) ot -> Magic 'Private 'RW m ()
-resolveOneShot zoStack = logCall 'resolveOneShot $ M.void . performElections zoStack goEffect
+resolveOneShot :: Monad m => ZO 'ZStack OT0 -> Elect 'Post (Effect 'OneShot) ot -> Magic 'Private 'RW m (Maybe EnactInfo)
+resolveOneShot zoStack elect = logCall 'resolveOneShot do
+  performElections zoStack goEffect elect
  where
-  goEffect :: Monad m => Effect 'OneShot -> Magic 'Private 'RW m (Maybe Void)
-  goEffect = fmap (const Nothing) . enact
+  goEffect :: Monad m => Effect 'OneShot -> Magic 'Private 'RW m (Maybe EnactInfo)
+  goEffect = fmap Just . enact
 
 data ElectedPermanent (ot :: Type) :: Type where
   ElectedPermanent ::

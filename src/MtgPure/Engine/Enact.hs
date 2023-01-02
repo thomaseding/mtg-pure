@@ -33,6 +33,7 @@ import safe MtgPure.Engine.Monad (fromPublicRO, fromRO, gets)
 import safe MtgPure.Engine.Prompt (
   CardCount (..),
   CardIndex (..),
+  EnactInfo (..),
   InternalLogicError (..),
   Prompt' (..),
  )
@@ -55,7 +56,7 @@ import safe MtgPure.Model.Zone (Zone (..))
 import safe MtgPure.Model.ZoneObject.Convert (toZO0, zo0ToPermanent, zo1ToO)
 import safe MtgPure.Model.ZoneObject.ZoneObject (ZO, ZOCreaturePlayerPlaneswalker, ZOPermanent, ZOPlayer)
 
-enact :: Monad m => Effect 'OneShot -> Magic 'Private 'RW m ()
+enact :: Monad m => Effect 'OneShot -> Magic 'Private 'RW m EnactInfo
 enact = logCall 'enact \case
   AddMana oPlayer mana -> addMana' oPlayer mana
   AddToBattlefield{} -> undefined
@@ -69,26 +70,27 @@ enact = logCall 'enact \case
   PutOntoBattlefield{} -> undefined
   Sacrifice{} -> undefined
   SearchLibrary{} -> undefined
-  Sequence effects -> mapM_ enact effects
+  Sequence effects -> mconcat <$> mapM enact effects
   ShuffleLibrary oPlayer -> shuffleLibrary' $ zo1ToO oPlayer
-  Tap oPerm -> M.void $ tap' oPerm
-  Untap oPerm -> M.void $ untap' oPerm
+  Tap oPerm -> tap' oPerm
+  Untap oPerm -> untap' oPerm
   WithList{} -> undefined
 
-addMana' :: Monad m => ZOPlayer -> ManaPool 'NonSnow -> Magic 'Private 'RW m ()
+addMana' :: Monad m => ZOPlayer -> ManaPool 'NonSnow -> Magic 'Private 'RW m EnactInfo
 addMana' oPlayer mana = logCall 'addMana' do
   fromRO (findPlayer $ zo1ToO oPlayer) >>= \case
     Nothing -> pure () -- Don't complain. This can naturally happen if a player loses before `enact` resolves.
     Just player -> do
       let mana' = playerMana player + mempty{poolNonSnow = mana}
       setPlayer (zo1ToO oPlayer) player{playerMana = mana'}
+  pure mempty{enactInfo_couldAddMana = True}
 
 dealDamage' ::
   Monad m =>
   ZO zone OTDamageSource ->
   ZOCreaturePlayerPlaneswalker ->
   Damage var ->
-  Magic 'Private 'RW m ()
+  Magic 'Private 'RW m EnactInfo
 dealDamage' _oSource oVictim (forceVars -> Damage damage) = logCall 'dealDamage' do
   fromRO (findPermanent $ zo0ToPermanent $ toZO0 oVictim) >>= \case
     Nothing -> pure ()
@@ -114,19 +116,21 @@ dealDamage' _oSource oVictim (forceVars -> Damage damage) = logCall 'dealDamage'
       player <- fromRO $ getPlayer oPlayer
       let life = unLife $ playerLife player
       setPlayer oPlayer player{playerLife = Life $ life - damage}
+  pure mempty
 
 destroy' ::
   Monad m =>
   ZOPermanent ->
-  Magic 'Private 'RW m ()
+  Magic 'Private 'RW m EnactInfo
 destroy' oPerm = logCall 'destroy' do
   fromRO (findPermanent oPerm) >>= \case
     Nothing -> pure ()
     Just _perm -> do
       pure () -- TODO: indestructable
       setPermanent oPerm Nothing
+  pure mempty
 
-shuffleLibrary' :: Monad m => Object 'OTPlayer -> Magic 'Private 'RW m ()
+shuffleLibrary' :: Monad m => Object 'OTPlayer -> Magic 'Private 'RW m EnactInfo
 shuffleLibrary' oPlayer = logCall 'shuffleLibrary' do
   prompt <- fromRO $ gets magicPrompt
   player <- fromRO $ getPlayer oPlayer
@@ -143,8 +147,9 @@ shuffleLibrary' oPlayer = logCall 'shuffleLibrary' do
           pure Nothing
   let library' = map snd $ List.sortOn fst $ zip ordering library
   setPlayer oPlayer $ player{playerLibrary = toCardList library'}
+  pure mempty
 
-drawCard' :: Monad m => Object 'OTPlayer -> Magic 'Private 'RW m ()
+drawCard' :: Monad m => Object 'OTPlayer -> Magic 'Private 'RW m EnactInfo
 drawCard' oPlayer = logCall 'drawCard' do
   player <- fromRO $ getPlayer oPlayer
   let library = playerLibrary player
@@ -156,18 +161,24 @@ drawCard' oPlayer = logCall 'drawCard' do
             Nothing -> error $ show CantHappenByConstruction
             Just c -> c
       M.void $ pushHandCard oPlayer card
+  pure mempty
 
-drawCards' :: Monad m => Int -> Object 'OTPlayer -> Magic 'Private 'RW m ()
-drawCards' n = logCall 'drawCards' $ M.replicateM_ n . drawCard'
+drawCards' :: Monad m => Int -> Object 'OTPlayer -> Magic 'Private 'RW m EnactInfo
+drawCards' n oPlayer = logCall 'drawCards' do
+  fmap mconcat $ M.replicateM n $ drawCard' oPlayer
 
-untap' :: Monad m => ZO 'ZBattlefield OTPermanent -> Magic 'Private 'RW m Bool
+untap' :: Monad m => ZO 'ZBattlefield OTPermanent -> Magic 'Private 'RW m EnactInfo
 untap' oPerm = logCall 'untap' do
   perm <- fromRO $ getPermanent oPerm
   setPermanent oPerm $ Just perm{permanentTapped = Untapped}
-  pure $ permanentTapped perm /= Untapped
+  pure case permanentTapped perm /= Untapped of
+    False -> mempty
+    True -> mempty{enactInfo_becameUntapped = pure oPerm}
 
-tap' :: Monad m => ZO 'ZBattlefield OTPermanent -> Magic 'Private 'RW m Bool
+tap' :: Monad m => ZO 'ZBattlefield OTPermanent -> Magic 'Private 'RW m EnactInfo
 tap' oPerm = logCall 'tap' do
   perm <- fromRO $ getPermanent oPerm
   setPermanent oPerm $ Just perm{permanentTapped = Tapped}
-  pure $ permanentTapped perm /= Tapped
+  pure case permanentTapped perm /= Tapped of
+    False -> mempty
+    True -> mempty{enactInfo_becameTapped = pure oPerm}

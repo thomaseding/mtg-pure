@@ -13,6 +13,7 @@ module MtgPure.Engine.Prompt (
   CardCount (..),
   CardIndex (..),
   CastSpell,
+  EnactInfo (..),
   InternalLogicError (..),
   InvalidCastSpell (..),
   InvalidPlayLand (..),
@@ -194,3 +195,42 @@ data InvalidCastSpell :: Type where
   CastSpell_NotOwned :: ZO zone OTSpell -> InvalidCastSpell
 
 deriving instance Show InvalidCastSpell
+
+data EnactInfo = EnactInfo
+  { enactInfo_ :: ()
+  , enactInfo_becameTapped :: [ZO 'ZBattlefield OTPermanent]
+  , enactInfo_becameUntapped :: [ZO 'ZBattlefield OTPermanent]
+  , enactInfo_couldAddMana :: Bool
+  }
+  deriving (Show)
+
+instance Semigroup EnactInfo where
+  x <> y =
+    EnactInfo
+      { enactInfo_ = ()
+      , enactInfo_becameTapped = becameTapped1 <> becameTapped2
+      , enactInfo_becameUntapped = becameUntapped1 <> becameUntapped2
+      , enactInfo_couldAddMana = couldAddMana1 || couldAddMana2
+      }
+   where
+    EnactInfo
+      { enactInfo_ = ()
+      , enactInfo_becameTapped = becameTapped1
+      , enactInfo_becameUntapped = becameUntapped1
+      , enactInfo_couldAddMana = couldAddMana1
+      } = x
+    EnactInfo
+      { enactInfo_ = ()
+      , enactInfo_becameTapped = becameTapped2
+      , enactInfo_becameUntapped = becameUntapped2
+      , enactInfo_couldAddMana = couldAddMana2
+      } = y
+
+instance Monoid EnactInfo where
+  mempty =
+    EnactInfo
+      { enactInfo_ = ()
+      , enactInfo_becameTapped = []
+      , enactInfo_becameUntapped = []
+      , enactInfo_couldAddMana = False
+      }

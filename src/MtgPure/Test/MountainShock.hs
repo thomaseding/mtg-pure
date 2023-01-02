@@ -26,7 +26,6 @@ main :: IO ()
 main = mainMountainShock
 
 -- NOTE: Still a WIP
--- TODO: Mana abilities should elide stack
 mainMountainShock :: IO ()
 mainMountainShock = runConsole input do
   playConsoleGame $ replicate 2 (deck, side)
@@ -67,8 +66,6 @@ replayInputs =
   , "Pass"
   , "PlayLand 8"
   , "ActivateAbility 11 0"
-  , "Pass" -- XXX: mana abilities should not use stack
-  , "Pass" -- XXX: mana abilities should not use stack
   , "CastSpell 7"
   , "Pass"
   , "Pass"

@@ -10,13 +10,14 @@
 
 module MtgPure.Engine.PerformElections (
   performElections,
+  requiresTargets,
   controllerOf,
 ) where
 
 import safe Control.Exception (assert)
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
 import safe Control.Monad.Trans (lift)
-import safe Control.Monad.Util (AndLike, untilJust)
+import safe Control.Monad.Util (untilJust)
 import safe Data.ConsIndex (consIndex)
 import safe Data.List.NonEmpty (NonEmpty (..))
 import safe qualified Data.Map.Strict as Map
@@ -25,15 +26,19 @@ import safe MtgPure.Engine.Fwd.Api (
   getPermanent,
   zosSatisfying,
  )
-import safe MtgPure.Engine.Monad (fromRO, gets, modify)
+import safe MtgPure.Engine.Monad (fromRO, gets, internalFromRW, local, modify)
 import safe MtgPure.Engine.Orphans ()
-import safe MtgPure.Engine.Prompt (InternalLogicError (..), Prompt' (..))
+import safe MtgPure.Engine.Prompt (
+  InternalLogicError (..),
+  Prompt' (..),
+ )
 import safe MtgPure.Engine.State (
   AnyRequirement (..),
   GameState (..),
   Magic,
   logCall,
   mkOpaqueGameState,
+  withHeadlessPrompt,
  )
 import safe MtgPure.Model.Object.OTN (OT0)
 import safe MtgPure.Model.Object.OTNAliases (OTAny)
@@ -67,14 +72,29 @@ import safe MtgPure.Model.ZoneObject.ZoneObject (IsZO, ZO, ZOPlayer, ZoneObject 
 
 performElections ::
   forall ot m p el x.
-  (Monad m, AndLike (Maybe x)) =>
+  Monad m =>
   ZO 'ZStack OT0 ->
   (el -> Magic 'Private 'RW m (Maybe x)) ->
   Elect p el ot ->
   Magic 'Private 'RW m (Maybe x)
-performElections zoStack goTerm = logCall 'performElections \case
+performElections = logCall 'performElections $ performElections' PerformElections Nothing
+
+data Behavior x
+  = PerformElections
+  | RequiresTargets x
+
+performElections' ::
+  forall ot m p el x.
+  Monad m =>
+  Behavior x ->
+  x ->
+  ZO 'ZStack OT0 ->
+  (el -> Magic 'Private 'RW m x) ->
+  Elect p el ot ->
+  Magic 'Private 'RW m x
+performElections' bhv failureX zoStack goTerm = logCall 'performElections' \case
   All masked -> electAll goRec masked
-  Choose oPlayer thisToElect -> electA Choose' zoStack goRec oPlayer thisToElect
+  Choose oPlayer thisToElect -> electA Choose' zoStack failureX goRec oPlayer thisToElect
   ControllerOf zo cont -> electControllerOf goRec zo cont
   Cost cost -> goTerm cost
   ElectActivated activated -> goTerm activated
@@ -82,17 +102,22 @@ performElections zoStack goTerm = logCall 'performElections \case
   ElectCase case_ -> caseOf goRec case_
   Effect effect -> goTerm $ Sequence effect
   Elect elect -> goTerm elect
-  Target oPlayer thisToElect -> electA Target' zoStack goRec oPlayer thisToElect
+  Target zoPlayer thisToElect -> goTarget zoPlayer thisToElect
   VariableInt cont -> electVariableInt goRec cont
   x -> error $ show $ consIndex x
  where
-  goRec = performElections zoStack goTerm
+  goRec = performElections' bhv failureX zoStack goTerm
+  --
+  goTarget :: IsZO zone ot => ZOPlayer -> WithMaskedObject zone (Elect p el ot) -> Magic 'Private 'RW m x
+  goTarget oPlayer thisToElect = case bhv of
+    PerformElections -> electA Target' zoStack failureX goRec oPlayer thisToElect
+    RequiresTargets x -> pure x
 
 electVariableInt ::
   Monad m =>
-  (Elect 'Pre el ot -> Magic 'Private 'RW m (Maybe x)) ->
+  (Elect 'Pre el ot -> Magic 'Private 'RW m x) ->
   (Variable Int -> Elect 'Pre el ot) ->
-  Magic 'Private 'RW m (Maybe x)
+  Magic 'Private 'RW m x
 electVariableInt goElect cont = logCall 'electVariableInt do
   let var = ReifiedVariable undefined undefined
   goElect $ cont var
@@ -111,10 +136,10 @@ controllerOf zo = logCall 'controllerOf case singZone @zone of
 electControllerOf ::
   forall p zone m el ot x.
   (IsZO zone OTAny, Monad m) =>
-  (Elect p el ot -> Magic 'Private 'RW m (Maybe x)) ->
+  (Elect p el ot -> Magic 'Private 'RW m x) ->
   ZO zone OTAny ->
   (ZOPlayer -> Elect p el ot) ->
-  Magic 'Private 'RW m (Maybe x)
+  Magic 'Private 'RW m x
 electControllerOf goElect zo cont = logCall 'electControllerOf do
   controller <- fromRO $ controllerOf zo
   let elect = cont $ oToZO1 controller
@@ -162,11 +187,12 @@ electA ::
   (IsZO zone ot, Monad m) =>
   Selection ->
   ZO 'ZStack OT0 ->
-  (Elect p el ot -> Magic 'Private 'RW m (Maybe x)) ->
+  x ->
+  (Elect p el ot -> Magic 'Private 'RW m x) ->
   ZOPlayer ->
   WithMaskedObject zone (Elect p el ot) ->
-  Magic 'Private 'RW m (Maybe x)
-electA sel zoStack goElect oPlayer = logCall 'electA \case
+  Magic 'Private 'RW m x
+electA sel zoStack failureX goElect oPlayer = logCall 'electA \case
   M1 reqs zoToElect -> go reqs zoToElect
   M2 reqs zoToElect -> go reqs zoToElect
   M3 reqs zoToElect -> go reqs zoToElect
@@ -178,11 +204,11 @@ electA sel zoStack goElect oPlayer = logCall 'electA \case
     (IsZO zone ot', Eq (ZO zone ot')) =>
     [Requirement zone ot'] ->
     (ZO zone ot' -> Elect p el ot) ->
-    Magic 'Private 'RW m (Maybe x)
+    Magic 'Private 'RW m x
   go reqs zoToElect = do
     prompt <- fromRO $ gets magicPrompt
     fromRO (zosSatisfying (RAnd reqs)) >>= \case
-      [] -> pure Nothing
+      [] -> pure failureX
       zos@(zosHead : zosTail) -> do
         opaque <- fromRO $ gets mkOpaqueGameState
         zo <- lift $
@@ -199,7 +225,7 @@ electA sel zoStack goElect oPlayer = logCall 'electA \case
 
 electAll ::
   forall zone m p el ot x.
-  (IsZO zone ot, Monad m, AndLike x) =>
+  (IsZO zone ot, Monad m) =>
   (Elect p el ot -> Magic 'Private 'RW m x) ->
   WithMaskedObjects zone (Elect p el ot) ->
   Magic 'Private 'RW m x
@@ -219,3 +245,16 @@ electAll goElect = logCall 'electAll \case
   go reqs zosToElect = do
     zos <- fromRO $ zosSatisfying $ RAnd reqs
     goElect $ zosToElect $ List zos
+
+-- (115.6)
+requiresTargets :: Monad m => Elect p el ot -> Magic 'Private 'RO m Bool
+requiresTargets elect = logCall 'requiresTargets do
+  internalFromRW goGameResult $ local withHeadlessPrompt do
+    performElections' (RequiresTargets True) False zoStack goTerm elect
+ where
+  zoStack :: ZO 'ZStack OT0
+  zoStack = error $ show ManaAbilitiesDontHaveTargetsSoNoZoShouldBeNeeded
+  --
+  goTerm _ = pure False
+  --
+  goGameResult _ = pure False -- It would be really weird if this code path actually gets hit.

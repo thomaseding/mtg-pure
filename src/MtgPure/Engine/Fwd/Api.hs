@@ -54,7 +54,9 @@ module MtgPure.Engine.Fwd.Api (
   pushLibraryCard,
   removeHandCard,
   removeLibraryCard,
+  requiresTargets,
   resolveTopOfStack,
+  resolveOneShot,
   satisfies,
   setPermanent,
   setPlayer,
@@ -81,6 +83,7 @@ import safe MtgPure.Engine.Prompt (
   AbsoluteActivatedAbilityIndex,
   ActivateAbility,
   CastSpell,
+  EnactInfo,
   PlayLand,
   PlayerCount (..),
   PriorityAction,
@@ -102,6 +105,7 @@ import safe MtgPure.Model.Object.ObjectId (ObjectId)
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Permanent (Permanent)
 import safe MtgPure.Model.Player (Player)
+import safe MtgPure.Model.PrePost (PrePost (..))
 import safe MtgPure.Model.Recursive (
   AnyCard,
   Case,
@@ -148,7 +152,7 @@ data Api (m :: Type -> Type) (v :: Visibility) (rw :: ReadWrite) (ret :: Type) :
   CaseOf :: (x -> Api m 'Private 'RW a) -> Case x -> Api m 'Private 'RW a
   ControllerOf :: IsZO zone ot => ZO zone ot -> Api m 'Private 'RO (Object 'OTPlayer)
   DoesZoneObjectExist :: IsZO zone ot => ZO zone ot -> Api m 'Private 'RO Bool
-  Enact :: Effect 'OneShot -> Api m 'Private 'RW ()
+  Enact :: Effect 'OneShot -> Api m 'Private 'RW EnactInfo
   FindHandCard :: Object 'OTPlayer -> ZO 'ZHand OTCard -> Api m 'Private 'RW (Maybe AnyCard)
   FindLibraryCard :: Object 'OTPlayer -> ZO 'ZLibrary OTCard -> Api m 'Private 'RW (Maybe AnyCard)
   FindPermanent :: ZO 'ZBattlefield OTPermanent -> Api m 'Private 'RO (Maybe Permanent)
@@ -288,7 +292,7 @@ controllerOf = fwd1 fwd_controllerOf
 doesZoneObjectExist :: (IsZO zone ot, Monad m) => ZO zone ot -> Magic 'Private 'RO m Bool
 doesZoneObjectExist = fwd1 fwd_doesZoneObjectExist
 
-enact :: Monad m => Effect 'OneShot -> Magic 'Private 'RW m ()
+enact :: Monad m => Effect 'OneShot -> Magic 'Private 'RW m EnactInfo
 enact = fwd1 fwd_enact
 
 findHandCard :: Monad m => Object 'OTPlayer -> ZO 'ZHand OTCard -> Magic 'Private 'RW m (Maybe AnyCard)
@@ -343,7 +347,7 @@ pay = fwd2 fwd_pay
 
 performElections ::
   forall ot m p el x.
-  (Monad m, AndLike (Maybe x)) =>
+  Monad m =>
   ZO 'ZStack OT0 ->
   (el -> Magic 'Private 'RW m (Maybe x)) ->
   Elect p el ot ->
@@ -367,6 +371,12 @@ removeHandCard = fwd2 fwd_removeHandCard
 
 removeLibraryCard :: Monad m => Object 'OTPlayer -> ZO 'ZLibrary OTCard -> Magic 'Private 'RW m (Maybe AnyCard)
 removeLibraryCard = fwd2 fwd_removeLibraryCard
+
+requiresTargets :: Monad m => Elect p el ot -> Magic 'Private 'RO m Bool
+requiresTargets = fwd1 fwd_requiresTargets
+
+resolveOneShot :: Monad m => ZO 'ZStack OT0 -> Elect 'Post (Effect 'OneShot) ot -> Magic 'Private 'RW m (Maybe EnactInfo)
+resolveOneShot = fwd2 fwd_resolveOneShot
 
 resolveTopOfStack :: Monad m => Magic 'Private 'RW m ()
 resolveTopOfStack = fwd0 fwd_resolveTopOfStack
