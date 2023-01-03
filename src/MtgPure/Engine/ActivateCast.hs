@@ -49,7 +49,7 @@ import safe MtgPure.Engine.Prompt (
   Prompt' (..),
   SomeActivatedAbility (..),
  )
-import MtgPure.Engine.Resolve (resolveManaAbility)
+import safe MtgPure.Engine.Resolve (resolveManaAbility)
 import safe MtgPure.Engine.State (
   AnyElected (..),
   Elected (..),

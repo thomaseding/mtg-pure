@@ -32,6 +32,8 @@ import safe Data.Kind (Type)
 import safe Data.List.NonEmpty (NonEmpty)
 import safe Data.Typeable (Typeable, cast)
 import safe MtgPure.Engine.Orphans.ZO ()
+import safe MtgPure.Model.GenericMana (GenericMana)
+import safe MtgPure.Model.ManaPool (CompleteManaPool)
 import safe MtgPure.Model.Object.OTNAliases (OTLand, OTPermanent, OTSpell)
 import safe MtgPure.Model.Object.Object (Object)
 import safe MtgPure.Model.Object.ObjectId (GetObjectId (getUntypedObject), ObjectId)
@@ -40,6 +42,7 @@ import safe MtgPure.Model.Recursive (AnyCard, WithThisActivated)
 import safe MtgPure.Model.Recursive.Ord ()
 import safe qualified MtgPure.Model.Recursive.Ord as O
 import safe MtgPure.Model.Recursive.Show ()
+import safe MtgPure.Model.Variable (Var (..))
 import safe MtgPure.Model.Zone (IsZone, Zone (..))
 import safe MtgPure.Model.ZoneObject.ZoneObject (IsZO, ZO)
 
@@ -84,17 +87,19 @@ data CallFrameInfo = CallFrameInfo
 data Prompt' (opaqueGameState :: (Type -> Type) -> Type) (m :: Type -> Type) = Prompt
   { exceptionCantBeginGameWithoutPlayers :: m ()
   , exceptionInvalidCastSpell :: opaqueGameState m -> Object 'OTPlayer -> InvalidCastSpell -> m ()
+  , exceptionInvalidGenericManaPayment :: GenericMana 'NoVar -> CompleteManaPool -> m ()
   , exceptionInvalidPlayLand :: opaqueGameState m -> Object 'OTPlayer -> InvalidPlayLand -> m ()
   , exceptionInvalidShuffle :: CardCount -> [CardIndex] -> m ()
   , exceptionInvalidStartingPlayer :: PlayerCount -> PlayerIndex -> m ()
   , exceptionZoneObjectDoesNotExist :: forall zone ot. IsZO zone ot => ZO zone ot -> m ()
-  , promptPriorityAction :: Attempt -> opaqueGameState m -> Object 'OTPlayer -> m (PriorityAction ())
   , promptDebugMessage :: String -> m ()
   , promptGetStartingPlayer :: Attempt -> PlayerCount -> m PlayerIndex
   , promptLogCallPop :: opaqueGameState m -> CallFrameInfo -> m ()
   , promptLogCallPush :: opaqueGameState m -> CallFrameInfo -> m ()
+  , promptPayGeneric :: Attempt -> opaqueGameState m -> Object 'OTPlayer -> GenericMana 'NoVar -> m CompleteManaPool
   , promptPerformMulligan :: Attempt -> Object 'OTPlayer -> [AnyCard] -> m Bool -- TODO: Encode limited game state about players' mulligan states and [Serum Powder].
   , promptPickZO :: forall zone ot. IsZO zone ot => Attempt -> opaqueGameState m -> Object 'OTPlayer -> NonEmpty (ZO zone ot) -> m (ZO zone ot)
+  , promptPriorityAction :: Attempt -> opaqueGameState m -> Object 'OTPlayer -> m (PriorityAction ())
   , promptShuffle :: Attempt -> CardCount -> Object 'OTPlayer -> m [CardIndex]
   }
 

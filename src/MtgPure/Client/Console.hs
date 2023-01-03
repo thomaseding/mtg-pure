@@ -25,6 +25,7 @@ import safe qualified Control.Monad.Trans as M
 import safe qualified Control.Monad.Trans.State.Strict as State
 import safe Control.Monad.Util (Attempt, Attempt' (..))
 import safe Data.Char (isSpace)
+import safe qualified Data.Char as Char
 import safe Data.Functor ((<&>))
 import safe Data.List (stripPrefix)
 import safe Data.List.NonEmpty (NonEmpty (..))
@@ -63,8 +64,11 @@ import safe MtgPure.Engine.State (
  )
 import safe MtgPure.Model.CardName (CardName (..))
 import safe MtgPure.Model.Deck (Deck (..))
+import safe MtgPure.Model.GenericMana (GenericMana (..))
 import safe MtgPure.Model.Hand (Hand (..))
 import safe MtgPure.Model.Library (Library (..))
+import safe MtgPure.Model.ManaPool (CompleteManaPool)
+import safe MtgPure.Model.ManaSymbol (ManaSymbol (..))
 import safe MtgPure.Model.Mulligan (Mulligan (..))
 import safe MtgPure.Model.Object.OTNAliases (
   OTAny,
@@ -80,6 +84,8 @@ import safe MtgPure.Model.Recursive (
   Card (..),
  )
 import safe MtgPure.Model.Sideboard (Sideboard (..))
+import safe MtgPure.Model.ToManaPool (toCompleteManaPool)
+import safe MtgPure.Model.Variable (Var (..))
 import safe MtgPure.Model.Zone (Zone (..))
 import safe MtgPure.Model.ZoneObject.Convert (toZO0, toZO1, zo0ToSpell)
 import safe MtgPure.Model.ZoneObject.ZoneObject (IsZO, ZO)
@@ -147,6 +153,7 @@ gameInput decks =
         Prompt
           { exceptionCantBeginGameWithoutPlayers = liftIO $ putStrLn "exceptionCantBeginGameWithoutPlayers"
           , exceptionInvalidCastSpell = \_ _ _ -> liftIO $ putStrLn "exceptionInvalidCastSpell"
+          , exceptionInvalidGenericManaPayment = \_ _ -> liftIO $ putStrLn "exceptionInvalidGenericManaPayment"
           , exceptionInvalidPlayLand = \_ player msg -> liftIO $ print (player, msg)
           , exceptionInvalidShuffle = \_ _ -> liftIO $ putStrLn "exceptionInvalidShuffle"
           , exceptionInvalidStartingPlayer = \_ _ -> liftIO $ putStrLn "exceptionInvalidStartingPlayer"
@@ -155,6 +162,7 @@ gameInput decks =
           , promptGetStartingPlayer = \_attempt _count -> pure $ PlayerIndex 0
           , promptLogCallPop = consoleLogCallPop
           , promptLogCallPush = consoleLogCallPush
+          , promptPayGeneric = consolePromptPayGeneric
           , promptPerformMulligan = \_attempt _p _hand -> pure False
           , promptPickZO = consolePickZo
           , promptPriorityAction = consolePriorityAction
@@ -271,6 +279,35 @@ consolePriorityAction attempt opaque oPlayer = do
     Nothing -> pure ()
     Just file -> liftIO $ appendFile file $ show commandInput ++ "\n"
   pure action
+
+consolePromptPayGeneric :: Attempt -> OpaqueGameState Console -> Object 'OTPlayer -> GenericMana 'NoVar -> Console CompleteManaPool
+consolePromptPayGeneric attempt opaque oPlayer generic = do
+  (pool, text) <- queryMagic opaque do
+    let GenericMana' x = generic
+    liftIO case attempt of
+      Attempt 0 -> pure ()
+      Attempt n -> putStrLn $ "Retrying[" ++ show n ++ "]..."
+    text <- M.lift $ prompt $ "PayGeneric (" ++ show x ++ ") " ++ show oPlayer ++ ": "
+    let pool = case parseManaPool text of
+          Nothing -> mempty
+          Just p -> p
+    pure (pool, text)
+  let _ = text -- TODO: log the choice
+  pure pool
+
+parseManaPool :: String -> Maybe CompleteManaPool
+parseManaPool = parseManaPool' . map Char.toUpper
+
+parseManaPool' :: String -> Maybe CompleteManaPool
+parseManaPool' = \case
+  [] -> Just mempty
+  'W' : s -> (toCompleteManaPool W <>) <$> parseManaPool' s
+  'U' : s -> (toCompleteManaPool U <>) <$> parseManaPool' s
+  'B' : s -> (toCompleteManaPool B <>) <$> parseManaPool' s
+  'R' : s -> (toCompleteManaPool R <>) <$> parseManaPool' s
+  'G' : s -> (toCompleteManaPool G <>) <$> parseManaPool' s
+  'C' : s -> (toCompleteManaPool C <>) <$> parseManaPool' s
+  _ -> Nothing
 
 consoleLogCallPush :: OpaqueGameState Console -> CallFrameInfo -> Console ()
 consoleLogCallPush opaque frame = case name == show 'queryMagic of

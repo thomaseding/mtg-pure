@@ -13,6 +13,7 @@ module MtgPure.Model (
   module MtgPure.Model.Colors,
   module MtgPure.Model.ColorsLike,
   module MtgPure.Model.ColorToManaType,
+  module MtgPure.Model.CountMana,
   module MtgPure.Model.Creature,
   module MtgPure.Model.CreatureType,
   module MtgPure.Model.Damage,
@@ -99,6 +100,7 @@ import safe MtgPure.Model.ColoredMana
 import safe MtgPure.Model.ColorlessMana
 import safe MtgPure.Model.Colors
 import safe MtgPure.Model.ColorsLike
+import safe MtgPure.Model.CountMana
 import safe MtgPure.Model.Creature
 import safe MtgPure.Model.CreatureType
 import safe MtgPure.Model.Damage

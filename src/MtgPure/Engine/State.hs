@@ -244,17 +244,19 @@ headlessPrompt =
   Prompt
     { exceptionCantBeginGameWithoutPlayers = pure ()
     , exceptionInvalidCastSpell = \_ _ _ -> pure ()
+    , exceptionInvalidGenericManaPayment = \_ _ -> pure ()
     , exceptionInvalidPlayLand = \_ _ _ -> pure ()
     , exceptionInvalidShuffle = \_ _ -> pure ()
     , exceptionInvalidStartingPlayer = \_ _ -> pure ()
     , exceptionZoneObjectDoesNotExist = \_ -> pure ()
-    , promptPriorityAction = \_ _ _ -> pure PassPriority
     , promptDebugMessage = \_ -> pure ()
     , promptGetStartingPlayer = \_ _ -> pure $ PlayerIndex 0
     , promptLogCallPop = \_ _ -> pure ()
     , promptLogCallPush = \_ _ -> pure ()
+    , promptPayGeneric = \_ _ _ _ -> undefined -- TODO: take first N manas from input pool to satisfy
     , promptPerformMulligan = \_ _ _ -> pure False
     , promptPickZO = \_ _ _ -> pure . NonEmpty.head
+    , promptPriorityAction = \_ _ _ -> pure PassPriority
     , promptShuffle = \_ (CardCount count) _ -> pure $ map CardIndex [0 .. count - 1]
     }
 

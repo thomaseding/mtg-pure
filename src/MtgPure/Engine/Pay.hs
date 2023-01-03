@@ -30,6 +30,8 @@ import safe MtgPure.Engine.Legality (Legality (..), toLegality)
 import safe MtgPure.Engine.Monad (fromRO, gets)
 import safe MtgPure.Engine.Prompt (Prompt' (..))
 import safe MtgPure.Engine.State (GameState (..), Magic, logCall, mkOpaqueGameState)
+import safe MtgPure.Model.CountMana (countMana)
+import safe MtgPure.Model.GenericMana (GenericMana (..))
 import safe MtgPure.Model.Mana (IsManaNoVar, IsSnow, Mana)
 import safe MtgPure.Model.ManaCost (ManaCost (..))
 import safe MtgPure.Model.ManaPool (CompleteManaPool (..), ManaPool (..))
@@ -79,8 +81,7 @@ instance FindMana CompleteManaPool 'NoVar where
   findMana pool f =
     getFirst $ mconcat $ map First [poolNonSnow pool `findMana` f, poolSnow pool `findMana` f]
 
--- TODO: Give this a legit impl.
--- TODO: Need to prompt for generic mana payments
+-- TODO: snow costs and snow payments
 payManaCost :: Monad m => Object 'OTPlayer -> ManaCost 'Var -> Magic 'Private 'RW m Legality
 payManaCost oPlayer (forceVars -> cost) = logCall 'payManaCost do
   fromRO (findPlayer oPlayer) >>= \case
@@ -100,8 +101,28 @@ payManaCost oPlayer (forceVars -> cost) = logCall 'payManaCost do
       case findMana pool' isBad of
         Just () -> pure Illegal
         Nothing -> do
-          setPlayer oPlayer player{playerMana = (playerMana player){poolNonSnow = pool'}}
-          pure Legal
+          let avail = countMana pool'
+              generic = countMana $ costGeneric cost
+              generic' = GenericMana' generic
+          case generic > avail of
+            True -> pure Illegal
+            False -> do
+              payment <- case generic of
+                0 -> pure mempty
+                _ -> do
+                  prompt <- fromRO $ gets magicPrompt
+                  opaque <- fromRO $ gets mkOpaqueGameState
+                  M.lift $ untilJust \attempt -> do
+                    fullPayment <- promptPayGeneric prompt attempt opaque oPlayer generic'
+                    let payment = poolNonSnow fullPayment
+                    case countMana payment == generic of
+                      True -> pure $ Just payment
+                      False -> do
+                        exceptionInvalidGenericManaPayment prompt generic' fullPayment
+                        pure Nothing
+              let pool'' = pool' - payment
+              setPlayer oPlayer player{playerMana = (playerMana player){poolNonSnow = pool''}}
+              pure Legal
 
 payTapCost ::
   (Monad m, IsZO 'ZBattlefield ot, CoPermanent ot) =>
