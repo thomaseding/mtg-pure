@@ -183,34 +183,16 @@ import safe MtgPure.ModelCombinators (
 
 ----------------------------------------
 
-mkBasicLand :: Maybe BasicLandType -> Card OTLand
-mkBasicLand mTy = Card name $
+mkBasicLand :: BasicLandType -> Card OTLand
+mkBasicLand ty = Card name $
   YourLand \_you ->
     LandFacet
       { land_creatureTypes = []
-      , land_landTypes = case mTy of
-          Just ty -> [BasicLand ty]
-          Nothing -> []
-      , land_abilities =
-          -- TODO: Synthesize basic land mana abilities inside the engine instead of explicitly making here.
-          [ Activated @ 'ZBattlefield $
-              thisObject \this ->
-                controllerOf this \you ->
-                  ElectActivated $
-                    Ability
-                      { activated_cost = tapCost [is this]
-                      , activated_effect = effect $ AddMana you case mTy of
-                          Just Plains -> toManaPool W
-                          Just Island -> toManaPool U
-                          Just Swamp -> toManaPool B
-                          Just Mountain -> toManaPool R
-                          Just Forest -> toManaPool G
-                          Nothing -> toManaPool C
-                      }
-          ]
+      , land_landTypes = [BasicLand ty]
+      , land_abilities = []
       }
  where
-  name = CardName $ maybe "Wastes" show mTy
+  name = CardName $ show ty
 
 mkDualLand :: String -> BasicLandType -> BasicLandType -> Card OTLand
 mkDualLand name ty1 ty2 =
@@ -484,7 +466,7 @@ fling = Card "Fling" $
             }
 
 forest :: Card OTLand
-forest = mkBasicLand $ Just Forest
+forest = mkBasicLand Forest
 
 holyStrength :: Card OTEnchantment
 holyStrength = Card "Holy Strength" $
@@ -502,7 +484,7 @@ holyStrength = Card "Holy Strength" $
       }
 
 island :: Card OTLand
-island = mkBasicLand $ Just Island
+island = mkBasicLand Island
 
 lavaAxe :: Card OTSorcery
 lavaAxe = Card "Lava Axe" $
@@ -535,7 +517,7 @@ manaLeak = Card "Mana Leak" $
           }
 
 mountain :: Card OTLand
-mountain = mkBasicLand $ Just Mountain
+mountain = mkBasicLand Mountain
 
 nyxbornRollicker :: Card OTEnchantmentCreature
 nyxbornRollicker = Card "Nyxborn Rollicker" $
@@ -573,7 +555,7 @@ ornithopter = Card "Ornithopter" $
       }
 
 plains :: Card OTLand
-plains = mkBasicLand $ Just Plains
+plains = mkBasicLand Plains
 
 plummet :: Card OTInstant
 plummet = Card "Plummet" $
@@ -749,7 +731,7 @@ stoneThrowingDevils = Card "Stone-Throwing Devils" $
       }
 
 swamp :: Card OTLand
-swamp = mkBasicLand $ Just Swamp
+swamp = mkBasicLand Swamp
 
 swanSong :: Card OTInstant
 swanSong = Card "Swan Song" $
@@ -783,8 +765,24 @@ vindicate = Card "Vindicate" $
               effect $ destroy target
           }
 
+-- NOTE: Wastes does NOT have an intrinsic mana ability.
 wastes :: Card OTLand
-wastes = mkBasicLand Nothing
+wastes = Card "Wastes" $
+  YourLand \_you ->
+    LandFacet
+      { land_creatureTypes = []
+      , land_landTypes = []
+      , land_abilities =
+          [ Activated @ 'ZBattlefield $
+              thisObject \this ->
+                controllerOf this \you ->
+                  ElectActivated $
+                    Ability
+                      { activated_cost = tapCost [is this]
+                      , activated_effect = effect $ AddMana you $ toManaPool C
+                      }
+          ]
+      }
 
 wrathOfGod :: Card OTSorcery
 wrathOfGod = Card "Wrath of God" $

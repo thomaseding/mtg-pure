@@ -149,10 +149,10 @@ replayInputs =
   , "Pass"
   , "PlayLand 128"
   , "CastSpell 123"
-  , "ActivateAbility 137 0"
+  , "ActivateAbility 137 R"
   , "PlayLand 140 0"
-  , "ActivateAbility 140 0"
+  , "ActivateAbility 140 R"
   , "CastSpell 123"
-  , "ActivateAbility 143 0"
+  , "ActivateAbility 143 R"
   , "CastSpell 123"
   ]

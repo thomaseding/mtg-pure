@@ -35,6 +35,7 @@ module MtgPure.ModelCombinators (
   ifElse,
   ifThen,
   ifThenElse,
+  intrinsicManaAbility,
   is,
   isBasic,
   isTapped,
@@ -72,7 +73,7 @@ import safe Data.Kind (Type)
 import safe Data.Nat (Fin, NatList (..), ToNat)
 import safe Data.Proxy (Proxy (..))
 import safe Data.Typeable (Typeable)
-import safe MtgPure.Model.BasicLandType (BasicLandType)
+import safe MtgPure.Model.BasicLandType (BasicLandType (..))
 import safe MtgPure.Model.Color (Color (..))
 import safe MtgPure.Model.ColorsLike (ColorsLike (..))
 import safe MtgPure.Model.Damage (Damage, Damage' (..))
@@ -102,6 +103,7 @@ import safe MtgPure.Model.Object.ToObjectN.Instances ()
 import safe MtgPure.Model.PrePost (PrePost (..))
 import safe MtgPure.Model.Recursive (
   Ability (..),
+  ActivatedAbility (..),
   AnyCard (..),
   AnyToken (..),
   Card (..),
@@ -123,6 +125,7 @@ import safe MtgPure.Model.Recursive (
   WithMaskedObject (..),
   WithMaskedObjects (..),
   WithThis (..),
+  WithThisActivated,
   pattern CTrue,
  )
 import safe MtgPure.Model.Step (Step (..))
@@ -517,3 +520,25 @@ searchLibrary ::
   WithLinkedObject 'ZLibrary (Elect 'Post (Effect 'OneShot)) ot ->
   Effect 'OneShot
 searchLibrary = SearchLibrary coCard
+
+-- TODO: Synthesize basic land mana abilities inside the engine instead of explicitly making here.
+-- Console can use syntax of
+--  ActivateAbility LandID w -- tap for white
+--  ActivateAbility LandID u -- tap for blue
+--  ActivateAbility LandID b -- tap for black
+--  ActivateAbility LandID r -- tap for red
+--  ActivateAbility LandID g -- tap for green
+--  ActivateAbility LandID i -- infer (only avail when has exactly one basic land type)
+intrinsicManaAbility :: BasicLandType -> WithThisActivated 'ZBattlefield OTLand
+intrinsicManaAbility ty = thisObject \this ->
+  controllerOf this \you ->
+    ElectActivated $
+      Ability
+        { activated_cost = tapCost [is this]
+        , activated_effect = effect $ AddMana you case ty of
+            Plains -> toManaPool W
+            Island -> toManaPool U
+            Swamp -> toManaPool B
+            Mountain -> toManaPool R
+            Forest -> toManaPool G
+        }

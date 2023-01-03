@@ -65,7 +65,7 @@ replayInputs =
   , "Pass"
   , "Pass"
   , "PlayLand 8"
-  , "ActivateAbility 11 0"
+  , "ActivateAbility 11 R"
   , "CastSpell 7"
   , "Pass"
   , "Pass"

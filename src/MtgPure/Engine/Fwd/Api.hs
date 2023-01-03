@@ -61,6 +61,7 @@ module MtgPure.Engine.Fwd.Api (
   setPermanent,
   setPlayer,
   startGame,
+  toZO,
   zosSatisfying,
 ) where
 

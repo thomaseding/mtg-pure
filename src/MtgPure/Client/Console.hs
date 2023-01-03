@@ -24,7 +24,6 @@ import safe Control.Monad.Trans (MonadIO (..))
 import safe qualified Control.Monad.Trans as M
 import safe qualified Control.Monad.Trans.State.Strict as State
 import safe Control.Monad.Util (Attempt, Attempt' (..))
-import safe Data.Char (isSpace)
 import safe qualified Data.Char as Char
 import safe Data.Functor ((<&>))
 import safe Data.List (stripPrefix)
@@ -38,6 +37,7 @@ import safe MtgPure.Engine.Fwd.Api (
   eachLogged_,
   getPlayer,
   indexToActivated,
+  toZO,
  )
 import safe MtgPure.Engine.Monad (get, gets, internalFromPrivate)
 import safe MtgPure.Engine.PlayGame (playGame)
@@ -62,6 +62,7 @@ import safe MtgPure.Engine.State (
   OpaqueGameState,
   queryMagic,
  )
+import safe MtgPure.Model.BasicLandType (BasicLandType (..))
 import safe MtgPure.Model.CardName (CardName (..))
 import safe MtgPure.Model.Deck (Deck (..))
 import safe MtgPure.Model.GenericMana (GenericMana (..))
@@ -73,6 +74,7 @@ import safe MtgPure.Model.Mulligan (Mulligan (..))
 import safe MtgPure.Model.Object.OTNAliases (
   OTAny,
   OTCard,
+  OTLand,
  )
 import safe MtgPure.Model.Object.Object (Object (..))
 import safe MtgPure.Model.Object.ObjectId (ObjectId (ObjectId), getObjectId)
@@ -89,6 +91,7 @@ import safe MtgPure.Model.Variable (Var (..))
 import safe MtgPure.Model.Zone (Zone (..))
 import safe MtgPure.Model.ZoneObject.Convert (toZO0, toZO1, zo0ToSpell)
 import safe MtgPure.Model.ZoneObject.ZoneObject (IsZO, ZO)
+import safe MtgPure.ModelCombinators (intrinsicManaAbility)
 import safe qualified System.IO as IO
 import safe Text.Read (readMaybe)
 
@@ -200,6 +203,29 @@ consolePickZo _attempt _opaque _p zos = case zos of
     liftIO $ print ("picked", zo, "from", NonEmpty.toList zos)
     pure zo
 
+mapFst :: (a -> c) -> (a, b) -> (c, b)
+mapFst f (a, b) = (f a, b)
+
+newtype EncodedInt = EncodedInt Int
+
+instance Read EncodedInt where
+  readsPrec prec s = case s of
+    "" -> []
+    c : cs -> case c of
+      (go (-1) 'W' cs -> result@[_]) -> result
+      (go (-2) 'U' cs -> result@[_]) -> result
+      (go (-3) 'B' cs -> result@[_]) -> result
+      (go (-4) 'R' cs -> result@[_]) -> result
+      (go (-5) 'G' cs -> result@[_]) -> result
+      _ -> map (mapFst EncodedInt) $ readsPrec prec s
+   where
+    go enc sym cs c = case sym == Char.toUpper c of
+      False -> []
+      True -> case cs of
+        "" -> [(EncodedInt enc, "")]
+        ' ' : _ -> [(EncodedInt enc, cs)]
+        _ -> []
+
 newtype CommandInput = CommandInput [Int]
 
 instance Show CommandInput where
@@ -224,7 +250,7 @@ readsCommandInput = readsCommandInput' True . map dotToSpace
 
 readsCommandInput' :: Bool -> String -> [(CommandInput, String)]
 readsCommandInput' isHead s0 = case reads' s0 of
-  [(x, s1)] -> case span isSpace s1 of
+  [(EncodedInt x, s1)] -> case span Char.isSpace s1 of
     (_, "") -> [(CommandInput [x], "")]
     ("", _) -> []
     (_, s2) -> prepend x $ readsCommandInput' False s2
@@ -233,13 +259,13 @@ readsCommandInput' isHead s0 = case reads' s0 of
   prepend x res = res <&> \(CommandInput xs, s) -> (CommandInput $ x : xs, s)
   reads' s = case isHead of
     False -> reads s
-    True -> case dropWhile isSpace s of
+    True -> case dropWhile Char.isSpace s of
       (stripPrefix "Pass" -> Just s') -> namedRead 0 s'
       (stripPrefix "ActivateAbility " -> Just s') -> namedRead 1 s'
       (stripPrefix "CastSpell " -> Just s') -> namedRead 2 s'
       (stripPrefix "PlayLand " -> Just s') -> namedRead 3 s'
       _ -> reads s
-  namedRead n s = [(n, ' ' : s)]
+  namedRead n s = [(EncodedInt n, ' ' : s)]
 
 parseCommandInput :: Monad m => CommandInput -> Magic 'Public 'RO m (PriorityAction ())
 parseCommandInput (CommandInput raw) = case raw of
@@ -248,8 +274,17 @@ parseCommandInput (CommandInput raw) = case raw of
     let index = AbsoluteActivatedAbilityIndex (ObjectId objId) $ RelativeAbilityIndex abilityIndex
     -- XXX: This can be generalized by scanning across various zones.(with OTAny each time).
     mAbility <- internalFromPrivate $ indexToActivated index
+    mZo <- internalFromPrivate $ toZO $ ObjectId objId
     pure case mAbility of
-      Nothing -> AskPriorityActionAgain
+      Nothing -> case mZo of
+        Just (zo :: ZO 'ZBattlefield OTLand) -> case abilityIndex of
+          -1 -> PriorityAction $ ActivateAbility $ SomeActivatedAbility zo $ intrinsicManaAbility Plains
+          -2 -> PriorityAction $ ActivateAbility $ SomeActivatedAbility zo $ intrinsicManaAbility Island
+          -3 -> PriorityAction $ ActivateAbility $ SomeActivatedAbility zo $ intrinsicManaAbility Swamp
+          -4 -> PriorityAction $ ActivateAbility $ SomeActivatedAbility zo $ intrinsicManaAbility Mountain
+          -5 -> PriorityAction $ ActivateAbility $ SomeActivatedAbility zo $ intrinsicManaAbility Forest
+          _ -> AskPriorityActionAgain
+        Nothing -> AskPriorityActionAgain
       Just ability -> PriorityAction $ ActivateAbility (ability :: SomeActivatedAbility 'ZBattlefield OTAny)
   [2, spellId] -> do
     let zo0 = toZO0 @ 'ZHand $ ObjectId spellId -- XXX: Use `getZoneOf` + `singZone` to generalize.

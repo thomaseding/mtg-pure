@@ -10,6 +10,7 @@
 module MtgPure.Engine.ActivateCast (
   activateAbility,
   castSpell,
+  isIntrinsicManaAbility,
 ) where
 
 import safe Control.Exception (assert)
@@ -18,7 +19,7 @@ import safe Control.Monad.Trans (lift)
 import safe Control.Monad.Util (AndLike (..))
 import safe Data.Kind (Type)
 import safe qualified Data.Map.Strict as Map
-import safe Data.Typeable (Typeable)
+import safe Data.Typeable (Typeable, cast)
 import safe MtgPure.Engine.Fwd.Api (
   doesZoneObjectExist,
   getHasPriority,
@@ -110,6 +111,7 @@ import safe MtgPure.Model.Stack (Stack (..), StackObject (..))
 import safe MtgPure.Model.Zone (IsZone (..), SZone (..), Zone (..))
 import safe MtgPure.Model.ZoneObject.Convert (AsSpell', asCard, oToZO1, toZO0)
 import safe MtgPure.Model.ZoneObject.ZoneObject (IsOT, IsZO, ZO, ZOPlayer, ZoneObject (..))
+import MtgPure.ModelCombinators (intrinsicManaAbility)
 
 type Legality' = Maybe ()
 
@@ -374,7 +376,7 @@ activateAbility oPlayer = logCall 'activateAbility \case
     Magic 'Private 'RW m Legality
   goSomeActivatedAbility zoThis' withThisActivated = logCall' "goSomeActivatedAbility" do
     zoExists' <- fromRO $ doesZoneObjectExist zoThis'
-    pure () -- TODO: Check that `zoThis'` actually has the `withThisActivated`
+    pure () -- TODO: Check that `zoThis'` actually has the `withThisActivated` (including intrinsic abilities)
     _reqs <- fromRO $ getActivateAbilityReqs oPlayer -- TODO: validate reqs
     let oThis = promoteIdToObjectN @ot $ getObjectId zoThis'
         zoThis = ZO (singZone @zone) oThis
@@ -420,7 +422,7 @@ activateAbility oPlayer = logCall 'activateAbility \case
                 let goPay cost effect = do
                       let elected = ElectedActivatedAbility oPlayer zoThis cost effect
                       fmap legalityToMaybe $
-                        fromRO (isManaAbility effect) >>= \case
+                        fromRO (isPendingManaEffect effect) >>= \case
                           True -> payElectedManaAbilityAndResolve elected
                           False -> payElectedAndPutOnStack @ 'Activate @ot zoAbility elected
                 let cost = activated_cost activated
@@ -429,9 +431,16 @@ activateAbility oPlayer = logCall 'activateAbility \case
 
     goWithThisActivated
 
+isIntrinsicManaAbility :: IsZO zone ot => WithThisActivated zone ot -> Bool
+isIntrinsicManaAbility ability = case cast ability of
+  Just landAbility ->
+    let predicate ty = landAbility == intrinsicManaAbility ty
+     in any predicate [minBound ..]
+  Nothing -> False
+
 -- (605.1a)
-isManaAbility :: Monad m => Pending (Effect 'OneShot) ot -> Magic 'Private 'RO m Bool
-isManaAbility (Pending effect) = logCall 'isManaAbility do
+isPendingManaEffect :: Monad m => Pending (Effect 'OneShot) ot -> Magic 'Private 'RO m Bool
+isPendingManaEffect (Pending effect) = logCall 'isPendingManaEffect do
   requiresTargets effect >>= \case
     True -> pure False
     False -> internalFromRW goGameResult $ local withHeadlessPrompt do
