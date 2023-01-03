@@ -95,6 +95,7 @@ import safe MtgPure.Model.Recursive (
     CantBeRegenerated,
     DrawCards,
     EffectContinuous,
+    Sequence,
     StatDelta,
     WithList
   ),
@@ -455,7 +456,10 @@ damnation = Card "Damnation" $
             All $ maskeds @OTCreature [] \creatures ->
               effect $
                 WithList $ Each creatures \creature ->
-                  destroy creature
+                  Sequence
+                    [ destroy creature
+                    , EffectContinuous $ CantBeRegenerated creature
+                    ]
         }
 
 fling :: Card OTInstant
@@ -795,5 +799,8 @@ wrathOfGod = Card "Wrath of God" $
             All $ maskeds @OTCreature [] \creatures ->
               effect $
                 WithList $ Each creatures \creature ->
-                  destroy creature
+                  Sequence
+                    [ destroy creature
+                    , EffectContinuous $ CantBeRegenerated creature
+                    ]
         }
