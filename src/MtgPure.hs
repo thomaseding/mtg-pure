@@ -9,6 +9,7 @@ module MtgPure (
   module MtgPure.ModelCombinators,
   NatList (..),
   codeGenToObjectN,
+  mainMountainRagingGoblin,
   mainMountainShock,
   mainMountainStoneRain,
 ) where
@@ -29,6 +30,7 @@ import safe MtgPure.Model.Object.ToObjectN.CodeGen (codeGenToObjectN)
 import safe MtgPure.ModelCombinators
 import safe MtgPure.Test.Direct ()
 import safe MtgPure.Test.MagicContUnit ()
+import safe MtgPure.Test.MountainRagingGoblin (mainMountainRagingGoblin)
 import safe MtgPure.Test.MountainShock (mainMountainShock)
 import safe MtgPure.Test.MountainStoneRain (mainMountainStoneRain)
 import safe MtgPure.Test.Variabled ()

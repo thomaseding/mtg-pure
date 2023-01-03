@@ -275,17 +275,18 @@ castSpellCard oCaster card = logCall 'castSpellCard case card of
 
   goYourCard :: IsSpecificCard ot => YourCard ot -> Magic 'Private 'RW m Legality
   goYourCard = \case
-    YourArtifact{} -> goInvalid
-    YourArtifactCreature{} -> goInvalid
-    YourArtifactLand{} -> goInvalid
-    YourCreature{} -> goInvalid
-    YourEnchantment{} -> goInvalid
-    YourEnchantmentCreature{} -> goInvalid
     YourLand{} -> goInvalid
-    YourPlaneswalker{} -> goInvalid
+    YourArtifactLand{} -> goInvalid
     --
     YourInstant cont -> goSpell cont
     YourSorcery cont -> goSpell cont
+    --
+    YourArtifact cont -> goSpell $ ElectCard . cont
+    YourArtifactCreature cont -> goSpell $ ElectCard . cont
+    YourCreature cont -> goSpell $ ElectCard . cont
+    YourEnchantment cont -> goSpell $ ElectCard . cont
+    YourEnchantmentCreature cont -> goSpell $ ElectCard . cont
+    YourPlaneswalker cont -> goSpell $ ElectCard . cont
 
   goSpell ::
     IsSpecificCard ot =>
@@ -581,6 +582,9 @@ payElectedAndPutOnStackImpl ::
 payElectedAndPutOnStackImpl zoStack idToStackObject elected = do
   let stackId = getObjectId zoStack
       stackItem = idToStackObject stackId
+  case stackItem of
+    StackAbility{} -> pure ()
+    StackSpell{} -> pure () -- TODO: Remove original zoSpell (if not an ability) from its original zone (e.g. remove from hand).
   modify \st ->
     st
       { magicStack = Stack $ stackItem : unStack (magicStack st)

@@ -48,6 +48,21 @@ import safe MtgPure.Model.Recursive.Show ()
 import safe MtgPure.Model.Sideboard (Sideboard (..))
 import safe MtgPure.Model.Stack (Stack (..), StackObject (..))
 
+newtype Bulleted a = Bulleted a
+  deriving (Eq, Ord)
+
+instance Show a => Show (Bulleted a) where
+  showsPrec n (Bulleted x) = ("\n  @@ " ++) . showsPrec n x
+
+class AsBulleted a b | a -> b where
+  bulleted :: a -> b
+
+instance AsBulleted [a] [Bulleted a] where
+  bulleted = map Bulleted
+
+instance Ord k => AsBulleted (Map.Map k v) (Map.Map (Bulleted k) v) where
+  bulleted = Map.mapKeys Bulleted
+
 type DString = DList.DList Char
 
 tellPrint :: Show a => a -> Writer DString ()
@@ -123,10 +138,10 @@ instance Show (GameState m) where
     tellPrint ("allPlayerIds", allPlayerIds)
     tellLine ""
     tellPrint ("graveMapSize", Map.size graveMap)
-    tellPrint ("graveMap", graveMap)
+    tellPrint ("graveMap", bulleted graveMap)
     tellLine ""
     tellPrint ("handMapSize", Map.size handMap)
-    tellPrint ("handMap", handMap)
+    tellPrint ("handMap", bulleted handMap)
     tellLine ""
     tellPrint ("libMapSize", libMapSize)
     tellLine ""
@@ -143,11 +158,11 @@ instance Show (GameState m) where
     tellPrint ("apnapOrder", Stream.take aliveCount apnapOrder)
     tellPrint ("priorityOrder", priorityOrder)
     tellLine ""
-    tellPrint ("stack", stack)
+    tellPrint ("stack", bulleted stack)
     tellLine ""
-    tellPrint ("allPlayers", allPlayers) --  TODO: beautify this
+    tellPrint ("allPlayers", bulleted allPlayers) --  TODO: beautify this
     tellLine ""
-    tellPrint ("permMap", permMap) --  TODO: beautify this
+    tellPrint ("permMap", bulleted permMap) --  TODO: beautify this
     tellLine ""
     tell "</GameState>"
    where
@@ -171,7 +186,7 @@ instance Show (GameState m) where
       , magicPlayerOrderPriority = priorityOrder
       , magicPlayerOrderTurn = turnOrder
       , magicPrompt = _
-      , magicStack = stack
+      , magicStack = Stack stack
       , magicStackEntryTargetsMap = (Map.size -> stackEntryTargetsMapSize)
       , magicStackEntryElectedMap = (Map.size -> stackEntryElectedMapSize)
       , magicStartingPlayer = startingPlayer
