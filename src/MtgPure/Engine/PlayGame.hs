@@ -15,8 +15,8 @@ import safe qualified Data.Map.Strict as Map
 import safe qualified Data.Stream as Stream
 import safe Data.Void (Void, absurd)
 import safe MtgPure.Engine.Fwd.Api (
-  allPlayers,
   eachLogged_,
+  getAlivePlayers,
   getPlayer,
   pushLibraryCard,
   startGame,
@@ -67,7 +67,7 @@ startGame' = logCall 'startGame' do
 
 initLibraries :: Monad m => Magic 'Private 'RW m ()
 initLibraries = logCall 'initLibraries do
-  oPlayers <- fromPublicRO allPlayers
+  oPlayers <- fromPublicRO getAlivePlayers
   eachLogged_ oPlayers \oPlayer -> do
     player <- fromRO $ getPlayer oPlayer
     let Deck cards = playerStartingDeck player

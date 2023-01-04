@@ -286,6 +286,13 @@ instance HasCardName (Card ot) where
 
 ----------------------------------------
 
+-- TODO:
+-- The one-shot facets need to be split into two parts:
+--    * A static part
+--    * A dynamic part
+-- The reason for this is that the engine and clients will need to know things
+-- like color, card super types, and card subtypes before doing any elections.
+-- The YourCard type will hold both flavors in its one-shot constructor flavors.
 data CardFacet (ot :: Type) :: Type where
   ArtifactFacet ::
     { artifact_colors :: Colors
@@ -349,7 +356,8 @@ data CardFacet (ot :: Type) :: Type where
     { instant_colors :: Colors
     , instant_cost :: Cost OTInstant
     , instant_creatureTypes :: [CreatureType]
-    , instant_abilities :: [Ability OTInstant]
+    , -- instant_oneShotTypes :: [OneShotType] e.g. Arcane
+      instant_abilities :: [Ability OTInstant]
     , instant_effect :: WithThisOneShot OTInstant
     } ->
     CardFacet OTInstant
@@ -370,7 +378,8 @@ data CardFacet (ot :: Type) :: Type where
     { sorcery_colors :: Colors
     , sorcery_cost :: Cost OTSorcery
     , sorcery_creatureTypes :: [CreatureType]
-    , sorcery_abilities :: [Ability OTSorcery]
+    , -- instant_oneShotTypes :: [OneShotType] e.g. Arcane
+      sorcery_abilities :: [Ability OTSorcery]
     , sorcery_effect :: WithThisOneShot OTSorcery
     } ->
     CardFacet OTSorcery

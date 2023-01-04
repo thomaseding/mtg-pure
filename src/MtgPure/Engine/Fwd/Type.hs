@@ -28,6 +28,7 @@ import safe MtgPure.Engine.Prompt (
   SomeActivatedAbility,
   SpecialAction,
  )
+import safe MtgPure.Model.BasicLandType (BasicLandType)
 import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.Object.OTN (OT0)
 import safe MtgPure.Model.Object.OTNAliases (OTCard, OTPermanent)
@@ -56,7 +57,6 @@ data Fwd' ex st m where
     , fwd_activatedAbilitiesOf :: forall zone ot. IsZO zone ot => ZO zone ot -> Magic' ex st 'Private 'RO m [SomeActivatedAbility zone ot]
     , fwd_allControlledPermanentsOf :: Object 'OTPlayer -> Magic' ex st 'Public 'RO m [ZO 'ZBattlefield OTPermanent]
     , fwd_allPermanents :: Magic' ex st 'Public 'RO m [ZO 'ZBattlefield OTPermanent]
-    , fwd_allPlayers :: Magic' ex st 'Public 'RO m [Object 'OTPlayer]
     , fwd_allZOActivatedAbilities :: forall zone ot. IsZO zone ot => Magic' ex st 'Private 'RO m [SomeActivatedAbility zone ot]
     , fwd_allZOs :: forall zone ot. IsZO zone ot => Magic' ex st 'Private 'RO m [ZO zone ot]
     , fwd_askPriorityAction :: Object 'OTPlayer -> MagicCont' ex st 'Private 'RW m () ()
@@ -65,14 +65,16 @@ data Fwd' ex st m where
     , fwd_controllerOf :: forall zone ot. IsZO zone ot => ZO zone ot -> Magic' ex st 'Private 'RO m (Object 'OTPlayer)
     , fwd_doesZoneObjectExist :: forall zone ot. IsZO zone ot => ZO zone ot -> Magic' ex st 'Private 'RO m Bool
     , fwd_enact :: Effect 'OneShot -> Magic' ex st 'Private 'RW m EnactInfo
-    , fwd_findHandCard :: Object 'OTPlayer -> ZO 'ZHand OTCard -> Magic' ex st 'Private 'RW m (Maybe AnyCard)
-    , fwd_findLibraryCard :: Object 'OTPlayer -> ZO 'ZLibrary OTCard -> Magic' ex st 'Private 'RW m (Maybe AnyCard)
+    , fwd_findHandCard :: Object 'OTPlayer -> ZO 'ZHand OTCard -> Magic' ex st 'Private 'RO m (Maybe AnyCard)
+    , fwd_findLibraryCard :: Object 'OTPlayer -> ZO 'ZLibrary OTCard -> Magic' ex st 'Private 'RO m (Maybe AnyCard)
     , fwd_findPermanent :: ZO 'ZBattlefield OTPermanent -> Magic' ex st 'Private 'RO m (Maybe Permanent)
     , fwd_findPlayer :: Object 'OTPlayer -> Magic' ex st 'Private 'RO m (Maybe Player)
     , fwd_gainPriority :: Object 'OTPlayer -> Magic' ex st 'Private 'RW m ()
     , fwd_getActivePlayer :: Magic' ex st 'Public 'RO m (Object 'OTPlayer)
+    , fwd_getAlivePlayers :: Magic' ex st 'Public 'RO m [Object 'OTPlayer]
     , fwd_getAlivePlayerCount :: Magic' ex st 'Public 'RO m PlayerCount
     , fwd_getAPNAP :: forall v. Magic' ex st v 'RO m (Stream.Stream (Object 'OTPlayer))
+    , fwd_getBasicLandTypes :: forall zone ot. IsZO zone ot => ZO zone ot -> Magic' ex st 'Private 'RO m [BasicLandType]
     , fwd_getHasPriority :: Object 'OTPlayer -> Magic' ex st 'Public 'RO m Bool
     , fwd_getPermanent :: ZO 'ZBattlefield OTPermanent -> Magic' ex st 'Private 'RO m Permanent
     , fwd_getPlayer :: Object 'OTPlayer -> Magic' ex st 'Private 'RO m Player

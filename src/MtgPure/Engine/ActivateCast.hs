@@ -10,7 +10,6 @@
 module MtgPure.Engine.ActivateCast (
   activateAbility,
   castSpell,
-  isIntrinsicManaAbility,
 ) where
 
 import safe Control.Exception (assert)
@@ -19,7 +18,7 @@ import safe Control.Monad.Trans (lift)
 import safe Control.Monad.Util (AndLike (..))
 import safe Data.Kind (Type)
 import safe qualified Data.Map.Strict as Map
-import safe Data.Typeable (Typeable, cast)
+import safe Data.Typeable (Typeable)
 import safe MtgPure.Engine.Fwd.Api (
   doesZoneObjectExist,
   getHasPriority,
@@ -111,7 +110,6 @@ import safe MtgPure.Model.Stack (Stack (..), StackObject (..))
 import safe MtgPure.Model.Zone (IsZone (..), SZone (..), Zone (..))
 import safe MtgPure.Model.ZoneObject.Convert (AsSpell', asCard, oToZO1, toZO0)
 import safe MtgPure.Model.ZoneObject.ZoneObject (IsOT, IsZO, ZO, ZOPlayer, ZoneObject (..))
-import MtgPure.ModelCombinators (intrinsicManaAbility)
 
 type Legality' = Maybe ()
 
@@ -430,13 +428,6 @@ activateAbility oPlayer = logCall 'activateAbility \case
                 maybeToLegality <$> playPendingAbility zoAbility cost effect goPay
 
     goWithThisActivated
-
-isIntrinsicManaAbility :: IsZO zone ot => WithThisActivated zone ot -> Bool
-isIntrinsicManaAbility ability = case cast ability of
-  Just landAbility ->
-    let predicate ty = landAbility == intrinsicManaAbility ty
-     in any predicate [minBound ..]
-  Nothing -> False
 
 -- (605.1a)
 isPendingManaEffect :: Monad m => Pending (Effect 'OneShot) ot -> Magic 'Private 'RO m Bool

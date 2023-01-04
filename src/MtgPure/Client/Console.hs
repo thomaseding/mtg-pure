@@ -33,8 +33,9 @@ import safe qualified Data.Map.Strict as Map
 import safe qualified Data.Set as Set
 import safe qualified Data.Traversable as T
 import safe MtgPure.Engine.Fwd.Api (
-  allPlayers,
   eachLogged_,
+  getAlivePlayers,
+  getBasicLandTypes,
   getPlayer,
   indexToActivated,
   toZO,
@@ -91,7 +92,7 @@ import safe MtgPure.Model.Variable (Var (..))
 import safe MtgPure.Model.Zone (Zone (..))
 import safe MtgPure.Model.ZoneObject.Convert (toZO0, toZO1, zo0ToSpell)
 import safe MtgPure.Model.ZoneObject.ZoneObject (IsZO, ZO)
-import safe MtgPure.ModelCombinators (intrinsicManaAbility)
+import safe MtgPure.ModelCombinators (basicManaAbility)
 import safe qualified System.IO as IO
 import safe Text.Read (readMaybe)
 
@@ -217,6 +218,7 @@ instance Read EncodedInt where
       (go (-3) 'B' cs -> result@[_]) -> result
       (go (-4) 'R' cs -> result@[_]) -> result
       (go (-5) 'G' cs -> result@[_]) -> result
+      (go (-6) 'I' cs -> result@[_]) -> result -- "I" for "Infer"
       _ -> map (mapFst EncodedInt) $ readsPrec prec s
    where
     go enc sym cs c = case sym == Char.toUpper c of
@@ -275,17 +277,23 @@ parseCommandInput (CommandInput raw) = case raw of
     -- XXX: This can be generalized by scanning across various zones.(with OTAny each time).
     mAbility <- internalFromPrivate $ indexToActivated index
     mZo <- internalFromPrivate $ toZO $ ObjectId objId
-    pure case mAbility of
+    let goIntrinsic zo ty = PriorityAction $ ActivateAbility $ SomeActivatedAbility zo $ basicManaAbility ty
+    case mAbility of
       Nothing -> case mZo of
         Just (zo :: ZO 'ZBattlefield OTLand) -> case abilityIndex of
-          -1 -> PriorityAction $ ActivateAbility $ SomeActivatedAbility zo $ intrinsicManaAbility Plains
-          -2 -> PriorityAction $ ActivateAbility $ SomeActivatedAbility zo $ intrinsicManaAbility Island
-          -3 -> PriorityAction $ ActivateAbility $ SomeActivatedAbility zo $ intrinsicManaAbility Swamp
-          -4 -> PriorityAction $ ActivateAbility $ SomeActivatedAbility zo $ intrinsicManaAbility Mountain
-          -5 -> PriorityAction $ ActivateAbility $ SomeActivatedAbility zo $ intrinsicManaAbility Forest
-          _ -> AskPriorityActionAgain
-        Nothing -> AskPriorityActionAgain
-      Just ability -> PriorityAction $ ActivateAbility (ability :: SomeActivatedAbility 'ZBattlefield OTAny)
+          -1 -> pure $ goIntrinsic zo Plains
+          -2 -> pure $ goIntrinsic zo Island
+          -3 -> pure $ goIntrinsic zo Swamp
+          -4 -> pure $ goIntrinsic zo Mountain
+          -5 -> pure $ goIntrinsic zo Forest
+          -6 -> do
+            tys <- internalFromPrivate $ getBasicLandTypes zo
+            case tys of
+              [ty] -> pure $ goIntrinsic zo ty
+              _ -> pure AskPriorityActionAgain
+          _ -> pure AskPriorityActionAgain
+        Nothing -> pure AskPriorityActionAgain
+      Just ability -> pure $ PriorityAction $ ActivateAbility (ability :: SomeActivatedAbility 'ZBattlefield OTAny)
   [2, spellId] -> do
     let zo0 = toZO0 @ 'ZHand $ ObjectId spellId -- XXX: Use `getZoneOf` + `singZone` to generalize.
         zo = zo0ToSpell zo0
@@ -399,7 +407,7 @@ printGameState opaque = queryMagic opaque case dumpEverything of
     liftIO do
       horizLine
       print "GAME STATE BEGIN"
-    oPlayers <- allPlayers
+    oPlayers <- getAlivePlayers
     eachLogged_ oPlayers \oPlayer -> do
       let name = getPlayerName oPlayer
       liftIO do

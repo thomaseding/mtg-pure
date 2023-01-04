@@ -22,7 +22,6 @@ module MtgPure.Engine.Fwd.Api (
   activatedToIndex,
   allControlledPermanentsOf,
   allPermanents,
-  allPlayers,
   allZOActivatedAbilities,
   allZOs,
   askPriorityAction,
@@ -37,8 +36,10 @@ module MtgPure.Engine.Fwd.Api (
   findPlayer,
   gainPriority,
   getActivePlayer,
+  getAlivePlayers,
   getAlivePlayerCount,
   getAPNAP,
+  getBasicLandTypes,
   getHasPriority,
   getPermanent,
   getPlayer,
@@ -98,6 +99,7 @@ import safe MtgPure.Engine.State (
   MagicCont,
   logCall,
  )
+import MtgPure.Model.BasicLandType (BasicLandType)
 import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.Object.OTN (OT0)
 import safe MtgPure.Model.Object.OTNAliases (OTCard, OTPermanent)
@@ -145,17 +147,17 @@ data Api (m :: Type -> Type) (v :: Visibility) (rw :: ReadWrite) (ret :: Type) :
   ActivatedToIndex :: IsZO zone ot => SomeActivatedAbility zone ot -> Api m 'Private 'RO AbsoluteActivatedAbilityIndex
   ActivatedAbilitiesOf :: IsZO zone ot => ZO zone ot -> Api m 'Private 'RO [SomeActivatedAbility zone ot]
   ActivePlayer :: Api m 'Public 'RO (Object 'OTPlayer)
+  AlivePlayers :: Api m 'Public 'RO [Object 'OTPlayer]
   AlivePlayerCount :: Api m 'Public 'RO PlayerCount
   AllPermanents :: Api m 'Public 'RO [ZO 'ZBattlefield OTPermanent]
-  AllPlayers :: Api m 'Public 'RO [Object 'OTPlayer]
   AllZOActivatedAbilities :: IsZO zone ot => Api m 'Private 'RO [SomeActivatedAbility zone ot]
   AllZOs :: IsZO zone ot => Api m 'Private 'RO [ZO zone ot]
   CaseOf :: (x -> Api m 'Private 'RW a) -> Case x -> Api m 'Private 'RW a
   ControllerOf :: IsZO zone ot => ZO zone ot -> Api m 'Private 'RO (Object 'OTPlayer)
   DoesZoneObjectExist :: IsZO zone ot => ZO zone ot -> Api m 'Private 'RO Bool
   Enact :: Effect 'OneShot -> Api m 'Private 'RW EnactInfo
-  FindHandCard :: Object 'OTPlayer -> ZO 'ZHand OTCard -> Api m 'Private 'RW (Maybe AnyCard)
-  FindLibraryCard :: Object 'OTPlayer -> ZO 'ZLibrary OTCard -> Api m 'Private 'RW (Maybe AnyCard)
+  FindHandCard :: Object 'OTPlayer -> ZO 'ZHand OTCard -> Api m 'Private 'RO (Maybe AnyCard)
+  FindLibraryCard :: Object 'OTPlayer -> ZO 'ZLibrary OTCard -> Api m 'Private 'RO (Maybe AnyCard)
   FindPermanent :: ZO 'ZBattlefield OTPermanent -> Api m 'Private 'RO (Maybe Permanent)
   FindPlayer :: Object 'OTPlayer -> Api m 'Private 'RO (Maybe Player)
   GainPriority :: Object 'OTPlayer -> Api m 'Private 'RW ()
@@ -191,9 +193,9 @@ run = \case
   ActivatedToIndex a -> activatedToIndex a
   ActivatedAbilitiesOf a -> activatedAbilitiesOf a
   ActivePlayer -> getActivePlayer
+  AlivePlayers -> getAlivePlayers
   AlivePlayerCount -> getAlivePlayerCount
   AllPermanents -> allPermanents
-  AllPlayers -> allPlayers
   AllZOActivatedAbilities -> allZOActivatedAbilities
   AllZOs -> allZOs
   CaseOf a b -> caseOf (run . a) b
@@ -272,9 +274,6 @@ allControlledPermanentsOf = fwd1 fwd_allControlledPermanentsOf
 allPermanents :: Monad m => Magic 'Public 'RO m [ZO 'ZBattlefield OTPermanent]
 allPermanents = fwd0 fwd_allPermanents
 
-allPlayers :: Monad m => Magic 'Public 'RO m [Object 'OTPlayer]
-allPlayers = fwd0 fwd_allPlayers
-
 allZOs :: (IsZO zone ot, Monad m) => Magic 'Private 'RO m [ZO zone ot]
 allZOs = fwd0 fwd_allZOs
 
@@ -296,10 +295,10 @@ doesZoneObjectExist = fwd1 fwd_doesZoneObjectExist
 enact :: Monad m => Effect 'OneShot -> Magic 'Private 'RW m EnactInfo
 enact = fwd1 fwd_enact
 
-findHandCard :: Monad m => Object 'OTPlayer -> ZO 'ZHand OTCard -> Magic 'Private 'RW m (Maybe AnyCard)
+findHandCard :: Monad m => Object 'OTPlayer -> ZO 'ZHand OTCard -> Magic 'Private 'RO m (Maybe AnyCard)
 findHandCard = fwd2 fwd_findHandCard
 
-findLibraryCard :: Monad m => Object 'OTPlayer -> ZO 'ZLibrary OTCard -> Magic 'Private 'RW m (Maybe AnyCard)
+findLibraryCard :: Monad m => Object 'OTPlayer -> ZO 'ZLibrary OTCard -> Magic 'Private 'RO m (Maybe AnyCard)
 findLibraryCard = fwd2 fwd_findLibraryCard
 
 findPermanent :: Monad m => ZO 'ZBattlefield OTPermanent -> Magic 'Private 'RO m (Maybe Permanent)
@@ -311,6 +310,9 @@ findPlayer = fwd1 fwd_findPlayer
 gainPriority :: Monad m => Object 'OTPlayer -> Magic 'Private 'RW m ()
 gainPriority = fwd1 fwd_gainPriority
 
+getAlivePlayers :: Monad m => Magic 'Public 'RO m [Object 'OTPlayer]
+getAlivePlayers = fwd0 fwd_getAlivePlayers
+
 getActivePlayer :: Monad m => Magic 'Public 'RO m (Object 'OTPlayer)
 getActivePlayer = fwd0 fwd_getActivePlayer
 
@@ -319,6 +321,9 @@ getAlivePlayerCount = fwd0 fwd_getAlivePlayerCount
 
 getAPNAP :: Monad m => Magic v 'RO m (Stream.Stream (Object 'OTPlayer))
 getAPNAP = fwd0 fwd_getAPNAP
+
+getBasicLandTypes :: (IsZO zone ot, Monad m) => ZO zone ot -> Magic 'Private 'RO m [BasicLandType]
+getBasicLandTypes = fwd1 fwd_getBasicLandTypes
 
 getHasPriority :: Monad m => Object 'OTPlayer -> Magic 'Public 'RO m Bool
 getHasPriority = fwd1 fwd_getHasPriority

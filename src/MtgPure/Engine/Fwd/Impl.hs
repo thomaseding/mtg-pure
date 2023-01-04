@@ -21,7 +21,6 @@ import safe MtgPure.Engine.Core (
   activatedToIndex,
   allControlledPermanentsOf,
   allPermanents,
-  allPlayers,
   allZOActivatedAbilities,
   allZOs,
   doesZoneObjectExist,
@@ -33,6 +32,8 @@ import safe MtgPure.Engine.Core (
   getActivatedAbilitiesOf,
   getActivePlayer,
   getAlivePlayerCount,
+  getAlivePlayers,
+  getBasicLandTypes,
   getPermanent,
   getPlayer,
   indexToActivated,
@@ -72,7 +73,6 @@ fwdImpl =
     , fwd_activatedAbilitiesOf = getActivatedAbilitiesOf
     , fwd_allControlledPermanentsOf = allControlledPermanentsOf
     , fwd_allPermanents = allPermanents
-    , fwd_allPlayers = allPlayers
     , fwd_allZOActivatedAbilities = allZOActivatedAbilities
     , fwd_allZOs = allZOs
     , fwd_askPriorityAction = askPriorityAction
@@ -87,8 +87,10 @@ fwdImpl =
     , fwd_findPlayer = findPlayer
     , fwd_gainPriority = gainPriority
     , fwd_getActivePlayer = getActivePlayer
+    , fwd_getAlivePlayers = getAlivePlayers
     , fwd_getAlivePlayerCount = getAlivePlayerCount
     , fwd_getAPNAP = getAPNAP
+    , fwd_getBasicLandTypes = getBasicLandTypes
     , fwd_getHasPriority = getHasPriority
     , fwd_getPermanent = getPermanent
     , fwd_getPlayer = getPlayer

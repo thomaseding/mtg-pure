@@ -12,7 +12,6 @@ module MtgPure.Engine.Core (
   activatedToIndex,
   allControlledPermanentsOf,
   allPermanents,
-  allPlayers,
   allZOActivatedAbilities,
   allZOs,
   doesObjectIdExist,
@@ -24,8 +23,10 @@ module MtgPure.Engine.Core (
   findPlayer,
   getActivatedAbilitiesOf,
   getActivePlayer,
+  getAlivePlayers,
   getAlivePlayerCount,
   getAPNAP,
+  getBasicLandTypes,
   getPermanent,
   getPlayer,
   indexToActivated,
@@ -77,8 +78,11 @@ import safe MtgPure.Engine.State (
   Magic,
   logCall,
  )
+import safe MtgPure.Model.BasicLandType (BasicLandType)
 import safe MtgPure.Model.Hand (Hand (..))
 import safe MtgPure.Model.IsCardList (pushCard)
+import safe MtgPure.Model.Land (Land (..))
+import safe MtgPure.Model.LandType (LandType (..))
 import safe MtgPure.Model.Library (Library (..))
 import safe MtgPure.Model.Object.IndexOT (IndexOT (..))
 import safe MtgPure.Model.Object.IsObjectType (IsObjectType (..))
@@ -99,12 +103,16 @@ import safe MtgPure.Model.Player (Player (..))
 import safe MtgPure.Model.Recursive (
   Ability (..),
   AnyCard (..),
+  Card (..),
+  CardFacet (..),
   WithThisActivated,
+  YourCard (..),
   fromSome,
  )
 import safe MtgPure.Model.Zone (IsZone (..), SZone (..), Zone (..))
 import safe MtgPure.Model.ZoneObject.Convert (
   castOToON,
+  oToZO1,
   toZO0,
   zo0ToCard,
   zo0ToPermanent,
@@ -112,7 +120,7 @@ import safe MtgPure.Model.ZoneObject.Convert (
 import safe MtgPure.Model.ZoneObject.ZoneObject (IsOT, IsZO, ZO, ZoneObject (ZO), toZone)
 
 getAlivePlayerCount :: Monad m => Magic 'Public 'RO m PlayerCount
-getAlivePlayerCount = logCall 'getAlivePlayerCount $ PlayerCount . length <$> allPlayers
+getAlivePlayerCount = logCall 'getAlivePlayerCount $ PlayerCount . length <$> getAlivePlayers
 
 getAPNAP :: Monad m => Magic v 'RO m (Stream.Stream (Object 'OTPlayer))
 getAPNAP = logCall 'getAPNAP $ internalFromPrivate $ gets magicPlayerOrderAPNAP
@@ -120,8 +128,8 @@ getAPNAP = logCall 'getAPNAP $ internalFromPrivate $ gets magicPlayerOrderAPNAP
 getActivePlayer :: Monad m => Magic 'Public 'RO m (Object 'OTPlayer)
 getActivePlayer = logCall 'getActivePlayer $ Stream.head <$> getAPNAP
 
-allPlayers :: Monad m => Magic 'Public 'RO m [Object 'OTPlayer]
-allPlayers = logCall 'allPlayers do
+getAlivePlayers :: Monad m => Magic 'Public 'RO m [Object 'OTPlayer]
+getAlivePlayers = logCall 'getAlivePlayers do
   st <- internalFromPrivate get
   let ps = Map.assocs $ magicPlayers st
   pure $ map fst $ filter (not . playerLost . snd) ps
@@ -179,7 +187,7 @@ allZOs = logCall 'allZOs case singZone @zone of
                 _ -> Nothing
           goPlayers :: ObjectType -> Magic 'Private 'RO m [ZO zone ot]
           goPlayers = \case
-            OTPlayer -> mapMaybe castOToZO <$> fromPublic allPlayers
+            OTPlayer -> mapMaybe castOToZO <$> fromPublic getAlivePlayers
             _ -> pure []
           goRec :: [ObjectType] -> Magic 'Private 'RO m (DList.DList (ZO zone ot))
           goRec = \case
@@ -298,6 +306,39 @@ indexToActivated absIndex = logCall 'indexToActivated do
         False -> Nothing
         True -> Just $ abilities !! index
 
+getBasicLandTypes :: forall zone ot m. (IsZO zone ot, Monad m) => ZO zone ot -> Magic 'Private 'RO m [BasicLandType]
+getBasicLandTypes zo = logCall 'getBasicLandTypes do
+  case singZone @zone of
+    SZBattlefield -> do
+      let zoPerm = zo0ToPermanent $ toZO0 zo
+      findPermanent zoPerm <&> \case
+        Nothing -> []
+        Just perm -> case permanentLand perm of
+          Nothing -> []
+          Just land -> fromLandTypes $ landTypes land
+    SZHand -> do
+      let zoHand = zo0ToCard $ toZO0 zo
+      oPlayers <- fromPublic getAlivePlayers
+      concat <$> T.for oPlayers \oPlayer -> do
+        let zoPlayer = oToZO1 @ 'ZBattlefield oPlayer
+        findHandCard oPlayer zoHand <&> \case
+          Nothing -> []
+          Just handCard -> case handCard of -- TODO: make a type class to fetch facets
+            AnyCard anyCard -> case anyCard of
+              Card _ card -> case card of
+                YourArtifactLand playerToFacet -> case playerToFacet zoPlayer of
+                  ArtifactLandFacet{artifactLand_landTypes = tys} -> fromLandTypes tys
+                YourLand playerToFacet -> case playerToFacet zoPlayer of
+                  LandFacet{land_landTypes = tys} -> fromLandTypes tys
+                _ -> undefined
+    _ -> undefined
+ where
+  fromLandTypes :: [LandType] -> [BasicLandType]
+  fromLandTypes tys =
+    tys >>= \case
+      BasicLand ty -> [ty]
+      _ -> []
+
 newObjectId :: Monad m => Magic 'Private 'RW m ObjectId
 newObjectId = logCall 'newObjectId do
   ObjectId i <- fromRO $ gets magicNextObjectId
@@ -324,7 +365,7 @@ pushHandCard oPlayer card = logCall 'pushHandCard do
   setPlayer oPlayer player{playerHand = pushCard zoCard $ playerHand player}
   pure zoCard
 
-findHandCard :: Monad m => Object 'OTPlayer -> ZO 'ZHand OTCard -> Magic 'Private 'RW m (Maybe AnyCard)
+findHandCard :: Monad m => Object 'OTPlayer -> ZO 'ZHand OTCard -> Magic 'Private 'RO m (Maybe AnyCard)
 findHandCard oPlayer zoCard = logCall 'findHandCard do
   fromRO (gets $ Map.lookup (toZO0 zoCard) . magicHandCards) >>= \case
     Nothing -> pure Nothing
@@ -334,7 +375,7 @@ findHandCard oPlayer zoCard = logCall 'findHandCard do
         False -> Nothing
         True -> Just card
 
-findLibraryCard :: Monad m => Object 'OTPlayer -> ZO 'ZLibrary OTCard -> Magic 'Private 'RW m (Maybe AnyCard)
+findLibraryCard :: Monad m => Object 'OTPlayer -> ZO 'ZLibrary OTCard -> Magic 'Private 'RO m (Maybe AnyCard)
 findLibraryCard oPlayer zoCard = logCall 'findLibraryCard do
   fromRO (gets $ Map.lookup (toZO0 zoCard) . magicLibraryCards) >>= \case
     Nothing -> pure Nothing
@@ -346,7 +387,7 @@ findLibraryCard oPlayer zoCard = logCall 'findLibraryCard do
 
 removeHandCard :: Monad m => Object 'OTPlayer -> ZO 'ZHand OTCard -> Magic 'Private 'RW m (Maybe AnyCard)
 removeHandCard oPlayer zoCard = logCall 'removeHandCard do
-  findHandCard oPlayer zoCard >>= \case
+  fromRO (findHandCard oPlayer zoCard) >>= \case
     Nothing -> pure Nothing
     Just{} -> do
       mCard <- fromRO $ gets $ Map.lookup (toZO0 zoCard) . magicHandCards
@@ -357,7 +398,7 @@ removeHandCard oPlayer zoCard = logCall 'removeHandCard do
 
 removeLibraryCard :: Monad m => Object 'OTPlayer -> ZO 'ZLibrary OTCard -> Magic 'Private 'RW m (Maybe AnyCard)
 removeLibraryCard oPlayer zoCard = logCall 'removeLibraryCard do
-  findLibraryCard oPlayer zoCard >>= \case
+  fromRO (findLibraryCard oPlayer zoCard) >>= \case
     Nothing -> pure Nothing
     Just{} -> do
       mCard <- fromRO $ gets $ Map.lookup (toZO0 zoCard) . magicLibraryCards

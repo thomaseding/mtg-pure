@@ -23,12 +23,12 @@ import safe qualified Data.Stream as Stream
 import safe Data.Void (Void)
 import safe MtgPure.Engine.Fwd.Api (
   allControlledPermanentsOf,
-  allPlayers,
   eachLogged_,
   enact,
   gainPriority,
   getActivePlayer,
   getAlivePlayerCount,
+  getAlivePlayers,
   getPermanent,
   getPlayer,
   setPermanent,
@@ -62,7 +62,7 @@ import safe MtgPure.Model.ZoneObject.ZoneObject (ZO)
 startGame :: Monad m => Magic 'Private 'RW m Void
 startGame = logCall 'startGame do
   determineStartingPlayer -- (103.1)
-  ps <- fromPublicRO allPlayers
+  ps <- fromPublicRO getAlivePlayers
   eachLogged_ ps $ M.void . enact . ShuffleLibrary . oToZO1 -- (103.2)
   pure () -- (103.3) See `mkPlayer`
   drawStartingHands -- (103.4)
@@ -100,7 +100,7 @@ determineStartingPlayer = logCall 'determineStartingPlayer do
 -- (103.4)
 drawStartingHands :: Monad m => Magic 'Private 'RW m ()
 drawStartingHands = logCall 'drawStartingHands do
-  ps <- fromPublic $ fromRO allPlayers
+  ps <- fromPublic $ fromRO getAlivePlayers
   eachLogged_ ps drawStartingHand
 
 drawStartingHand :: Monad m => Object 'OTPlayer -> Magic 'Private 'RW m ()

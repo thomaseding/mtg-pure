@@ -2,6 +2,7 @@
 
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
+{-# HLINT ignore "Use camelCase" #-}
 
 module MtgPure.ModelCombinators (
   addManaAnyColor,
@@ -14,6 +15,7 @@ module MtgPure.ModelCombinators (
   AsWithMaskedObject (..),
   AsWithMaskedObjects (..),
   AsWithThis (..),
+  basicManaAbility,
   becomesTapped,
   changeTo,
   chooseAnyColor,
@@ -35,7 +37,6 @@ module MtgPure.ModelCombinators (
   ifElse,
   ifThen,
   ifThenElse,
-  intrinsicManaAbility,
   is,
   isBasic,
   isTapped,
@@ -58,6 +59,7 @@ module MtgPure.ModelCombinators (
   ToCard (..),
   ToToken (..),
   tyAp,
+  unlifted_isBasicManaAbility,
   untilEndOfTurn,
 ) where
 
@@ -72,7 +74,7 @@ import safe Data.Inst (
 import safe Data.Kind (Type)
 import safe Data.Nat (Fin, NatList (..), ToNat)
 import safe Data.Proxy (Proxy (..))
-import safe Data.Typeable (Typeable)
+import safe Data.Typeable (Typeable, cast)
 import safe MtgPure.Model.BasicLandType (BasicLandType (..))
 import safe MtgPure.Model.Color (Color (..))
 import safe MtgPure.Model.ColorsLike (ColorsLike (..))
@@ -529,8 +531,8 @@ searchLibrary = SearchLibrary coCard
 --  ActivateAbility LandID r -- tap for red
 --  ActivateAbility LandID g -- tap for green
 --  ActivateAbility LandID i -- infer (only avail when has exactly one basic land type)
-intrinsicManaAbility :: BasicLandType -> WithThisActivated 'ZBattlefield OTLand
-intrinsicManaAbility ty = thisObject \this ->
+basicManaAbility :: BasicLandType -> WithThisActivated 'ZBattlefield OTLand
+basicManaAbility ty = thisObject \this ->
   controllerOf this \you ->
     ElectActivated $
       Ability
@@ -542,3 +544,10 @@ intrinsicManaAbility ty = thisObject \this ->
             Mountain -> toManaPool R
             Forest -> toManaPool G
         }
+
+unlifted_isBasicManaAbility :: IsZO zone ot => WithThisActivated zone ot -> Bool
+unlifted_isBasicManaAbility ability = case cast ability of
+  Just landAbility ->
+    let predicate ty = landAbility == basicManaAbility ty
+     in any predicate [minBound ..]
+  Nothing -> False
