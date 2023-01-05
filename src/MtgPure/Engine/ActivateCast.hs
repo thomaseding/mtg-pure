@@ -104,7 +104,7 @@ import safe MtgPure.Model.Recursive (
   WithThis (..),
   WithThisActivated,
   WithThisOneShot,
-  YourCard (..),
+  YourCardFacet (..),
  )
 import safe MtgPure.Model.Stack (Stack (..), StackObject (..))
 import safe MtgPure.Model.Zone (IsZone (..), SZone (..), Zone (..))
@@ -273,7 +273,7 @@ castSpellCard oCaster card = logCall 'castSpellCard case card of
     -- TODO: prompt error
     pure Illegal
 
-  goYourCard :: IsSpecificCard ot => YourCard ot -> Magic 'Private 'RW m Legality
+  goYourCard :: IsSpecificCard ot => YourCardFacet ot -> Magic 'Private 'RW m Legality
   goYourCard = \case
     YourLand{} -> goInvalid
     YourArtifactLand{} -> goInvalid

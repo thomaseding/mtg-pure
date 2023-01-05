@@ -138,7 +138,7 @@ import safe MtgPure.Model.Recursive (
   WithThisActivated,
   WithThisOneShot,
   WithThisTriggered,
-  YourCard (..),
+  YourCardFacet (..),
  )
 import safe MtgPure.Model.TimePoint (TimePoint (..))
 import safe MtgPure.Model.Toughness (Toughness)
@@ -2052,7 +2052,7 @@ showWSpell wit = case wit of
   sWit :: EnvM Items
   sWit = pure $ pure $ fromString $ show wit
 
-showYourCard :: YourCard ot -> EnvM ParenItems
+showYourCard :: YourCardFacet ot -> EnvM ParenItems
 showYourCard = \case
   YourArtifact cont -> goPerm cont "YourArtifact"
   YourArtifactCreature cont -> goPerm cont "YourArtifactCreature"

@@ -47,7 +47,7 @@ module MtgPure.Model.Recursive (
   WithThisActivated,
   WithThisOneShot,
   WithThisTriggered,
-  YourCard (..),
+  YourCardFacet (..),
   pattern CFalse,
   pattern CTrue,
   fromSome,
@@ -271,7 +271,7 @@ instance HasCardName AnyToken where
 ----------------------------------------
 
 data Card (ot :: Type) :: Type where
-  Card :: IsSpecificCard ot => CardName -> YourCard ot -> Card ot
+  Card :: IsSpecificCard ot => CardName -> YourCardFacet ot -> Card ot
   --DoubleSidedCard
   --SplitCard
   deriving (Typeable)
@@ -292,7 +292,7 @@ instance HasCardName (Card ot) where
 --    * A dynamic part
 -- The reason for this is that the engine and clients will need to know things
 -- like color, card super types, and card subtypes before doing any elections.
--- The YourCard type will hold both flavors in its one-shot constructor flavors.
+-- The YourCardFacet type will hold both flavors in its one-shot constructor flavors.
 data CardFacet (ot :: Type) :: Type where
   ArtifactFacet ::
     { artifact_colors :: Colors
@@ -1114,19 +1114,23 @@ type WithThisTriggered zone ot = WithThis zone (TriggeredAbility zone) ot
 
 ----------------------------------------
 
-data YourCard (ot :: Type) :: Type where
-  YourArtifact :: OTArtifact ~ ot => (ZOPlayer -> CardFacet ot) -> YourCard ot
-  YourArtifactCreature :: OTArtifactCreature ~ ot => (ZOPlayer -> CardFacet ot) -> YourCard ot
-  YourArtifactLand :: OTArtifactLand ~ ot => (ZOPlayer -> CardFacet ot) -> YourCard ot
-  YourCreature :: OTCreature ~ ot => (ZOPlayer -> CardFacet ot) -> YourCard ot
-  YourEnchantment :: OTEnchantment ~ ot => (ZOPlayer -> CardFacet ot) -> YourCard ot
-  YourEnchantmentCreature :: OTEnchantmentCreature ~ ot => (ZOPlayer -> CardFacet ot) -> YourCard ot
-  YourInstant :: OTInstant ~ ot => (ZOPlayer -> Elect 'Pre (CardFacet ot) ot) -> YourCard ot
-  YourLand :: OTLand ~ ot => (ZOPlayer -> CardFacet ot) -> YourCard ot
-  YourPlaneswalker :: OTPlaneswalker ~ ot => (ZOPlayer -> CardFacet ot) -> YourCard ot
-  YourSorcery :: OTSorcery ~ ot => (ZOPlayer -> Elect 'Pre (CardFacet ot) ot) -> YourCard ot
+type YourDirect liftOT ot = ZOPlayer -> liftOT ot
 
-instance ConsIndex (YourCard ot) where
+type YourElected liftOT ot = ZOPlayer -> Elect 'Pre (liftOT ot) ot
+
+data YourCardFacet (ot :: Type) :: Type where
+  YourArtifact :: OTArtifact ~ ot => YourDirect CardFacet ot -> YourCardFacet ot
+  YourArtifactCreature :: OTArtifactCreature ~ ot => YourDirect CardFacet ot -> YourCardFacet ot
+  YourArtifactLand :: OTArtifactLand ~ ot => YourDirect CardFacet ot -> YourCardFacet ot
+  YourCreature :: OTCreature ~ ot => YourDirect CardFacet ot -> YourCardFacet ot
+  YourEnchantment :: OTEnchantment ~ ot => YourDirect CardFacet ot -> YourCardFacet ot
+  YourEnchantmentCreature :: OTEnchantmentCreature ~ ot => YourDirect CardFacet ot -> YourCardFacet ot
+  YourInstant :: OTInstant ~ ot => YourElected CardFacet ot -> YourCardFacet ot
+  YourLand :: OTLand ~ ot => YourDirect CardFacet ot -> YourCardFacet ot
+  YourPlaneswalker :: OTPlaneswalker ~ ot => YourDirect CardFacet ot -> YourCardFacet ot
+  YourSorcery :: OTSorcery ~ ot => YourElected CardFacet ot -> YourCardFacet ot
+
+instance ConsIndex (YourCardFacet ot) where
   consIndex = \case
     YourArtifact{} -> 1
     YourArtifactCreature{} -> 2

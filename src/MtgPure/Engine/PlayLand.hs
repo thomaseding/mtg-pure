@@ -60,7 +60,7 @@ import safe MtgPure.Model.Recursive (
   Card (..),
   CardFacet,
   IsSpecificCard,
-  YourCard (..),
+  YourCardFacet (..),
  )
 import safe MtgPure.Model.Stack (Stack (..))
 import safe MtgPure.Model.Zone (IsZone (..), SZone (..))

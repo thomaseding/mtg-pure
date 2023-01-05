@@ -96,7 +96,7 @@ import safe MtgPure.Model.Recursive (
   WithThis (..),
   WithThisActivated,
   WithThisTriggered,
-  YourCard (..),
+  YourCardFacet (..),
  )
 import safe MtgPure.Model.TimePoint (TimePoint (..))
 import safe MtgPure.Model.Variable (
@@ -2052,7 +2052,7 @@ ordWSpell = \case
   x@WSpell4 -> \case
     y@WSpell4 -> ordW4 x y
 
-ordYourCard :: YourCard ot -> YourCard ot -> EnvM Ordering
+ordYourCard :: YourCardFacet ot -> YourCardFacet ot -> EnvM Ordering
 ordYourCard = \case
   YourArtifact cont1 -> \case
     YourArtifact cont2 -> goPerm cont1 cont2

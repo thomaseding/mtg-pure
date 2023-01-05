@@ -132,7 +132,7 @@ import safe MtgPure.Model.Recursive (
   Token (..),
   TriggeredAbility (When),
   WithList (..),
-  YourCard (..),
+  YourCardFacet (..),
   pattern CTrue,
  )
 import safe MtgPure.Model.Step (Step (..))

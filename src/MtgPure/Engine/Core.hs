@@ -106,7 +106,7 @@ import safe MtgPure.Model.Recursive (
   Card (..),
   CardFacet (..),
   WithThisActivated,
-  YourCard (..),
+  YourCardFacet (..),
   fromSome,
  )
 import safe MtgPure.Model.Zone (IsZone (..), SZone (..), Zone (..))
