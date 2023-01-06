@@ -31,7 +31,7 @@ module MtgPure.Model.Recursive (
   SetCard (..),
   SetToken (..),
   Some (..),
-  SomeCard,
+  SomeCard (..),
   SomeCardOrToken,
   SomeTerm (..),
   SomeToken,
@@ -73,8 +73,9 @@ import safe MtgPure.Model.Loyalty (Loyalty)
 import safe MtgPure.Model.Mana (Snow (..))
 import safe MtgPure.Model.ManaCost (ManaCost)
 import safe MtgPure.Model.ManaPool (ManaPool)
+import MtgPure.Model.Object.IndexOT (IndexOT)
 import safe MtgPure.Model.Object.IsObjectType (IsObjectType)
-import safe MtgPure.Model.Object.OTN (OT1, OT2, OT3, OT4, OT5, OT6)
+import safe MtgPure.Model.Object.OTN (OT1, OT2, OT3, OT4, OT5, OT6, OTN)
 import safe MtgPure.Model.Object.OTNAliases (
   OTActivatedOrTriggeredAbility,
   OTAny,
@@ -103,7 +104,7 @@ import safe MtgPure.Model.Rarity (Rarity)
 import safe MtgPure.Model.TimePoint (TimePoint)
 import safe MtgPure.Model.Toughness (Toughness)
 import safe MtgPure.Model.Variable (Var (Var), Variable)
-import safe MtgPure.Model.Zone (Zone (..))
+import safe MtgPure.Model.Zone (IsZone, Zone (..))
 import safe MtgPure.Model.ZoneObject.ZoneObject (
   IsOT,
   IsZO,
@@ -134,7 +135,7 @@ import safe MtgPure.Model.ZoneObject.ZoneObject (
 
 data Ability (ot :: Type) :: Type where
   Activated :: IsZO zone ot => WithThisActivated zone ot -> Ability ot
-  Static :: IsZO zone ot => StaticAbility zone ot -> Ability ot
+  Static :: (IsZone zone, IndexOT ot) => StaticAbility zone ot -> Ability ot
   Triggered :: IsZO zone ot => WithThisTriggered zone ot -> Ability ot
   deriving (Typeable)
 
@@ -243,16 +244,19 @@ instance IsSpecificCard OTSorcery where
 ----------------------------------------
 
 data AnyCard :: Type where
-  AnyCard :: IsSpecificCard ot => Card ot -> AnyCard
+  AnyCard1 :: (ot ~ OTN x, IsSpecificCard ot) => Card ot -> AnyCard
+  AnyCard2 :: (IsSpecificCard ot1, IsSpecificCard ot2) => Card (ot1, ot2) -> AnyCard
   deriving (Typeable)
 
 instance ConsIndex AnyCard where
   consIndex = \case
-    AnyCard{} -> 1
+    AnyCard1{} -> 1
+    AnyCard2{} -> 2
 
 instance HasCardName AnyCard where
   getCardName = \case
-    AnyCard card -> getCardName card
+    AnyCard1 card -> getCardName card
+    AnyCard2 card -> getCardName card
 
 ----------------------------------------
 
@@ -271,18 +275,28 @@ instance HasCardName AnyToken where
 ----------------------------------------
 
 data Card (ot :: Type) :: Type where
-  Card :: IsSpecificCard ot => CardName -> YourCardFacet ot -> Card ot
-  --DoubleSidedCard
-  --SplitCard
+  Card :: (ot ~ OTN x, IsSpecificCard ot) => CardName -> YourCardFacet ot -> Card ot
+  DoubleSidedCard :: Inst2 IsSpecificCard ot1 ot2 => Card ot1 -> Card ot2 -> Card (ot1, ot2)
+  SplitCard ::
+    Inst2 IsSpecificCard ot1 ot2 =>
+    { splitCard_card1 :: Card ot1
+    , splitCard_card2 :: Card ot2
+    , splitCard_abilities :: [Ability (ot1, ot2)]
+    } ->
+    Card (ot1, ot2)
   deriving (Typeable)
 
 instance ConsIndex (Card ot) where
   consIndex = \case
     Card{} -> 1
+    DoubleSidedCard{} -> 2
+    SplitCard{} -> 3
 
 instance HasCardName (Card ot) where
   getCardName = \case
     Card name _ -> name
+    DoubleSidedCard card1 card2 -> getCardName card1 <> " // " <> getCardName card2
+    SplitCard card1 card2 _ -> getCardName card1 <> " // " <> getCardName card2
 
 ----------------------------------------
 
@@ -474,7 +488,7 @@ data Effect (ef :: EffectType) :: Type where
   AddMana :: ZOPlayer -> ManaPool 'NonSnow -> Effect 'OneShot -- NOTE: Engine will reinterpret as Snow when source is Snow.
   AddToBattlefield :: IsOT ot => WPermanent ot -> ZOPlayer -> Token ot -> Effect 'OneShot
   CantBeRegenerated :: ZOCreature -> Effect 'Continuous
-  ChangeTo :: IsOT ot => WPermanent ot -> ZOPermanent -> Card ot -> Effect 'Continuous
+  ChangeTo :: (ot ~ OTN x, IsOT ot) => WPermanent ot -> ZOPermanent -> Card ot -> Effect 'Continuous
   CounterAbility :: ZO 'ZStack OTActivatedOrTriggeredAbility -> Effect 'OneShot
   CounterSpell :: ZO 'ZStack OTSpell -> Effect 'OneShot
   DealDamage :: IsZO zone OTDamageSource => ZO zone OTDamageSource -> ZOCreaturePlayerPlaneswalker -> Damage 'Var -> Effect 'OneShot
@@ -807,7 +821,12 @@ data SomeTerm (liftOT :: Type -> Type) (ot :: Type) :: Type where
   SomeEnchantmentCreature :: liftOT OTEnchantmentCreature -> SomeTerm liftOT OTEnchantmentCreature
   deriving (Typeable)
 
-type SomeCard = Some Card
+data SomeCard (ot :: Type) :: Type where
+  SomeCard :: (ot ~ OTN x, IsSpecificCard ot) => SomeCard ot -> SomeCard ot
+  SomeDoubleSidedCard1 :: (ot ~ OTN x, ot' ~ OTN y, Inst2 IsSpecificCard ot ot') => SomeCard ot -> SomeCard ot' -> SomeCard ot
+  SomeDoubleSidedCard2 :: (ot ~ OTN x, ot' ~ OTN y, Inst2 IsSpecificCard ot ot') => SomeCard ot' -> SomeCard ot -> SomeCard ot
+  SomeSplitCard1 :: (ot ~ OTN x, ot' ~ OTN y, Inst2 IsSpecificCard ot ot') => SomeCard ot -> SomeCard ot' -> SomeCard ot
+  SomeSplitCard2 :: (ot ~ OTN x, ot' ~ OTN y, Inst2 IsSpecificCard ot ot') => SomeCard ot' -> SomeCard ot -> SomeCard ot
 
 type SomeToken = Some Token
 
@@ -892,15 +911,16 @@ fromSome some f = case some of
 ----------------------------------------
 
 data StaticAbility (zone :: Zone) (ot :: Type) :: Type where
-  As :: IsOT ot => Elect 'Post EventListener ot -> StaticAbility 'ZBattlefield ot -- 603.6d: not a triggered ability
+  As :: (ot ~ OTN x, IsOT ot) => Elect 'Post EventListener ot -> StaticAbility 'ZBattlefield ot -- 603.6d: not a triggered ability
   -- XXX: BestowPre and BestowPost
   Bestow :: ot ~ OTEnchantmentCreature => Elect 'Pre (Cost ot) ot -> Enchant 'ZBattlefield OTCreature -> StaticAbility 'ZBattlefield ot
   FirstStrike :: ot ~ OTCreature => StaticAbility 'ZBattlefield ot
   Flying :: ot ~ OTCreature => StaticAbility 'ZBattlefield ot
+  Fuse :: IsOT ot => StaticAbility 'ZHand (ot, ot) -- TODO: Add witness or constraint for OTInstant or OTSorcery
   Haste :: ot ~ OTCreature => StaticAbility 'ZBattlefield ot
-  StaticContinuous :: IsOT ot => Elect 'Post (Effect 'Continuous) ot -> StaticAbility 'ZBattlefield ot -- 611.3
+  StaticContinuous :: (ot ~ OTN x, IsOT ot) => Elect 'Post (Effect 'Continuous) ot -> StaticAbility 'ZBattlefield ot -- 611.3
   -- XXX: SuspendPre and SuspendPost
-  Suspend :: IsOT ot => Int -> Elect 'Pre (Cost ot) ot -> StaticAbility 'ZBattlefield ot -- PositiveInt
+  Suspend :: (ot ~ OTN x, IsOT ot) => Int -> Elect 'Pre (Cost ot) ot -> StaticAbility 'ZBattlefield ot -- PositiveInt
   deriving (Typeable)
 
 instance ConsIndex (StaticAbility zone ot) where
@@ -909,14 +929,15 @@ instance ConsIndex (StaticAbility zone ot) where
     Bestow{} -> 2
     FirstStrike{} -> 3
     Flying{} -> 4
-    Haste{} -> 5
-    StaticContinuous{} -> 6
-    Suspend{} -> 7
+    Fuse{} -> 5
+    Haste{} -> 6
+    StaticContinuous{} -> 7
+    Suspend{} -> 8
 
 ----------------------------------------
 
 data Token (ot :: Type) :: Type where
-  Token :: IsSpecificCard ot => WPermanent ot -> Card ot -> Token ot
+  Token :: (ot ~ OTN x, IsSpecificCard ot) => WPermanent ot -> Card ot -> Token ot
   deriving (Typeable)
 
 instance ConsIndex (Token ot) where

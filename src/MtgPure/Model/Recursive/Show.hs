@@ -40,7 +40,7 @@ import safe Data.String (IsString (..))
 import safe Data.Typeable (TypeRep, Typeable, typeOf, typeRep)
 import safe MtgPure.Model.ArtifactType (ArtifactType)
 import safe MtgPure.Model.BasicLandType (BasicLandType)
-import safe MtgPure.Model.CardName (CardName (CardName))
+import safe MtgPure.Model.CardName (CardName (CardName), HasCardName (..))
 import safe MtgPure.Model.Color (Color (..))
 import safe MtgPure.Model.ColoredMana (ColoredMana (..))
 import safe MtgPure.Model.ColorlessMana (ColorlessMana (..))
@@ -490,9 +490,12 @@ showAbilities = showListM showAbility
 
 showAnyCard :: AnyCard -> EnvM ParenItems
 showAnyCard = \case
-  AnyCard card -> yesParens do
+  AnyCard1 card -> yesParens do
     sCard <- dollar <$> showCard card
-    pure $ pure "AnyCard" <> sCard
+    pure $ pure "AnyCard1" <> sCard
+  AnyCard2 card -> yesParens do
+    sCard <- dollar <$> showCard card
+    pure $ pure "AnyCard2" <> sCard
 
 showAnyToken :: AnyToken -> EnvM ParenItems
 showAnyToken = \case
@@ -517,19 +520,40 @@ showBasicLandType :: BasicLandType -> EnvM ParenItems
 showBasicLandType = noParens . pure . pure . fromString . show
 
 showCard :: Card ot -> EnvM ParenItems
-showCard = \case
-  Card (CardName name) yourCard -> yesParens do
-    depth <- EnvM $ State.gets cardDepth
-    EnvM $ State.modify' \st -> st{cardDepth = subtract 1 <$> depth}
-    let sName = pure (fromString $ show name)
-    case depth of
-      Just 0 -> pure $ pure "Card " <> sName <> pure " ..."
-      _ -> do
-        sYourCard <- dollar <$> showYourCard yourCard
-        pure $
-          pure "Card "
-            <> sName
-            <> sYourCard
+showCard card = case card of
+  Card name yourCard -> showCardImpl "Card" card do
+    let sName = pure $ fromString $ show name
+    sYourCard <- dollar <$> showYourCard yourCard
+    pure $
+      pure "Card "
+        <> sName
+        <> sYourCard
+  DoubleSidedCard card1 card2 -> showCardImpl "DoubleSidedCard" card do
+    sCard1 <- parens <$> showCard card1
+    sCard2 <- dollar <$> showCard card2
+    pure $
+      pure "DoubleSidedCard "
+        <> sCard1
+        <> sCard2
+  SplitCard card1 card2 splitAbilities -> showCardImpl "SplitCard" card do
+    sCard1 <- parens <$> showCard card1
+    sCard2 <- parens <$> showCard card2
+    sSplitAbilities <- dollar <$> showAbilities splitAbilities
+    pure $
+      pure "SplitCard "
+        <> sCard1
+        <> pure " "
+        <> sCard2
+        <> sSplitAbilities
+
+showCardImpl :: HasCardName name => Item -> name -> EnvM Items -> EnvM ParenItems
+showCardImpl consName (getCardName -> CardName name) cont = yesParens do
+  depth <- EnvM $ State.gets cardDepth
+  EnvM $ State.modify' \st -> st{cardDepth = subtract 1 <$> depth}
+  let sName = pure $ fromString $ show name
+  case depth of
+    Just 0 -> pure $ pure consName <> pure " " <> sName <> pure " ..."
+    _ -> cont
 
 showCardFacet :: CardFacet ot -> EnvM ParenItems
 showCardFacet = \case
@@ -1729,6 +1753,8 @@ showStaticAbility = \case
     pure $ pure "FirstStrike"
   Flying -> noParens do
     pure $ pure "Flying"
+  Fuse -> noParens do
+    pure $ pure "Fuse"
   Haste -> noParens do
     pure $ pure "Haste"
   StaticContinuous continuous -> yesParens do

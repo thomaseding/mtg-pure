@@ -37,11 +37,10 @@ import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Planeswalker (Planeswalker (..))
 import safe MtgPure.Model.Recursive (
   Ability,
-  Card (..),
+  AnyCard,
+  AnyToken,
   CardFacet (..),
   Some (..),
-  SomeCard,
-  SomeCardOrToken,
   SomeTerm (..),
  )
 import safe MtgPure.Model.Variable (Var (NoVar))
@@ -62,7 +61,7 @@ data Permanent :: Type where
   Permanent ::
     { permanentAbilities :: [Some Ability OTPermanent]
     , permanentArtifact :: Maybe Artifact
-    , permanentCard :: SomeCardOrToken OTPermanent
+    , permanentCard :: Either AnyCard AnyToken -- SomeCardOrToken OTPermanent
     , permanentCardFacet :: Some CardFacet OTPermanent
     , permanentColors :: Colors
     , permanentController :: Object 'OTPlayer
@@ -138,9 +137,10 @@ someArtifactLand = Some5ad . SomeArtifactLand
 someEnchantmentCreature :: liftOT OTEnchantmentCreature -> Some liftOT OTPermanent
 someEnchantmentCreature = Some5bc . SomeEnchantmentCreature
 
+-- | Usage requirement: The provided CardFacet must actually be part of the provided AnyCard.
 cardToPermanent ::
   Object 'OTPlayer ->
-  Card ot ->
+  AnyCard ->
   CardFacet ot ->
   Maybe Permanent
 cardToPermanent owner card facet = case facet of
@@ -150,7 +150,7 @@ cardToPermanent owner card facet = case facet of
   ArtifactFacet{} ->
     let some = someArtifact
      in Just
-          (go (some card) (some facet))
+          (go card (some facet))
             { permanentAbilities = map some $ artifact_abilities facet
             , permanentArtifact =
                 Just
@@ -161,7 +161,7 @@ cardToPermanent owner card facet = case facet of
   CreatureFacet{} ->
     let some = someCreature
      in Just
-          (go (some card) (some facet))
+          (go card (some facet))
             { permanentAbilities = map some $ creature_abilities facet
             , permanentCreature =
                 Just
@@ -174,7 +174,7 @@ cardToPermanent owner card facet = case facet of
   EnchantmentFacet{} ->
     let some = someEnchantment
      in Just
-          (go (some card) (some facet))
+          (go card (some facet))
             { permanentAbilities = map some $ enchantment_abilities facet
             , permanentEnchantment =
                 Just
@@ -185,7 +185,7 @@ cardToPermanent owner card facet = case facet of
   LandFacet{} ->
     let some = someLand
      in Just
-          (go (some card) (some facet))
+          (go card (some facet))
             { permanentAbilities = map some $ land_abilities facet
             , permanentLand =
                 Just
@@ -196,7 +196,7 @@ cardToPermanent owner card facet = case facet of
   PlaneswalkerFacet{} ->
     let some = somePlaneswalker
      in Just
-          (go (some card) (some facet))
+          (go card (some facet))
             { permanentAbilities = map some $ planeswalker_abilities facet
             , permanentPlaneswalker =
                 Just
@@ -207,7 +207,7 @@ cardToPermanent owner card facet = case facet of
   ArtifactCreatureFacet{} ->
     let some = someArtifactCreature
      in Just
-          (go (some card) (some facet))
+          (go card (some facet))
             { permanentAbilities =
                 concat
                   [ map someArtifact $ artifactCreature_artifactAbilities facet
@@ -230,7 +230,7 @@ cardToPermanent owner card facet = case facet of
   ArtifactLandFacet{} ->
     let some = someArtifactLand
      in Just
-          (go (some card) (some facet))
+          (go card (some facet))
             { permanentAbilities =
                 concat
                   [ map someArtifact $ artifactLand_artifactAbilities facet
@@ -251,7 +251,7 @@ cardToPermanent owner card facet = case facet of
   EnchantmentCreatureFacet{} ->
     let some = someEnchantmentCreature
      in Just
-          (go (some card) (some facet))
+          (go card (some facet))
             { permanentAbilities =
                 concat
                   [ map someCreature $ enchantmentCreature_creatureAbilities facet
@@ -272,12 +272,12 @@ cardToPermanent owner card facet = case facet of
                     }
             }
  where
-  go :: SomeCard OTPermanent -> Some CardFacet OTPermanent -> Permanent
-  go someCard someFacet =
+  go :: AnyCard -> Some CardFacet OTPermanent -> Permanent
+  go anyCard someFacet =
     Permanent
       { permanentAbilities = mempty
       , permanentArtifact = Nothing
-      , permanentCard = Left someCard
+      , permanentCard = Left anyCard
       , permanentCardFacet = someFacet
       , permanentColors = getColors facet
       , permanentController = owner

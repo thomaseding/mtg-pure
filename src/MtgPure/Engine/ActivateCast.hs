@@ -66,7 +66,7 @@ import safe MtgPure.Engine.State (
 import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.IsCardList (containsCard)
 import safe MtgPure.Model.Object.IsObjectType (IsObjectType (..))
-import safe MtgPure.Model.Object.OTN (OT0, OT1)
+import safe MtgPure.Model.Object.OTN (OT0, OT1, OTN)
 import safe MtgPure.Model.Object.OTNAliases (
   OTArtifact,
   OTArtifactCreature,
@@ -256,37 +256,35 @@ castSpell oCaster = logCall 'castSpell \case
                 case containsCard (asCard zoSpell) hand of
                   False -> invalid CastSpell_NotOwned
                   True -> case anyCard of
-                    AnyCard card -> case card of
-                      Card{} -> castSpellCard oCaster card
+                    AnyCard1 card -> case card of
+                      Card _name yourCard -> castYourSpellCard oCaster card yourCard
+                    AnyCard2{} -> undefined
 
-castSpellCard ::
-  forall ot m.
-  Monad m =>
+castYourSpellCard ::
+  forall ot m x.
+  (ot ~ OTN x, Monad m) =>
   Object 'OTPlayer ->
   Card ot ->
+  YourCardFacet ot ->
   Magic 'Private 'RW m Legality
-castSpellCard oCaster card = logCall 'castSpellCard case card of
-  Card _name yourCard -> goYourCard yourCard
+castYourSpellCard oCaster card = logCall 'castYourSpellCard \case
+  YourLand{} -> goInvalid
+  YourArtifactLand{} -> goInvalid
+  --
+  YourInstant cont -> goSpell cont
+  YourSorcery cont -> goSpell cont
+  --
+  YourArtifact cont -> goSpell $ ElectCard . cont
+  YourArtifactCreature cont -> goSpell $ ElectCard . cont
+  YourCreature cont -> goSpell $ ElectCard . cont
+  YourEnchantment cont -> goSpell $ ElectCard . cont
+  YourEnchantmentCreature cont -> goSpell $ ElectCard . cont
+  YourPlaneswalker cont -> goSpell $ ElectCard . cont
  where
   goInvalid :: Magic 'Private 'RW m Legality
   goInvalid = do
     -- TODO: prompt error
     pure Illegal
-
-  goYourCard :: IsSpecificCard ot => YourCardFacet ot -> Magic 'Private 'RW m Legality
-  goYourCard = \case
-    YourLand{} -> goInvalid
-    YourArtifactLand{} -> goInvalid
-    --
-    YourInstant cont -> goSpell cont
-    YourSorcery cont -> goSpell cont
-    --
-    YourArtifact cont -> goSpell $ ElectCard . cont
-    YourArtifactCreature cont -> goSpell $ ElectCard . cont
-    YourCreature cont -> goSpell $ ElectCard . cont
-    YourEnchantment cont -> goSpell $ ElectCard . cont
-    YourEnchantmentCreature cont -> goSpell $ ElectCard . cont
-    YourPlaneswalker cont -> goSpell $ ElectCard . cont
 
   goSpell ::
     IsSpecificCard ot =>
@@ -318,35 +316,36 @@ castSpellCard oCaster card = logCall 'castSpellCard case card of
 
         goFacet' :: CardFacet ot -> CastMeta ot -> Magic 'Private 'RW m Legality'
         goFacet' facet meta = do
-          let goPay cost mEffect = do
+          let anyCard = AnyCard1 card
+              goPay cost mEffect = do
                 legalityToMaybe <$> case singSpecificCard @ot of
                   ArtifactLandCard{} -> error $ show CantHappenByConstruction
                   LandCard{} -> error $ show CantHappenByConstruction
                   --
                   ArtifactCard{} ->
                     payElectedAndPutOnStack @ 'Cast @ot zoSpell $
-                      ElectedSpell oCaster card facet cost mEffect
+                      ElectedSpell oCaster anyCard facet cost mEffect
                   ArtifactCreatureCard{} -> do
                     payElectedAndPutOnStack @ 'Cast @ot zoSpell $
-                      ElectedSpell oCaster card facet cost mEffect
+                      ElectedSpell oCaster anyCard facet cost mEffect
                   CreatureCard{} -> do
                     payElectedAndPutOnStack @ 'Cast @ot zoSpell $
-                      ElectedSpell oCaster card facet cost mEffect
+                      ElectedSpell oCaster anyCard facet cost mEffect
                   EnchantmentCard{} -> do
                     payElectedAndPutOnStack @ 'Cast @ot zoSpell $
-                      ElectedSpell oCaster card facet cost mEffect
+                      ElectedSpell oCaster anyCard facet cost mEffect
                   EnchantmentCreatureCard{} -> do
                     payElectedAndPutOnStack @ 'Cast @ot zoSpell $
-                      ElectedSpell oCaster card facet cost mEffect
+                      ElectedSpell oCaster anyCard facet cost mEffect
                   InstantCard -> do
                     payElectedAndPutOnStack @ 'Cast @ot zoSpell $
-                      ElectedSpell oCaster card facet cost mEffect
+                      ElectedSpell oCaster anyCard facet cost mEffect
                   PlaneswalkerCard{} -> do
                     payElectedAndPutOnStack @ 'Cast @ot zoSpell $
-                      ElectedSpell oCaster card facet cost mEffect
+                      ElectedSpell oCaster anyCard facet cost mEffect
                   SorceryCard -> do
                     payElectedAndPutOnStack @ 'Cast @ot zoSpell $
-                      ElectedSpell oCaster card facet cost mEffect
+                      ElectedSpell oCaster anyCard facet cost mEffect
           case castMeta_effect meta of
             Just facetToEffect -> do
               playPendingOneShot zoSpell (castMeta_cost meta facet) (facetToEffect facet) goPay

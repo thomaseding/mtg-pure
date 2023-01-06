@@ -27,3 +27,6 @@ class HasCardName a where
 
 instance HasCardName CardName where
   getCardName = id
+
+instance Semigroup CardName where
+  CardName a <> CardName b = CardName $ a ++ b

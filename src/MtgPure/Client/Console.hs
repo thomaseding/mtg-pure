@@ -64,7 +64,7 @@ import safe MtgPure.Engine.State (
   queryMagic,
  )
 import safe MtgPure.Model.BasicLandType (BasicLandType (..))
-import safe MtgPure.Model.CardName (CardName (..))
+import safe MtgPure.Model.CardName (CardName (..), HasCardName (..))
 import safe MtgPure.Model.Deck (Deck (..))
 import safe MtgPure.Model.GenericMana (GenericMana (..))
 import safe MtgPure.Model.Hand (Hand (..))
@@ -82,10 +82,6 @@ import safe MtgPure.Model.Object.ObjectId (ObjectId (ObjectId), getObjectId)
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Object.ToObjectN.Instances ()
 import safe MtgPure.Model.Player (Player (..))
-import safe MtgPure.Model.Recursive (
-  AnyCard (..),
-  Card (..),
- )
 import safe MtgPure.Model.Sideboard (Sideboard (..))
 import safe MtgPure.Model.ToManaPool (toCompleteManaPool)
 import safe MtgPure.Model.Variable (Var (..))
@@ -439,8 +435,9 @@ getHandCardName zo = do
   handCards <- internalFromPrivate $ gets magicHandCards
   case Map.lookup zo0 handCards of
     Nothing -> pure $ "IllegalHandCard@" ++ show zo
-    Just (AnyCard card) -> case card of
-      Card (CardName name) _ -> pure $ name ++ "@" ++ show zo
+    Just anyCard -> do
+      let CardName name = getCardName anyCard
+      pure $ name ++ "@" ++ show zo
 
 logDetailed :: Set.Set String
 logDetailed =

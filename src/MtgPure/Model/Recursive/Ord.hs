@@ -357,13 +357,23 @@ withObjectCont ordM cons cont1 cont2 = do
 compareIndexM :: ConsIndex a => a -> a -> EnvM Ordering
 compareIndexM x y = pure $ compare (consIndex x) (consIndex y)
 
-compareOT :: forall ot1 ot2. (IsOT ot1, IsOT ot2) => EnvM Ordering
+compareOT ::
+  forall ot1 ot2.
+  (IndexOT ot1, IndexOT ot2) =>
+  EnvM Ordering
 compareOT = pure $ compare (indexOT @ot1) (indexOT @ot2)
 
-compareZone :: forall zone1 zone2. (IsZone zone1, IsZone zone2) => EnvM Ordering
+compareZone ::
+  forall zone1 zone2.
+  (IsZone zone1, IsZone zone2) =>
+  EnvM Ordering
 compareZone = pure $ compare (litZone @zone1) (litZone @zone2)
 
-compareZoneOT :: forall zone1 zone2 ot1 ot2. (IsZO zone1 ot1, IsZO zone2 ot2) => EnvM Ordering
+compareZoneOT ::
+  forall zone1 zone2 ot1 ot2.
+  (IsZone zone1, IsZone zone2) =>
+  (IndexOT ot1, IndexOT ot2) =>
+  EnvM Ordering
 compareZoneOT = pure $ compare (litZone @zone1, indexOT @ot1) (litZone @zone2, indexOT @ot2)
 
 lenseList :: List x -> x
@@ -393,8 +403,10 @@ ordAbility x = case x of
     Static ability2 ->
       let go ::
             forall zone1 zone2 ot1 ot2.
-            IsZO zone1 ot1 =>
-            IsZO zone2 ot2 =>
+            IsZone zone1 =>
+            IsZone zone2 =>
+            IndexOT ot1 =>
+            IndexOT ot2 =>
             StaticAbility zone1 ot1 ->
             StaticAbility zone2 ot2 ->
             EnvM Ordering
@@ -427,14 +439,28 @@ ordActivatedAbility x = case x of
     Ability cost2 effect2 -> seqM [ordCost cost1 cost2, ordElectEl effect1 effect2]
 
 ordAnyCard :: AnyCard -> AnyCard -> EnvM Ordering
-ordAnyCard = \case
-  AnyCard card1 -> \case
-    AnyCard card2 ->
+ordAnyCard x = case x of
+  AnyCard1 card1 -> \case
+    AnyCard1 card2 ->
       let go :: forall ot1 ot2. (IsOT ot1, IsOT ot2) => Card ot1 -> Card ot2 -> EnvM Ordering
           go _ _ = case cast card2 of
             Nothing -> compareOT @ot1 @ot2
             Just card2 -> ordCard card1 card2
        in go card1 card2
+    y -> compareIndexM x y
+  AnyCard2 card1 -> \case
+    AnyCard2 card2 ->
+      let go ::
+            forall ot1a ot1b ot2a ot2b.
+            (IsOT ot1a, IsOT ot1b, IsOT ot2a, IsOT ot2b) =>
+            Card (ot1a, ot1b) ->
+            Card (ot2a, ot2b) ->
+            EnvM Ordering
+          go _ _ = case cast card2 of
+            Nothing -> seqM [compareOT @ot1a @ot2a, compareOT @ot1b @ot2b]
+            Just card2 -> ordCard card1 card2
+       in go card1 card2
+    y -> compareIndexM x y
 
 ordAnyToken :: AnyToken -> AnyToken -> EnvM Ordering
 ordAnyToken = \case
@@ -454,6 +480,21 @@ ordCard x = case x of
         [ pure $ compare name1 name2
         , ordYourCard yourCard1 yourCard2
         ]
+  DoubleSidedCard card1a card1b -> \case
+    DoubleSidedCard card2a card2b ->
+      seqM
+        [ ordCard card1a card2a
+        , ordCard card1b card2b
+        ]
+    y -> compareIndexM x y
+  SplitCard card1a card1b fuse1 -> \case
+    SplitCard card2a card2b fuse2 ->
+      seqM
+        [ ordCard card1a card2a
+        , ordCard card1b card2b
+        , pure $ compare fuse1 fuse2
+        ]
+    y -> compareIndexM x y
 
 ordCardFacet :: CardFacet ot -> CardFacet ot -> EnvM Ordering
 ordCardFacet = \case
@@ -1634,6 +1675,8 @@ ordStaticAbility x = case x of
   Flying -> \case
     Flying -> pure EQ
     y -> compareIndexM x y
+  Fuse -> \case
+    Fuse -> pure EQ
   Haste -> \case
     Haste -> pure EQ
     y -> compareIndexM x y

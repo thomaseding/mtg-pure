@@ -93,7 +93,6 @@ import safe MtgPure.Model.Player (Player (..))
 import safe MtgPure.Model.PrePost (PrePost (..))
 import safe MtgPure.Model.Recursive (
   AnyCard,
-  Card,
   CardFacet,
   Cost,
   Effect,
@@ -144,7 +143,7 @@ data Elected (pEffect :: PrePost) (ot :: Type) :: Type where
     Elected pEffect ot
   ElectedSpell ::
     { electedSpell_controller :: Object 'OTPlayer
-    , electedSpell_card :: Card ot
+    , electedSpell_card :: AnyCard -- Card ot
     , electedSpell_facet :: CardFacet ot
     , electedSpell_cost :: Cost ot
     , electedSpell_effect :: Maybe (PendingReady pEffect (Effect 'OneShot) ot)

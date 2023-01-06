@@ -5,6 +5,7 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Avoid lambda using `infix`" #-}
 {-# HLINT ignore "Use const" #-}
+{-# HLINT ignore "Use camelCase" #-}
 
 module MtgPure.Cards (
   acceptableLosses,
@@ -42,6 +43,7 @@ module MtgPure.Cards (
   swanSong,
   vindicate,
   wastes,
+  wear_tear,
   wrathOfGod,
   --
   birdToken,
@@ -60,6 +62,7 @@ import safe MtgPure.Model.ManaSymbol (ManaSymbol (..))
 import safe MtgPure.Model.Object.OTN (OT3)
 import safe MtgPure.Model.Object.OTNAliases (
   OTActivatedOrTriggeredAbility,
+  OTArtifact,
   OTArtifactCreature,
   OTCreature,
   OTCreaturePlayer,
@@ -125,6 +128,7 @@ import safe MtgPure.Model.Recursive (
     Bestow,
     FirstStrike,
     Flying,
+    Fuse,
     Haste,
     StaticContinuous,
     Suspend
@@ -783,6 +787,36 @@ wastes = Card "Wastes" $
                       }
           ]
       }
+
+wear_tear :: Card (OTInstant, OTInstant)
+wear_tear = SplitCard wear tear [Static Fuse]
+ where
+  wear :: Card OTInstant
+  wear = Card "Wear" $
+    YourInstant \you ->
+      Target you $ masked @OTArtifact [] \target ->
+        ElectCard $
+          InstantFacet
+            { instant_colors = toColors R
+            , instant_cost = spellCost (1, R)
+            , instant_creatureTypes = []
+            , instant_abilities = []
+            , instant_effect = thisObject \_this ->
+                effect $ destroy target
+            }
+  tear :: Card OTInstant
+  tear = Card "Tear" $
+    YourInstant \you ->
+      Target you $ masked @OTEnchantment [] \target ->
+        ElectCard $
+          InstantFacet
+            { instant_colors = toColors W
+            , instant_cost = spellCost W
+            , instant_creatureTypes = []
+            , instant_abilities = []
+            , instant_effect = thisObject \_this ->
+                effect $ destroy target
+            }
 
 wrathOfGod :: Card OTSorcery
 wrathOfGod = Card "Wrath of God" $

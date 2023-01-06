@@ -45,7 +45,7 @@ import safe MtgPure.Model.Object.Object (Object)
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Permanent (cardToPermanent)
 import safe MtgPure.Model.PrePost (PrePost (..))
-import safe MtgPure.Model.Recursive (Card, CardFacet, Effect (..), Elect (..))
+import safe MtgPure.Model.Recursive (AnyCard (..), CardFacet, Effect (..), Elect (..))
 import safe MtgPure.Model.Stack (Stack (..), stackObjectToZo0)
 import safe MtgPure.Model.Zone (Zone (..))
 import safe MtgPure.Model.ZoneObject.Convert (toZO0, zo0ToPermanent)
@@ -111,7 +111,7 @@ resolveOneShot zoStack elect = logCall 'resolveOneShot do
 data ElectedPermanent (ot :: Type) :: Type where
   ElectedPermanent ::
     { electedPermanent_controller :: Object 'OTPlayer
-    , electedPermanent_card :: Card ot
+    , electedPermanent_card :: AnyCard -- Card ot
     , electedPermanent_facet :: CardFacet ot
     } ->
     ElectedPermanent ot

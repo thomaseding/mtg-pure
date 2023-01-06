@@ -92,6 +92,7 @@ import safe MtgPure.Model.Object.OTN (
   OT4,
   OT5,
   OT6,
+  OTN,
  )
 import safe MtgPure.Model.Object.OTNAliases (
   OTDamageSource,
@@ -118,7 +119,6 @@ import safe MtgPure.Model.Recursive (
   Event,
   EventListener,
   EventListener' (..),
-  IsSpecificCard,
   List,
   NonProxy (..),
   Requirement (..),
@@ -166,8 +166,11 @@ class ToCard card where
 instance ToCard AnyCard where
   toCard = id
 
-instance IsSpecificCard ot => ToCard (Card ot) where
-  toCard = AnyCard
+instance ToCard (Card ot) where
+  toCard card = case card of
+    Card{} -> AnyCard1 card
+    DoubleSidedCard{} -> AnyCard2 card
+    SplitCard{} -> AnyCard2 card
 
 class ToToken token where
   toToken :: token -> AnyToken
@@ -305,7 +308,7 @@ sacrifice ::
 sacrifice = Sacrifice coPermanent
 
 changeTo ::
-  (AsPermanent ot, CoPermanent ot) =>
+  (AsPermanent ot, CoPermanent ot, ot ~ OTN x) =>
   ZO 'ZBattlefield ot ->
   Card ot ->
   Effect 'Continuous

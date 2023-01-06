@@ -47,6 +47,7 @@ import safe MtgPure.Cards (
   swanSong,
   vindicate,
   wastes,
+  wear_tear,
   wrathOfGod,
  )
 import safe MtgPure.Model.Recursive (AnyCard, AnyToken)
@@ -89,6 +90,7 @@ allCards =
   , toCard swanSong
   , toCard vindicate
   , toCard wastes
+  , toCard wear_tear
   , toCard wrathOfGod
   ]
 

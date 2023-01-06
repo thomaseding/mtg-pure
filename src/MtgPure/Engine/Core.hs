@@ -164,7 +164,7 @@ rewindIllegal m = logCall 'rewindIllegal do
 allZOs :: forall zone ot m. (Monad m, IsZO zone ot) => Magic 'Private 'RO m [ZO zone ot]
 allZOs = logCall 'allZOs case singZone @zone of
   SZBattlefield -> case indexOT @ot of
-    objectTypes ->
+    [objectTypes] ->
       let goPerms :: ObjectType -> Magic 'Private 'RO m [ZO zone ot]
           goPerms ot = do
             perms <- fromPublic allPermanents
@@ -198,6 +198,7 @@ allZOs = logCall 'allZOs case singZone @zone of
               oRecs <- goRec ots
               pure $ DList.fromList oPerms <> DList.fromList oPlayers <> oRecs
        in DList.toList <$> goRec objectTypes
+    _ -> undefined
   _ -> undefined
  where
   castOToZO :: IsObjectType z => Object z -> Maybe (ZO zone ot)
@@ -324,13 +325,13 @@ getBasicLandTypes zo = logCall 'getBasicLandTypes do
         findHandCard oPlayer zoHand <&> \case
           Nothing -> []
           Just handCard -> case handCard of -- TODO: make a type class to fetch facets
-            AnyCard anyCard -> case anyCard of
-              Card _ card -> case card of
-                YourArtifactLand playerToFacet -> case playerToFacet zoPlayer of
-                  ArtifactLandFacet{artifactLand_landTypes = tys} -> fromLandTypes tys
-                YourLand playerToFacet -> case playerToFacet zoPlayer of
-                  LandFacet{land_landTypes = tys} -> fromLandTypes tys
-                _ -> undefined
+            AnyCard1 (Card _ card) -> case card of
+              YourArtifactLand playerToFacet -> case playerToFacet zoPlayer of
+                ArtifactLandFacet{artifactLand_landTypes = tys} -> fromLandTypes tys
+              YourLand playerToFacet -> case playerToFacet zoPlayer of
+                LandFacet{land_landTypes = tys} -> fromLandTypes tys
+              _ -> undefined
+            AnyCard2{} -> undefined
     _ -> undefined
  where
   fromLandTypes :: [LandType] -> [BasicLandType]

@@ -43,16 +43,16 @@ deck =
     concat $
       replicate
         (if False then 1 else 30)
-        [ AnyCard mountain
-        , AnyCard stoneRain
+        [ AnyCard1 mountain
+        , AnyCard1 stoneRain
         ]
 
 side :: Sideboard
 side =
   Sideboard $
     concat
-      [ replicate (if True then 1 else 7) $ AnyCard mountain
-      , replicate (if True then 1 else 8) $ AnyCard stoneRain
+      [ replicate (if True then 1 else 7) $ AnyCard1 mountain
+      , replicate (if True then 1 else 8) $ AnyCard1 stoneRain
       ]
 
 replayLog :: Maybe FilePath

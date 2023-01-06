@@ -49,6 +49,7 @@ import safe MtgPure.Engine.State (
   mkOpaqueGameState,
  )
 import safe MtgPure.Model.IsCardList (containsCard)
+import safe MtgPure.Model.Object.OTN (OTN)
 import safe MtgPure.Model.Object.OTNAliases (OTLand)
 import safe MtgPure.Model.Object.Object (Object)
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
@@ -132,8 +133,15 @@ playLandZO oPlayer zoLand = logCall 'playLandZO do
         pure Illegal
       --
 
-      goCard :: forall ot. IsSpecificCard ot => Card ot -> Magic 'Private 'RW m Legality
-      goCard card@(Card _name yourCard) = logCall' "goCard" case yourCard of
+      goCard2 ::
+        forall ot1 ot2.
+        (IsSpecificCard ot1, IsSpecificCard ot2) =>
+        Card (ot1, ot2) ->
+        Magic 'Private 'RW m Legality
+      goCard2 = undefined
+
+      goCard1 :: forall ot x. (ot ~ OTN x, IsSpecificCard ot) => Card ot -> Magic 'Private 'RW m Legality
+      goCard1 card@(Card _name yourCard) = logCall' "goCard" case yourCard of
         YourArtifact{} -> invalid PlayLand_NotALand
         YourArtifactCreature{} -> invalid PlayLand_NotALand
         YourCreature{} -> invalid PlayLand_NotALand
@@ -166,7 +174,7 @@ playLandZO oPlayer zoLand = logCall 'playLandZO do
           modifyPlayer oPlayer \p -> p{playerLandsPlayedThisTurn = playerLandsPlayedThisTurn p + 1}
           i <- newObjectId
           let oLand' = zo0ToPermanent $ toZO0 i
-              perm = case cardToPermanent oPlayer card facet of
+              perm = case cardToPermanent oPlayer (AnyCard1 card) facet of
                 Nothing -> error $ show ExpectedCardToBeAPermanentCard
                 Just perm' -> perm'
           setPermanent oLand' $ Just perm
@@ -198,5 +206,5 @@ playLandZO oPlayer zoLand = logCall 'playLandZO do
               case containsCard (asCard zoLand) hand of
                 False -> invalid PlayLand_NotOwned
                 True -> case anyCard of
-                  AnyCard card -> case card of
-                    Card{} -> goCard card
+                  AnyCard1 card -> goCard1 card
+                  AnyCard2 card -> goCard2 card
