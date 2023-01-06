@@ -36,6 +36,7 @@ import safe MtgPure.Cards (
   pollutedDelta,
   pradeshGypsies,
   ragingGoblin,
+  shatter,
   shock,
   sinkhole,
   snuffOut,
@@ -80,6 +81,7 @@ allCards =
   , toCard plummet
   , toCard pollutedDelta
   , toCard pradeshGypsies
+  , toCard shatter
   , toCard shock
   , toCard sinkhole
   , toCard snuffOut

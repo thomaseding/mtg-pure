@@ -33,6 +33,7 @@ module MtgPure.Cards (
   plummet,
   pollutedDelta,
   pradeshGypsies,
+  shatter,
   shock,
   sinkhole,
   snuffOut,
@@ -622,6 +623,20 @@ ragingGoblin = Card "Raging Goblin" $
       , creature_toughness = Toughness 1
       , creature_abilities = [Static Haste]
       }
+
+shatter :: Card OTInstant
+shatter = Card "Shatter" $
+  YourInstant \you ->
+    Target you $ masked @OTArtifact [] \target ->
+      ElectCard $
+        InstantFacet
+          { instant_colors = toColors R
+          , instant_cost = spellCost (1, R)
+          , instant_creatureTypes = []
+          , instant_abilities = []
+          , instant_effect = thisObject \_this ->
+              effect $ destroy target
+          }
 
 shock :: Card OTInstant
 shock = Card "Shock" $
