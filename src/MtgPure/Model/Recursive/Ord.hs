@@ -1757,23 +1757,23 @@ ordWithMaskedObjectElectEl ::
   WithMaskedObject zone (Elect p el ot) ->
   EnvM Ordering
 ordWithMaskedObjectElectEl x = case x of
-  M1 reqs1 cont1 -> \case
-    M1 reqs2 cont2 -> ordO1 ordM reqs1 reqs2 cont1 cont2
+  Masked1 reqs1 cont1 -> \case
+    Masked1 reqs2 cont2 -> ordO1 ordM reqs1 reqs2 cont1 cont2
     y -> pure $ compare (consIndex x) (consIndex y)
-  M2 reqs1 cont1 -> \case
-    M2 reqs2 cont2 -> ordO2 ordM reqs1 reqs2 cont1 cont2
+  Masked2 reqs1 cont1 -> \case
+    Masked2 reqs2 cont2 -> ordO2 ordM reqs1 reqs2 cont1 cont2
     y -> pure $ compare (consIndex x) (consIndex y)
-  M3 reqs1 cont1 -> \case
-    M3 reqs2 cont2 -> ordO3 ordM reqs1 reqs2 cont1 cont2
+  Masked3 reqs1 cont1 -> \case
+    Masked3 reqs2 cont2 -> ordO3 ordM reqs1 reqs2 cont1 cont2
     y -> pure $ compare (consIndex x) (consIndex y)
-  M4 reqs1 cont1 -> \case
-    M4 reqs2 cont2 -> ordO4 ordM reqs1 reqs2 cont1 cont2
+  Masked4 reqs1 cont1 -> \case
+    Masked4 reqs2 cont2 -> ordO4 ordM reqs1 reqs2 cont1 cont2
     y -> pure $ compare (consIndex x) (consIndex y)
-  M5 reqs1 cont1 -> \case
-    M5 reqs2 cont2 -> ordO5 ordM reqs1 reqs2 cont1 cont2
+  Masked5 reqs1 cont1 -> \case
+    Masked5 reqs2 cont2 -> ordO5 ordM reqs1 reqs2 cont1 cont2
     y -> pure $ compare (consIndex x) (consIndex y)
-  M6 reqs1 cont1 -> \case
-    M6 reqs2 cont2 -> ordO6 ordM reqs1 reqs2 cont1 cont2
+  Masked6 reqs1 cont1 -> \case
+    Masked6 reqs2 cont2 -> ordO6 ordM reqs1 reqs2 cont1 cont2
     y -> pure $ compare (consIndex x) (consIndex y)
  where
   ordM = ordElectEl
@@ -1786,23 +1786,23 @@ ordWithMaskedObjectsElectEl ::
   WithMaskedObjects zone (Elect p el ot) ->
   EnvM Ordering
 ordWithMaskedObjectsElectEl x = case x of
-  M1s reqs1 cont1 -> \case
-    M1s reqs2 cont2 -> ordO1 ordM reqs1 reqs2 (cont1 . pure) (cont2 . pure)
+  Maskeds1 reqs1 cont1 -> \case
+    Maskeds1 reqs2 cont2 -> ordO1 ordM reqs1 reqs2 (cont1 . pure) (cont2 . pure)
     y -> pure $ compare (consIndex x) (consIndex y)
-  M2s reqs1 cont1 -> \case
-    M2s reqs2 cont2 -> ordO2 ordM reqs1 reqs2 (cont1 . pure) (cont2 . pure)
+  Maskeds2 reqs1 cont1 -> \case
+    Maskeds2 reqs2 cont2 -> ordO2 ordM reqs1 reqs2 (cont1 . pure) (cont2 . pure)
     y -> pure $ compare (consIndex x) (consIndex y)
-  M3s reqs1 cont1 -> \case
-    M3s reqs2 cont2 -> ordO3 ordM reqs1 reqs2 (cont1 . pure) (cont2 . pure)
+  Maskeds3 reqs1 cont1 -> \case
+    Maskeds3 reqs2 cont2 -> ordO3 ordM reqs1 reqs2 (cont1 . pure) (cont2 . pure)
     y -> pure $ compare (consIndex x) (consIndex y)
-  M4s reqs1 cont1 -> \case
-    M4s reqs2 cont2 -> ordO4 ordM reqs1 reqs2 (cont1 . pure) (cont2 . pure)
+  Maskeds4 reqs1 cont1 -> \case
+    Maskeds4 reqs2 cont2 -> ordO4 ordM reqs1 reqs2 (cont1 . pure) (cont2 . pure)
     y -> pure $ compare (consIndex x) (consIndex y)
-  M5s reqs1 cont1 -> \case
-    M5s reqs2 cont2 -> ordO5 ordM reqs1 reqs2 (cont1 . pure) (cont2 . pure)
+  Maskeds5 reqs1 cont1 -> \case
+    Maskeds5 reqs2 cont2 -> ordO5 ordM reqs1 reqs2 (cont1 . pure) (cont2 . pure)
     y -> pure $ compare (consIndex x) (consIndex y)
-  M6s reqs1 cont1 -> \case
-    M6s reqs2 cont2 -> ordO6 ordM reqs1 reqs2 (cont1 . pure) (cont2 . pure)
+  Maskeds6 reqs1 cont1 -> \case
+    Maskeds6 reqs2 cont2 -> ordO6 ordM reqs1 reqs2 (cont1 . pure) (cont2 . pure)
     y -> pure $ compare (consIndex x) (consIndex y)
  where
   ordM = ordElectEl
@@ -1816,10 +1816,10 @@ ordWithThis ::
   WithThis zone liftOT ot ->
   EnvM Ordering
 ordWithThis ordM = \case
-  T1 cont1 -> \case
-    T1 cont2 -> ordO1 ordM reqs1 reqs2 cont1 cont2
-  T2 cont1 -> \case
-    T2 cont2 ->
+  This1 cont1 -> \case
+    This1 cont2 -> ordO1 ordM reqs1 reqs2 cont1 cont2
+  This2 cont1 -> \case
+    This2 cont2 ->
       let go ::
             forall a b ota otb.
             ota ~ OT1 a =>

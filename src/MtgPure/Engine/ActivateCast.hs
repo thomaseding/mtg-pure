@@ -387,9 +387,9 @@ activateAbility oPlayer = logCall 'activateAbility \case
 
         goWithThisActivated :: Magic 'Private 'RW m Legality
         goWithThisActivated = case withThisActivated of
-          T1 thisToElectActivated -> do
+          This1 thisToElectActivated -> do
             goThisToElectAbility thisToElectActivated (lensedThis thisId)
-          T2 thisToElectActivated -> do
+          This2 thisToElectActivated -> do
             goThisToElectAbility thisToElectActivated (lensedThis thisId, lensedThis thisId)
 
         goThisToElectAbility ::
@@ -458,10 +458,10 @@ playPendingOneShot _zoStack cost withThisElectEffect cont = logCall 'playPending
   goWithThis withThisElectEffect
  where
   goWithThis = \case
-    T1 thisToElectEffect -> do
+    This1 thisToElectEffect -> do
       thisId <- newObjectId
       goElectEffect $ thisToElectEffect (lensedThis thisId)
-    T2 thisToElectEffect -> do
+    This2 thisToElectEffect -> do
       thisId <- newObjectId
       goElectEffect $ thisToElectEffect (lensedThis thisId, lensedThis thisId)
 

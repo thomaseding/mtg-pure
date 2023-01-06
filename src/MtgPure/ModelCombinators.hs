@@ -209,52 +209,52 @@ class AsWithMaskedObject ot where
   masked :: forall zone z. Typeable z => [Requirement zone ot] -> (ZO zone ot -> z) -> WithMaskedObject zone z
 
 instance Inst1 IsObjectType a => AsWithMaskedObject (OT1 a) where
-  masked = M1
+  masked = Masked1
 
 instance Inst2 IsObjectType a b => AsWithMaskedObject (OT2 a b) where
-  masked = M2
+  masked = Masked2
 
 instance Inst3 IsObjectType a b c => AsWithMaskedObject (OT3 a b c) where
-  masked = M3
+  masked = Masked3
 
 instance Inst4 IsObjectType a b c d => AsWithMaskedObject (OT4 a b c d) where
-  masked = M4
+  masked = Masked4
 
 instance Inst5 IsObjectType a b c d e => AsWithMaskedObject (OT5 a b c d e) where
-  masked = M5
+  masked = Masked5
 
 instance Inst6 IsObjectType a b c d e f => AsWithMaskedObject (OT6 a b c d e f) where
-  masked = M6
+  masked = Masked6
 
 class AsWithMaskedObjects ot where
   maskeds :: forall zone z. Typeable z => [Requirement zone ot] -> (List (ZO zone ot) -> z) -> WithMaskedObjects zone z
 
 instance Inst1 IsObjectType a => AsWithMaskedObjects (OT1 a) where
-  maskeds = M1s
+  maskeds = Maskeds1
 
 instance Inst2 IsObjectType a b => AsWithMaskedObjects (OT2 a b) where
-  maskeds = M2s
+  maskeds = Maskeds2
 
 instance Inst3 IsObjectType a b c => AsWithMaskedObjects (OT3 a b c) where
-  maskeds = M3s
+  maskeds = Maskeds3
 
 instance Inst4 IsObjectType a b c d => AsWithMaskedObjects (OT4 a b c d) where
-  maskeds = M4s
+  maskeds = Maskeds4
 
 instance Inst5 IsObjectType a b c d e => AsWithMaskedObjects (OT5 a b c d e) where
-  maskeds = M5s
+  maskeds = Maskeds5
 
 instance Inst6 IsObjectType a b c d e f => AsWithMaskedObjects (OT6 a b c d e f) where
-  maskeds = M6s
+  maskeds = Maskeds6
 
 class IsZO zone ot => AsWithThis ot zone liftOT ots | ot zone liftOT -> ots, ots -> ot zone where
   thisObject :: (ots -> liftOT ot) -> WithThis zone liftOT ot
 
 instance (IsZO zone (OT1 a), Inst1 IsObjectType a) => AsWithThis (OT1 a) zone liftOT (ZO zone (OT1 a)) where
-  thisObject = T1
+  thisObject = This1
 
 instance (IsZO zone (OT2 a b), Inst2 IsObjectType a b) => AsWithThis (OT2 a b) zone liftOT (ZO zone (OT1 a), ZO zone (OT1 b)) where
-  thisObject = T2
+  thisObject = This2
 
 class AsDamage a where
   asDamage :: a -> Damage 'Var

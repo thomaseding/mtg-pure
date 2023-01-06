@@ -193,12 +193,12 @@ electA ::
   WithMaskedObject zone (Elect p el ot) ->
   Magic 'Private 'RW m x
 electA sel zoStack failureX goElect oPlayer = logCall 'electA \case
-  M1 reqs zoToElect -> go reqs zoToElect
-  M2 reqs zoToElect -> go reqs zoToElect
-  M3 reqs zoToElect -> go reqs zoToElect
-  M4 reqs zoToElect -> go reqs zoToElect
-  M5 reqs zoToElect -> go reqs zoToElect
-  M6 reqs zoToElect -> go reqs zoToElect
+  Masked1 reqs zoToElect -> go reqs zoToElect
+  Masked2 reqs zoToElect -> go reqs zoToElect
+  Masked3 reqs zoToElect -> go reqs zoToElect
+  Masked4 reqs zoToElect -> go reqs zoToElect
+  Masked5 reqs zoToElect -> go reqs zoToElect
+  Masked6 reqs zoToElect -> go reqs zoToElect
  where
   go ::
     (IsZO zone ot', Eq (ZO zone ot')) =>
@@ -230,12 +230,12 @@ electAll ::
   WithMaskedObjects zone (Elect p el ot) ->
   Magic 'Private 'RW m x
 electAll goElect = logCall 'electAll \case
-  M1s reqs zosToElect -> go reqs zosToElect
-  M2s reqs zosToElect -> go reqs zosToElect
-  M3s reqs zosToElect -> go reqs zosToElect
-  M4s reqs zosToElect -> go reqs zosToElect
-  M5s reqs zosToElect -> go reqs zosToElect
-  M6s reqs zosToElect -> go reqs zosToElect
+  Maskeds1 reqs zosToElect -> go reqs zosToElect
+  Maskeds2 reqs zosToElect -> go reqs zosToElect
+  Maskeds3 reqs zosToElect -> go reqs zosToElect
+  Maskeds4 reqs zosToElect -> go reqs zosToElect
+  Maskeds5 reqs zosToElect -> go reqs zosToElect
+  Maskeds6 reqs zosToElect -> go reqs zosToElect
  where
   go ::
     (IsZO zone ot', Eq (ZO zone ot')) =>

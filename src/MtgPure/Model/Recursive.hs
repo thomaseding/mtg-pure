@@ -1000,32 +1000,32 @@ instance ConsIndex (WithList ret zone ot) where
 ----------------------------------------
 
 data WithMaskedObject (zone :: Zone) (liftedOT :: Type) :: Type where
-  M1 ::
+  Masked1 ::
     (Typeable liftedOT, IsOT (OT1 a), Inst1 IsObjectType a) =>
     [Requirement zone (OT1 a)] ->
     (ZO zone (OT1 a) -> liftedOT) ->
     WithMaskedObject zone liftedOT
-  M2 ::
+  Masked2 ::
     (Typeable liftedOT, IsOT (OT2 a b), Inst2 IsObjectType a b) =>
     [Requirement zone (OT2 a b)] ->
     (ZO zone (OT2 a b) -> liftedOT) ->
     WithMaskedObject zone liftedOT
-  M3 ::
+  Masked3 ::
     (Typeable liftedOT, IsOT (OT3 a b c), Inst3 IsObjectType a b c) =>
     [Requirement zone (OT3 a b c)] ->
     (ZO zone (OT3 a b c) -> liftedOT) ->
     WithMaskedObject zone liftedOT
-  M4 ::
+  Masked4 ::
     (Typeable liftedOT, IsOT (OT4 a b c d), Inst4 IsObjectType a b c d) =>
     [Requirement zone (OT4 a b c d)] ->
     (ZO zone (OT4 a b c d) -> liftedOT) ->
     WithMaskedObject zone liftedOT
-  M5 ::
+  Masked5 ::
     (Typeable liftedOT, IsOT (OT5 a b c d e), Inst5 IsObjectType a b c d e) =>
     [Requirement zone (OT5 a b c d e)] ->
     (ZO zone (OT5 a b c d e) -> liftedOT) ->
     WithMaskedObject zone liftedOT
-  M6 ::
+  Masked6 ::
     (Typeable liftedOT, IsOT (OT6 a b c d e f), Inst6 IsObjectType a b c d e f) =>
     [Requirement zone (OT6 a b c d e f)] ->
     (ZO zone (OT6 a b c d e f) -> liftedOT) ->
@@ -1034,42 +1034,42 @@ data WithMaskedObject (zone :: Zone) (liftedOT :: Type) :: Type where
 
 instance ConsIndex (WithMaskedObject zone liftedOT) where
   consIndex = \case
-    M1{} -> 1
-    M2{} -> 2
-    M3{} -> 3
-    M4{} -> 4
-    M5{} -> 5
-    M6{} -> 6
+    Masked1{} -> 1
+    Masked2{} -> 2
+    Masked3{} -> 3
+    Masked4{} -> 4
+    Masked5{} -> 5
+    Masked6{} -> 6
 
 ----------------------------------------
 
 data WithMaskedObjects (zone :: Zone) (liftedOT :: Type) :: Type where
-  M1s ::
+  Maskeds1 ::
     (Typeable liftedOT, IsOT (OT1 a), Inst1 IsObjectType a) =>
     [Requirement zone (OT1 a)] ->
     (List (ZO zone (OT1 a)) -> liftedOT) ->
     WithMaskedObjects zone liftedOT
-  M2s ::
+  Maskeds2 ::
     (Typeable liftedOT, IsOT (OT2 a b), Inst2 IsObjectType a b) =>
     [Requirement zone (OT2 a b)] ->
     (List (ZO zone (OT2 a b)) -> liftedOT) ->
     WithMaskedObjects zone liftedOT
-  M3s ::
+  Maskeds3 ::
     (Typeable liftedOT, IsOT (OT3 a b c), Inst3 IsObjectType a b c) =>
     [Requirement zone (OT3 a b c)] ->
     (List (ZO zone (OT3 a b c)) -> liftedOT) ->
     WithMaskedObjects zone liftedOT
-  M4s ::
+  Maskeds4 ::
     (Typeable liftedOT, IsOT (OT4 a b c d), Inst4 IsObjectType a b c d) =>
     [Requirement zone (OT4 a b c d)] ->
     (List (ZO zone (OT4 a b c d)) -> liftedOT) ->
     WithMaskedObjects zone liftedOT
-  M5s ::
+  Maskeds5 ::
     (Typeable liftedOT, IsOT (OT5 a b c d e), Inst5 IsObjectType a b c d e) =>
     [Requirement zone (OT5 a b c d e)] ->
     (List (ZO zone (OT5 a b c d e)) -> liftedOT) ->
     WithMaskedObjects zone liftedOT
-  M6s ::
+  Maskeds6 ::
     (Typeable liftedOT, IsOT (OT6 a b c d e f), Inst6 IsObjectType a b c d e f) =>
     [Requirement zone (OT6 a b c d e f)] ->
     (List (ZO zone (OT6 a b c d e f)) -> liftedOT) ->
@@ -1078,21 +1078,21 @@ data WithMaskedObjects (zone :: Zone) (liftedOT :: Type) :: Type where
 
 instance ConsIndex (WithMaskedObjects zone liftedOT) where
   consIndex = \case
-    M1s{} -> 1
-    M2s{} -> 2
-    M3s{} -> 3
-    M4s{} -> 4
-    M5s{} -> 5
-    M6s{} -> 6
+    Maskeds1{} -> 1
+    Maskeds2{} -> 2
+    Maskeds3{} -> 3
+    Maskeds4{} -> 4
+    Maskeds5{} -> 5
+    Maskeds6{} -> 6
 
 ----------------------------------------
 
 data WithThis (zone :: Zone) (liftOT :: Type -> Type) (ot :: Type) :: Type where
-  T1 ::
+  This1 ::
     (IsOT (OT1 a), Inst1 IsObjectType a) =>
     (ZO zone (OT1 a) -> liftOT (OT1 a)) ->
     WithThis zone liftOT (OT1 a)
-  T2 ::
+  This2 ::
     (IsOT (OT2 a b), Inst2 IsObjectType a b) =>
     -- TODO: Add a additional full (ZO zone (OT2 a b)) to the input tuple?
     -- TODO: Introduce a `This ot` record type to access its constituents.
@@ -1103,8 +1103,8 @@ data WithThis (zone :: Zone) (liftOT :: Type -> Type) (ot :: Type) :: Type where
 
 instance ConsIndex (WithThis zone liftOT ot) where
   consIndex = \case
-    T1{} -> 1
-    T2{} -> 2
+    This1{} -> 1
+    This2{} -> 2
 
 type WithThisActivated zone ot = WithThis zone (Elect 'Pre (ActivatedAbility zone ot)) ot
 

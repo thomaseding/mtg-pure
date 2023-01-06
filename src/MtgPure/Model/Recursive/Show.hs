@@ -1838,17 +1838,17 @@ showWithMaskedObject ::
   WithMaskedObject zone z ->
   EnvM ParenItems
 showWithMaskedObject showM memo = \case
-  M1 reqs cont ->
+  Masked1 reqs cont ->
     let ty = getType reqs in go ty reqs $ showO1 @zone p showM memo (cont . toZone)
-  M2 reqs cont ->
+  Masked2 reqs cont ->
     let ty = getType reqs in go ty reqs $ showO2 @zone p showM memo (cont . toZone)
-  M3 reqs cont ->
+  Masked3 reqs cont ->
     let ty = getType reqs in go ty reqs $ showO3 @zone p showM memo (cont . toZone)
-  M4 reqs cont ->
+  Masked4 reqs cont ->
     let ty = getType reqs in go ty reqs $ showO4 @zone p showM memo (cont . toZone)
-  M5 reqs cont ->
+  Masked5 reqs cont ->
     let ty = getType reqs in go ty reqs $ showO5 @zone p showM memo (cont . toZone)
-  M6 reqs cont ->
+  Masked6 reqs cont ->
     let ty = getType reqs in go ty reqs $ showO6 @zone p showM memo (cont . toZone)
  where
   p = Singular
@@ -1870,17 +1870,17 @@ showWithMaskedObjects ::
   WithMaskedObjects zone z ->
   EnvM ParenItems
 showWithMaskedObjects showM memo = \case
-  M1s reqs cont ->
+  Maskeds1 reqs cont ->
     let ty = getType reqs in go ty reqs $ showO1 @zone p showM memo (cont . pure . toZone)
-  M2s reqs cont ->
+  Maskeds2 reqs cont ->
     let ty = getType reqs in go ty reqs $ showO2 @zone p showM memo (cont . pure . toZone)
-  M3s reqs cont ->
+  Maskeds3 reqs cont ->
     let ty = getType reqs in go ty reqs $ showO3 @zone p showM memo (cont . pure . toZone)
-  M4s reqs cont ->
+  Maskeds4 reqs cont ->
     let ty = getType reqs in go ty reqs $ showO4 @zone p showM memo (cont . pure . toZone)
-  M5s reqs cont ->
+  Maskeds5 reqs cont ->
     let ty = getType reqs in go ty reqs $ showO5 @zone p showM memo (cont . pure . toZone)
-  M6s reqs cont ->
+  Maskeds6 reqs cont ->
     let ty = getType reqs in go ty reqs $ showO6 @zone p showM memo (cont . pure . toZone)
  where
   p = Plural
@@ -1903,13 +1903,13 @@ showWithThis ::
   WithThis zone liftOT ot ->
   EnvM ParenItems
 showWithThis showM memo = \case
-  T1 cont ->
+  This1 cont ->
     let go = yesParens do
           sTy <- parens <$> showTypeOf (Proxy @ot)
           sCont <- dollar <$> showO1 @zone Singular showM memo (cont . toZone)
           pure $ pure "thisObject @" <> sTy <> sCont
      in go
-  T2 cont ->
+  This2 cont ->
     let go ::
           forall a b.
           (IsOT (OT2 a b), Inst2 IsObjectType a b) =>
