@@ -526,16 +526,8 @@ searchLibrary ::
   Effect 'OneShot
 searchLibrary = SearchLibrary coCard
 
--- TODO: Synthesize basic land mana abilities inside the engine instead of explicitly making here.
--- Console can use syntax of
---  ActivateAbility LandID w -- tap for white
---  ActivateAbility LandID u -- tap for blue
---  ActivateAbility LandID b -- tap for black
---  ActivateAbility LandID r -- tap for red
---  ActivateAbility LandID g -- tap for green
---  ActivateAbility LandID i -- infer (only avail when has exactly one basic land type)
-basicManaAbility :: BasicLandType -> WithThisActivated 'ZBattlefield OTNLand
-basicManaAbility ty = thisObject \this ->
+mkBasicManaAbility :: BasicLandType -> WithThisActivated 'ZBattlefield OTNLand
+mkBasicManaAbility ty = thisObject \this ->
   controllerOf this \you ->
     ElectActivated $
       Ability
@@ -548,9 +540,33 @@ basicManaAbility ty = thisObject \this ->
             Forest -> toManaPool G
         }
 
+plainsManaAbility :: WithThisActivated 'ZBattlefield OTNLand
+plainsManaAbility = mkBasicManaAbility Plains
+
+islandManaAbility :: WithThisActivated 'ZBattlefield OTNLand
+islandManaAbility = mkBasicManaAbility Island
+
+swampManaAbility :: WithThisActivated 'ZBattlefield OTNLand
+swampManaAbility = mkBasicManaAbility Swamp
+
+mountainManaAbility :: WithThisActivated 'ZBattlefield OTNLand
+mountainManaAbility = mkBasicManaAbility Mountain
+
+forestManaAbility :: WithThisActivated 'ZBattlefield OTNLand
+forestManaAbility = mkBasicManaAbility Forest
+
+basicManaAbility :: BasicLandType -> WithThisActivated 'ZBattlefield OTNLand
+basicManaAbility = \case
+  Plains -> plainsManaAbility
+  Island -> islandManaAbility
+  Swamp -> swampManaAbility
+  Mountain -> mountainManaAbility
+  Forest -> forestManaAbility
+
+allBasicManaAbilities :: [WithThisActivated 'ZBattlefield OTNLand]
+allBasicManaAbilities = map basicManaAbility [minBound ..]
+
 unlifted_isBasicManaAbility :: IsZO zone ot => WithThisActivated zone ot -> Bool
 unlifted_isBasicManaAbility ability = case cast ability of
-  Just landAbility ->
-    let predicate ty = landAbility == basicManaAbility ty
-     in any predicate [minBound ..]
+  Just landAbility -> landAbility `elem` allBasicManaAbilities
   Nothing -> False
