@@ -103,7 +103,7 @@ import safe MtgPure.Model.Recursive.Show ()
 import safe MtgPure.Model.Sideboard (Sideboard)
 import safe MtgPure.Model.Stack (Stack (..))
 import safe MtgPure.Model.Zone (Zone (..))
-import safe MtgPure.Model.ZoneObject.ZoneObject (IsOT, IsZO, ZO)
+import safe MtgPure.Model.ZoneObject.ZoneObject (IsOTN, IsZO, ZO)
 
 type Fwd m = Fwd' (GameResult m) (GameState m) m
 
@@ -162,7 +162,7 @@ electedObject_cost elected = ($ elected) case elected of
   ElectedSpell{} -> electedSpell_cost
 
 data AnyElected (pEffect :: PrePost) :: Type where
-  AnyElected :: IsOT ot => Elected pEffect ot -> AnyElected pEffect
+  AnyElected :: IsOTN ot => Elected pEffect ot -> AnyElected pEffect
   deriving (Typeable)
 
 data GameState (m :: Type -> Type) where

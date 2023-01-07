@@ -37,7 +37,7 @@ import safe MtgPure.Model.Object.OTNAliases (
   OTNSorcery,
  )
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
-import safe MtgPure.Model.ZoneObject.ZoneObject (IsOT, ZO)
+import safe MtgPure.Model.ZoneObject.ZoneObject (IsOTN, ZO)
 
 -- Witness type
 data WCard :: Type -> Type where
@@ -122,7 +122,7 @@ instance IsCardType 'OTSorcery where
   singCard = WCardSorcery
   visitCard v _ = visitCSorcery v
 
-class IsOT ot => CoCard ot where
+class IsOTN ot => CoCard ot where
   coCard :: WCard ot
 
 instance CoCard OTNArtifact where

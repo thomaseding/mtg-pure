@@ -32,7 +32,7 @@ import safe MtgPure.Model.Recursive (Requirement (..))
 import safe MtgPure.Model.Recursive.Ord ()
 import safe MtgPure.Model.Zone (IsZone (..), SZone (SZBattlefield), Zone (..))
 import safe MtgPure.Model.ZoneObject.Convert (toZO0, zo0ToPermanent)
-import safe MtgPure.Model.ZoneObject.ZoneObject (IsOT, IsZO, ZO, ZOPlayer)
+import safe MtgPure.Model.ZoneObject.ZoneObject (IsOTN, IsZO, ZO, ZOPlayer)
 
 zosSatisfying :: (Monad m, IsZO zone ot) => Requirement zone ot -> Magic 'Private 'RO m [ZO zone ot]
 zosSatisfying req = allZOs >>= M.filterM (`satisfies` req)
@@ -74,7 +74,7 @@ hasLandType' zo landType = logCall 'hasLandType' case singZone @zone of
       Just land -> landType `elem` landTypes land
   _ -> undefined -- XXX: sung zone
 
-isTapped' :: (IsOT ot, Monad m) => ZO 'ZBattlefield ot -> Magic 'Private 'RO m Bool
+isTapped' :: (IsOTN ot, Monad m) => ZO 'ZBattlefield ot -> Magic 'Private 'RO m Bool
 isTapped' zo = logCall 'isTapped' do
   perm <- getPermanent $ zo0ToPermanent $ toZO0 zo
   pure $ permanentTapped perm == Tapped

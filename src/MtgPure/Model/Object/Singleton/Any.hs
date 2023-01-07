@@ -25,7 +25,7 @@ import safe MtgPure.Model.Object.OTNAliases (
   OTNPlayer,
   OTNSorcery,
  )
-import safe MtgPure.Model.ZoneObject.ZoneObject (IsOT)
+import safe MtgPure.Model.ZoneObject.ZoneObject (IsOTN)
 
 -- Witness type
 data WAny :: Type -> Type where
@@ -49,7 +49,7 @@ deriving instance Show (WAny ot)
 
 type IsAnyType = IsObjectType
 
-class IsOT ot => CoAny ot where
+class IsOTN ot => CoAny ot where
   coAny :: WAny ot
 
 instance CoAny OTNInstant where

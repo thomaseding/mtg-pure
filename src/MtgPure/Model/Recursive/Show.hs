@@ -150,7 +150,7 @@ import safe MtgPure.Model.Variable (
  )
 import safe MtgPure.Model.Zone (IsZone (..), Zone (..))
 import safe MtgPure.Model.ZoneObject.ZoneObject (
-  IsOT,
+  IsOTN,
   IsZO,
   ZO,
   ZoneObject (..),
@@ -1342,7 +1342,7 @@ showNatList showX = \case
 showO1 ::
   forall zone a z.
   (IsZone zone, IsObjectType a) =>
-  IsOT (OT1 a) =>
+  IsOTN (OT1 a) =>
   Plurality ->
   (z -> EnvM ParenItems) ->
   String ->
@@ -1402,7 +1402,7 @@ showO6 = showONImpl @zone O6a
 
 showONImpl ::
   forall zone z a ot.
-  (IsZone zone, IsOT ot, IsObjectType a) =>
+  (IsZone zone, IsOTN ot, IsObjectType a) =>
   (Object a -> ObjectN ot) ->
   Plurality ->
   (z -> EnvM ParenItems) ->
@@ -1938,7 +1938,7 @@ showWithThis showM memo = \case
   This2 cont ->
     let go ::
           forall a b.
-          (IsOT (OT2 a b), Inst2 IsObjectType a b) =>
+          (IsOTN (OT2 a b), Inst2 IsObjectType a b) =>
           ((ZO zone (OT1 a), ZO zone (OT1 b)) -> liftOT (OT2 a b)) ->
           EnvM ParenItems
         go cont' = yesParens do

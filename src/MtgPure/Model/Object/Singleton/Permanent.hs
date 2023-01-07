@@ -32,7 +32,7 @@ import safe MtgPure.Model.Object.OTNAliases (
   OTNPlaneswalker,
  )
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
-import safe MtgPure.Model.ZoneObject.ZoneObject (IsOT, ZO)
+import safe MtgPure.Model.ZoneObject.ZoneObject (IsOTN, ZO)
 
 data PermanentType
   = PTArtifact
@@ -104,7 +104,7 @@ instance IsPermanentType 'OTPlaneswalker where
   singPermanent _ = WPermanentPlaneswalker
   visitPermanent v _ = visitPPlaneswalker v
 
-class IsOT ot => CoPermanent ot where
+class IsOTN ot => CoPermanent ot where
   coPermanent :: WPermanent ot
 
 instance CoPermanent OTNArtifact where

@@ -117,7 +117,7 @@ import safe MtgPure.Model.ZoneObject.Convert (
   zo0ToCard,
   zo0ToPermanent,
  )
-import safe MtgPure.Model.ZoneObject.ZoneObject (IsOT, IsZO, ZO, ZoneObject (ZO), toZone)
+import safe MtgPure.Model.ZoneObject.ZoneObject (IsOTN, IsZO, ZO, ZoneObject (ZO), toZone)
 
 getAlivePlayerCount :: Monad m => Magic 'Public 'RO m PlayerCount
 getAlivePlayerCount = logCall 'getAlivePlayerCount $ PlayerCount . length <$> getAlivePlayers
@@ -225,7 +225,7 @@ doesZoneObjectExist zo = logCall 'doesZoneObjectExist do
     Nothing -> False
     Just{} -> True
 
-doesObjectNExist :: forall ot m. (IsOT ot, Monad m) => ObjectN ot -> Magic 'Private 'RO m Bool
+doesObjectNExist :: forall ot m. (IsOTN ot, Monad m) => ObjectN ot -> Magic 'Private 'RO m Bool
 doesObjectNExist o = logCall 'doesObjectNExist do
   or -- XXX: Use monadic `orM`
     <$> sequence

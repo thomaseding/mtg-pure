@@ -151,7 +151,7 @@ import safe MtgPure.Model.ZoneObject.Convert (
   asSpell,
  )
 import safe MtgPure.Model.ZoneObject.ZoneObject (
-  IsOT,
+  IsOTN,
   IsZO,
   ZO,
   ZOPlayer,
@@ -190,7 +190,7 @@ instance (Typeable p, Typeable ef) => CoNonProxy (Elect p (Effect ef)) where
 instance (Typeable ot) => CoNonProxy (Elect 'Pre (Elect 'Post (Effect 'Continuous) ot)) where
   coNonProxy = NonProxyElectPrePostEffect
 
-class (IsOT ot, Typeable liftOT) => AsWithLinkedObject ot zone liftOT where
+class (IsOTN ot, Typeable liftOT) => AsWithLinkedObject ot zone liftOT where
   linked :: [Requirement zone ot] -> (ZO zone ot -> liftOT ot) -> WithLinkedObject zone liftOT ot
 
 instance (CoNonProxy x, Inst1 IsObjectType a) => AsWithLinkedObject (OT1 a) zone x where

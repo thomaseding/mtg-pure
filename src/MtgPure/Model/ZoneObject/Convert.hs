@@ -61,7 +61,7 @@ import safe Data.Kind (Type)
 import safe Data.Monoid (First (..))
 import safe Data.Typeable (Typeable, cast)
 import safe MtgPure.Model.Object.IsObjectType (IsObjectType)
-import safe MtgPure.Model.Object.LitOT (LitOT (..))
+import safe MtgPure.Model.Object.LitOTN (LitOTN (..))
 import safe MtgPure.Model.Object.OTN (
   OT0,
   OT1,
@@ -120,7 +120,7 @@ import safe MtgPure.Model.Object.ToObjectN.Classes (
 import safe MtgPure.Model.Object.VisitObjectN (VisitObjectN (..))
 import safe MtgPure.Model.Recursive.Ord ()
 import safe MtgPure.Model.Zone (IsZone (..), SZone (..), Zone (..))
-import safe MtgPure.Model.ZoneObject.ZoneObject (IsOT, ZO, ZoneObject (..), toZone, zoToObjectN)
+import safe MtgPure.Model.ZoneObject.ZoneObject (IsOTN, ZO, ZoneObject (..), toZone, zoToObjectN)
 
 zo1ToO :: (IsObjectType a, IsZone zone) => ZO zone (OT1 a) -> Object a
 zo1ToO zo = case zoToObjectN zo of
@@ -206,15 +206,15 @@ toZO12 = \case
 oToZO1 :: (IsZone zone, IsObjectType a) => Object a -> ZO zone (OT1 a)
 oToZO1 = toZone . O1
 
--- NOTE: Wrapper to get higher kinded types to type-check in `mapOT`.
+-- NOTE: Wrapper to get higher kinded types to type-check in `mapOTN`.
 newtype MaybeObjectN (ot :: Type) = MaybeObjectN {unMaybeObjectN :: Maybe (ObjectN ot)}
 
-castOToON :: forall z ot. (IsObjectType z, IsOT ot) => Object z -> Maybe (ObjectN ot)
+castOToON :: forall z ot. (IsObjectType z, IsOTN ot) => Object z -> Maybe (ObjectN ot)
 castOToON o = objN
  where
   objN :: Maybe (ObjectN ot)
   objN = unMaybeObjectN $
-    mapOT @ot $ \case
+    mapOTN @ot $ \case
       OT0 -> MaybeObjectN $
         Just $ O0 case o of
           Object _ u -> u

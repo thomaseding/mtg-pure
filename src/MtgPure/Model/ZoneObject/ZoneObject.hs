@@ -6,7 +6,7 @@
 {-# HLINT ignore "Use lambda-case" #-}
 
 module MtgPure.Model.ZoneObject.ZoneObject (
-  IsOT,
+  IsOTN,
   IsZO,
   ZO,
   ZoneObject (..),
@@ -42,7 +42,7 @@ import safe Data.ConsIndex (ConsIndex (..))
 import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.Object.IndexOT (IndexOT (..))
-import safe MtgPure.Model.Object.LitOT (LitOT)
+import safe MtgPure.Model.Object.LitOTN (LitOTN)
 import safe MtgPure.Model.Object.OTNAliases (
   OTNAbility,
   OTNActivatedAbility,
@@ -101,16 +101,16 @@ instance (IsZone zone, PrettyType ot) => PrettyType (ZO zone ot) where
 instance GetObjectId (ObjectN ot) => GetObjectId (ZO zone ot) where
   getUntypedObject = getUntypedObject . zoToObjectN
 
-type IsOT (ot :: Type) =
+type IsOTN (ot :: Type) =
   ( IndexOT ot
   , VisitObjectN ot
   , PrettyType ot
-  , LitOT ot
+  , LitOTN ot
   , GetObjectId (ObjectN ot)
   )
 
 type IsZO (zone :: Zone) (ot :: Type) =
-  ( IsOT ot
+  ( IsOTN ot
   , IsZone zone
   , PrettyType (ZO zone ot)
   -- XXX: Prolly dont want to put these here so they dont leak to Authoring

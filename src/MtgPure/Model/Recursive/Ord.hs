@@ -105,7 +105,7 @@ import safe MtgPure.Model.Variable (
   VariableId' (..),
  )
 import safe MtgPure.Model.Zone (IsZone (..), Zone (..))
-import safe MtgPure.Model.ZoneObject.ZoneObject (IsOT, IsZO, ZO, ZoneObject (..), toZone)
+import safe MtgPure.Model.ZoneObject.ZoneObject (IsOTN, IsZO, ZO, ZoneObject (..), toZone)
 
 ----------------------------------------
 
@@ -133,7 +133,7 @@ instance IndexOT ot => Eq (Cost ot) where
 instance Typeable ef => Eq (Effect ef) where
   (==) x y = runEnvM (ordEffect x y) == EQ
 
-instance (Typeable el, Typeable p, IsOT ot) => Eq (Elect p el ot) where
+instance (Typeable el, Typeable p, IsOTN ot) => Eq (Elect p el ot) where
   (==) x y = runEnvM (ordElectEl x y) == EQ
 
 instance Eq EventListener where
@@ -213,7 +213,7 @@ instance IndexOT ot => Ord (Cost ot) where
 instance Typeable ef => Ord (Effect ef) where
   compare x y = runEnvM (ordEffect x y)
 
-instance (Typeable el, Typeable p, IsOT ot) => Ord (Elect p el ot) where
+instance (Typeable el, Typeable p, IsOTN ot) => Ord (Elect p el ot) where
   compare x y = runEnvM (ordElectEl x y)
 
 instance Ord EventListener where
@@ -344,7 +344,7 @@ newObjectN make = do
 
 withObjectCont ::
   forall (a :: ObjectType) ot' x.
-  (IsObjectType a, IsOT ot') =>
+  (IsObjectType a, IsOTN ot') =>
   (x -> x -> EnvM Ordering) ->
   (Object a -> ObjectN ot') ->
   (ObjectN ot' -> x) ->
@@ -430,7 +430,7 @@ ordAbility x = case x of
        in go ability1 ability2
     y -> compareIndexM x y
 
-ordAbilities :: IsOT ot => [Ability ot] -> [Ability ot] -> EnvM Ordering
+ordAbilities :: IsOTN ot => [Ability ot] -> [Ability ot] -> EnvM Ordering
 ordAbilities = listM ordAbility
 
 ordActivatedAbility :: ActivatedAbility zone ot -> ActivatedAbility zone ot -> EnvM Ordering
@@ -442,7 +442,7 @@ ordAnyCard :: AnyCard -> AnyCard -> EnvM Ordering
 ordAnyCard x = case x of
   AnyCard1 card1 -> \case
     AnyCard1 card2 ->
-      let go :: forall ot1 ot2. (IsOT ot1, IsOT ot2) => Card ot1 -> Card ot2 -> EnvM Ordering
+      let go :: forall ot1 ot2. (IsOTN ot1, IsOTN ot2) => Card ot1 -> Card ot2 -> EnvM Ordering
           go _ _ = case cast card2 of
             Nothing -> compareOT @ot1 @ot2
             Just card2 -> ordCard card1 card2
@@ -452,7 +452,7 @@ ordAnyCard x = case x of
     AnyCard2 card2 ->
       let go ::
             forall ot1a ot1b ot2a ot2b.
-            (IsOT ot1a, IsOT ot1b, IsOT ot2a, IsOT ot2b) =>
+            (IsOTN ot1a, IsOTN ot1b, IsOTN ot2a, IsOTN ot2b) =>
             Card (ot1a, ot1b) ->
             Card (ot2a, ot2b) ->
             EnvM Ordering
@@ -466,7 +466,7 @@ ordAnyToken :: AnyToken -> AnyToken -> EnvM Ordering
 ordAnyToken = \case
   AnyToken token1 -> \case
     AnyToken token2 ->
-      let go :: forall ot1 ot2. (IsOT ot1, IsOT ot2) => Token ot1 -> Token ot2 -> EnvM Ordering
+      let go :: forall ot1 ot2. (IsOTN ot1, IsOTN ot2) => Token ot1 -> Token ot2 -> EnvM Ordering
           go _ _ = case cast token2 of
             Nothing -> compareOT @ot1 @ot2
             Just token2 -> ordToken token1 token2
@@ -738,7 +738,7 @@ ordEffect x = case x of
     AddToBattlefield perm2 player2 token2 ->
       let go ::
             forall ot1 ot2.
-            (IsOT ot1, IsOT ot2) =>
+            (IsOTN ot1, IsOTN ot2) =>
             WPermanent ot1 ->
             WPermanent ot2 ->
             EnvM Ordering
@@ -899,8 +899,8 @@ ordEffect x = case x of
     SearchLibrary wCard2 player2 card2 ->
       let go ::
             forall ot1 ot2.
-            IsOT ot1 =>
-            IsOT ot2 =>
+            IsOTN ot1 =>
+            IsOTN ot2 =>
             WCard ot1 ->
             WCard ot2 ->
             EnvM Ordering
@@ -1161,7 +1161,7 @@ ordEnchantmentTypes = listM ordEnchantmentType
 ordEventListener' ::
   forall liftOT.
   Typeable liftOT =>
-  (forall ot. IsOT ot => liftOT ot -> liftOT ot -> EnvM Ordering) ->
+  (forall ot. IsOTN ot => liftOT ot -> liftOT ot -> EnvM Ordering) ->
   EventListener' liftOT ->
   EventListener' liftOT ->
   EnvM Ordering
@@ -1895,8 +1895,8 @@ ordW2 ::
   ( Typeable witness
   , ot1 ~ OT2 a1 b1
   , ot2 ~ OT2 a2 b2
-  , IsOT ot1
-  , IsOT ot2
+  , IsOTN ot1
+  , IsOTN ot2
   , Inst2 IsObjectType a1 b1
   , Inst2 IsObjectType a2 b2
   ) =>
@@ -1912,8 +1912,8 @@ ordW3 ::
   ( Typeable witness
   , ot1 ~ OT3 a1 b1 c1
   , ot2 ~ OT3 a2 b2 c2
-  , IsOT ot1
-  , IsOT ot2
+  , IsOTN ot1
+  , IsOTN ot2
   , Inst3 IsObjectType a1 b1 c1
   , Inst3 IsObjectType a2 b2 c2
   ) =>
@@ -1929,8 +1929,8 @@ ordW4 ::
   ( Typeable witness
   , ot1 ~ OT4 a1 b1 c1 d1
   , ot2 ~ OT4 a2 b2 c2 d2
-  , IsOT ot1
-  , IsOT ot2
+  , IsOTN ot1
+  , IsOTN ot2
   , Inst4 IsObjectType a1 b1 c1 d1
   , Inst4 IsObjectType a2 b2 c2 d2
   ) =>
@@ -1946,8 +1946,8 @@ ordW5 ::
   ( Typeable witness
   , ot1 ~ OT5 a1 b1 c1 d1 e1
   , ot2 ~ OT5 a2 b2 c2 d2 e2
-  , IsOT ot1
-  , IsOT ot2
+  , IsOTN ot1
+  , IsOTN ot2
   , Inst5 IsObjectType a1 b1 c1 d1 e1
   , Inst5 IsObjectType a2 b2 c2 d2 e2
   ) =>
@@ -1963,8 +1963,8 @@ ordW6 ::
   ( Typeable witness
   , ot1 ~ OT6 a1 b1 c1 d1 e1 f1
   , ot2 ~ OT6 a2 b2 c2 d2 e2 f2
-  , IsOT ot1
-  , IsOT ot2
+  , IsOTN ot1
+  , IsOTN ot2
   , Inst6 IsObjectType a1 b1 c1 d1 e1 f1
   , Inst6 IsObjectType a2 b2 c2 d2 e2 f2
   ) =>

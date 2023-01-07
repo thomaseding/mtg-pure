@@ -38,7 +38,7 @@ module MtgPure.Model (
   module MtgPure.Model.ManaTypeToColor,
   module MtgPure.Model.Object.IndexOT,
   module MtgPure.Model.Object.IsObjectType,
-  module MtgPure.Model.Object.LitOT,
+  module MtgPure.Model.Object.LitOTN,
   module MtgPure.Model.Object.Object,
   module MtgPure.Model.Object.ObjectId,
   module MtgPure.Model.Object.ObjectN,
@@ -125,7 +125,7 @@ import safe MtgPure.Model.ManaType
 import safe MtgPure.Model.ManaTypeToColor
 import safe MtgPure.Model.Object.IndexOT
 import safe MtgPure.Model.Object.IsObjectType
-import safe MtgPure.Model.Object.LitOT
+import safe MtgPure.Model.Object.LitOTN
 import safe MtgPure.Model.Object.OTKN
 import safe MtgPure.Model.Object.OTKN_
 import safe MtgPure.Model.Object.OTN

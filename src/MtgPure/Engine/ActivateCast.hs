@@ -109,7 +109,7 @@ import safe MtgPure.Model.Recursive (
 import safe MtgPure.Model.Stack (Stack (..), StackObject (..))
 import safe MtgPure.Model.Zone (IsZone (..), SZone (..), Zone (..))
 import safe MtgPure.Model.ZoneObject.Convert (AsSpell', asCard, oToZO1, toZO0)
-import safe MtgPure.Model.ZoneObject.ZoneObject (IsOT, IsZO, ZO, ZOPlayer, ZoneObject (..))
+import safe MtgPure.Model.ZoneObject.ZoneObject (IsOTN, IsZO, ZO, ZOPlayer, ZoneObject (..))
 
 type Legality' = Maybe ()
 
@@ -499,7 +499,7 @@ payElected elected = logCall 'payElected do
 
 payElectedManaAbilityAndResolve ::
   forall ot m.
-  (IsOT ot, Monad m) =>
+  (IsOTN ot, Monad m) =>
   Elected 'Pre ot ->
   Magic 'Private 'RW m Legality
 payElectedManaAbilityAndResolve elected = logCall 'payElectedManaAbilityAndResolve do
@@ -522,7 +522,7 @@ payElectedAndPutOnStack zo elected = logCall 'payElectedAndPutOnStack do
 class ot ~ otdummy => PayElected (ac :: ActivateCast) (ot :: Type) (otdummy :: Type) where
   payElectedAndPutOnStack' :: Monad m => ZO 'ZStack OT0 -> Elected 'Pre ot -> Magic 'Private 'RW m Legality
 
-instance IsOT ot => PayElected 'Activate ot ot where
+instance IsOTN ot => PayElected 'Activate ot ot where
   payElectedAndPutOnStack' = payElectedAndPutOnStackAbility @ot
 
 instance PayElected 'Cast OTNArtifact OTNArtifact where
@@ -551,7 +551,7 @@ instance PayElected 'Cast OTNSorcery OTNSorcery where
 
 payElectedAndPutOnStackAbility ::
   forall ot m.
-  (IsOT ot, Monad m) =>
+  (IsOTN ot, Monad m) =>
   ZO 'ZStack OT0 ->
   Elected 'Pre ot ->
   Magic 'Private 'RW m Legality
@@ -562,7 +562,7 @@ payElectedAndPutOnStackAbility zo = payElectedAndPutOnStackImpl zo \i ->
 
 payElectedAndPutOnStackSpell ::
   forall a ot m.
-  (IsObjectType a, AsSpell' a, IsOT ot, Monad m) =>
+  (IsObjectType a, AsSpell' a, IsOTN ot, Monad m) =>
   ZO 'ZStack OT0 ->
   Elected 'Pre ot ->
   Magic 'Private 'RW m Legality
@@ -573,7 +573,7 @@ payElectedAndPutOnStackSpell zo = payElectedAndPutOnStackImpl zo \i ->
 
 payElectedAndPutOnStackImpl ::
   forall ot m.
-  (IsOT ot, Monad m) =>
+  (IsOTN ot, Monad m) =>
   ZO 'ZStack OT0 ->
   (ObjectId -> StackObject) ->
   Elected 'Pre ot ->

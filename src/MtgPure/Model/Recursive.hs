@@ -106,7 +106,7 @@ import safe MtgPure.Model.Toughness (Toughness)
 import safe MtgPure.Model.Variable (Var (Var), Variable)
 import safe MtgPure.Model.Zone (IsZone, Zone (..))
 import safe MtgPure.Model.ZoneObject.ZoneObject (
-  IsOT,
+  IsOTN,
   IsZO,
   ZO,
   ZOCreature,
@@ -208,7 +208,7 @@ instance ConsIndex (SpecificCard ot) where
     PlaneswalkerCard{} -> 9
     SorceryCard{} -> 10
 
-class IsOT ot => IsSpecificCard (ot :: Type) where
+class IsOTN ot => IsSpecificCard (ot :: Type) where
   singSpecificCard :: SpecificCard ot
 
 instance IsSpecificCard OTNArtifact where
@@ -486,9 +486,9 @@ instance ConsIndex (Cost ot) where
 
 data Effect (ef :: EffectType) :: Type where
   AddMana :: ZOPlayer -> ManaPool 'NonSnow -> Effect 'OneShot -- NOTE: Engine will reinterpret as Snow when source is Snow.
-  AddToBattlefield :: IsOT ot => WPermanent ot -> ZOPlayer -> Token ot -> Effect 'OneShot
+  AddToBattlefield :: IsOTN ot => WPermanent ot -> ZOPlayer -> Token ot -> Effect 'OneShot
   CantBeRegenerated :: ZOCreature -> Effect 'Continuous
-  ChangeTo :: (ot ~ OTN x, IsOT ot) => WPermanent ot -> ZOPermanent -> Card ot -> Effect 'Continuous
+  ChangeTo :: (ot ~ OTN x, IsOTN ot) => WPermanent ot -> ZOPermanent -> Card ot -> Effect 'Continuous
   CounterAbility :: ZO 'ZStack OTNActivatedOrTriggeredAbility -> Effect 'OneShot
   CounterSpell :: ZO 'ZStack OTNSpell -> Effect 'OneShot
   DealDamage :: IsZO zone OTNDamageSource => ZO zone OTNDamageSource -> ZOCreaturePlayerPlaneswalker -> Damage 'Var -> Effect 'OneShot
@@ -496,11 +496,11 @@ data Effect (ef :: EffectType) :: Type where
   DrawCards :: ZOPlayer -> Int -> Effect 'OneShot
   EffectCase :: Case (Effect ef) -> Effect ef
   EffectContinuous :: Effect 'Continuous -> Effect 'OneShot -- 611.2
-  GainAbility :: IsOT ot => WAny ot -> ZO 'ZBattlefield ot -> Ability ot -> Effect 'Continuous
-  LoseAbility :: IsOT ot => WAny ot -> ZO 'ZBattlefield ot -> Ability ot -> Effect 'Continuous
+  GainAbility :: IsOTN ot => WAny ot -> ZO 'ZBattlefield ot -> Ability ot -> Effect 'Continuous
+  LoseAbility :: IsOTN ot => WAny ot -> ZO 'ZBattlefield ot -> Ability ot -> Effect 'Continuous
   PutOntoBattlefield :: IsZO zone ot => WPermanent ot -> ZOPlayer -> ZO zone ot -> Effect 'OneShot -- TODO: zone /= 'ZBattlefield
-  Sacrifice :: IsOT ot => WPermanent ot -> ZOPlayer -> [Requirement 'ZBattlefield ot] -> Effect 'OneShot
-  SearchLibrary :: IsOT ot => WCard ot -> ZOPlayer -> WithLinkedObject 'ZLibrary (Elect 'Post (Effect 'OneShot)) ot -> Effect 'OneShot
+  Sacrifice :: IsOTN ot => WPermanent ot -> ZOPlayer -> [Requirement 'ZBattlefield ot] -> Effect 'OneShot
+  SearchLibrary :: IsOTN ot => WCard ot -> ZOPlayer -> WithLinkedObject 'ZLibrary (Elect 'Post (Effect 'OneShot)) ot -> Effect 'OneShot
   Sequence :: [Effect ef] -> Effect ef
   ShuffleLibrary :: ZOPlayer -> Effect 'OneShot
   StatDelta :: ZOCreature -> Power -> Toughness -> Effect 'Continuous
@@ -541,7 +541,7 @@ instance ConsIndex (Effect ef) where
 data Elect (p :: PrePost) (el :: Type) (ot :: Type) :: Type where
   ActivePlayer :: (ZOPlayer -> Elect p el ot) -> Elect p el ot
   -- TODO: Add `IsZO zone ot` witness and change `'ZBattlefield` to `zone`.
-  All :: IsOT ot => WithMaskedObjects 'ZBattlefield (Elect p el ot) -> Elect p el ot
+  All :: IsOTN ot => WithMaskedObjects 'ZBattlefield (Elect p el ot) -> Elect p el ot
   -- TODO: Disallow `Choose` for some types of `el` using a witness arg, in particular Event and EventListener
   Choose ::
     (IsPrePost p, Typeable el, IsZO zone ot) =>
@@ -568,7 +568,7 @@ data Elect (p :: PrePost) (el :: Type) (ot :: Type) :: Type where
   --      (2) Introduce 'Mid for between 'Pre and 'Post to enforce it happens before aggrogates
   --      (3) Say that this is OK and say that Random must come before All if want it unified. Seems good actually...
   Random ::
-    IsOT ot =>
+    IsOTN ot =>
     WithMaskedObject 'ZBattlefield (Elect 'Post el ot) ->
     Elect 'Post el ot -- Interpreted as "Arbitrary" in some contexts, such as Event and EventListener
 
@@ -653,9 +653,9 @@ type Event = EventListener' Proxy
 type EventListener = EventListener' (Elect 'Post (Effect 'OneShot))
 
 data EventListener' (liftOT :: Type -> Type) :: Type where
-  BecomesTapped :: (IsOT ot, Typeable liftOT) => WPermanent ot -> WithLinkedObject 'ZBattlefield liftOT ot -> EventListener' liftOT
+  BecomesTapped :: (IsOTN ot, Typeable liftOT) => WPermanent ot -> WithLinkedObject 'ZBattlefield liftOT ot -> EventListener' liftOT
   Events :: [EventListener' liftOT] -> EventListener' liftOT
-  SpellIsCast :: IsOT ot => WSpell ot -> WithLinkedObject 'ZBattlefield liftOT ot -> EventListener' liftOT
+  SpellIsCast :: IsOTN ot => WSpell ot -> WithLinkedObject 'ZBattlefield liftOT ot -> EventListener' liftOT
   TimePoint :: Typeable p => TimePoint p -> liftOT OTNPlayer -> EventListener' liftOT
   deriving (Typeable)
 
@@ -690,12 +690,12 @@ instance ConsIndex (NonProxy liftOT) where
 ----------------------------------------
 
 data Requirement (zone :: Zone) (ot :: Type) :: Type where
-  ControlledBy :: IsOT ot => ZOPlayer -> Requirement 'ZBattlefield ot
-  ControlsA :: IsOT ot => Requirement 'ZBattlefield ot -> Requirement zone OTNPlayer
+  ControlledBy :: IsOTN ot => ZOPlayer -> Requirement 'ZBattlefield ot
+  ControlsA :: IsOTN ot => Requirement 'ZBattlefield ot -> Requirement zone OTNPlayer
   HasAbility :: IsZO zone ot => WithThis zone Ability ot -> Requirement zone ot -- Non-unique differing representations will not be considered the same
   HasLandType :: IsZO zone OTNLand => LandType -> Requirement zone OTNLand
   Is :: IsZO zone ot => WAny ot -> ZO zone ot -> Requirement zone ot
-  IsTapped :: IsOT ot => WPermanent ot -> Requirement 'ZBattlefield ot
+  IsTapped :: IsOTN ot => WPermanent ot -> Requirement 'ZBattlefield ot
   Not :: IsZO zone ot => Requirement zone ot -> Requirement zone ot
   OfColors :: IsZO zone ot => Colors -> Requirement zone ot -- needs `WCard a` witness
   OwnedBy :: IsZO zone ot => ZOPlayer -> Requirement zone ot
@@ -911,16 +911,16 @@ fromSome some f = case some of
 ----------------------------------------
 
 data StaticAbility (zone :: Zone) (ot :: Type) :: Type where
-  As :: (ot ~ OTN x, IsOT ot) => Elect 'Post EventListener ot -> StaticAbility 'ZBattlefield ot -- 603.6d: not a triggered ability
+  As :: (ot ~ OTN x, IsOTN ot) => Elect 'Post EventListener ot -> StaticAbility 'ZBattlefield ot -- 603.6d: not a triggered ability
   -- XXX: BestowPre and BestowPost
   Bestow :: ot ~ OTNEnchantmentCreature => Elect 'Pre (Cost ot) ot -> Enchant 'ZBattlefield OTNCreature -> StaticAbility 'ZBattlefield ot
   FirstStrike :: ot ~ OTNCreature => StaticAbility 'ZBattlefield ot
   Flying :: ot ~ OTNCreature => StaticAbility 'ZBattlefield ot
-  Fuse :: IsOT ot => StaticAbility 'ZHand (ot, ot) -- TODO: Add witness or constraint for OTNInstant or OTNSorcery
+  Fuse :: IsOTN ot => StaticAbility 'ZHand (ot, ot) -- TODO: Add witness or constraint for OTNInstant or OTNSorcery
   Haste :: ot ~ OTNCreature => StaticAbility 'ZBattlefield ot
-  StaticContinuous :: (ot ~ OTN x, IsOT ot) => Elect 'Post (Effect 'Continuous) ot -> StaticAbility 'ZBattlefield ot -- 611.3
+  StaticContinuous :: (ot ~ OTN x, IsOTN ot) => Elect 'Post (Effect 'Continuous) ot -> StaticAbility 'ZBattlefield ot -- 611.3
   -- XXX: SuspendPre and SuspendPost
-  Suspend :: (ot ~ OTN x, IsOT ot) => Int -> Elect 'Pre (Cost ot) ot -> StaticAbility 'ZBattlefield ot -- PositiveInt
+  Suspend :: (ot ~ OTN x, IsOTN ot) => Int -> Elect 'Pre (Cost ot) ot -> StaticAbility 'ZBattlefield ot -- PositiveInt
   deriving (Typeable)
 
 instance ConsIndex (StaticAbility zone ot) where
@@ -965,31 +965,31 @@ instance ConsIndex (TriggeredAbility zone ot) where
 data WithLinkedObject (zone :: Zone) (liftOT :: Type -> Type) (ot :: Type) :: Type where
   LProxy :: [Requirement zone ot] -> WithLinkedObject zone Proxy ot
   L1 ::
-    (IsOT (OT1 a), Inst1 IsObjectType a) =>
+    (IsOTN (OT1 a), Inst1 IsObjectType a) =>
     NonProxy liftOT ->
     [Requirement zone (OT1 a)] ->
     (ZO zone (OT1 a) -> liftOT (OT1 a)) ->
     WithLinkedObject zone liftOT (OT1 a)
   L2 ::
-    (IsOT (OT2 a b), Inst2 IsObjectType a b) =>
+    (IsOTN (OT2 a b), Inst2 IsObjectType a b) =>
     NonProxy liftOT ->
     [Requirement zone (OT2 a b)] ->
     (ZO zone (OT2 a b) -> liftOT (OT2 a b)) ->
     WithLinkedObject zone liftOT (OT2 a b)
   L3 ::
-    (IsOT (OT3 a b c), Inst3 IsObjectType a b c) =>
+    (IsOTN (OT3 a b c), Inst3 IsObjectType a b c) =>
     NonProxy liftOT ->
     [Requirement zone (OT3 a b c)] ->
     (ZO zone (OT3 a b c) -> liftOT (OT3 a b c)) ->
     WithLinkedObject zone liftOT (OT3 a b c)
   L4 ::
-    (IsOT (OT4 a b c d), Inst4 IsObjectType a b c d) =>
+    (IsOTN (OT4 a b c d), Inst4 IsObjectType a b c d) =>
     NonProxy liftOT ->
     [Requirement zone (OT4 a b c d)] ->
     (ZO zone (OT4 a b c d) -> liftOT (OT4 a b c d)) ->
     WithLinkedObject zone liftOT (OT4 a b c d)
   L5 ::
-    (IsOT (OT5 a b c d e), Inst5 IsObjectType a b c d e) =>
+    (IsOTN (OT5 a b c d e), Inst5 IsObjectType a b c d e) =>
     NonProxy liftOT ->
     [Requirement zone (OT5 a b c d e)] ->
     (ZO zone (OT5 a b c d e) -> liftOT (OT5 a b c d e)) ->
@@ -1022,32 +1022,32 @@ instance ConsIndex (WithList ret zone ot) where
 
 data WithMaskedObject (zone :: Zone) (liftedOT :: Type) :: Type where
   Masked1 ::
-    (Typeable liftedOT, IsOT (OT1 a), Inst1 IsObjectType a) =>
+    (Typeable liftedOT, IsOTN (OT1 a), Inst1 IsObjectType a) =>
     [Requirement zone (OT1 a)] ->
     (ZO zone (OT1 a) -> liftedOT) ->
     WithMaskedObject zone liftedOT
   Masked2 ::
-    (Typeable liftedOT, IsOT (OT2 a b), Inst2 IsObjectType a b) =>
+    (Typeable liftedOT, IsOTN (OT2 a b), Inst2 IsObjectType a b) =>
     [Requirement zone (OT2 a b)] ->
     (ZO zone (OT2 a b) -> liftedOT) ->
     WithMaskedObject zone liftedOT
   Masked3 ::
-    (Typeable liftedOT, IsOT (OT3 a b c), Inst3 IsObjectType a b c) =>
+    (Typeable liftedOT, IsOTN (OT3 a b c), Inst3 IsObjectType a b c) =>
     [Requirement zone (OT3 a b c)] ->
     (ZO zone (OT3 a b c) -> liftedOT) ->
     WithMaskedObject zone liftedOT
   Masked4 ::
-    (Typeable liftedOT, IsOT (OT4 a b c d), Inst4 IsObjectType a b c d) =>
+    (Typeable liftedOT, IsOTN (OT4 a b c d), Inst4 IsObjectType a b c d) =>
     [Requirement zone (OT4 a b c d)] ->
     (ZO zone (OT4 a b c d) -> liftedOT) ->
     WithMaskedObject zone liftedOT
   Masked5 ::
-    (Typeable liftedOT, IsOT (OT5 a b c d e), Inst5 IsObjectType a b c d e) =>
+    (Typeable liftedOT, IsOTN (OT5 a b c d e), Inst5 IsObjectType a b c d e) =>
     [Requirement zone (OT5 a b c d e)] ->
     (ZO zone (OT5 a b c d e) -> liftedOT) ->
     WithMaskedObject zone liftedOT
   Masked6 ::
-    (Typeable liftedOT, IsOT (OT6 a b c d e f), Inst6 IsObjectType a b c d e f) =>
+    (Typeable liftedOT, IsOTN (OT6 a b c d e f), Inst6 IsObjectType a b c d e f) =>
     [Requirement zone (OT6 a b c d e f)] ->
     (ZO zone (OT6 a b c d e f) -> liftedOT) ->
     WithMaskedObject zone liftedOT
@@ -1066,32 +1066,32 @@ instance ConsIndex (WithMaskedObject zone liftedOT) where
 
 data WithMaskedObjects (zone :: Zone) (liftedOT :: Type) :: Type where
   Maskeds1 ::
-    (Typeable liftedOT, IsOT (OT1 a), Inst1 IsObjectType a) =>
+    (Typeable liftedOT, IsOTN (OT1 a), Inst1 IsObjectType a) =>
     [Requirement zone (OT1 a)] ->
     (List (ZO zone (OT1 a)) -> liftedOT) ->
     WithMaskedObjects zone liftedOT
   Maskeds2 ::
-    (Typeable liftedOT, IsOT (OT2 a b), Inst2 IsObjectType a b) =>
+    (Typeable liftedOT, IsOTN (OT2 a b), Inst2 IsObjectType a b) =>
     [Requirement zone (OT2 a b)] ->
     (List (ZO zone (OT2 a b)) -> liftedOT) ->
     WithMaskedObjects zone liftedOT
   Maskeds3 ::
-    (Typeable liftedOT, IsOT (OT3 a b c), Inst3 IsObjectType a b c) =>
+    (Typeable liftedOT, IsOTN (OT3 a b c), Inst3 IsObjectType a b c) =>
     [Requirement zone (OT3 a b c)] ->
     (List (ZO zone (OT3 a b c)) -> liftedOT) ->
     WithMaskedObjects zone liftedOT
   Maskeds4 ::
-    (Typeable liftedOT, IsOT (OT4 a b c d), Inst4 IsObjectType a b c d) =>
+    (Typeable liftedOT, IsOTN (OT4 a b c d), Inst4 IsObjectType a b c d) =>
     [Requirement zone (OT4 a b c d)] ->
     (List (ZO zone (OT4 a b c d)) -> liftedOT) ->
     WithMaskedObjects zone liftedOT
   Maskeds5 ::
-    (Typeable liftedOT, IsOT (OT5 a b c d e), Inst5 IsObjectType a b c d e) =>
+    (Typeable liftedOT, IsOTN (OT5 a b c d e), Inst5 IsObjectType a b c d e) =>
     [Requirement zone (OT5 a b c d e)] ->
     (List (ZO zone (OT5 a b c d e)) -> liftedOT) ->
     WithMaskedObjects zone liftedOT
   Maskeds6 ::
-    (Typeable liftedOT, IsOT (OT6 a b c d e f), Inst6 IsObjectType a b c d e f) =>
+    (Typeable liftedOT, IsOTN (OT6 a b c d e f), Inst6 IsObjectType a b c d e f) =>
     [Requirement zone (OT6 a b c d e f)] ->
     (List (ZO zone (OT6 a b c d e f)) -> liftedOT) ->
     WithMaskedObjects zone liftedOT
@@ -1110,11 +1110,11 @@ instance ConsIndex (WithMaskedObjects zone liftedOT) where
 
 data WithThis (zone :: Zone) (liftOT :: Type -> Type) (ot :: Type) :: Type where
   This1 ::
-    (IsOT (OT1 a), Inst1 IsObjectType a) =>
+    (IsOTN (OT1 a), Inst1 IsObjectType a) =>
     (ZO zone (OT1 a) -> liftOT (OT1 a)) ->
     WithThis zone liftOT (OT1 a)
   This2 ::
-    (IsOT (OT2 a b), Inst2 IsObjectType a b) =>
+    (IsOTN (OT2 a b), Inst2 IsObjectType a b) =>
     -- TODO: Add a additional full (ZO zone (OT2 a b)) to the input tuple?
     -- TODO: Introduce a `This ot` record type to access its constituents.
     --       Prolly can also add ToObjectN instances (cool!).

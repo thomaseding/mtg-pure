@@ -49,7 +49,7 @@ import safe MtgPure.Model.Recursive (AnyCard (..), CardFacet, Effect (..), Elect
 import safe MtgPure.Model.Stack (Stack (..), stackObjectToZo0)
 import safe MtgPure.Model.Zone (Zone (..))
 import safe MtgPure.Model.ZoneObject.Convert (toZO0, zo0ToPermanent)
-import safe MtgPure.Model.ZoneObject.ZoneObject (IsOT, ZO)
+import safe MtgPure.Model.ZoneObject.ZoneObject (IsOTN, ZO)
 
 resolveTopOfStack :: Monad m => Magic 'Private 'RW m ()
 resolveTopOfStack = logCall 'resolveTopOfStack do
@@ -76,7 +76,7 @@ resolveStackObject zoStack = logCall 'resolveStackObject do
     Just anyElected -> case anyElected of
       AnyElected elected -> resolveElected zoStack elected
 
-resolveManaAbility :: (IsOT ot, Monad m) => Elected 'Pre ot -> Magic 'Private 'RW m Legality
+resolveManaAbility :: (IsOTN ot, Monad m) => Elected 'Pre ot -> Magic 'Private 'RW m Legality
 resolveManaAbility elected = logCall 'resolveManaAbility do
   let isManaAbility = True -- TODO
   case isManaAbility of
@@ -86,7 +86,7 @@ resolveManaAbility elected = logCall 'resolveManaAbility do
       resolveElected zoStack elected
       pure Legal
 
-resolveElected :: forall ot m. (IsOT ot, Monad m) => ZO 'ZStack OT0 -> Elected 'Pre ot -> Magic 'Private 'RW m ()
+resolveElected :: forall ot m. (IsOTN ot, Monad m) => ZO 'ZStack OT0 -> Elected 'Pre ot -> Magic 'Private 'RW m ()
 resolveElected zoStack elected = logCall 'resolveElected do
   case elected of
     ElectedActivatedAbility{} -> M.void $ resolveOneShot zoStack $ unPending $ electedActivatedAbility_effect elected
@@ -117,7 +117,7 @@ data ElectedPermanent (ot :: Type) :: Type where
     ElectedPermanent ot
   deriving (Typeable)
 
-resolvePermanent :: (IsOT ot, Monad m) => ElectedPermanent ot -> Magic 'Private 'RW m ()
+resolvePermanent :: (IsOTN ot, Monad m) => ElectedPermanent ot -> Magic 'Private 'RW m ()
 resolvePermanent elected = logCall 'resolvePermanent do
   i <- newObjectId
   let oPerm = zo0ToPermanent $ toZO0 i
