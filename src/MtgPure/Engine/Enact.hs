@@ -44,7 +44,7 @@ import safe MtgPure.Model.IsCardList (IsCardList (..), popCard)
 import safe MtgPure.Model.Life (Life (..))
 import safe MtgPure.Model.Mana (Snow (..))
 import safe MtgPure.Model.ManaPool (CompleteManaPool (..), ManaPool (..))
-import safe MtgPure.Model.Object.OTNAliases (OTDamageSource, OTPermanent)
+import safe MtgPure.Model.Object.OTNAliases (OTNDamageSource, OTNPermanent)
 import safe MtgPure.Model.Object.Object (Object)
 import safe MtgPure.Model.Object.ObjectId (getObjectId)
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
@@ -87,7 +87,7 @@ addMana' oPlayer mana = logCall 'addMana' do
 
 dealDamage' ::
   Monad m =>
-  ZO zone OTDamageSource ->
+  ZO zone OTNDamageSource ->
   ZOCreaturePlayerPlaneswalker ->
   Damage var ->
   Magic 'Private 'RW m EnactInfo
@@ -167,7 +167,7 @@ drawCards' :: Monad m => Int -> Object 'OTPlayer -> Magic 'Private 'RW m EnactIn
 drawCards' n oPlayer = logCall 'drawCards' do
   fmap mconcat $ M.replicateM n $ drawCard' oPlayer
 
-untap' :: Monad m => ZO 'ZBattlefield OTPermanent -> Magic 'Private 'RW m EnactInfo
+untap' :: Monad m => ZO 'ZBattlefield OTNPermanent -> Magic 'Private 'RW m EnactInfo
 untap' oPerm = logCall 'untap' do
   perm <- fromRO $ getPermanent oPerm
   setPermanent oPerm $ Just perm{permanentTapped = Untapped}
@@ -175,7 +175,7 @@ untap' oPerm = logCall 'untap' do
     False -> mempty
     True -> mempty{enactInfo_becameUntapped = pure oPerm}
 
-tap' :: Monad m => ZO 'ZBattlefield OTPermanent -> Magic 'Private 'RW m EnactInfo
+tap' :: Monad m => ZO 'ZBattlefield OTNPermanent -> Magic 'Private 'RW m EnactInfo
 tap' oPerm = logCall 'tap' do
   perm <- fromRO $ getPermanent oPerm
   setPermanent oPerm $ Just perm{permanentTapped = Tapped}

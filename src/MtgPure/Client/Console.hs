@@ -73,9 +73,9 @@ import safe MtgPure.Model.ManaPool (CompleteManaPool)
 import safe MtgPure.Model.ManaSymbol (ManaSymbol (..))
 import safe MtgPure.Model.Mulligan (Mulligan (..))
 import safe MtgPure.Model.Object.OTNAliases (
-  OTAny,
-  OTCard,
-  OTLand,
+  OTNAny,
+  OTNCard,
+  OTNLand,
  )
 import safe MtgPure.Model.Object.Object (Object (..))
 import safe MtgPure.Model.Object.ObjectId (ObjectId (ObjectId), getObjectId)
@@ -276,7 +276,7 @@ parseCommandInput (CommandInput raw) = case raw of
     let goIntrinsic zo ty = PriorityAction $ ActivateAbility $ SomeActivatedAbility zo $ basicManaAbility ty
     case mAbility of
       Nothing -> case mZo of
-        Just (zo :: ZO 'ZBattlefield OTLand) -> case abilityIndex of
+        Just (zo :: ZO 'ZBattlefield OTNLand) -> case abilityIndex of
           -1 -> pure $ goIntrinsic zo Plains
           -2 -> pure $ goIntrinsic zo Island
           -3 -> pure $ goIntrinsic zo Swamp
@@ -289,7 +289,7 @@ parseCommandInput (CommandInput raw) = case raw of
               _ -> pure AskPriorityActionAgain
           _ -> pure AskPriorityActionAgain
         Nothing -> pure AskPriorityActionAgain
-      Just ability -> pure $ PriorityAction $ ActivateAbility (ability :: SomeActivatedAbility 'ZBattlefield OTAny)
+      Just ability -> pure $ PriorityAction $ ActivateAbility (ability :: SomeActivatedAbility 'ZBattlefield OTNAny)
   [2, spellId] -> do
     let zo0 = toZO0 @ 'ZHand $ ObjectId spellId -- XXX: Use `getZoneOf` + `singZone` to generalize.
         zo = zo0ToSpell zo0
@@ -429,7 +429,7 @@ printHand (Hand zos) = do
   names <- T.for zos getHandCardName
   liftIO $ print ("hand", names)
 
-getHandCardName :: ZO 'ZHand OTCard -> Magic 'Public 'RO Console String
+getHandCardName :: ZO 'ZHand OTNCard -> Magic 'Public 'RO Console String
 getHandCardName zo = do
   let zo0 = toZO0 zo
   handCards <- internalFromPrivate $ gets magicHandCards

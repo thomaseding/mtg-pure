@@ -62,20 +62,20 @@ import safe MtgPure.Model.LandType (LandType (..))
 import safe MtgPure.Model.ManaSymbol (ManaSymbol (..))
 import safe MtgPure.Model.Object.OTN (OT3)
 import safe MtgPure.Model.Object.OTNAliases (
-  OTActivatedOrTriggeredAbility,
-  OTArtifact,
-  OTArtifactCreature,
-  OTCreature,
-  OTCreaturePlayer,
-  OTCreaturePlayerPlaneswalker,
-  OTEnchantment,
-  OTEnchantmentCreature,
-  OTInstant,
-  OTLand,
-  OTPermanent,
-  OTPlayerPlaneswalker,
-  OTSorcery,
-  OTSpell,
+  OTNActivatedOrTriggeredAbility,
+  OTNArtifact,
+  OTNArtifactCreature,
+  OTNCreature,
+  OTNCreaturePlayer,
+  OTNCreaturePlayerPlaneswalker,
+  OTNEnchantment,
+  OTNEnchantmentCreature,
+  OTNInstant,
+  OTNLand,
+  OTNPermanent,
+  OTNPlayerPlaneswalker,
+  OTNSorcery,
+  OTNSpell,
  )
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Object.ToObjectN.Instances ()
@@ -188,7 +188,7 @@ import safe MtgPure.ModelCombinators (
 
 ----------------------------------------
 
-mkBasicLand :: BasicLandType -> Card OTLand
+mkBasicLand :: BasicLandType -> Card OTNLand
 mkBasicLand ty = Card name $
   YourLand \_you ->
     LandFacet
@@ -199,7 +199,7 @@ mkBasicLand ty = Card name $
  where
   name = CardName $ show ty
 
-mkDualLand :: String -> BasicLandType -> BasicLandType -> Card OTLand
+mkDualLand :: String -> BasicLandType -> BasicLandType -> Card OTNLand
 mkDualLand name ty1 ty2 =
   Card (CardName name) $
     YourLand \_you ->
@@ -209,7 +209,7 @@ mkDualLand name ty1 ty2 =
         , land_abilities = []
         }
 
-mkFetchLand :: String -> BasicLandType -> BasicLandType -> Card OTLand
+mkFetchLand :: String -> BasicLandType -> BasicLandType -> Card OTNLand
 mkFetchLand name ty1 ty2 = Card (CardName name) $
   YourLand \_you ->
     LandFacet
@@ -238,10 +238,10 @@ mkFetchLand name ty1 ty2 = Card (CardName name) $
 
 ----------------------------------------
 
-acceptableLosses :: Card OTSorcery
+acceptableLosses :: Card OTNSorcery
 acceptableLosses = Card "Acceptable Losses" $
   YourSorcery \you ->
-    Target you $ masked @OTCreature [] \target ->
+    Target you $ masked @OTNCreature [] \target ->
       ElectCard $
         SorceryFacet
           { sorcery_colors = toColors R
@@ -256,7 +256,7 @@ acceptableLosses = Card "Acceptable Losses" $
               effect $ dealDamage this target 5
           }
 
-allIsDust :: Card OTSorcery
+allIsDust :: Card OTNSorcery
 allIsDust = Card "All Is Dust" $
   YourSorcery \_you ->
     ElectCard $
@@ -267,7 +267,7 @@ allIsDust = Card "All Is Dust" $
         , sorcery_abilities = []
         , sorcery_effect = thisObject \_this ->
             All $ maskeds [] \players ->
-              All $ maskeds @OTPermanent [colored] \perms ->
+              All $ maskeds @OTNPermanent [colored] \perms ->
                 effect $
                   WithList $ Each players \player ->
                     WithList $
@@ -275,7 +275,7 @@ allIsDust = Card "All Is Dust" $
                         sacrifice player [is perm]
         }
 
-ancestralVision :: Card OTSorcery
+ancestralVision :: Card OTNSorcery
 ancestralVision = Card "Ancestral Vision" $
   YourSorcery \you ->
     Target you $ masked [] \target ->
@@ -289,7 +289,7 @@ ancestralVision = Card "Ancestral Vision" $
               effect $ DrawCards target 3
           }
 
-backlash :: Card OTInstant
+backlash :: Card OTNInstant
 backlash = Card "Backlash" $
   YourInstant \you ->
     Target you $ masked [Not isTapped] \target ->
@@ -306,10 +306,10 @@ backlash = Card "Backlash" $
                     dealDamage target targetController $ VariableDamage power
             }
 
-bayou :: Card OTLand
+bayou :: Card OTNLand
 bayou = mkDualLand "Bayou" Forest Swamp
 
-birdToken :: Token OTCreature
+birdToken :: Token OTNCreature
 birdToken = Token coPermanent $
   Card "Bird Token" $
     YourCreature \_you ->
@@ -322,11 +322,11 @@ birdToken = Token coPermanent $
         , creature_abilities = [Static Flying]
         }
 
-blaze :: Card OTSorcery
+blaze :: Card OTNSorcery
 blaze = Card "Blaze" $
   YourSorcery \you ->
     VariableInt \x ->
-      Target you $ masked @OTCreaturePlayerPlaneswalker [] \target ->
+      Target you $ masked @OTNCreaturePlayerPlaneswalker [] \target ->
         ElectCard $
           SorceryFacet
             { sorcery_colors = toColors R
@@ -337,7 +337,7 @@ blaze = Card "Blaze" $
                 effect $ dealDamage this target x
             }
 
-bloodMoon :: Card OTEnchantment
+bloodMoon :: Card OTNEnchantment
 bloodMoon = Card "Blood Moon" $
   YourEnchantment \_you ->
     EnchantmentFacet
@@ -355,7 +355,7 @@ bloodMoon = Card "Blood Moon" $
           ]
       }
 
-cityOfBrass :: Card OTLand
+cityOfBrass :: Card OTNLand
 cityOfBrass = Card "City of Brass" $
   YourLand \_you ->
     LandFacet
@@ -381,7 +381,7 @@ cityOfBrass = Card "City of Brass" $
           ]
       }
 
-cleanse :: Card OTSorcery
+cleanse :: Card OTNSorcery
 cleanse = Card "Cleanse" $
   YourSorcery \_you ->
     ElectCard $
@@ -391,13 +391,13 @@ cleanse = Card "Cleanse" $
         , sorcery_creatureTypes = []
         , sorcery_abilities = []
         , sorcery_effect = thisObject \_this ->
-            All $ maskeds @OTCreature [ofColors B] \creatures ->
+            All $ maskeds @OTNCreature [ofColors B] \creatures ->
               effect $
                 WithList $ Each creatures \creature ->
                   destroy creature
         }
 
-conversion :: Card OTEnchantment
+conversion :: Card OTNEnchantment
 conversion = Card "Conversion" $
   YourEnchantment \_you ->
     EnchantmentFacet
@@ -430,7 +430,7 @@ conversion = Card "Conversion" $
           ]
       }
 
-damnation :: Card OTSorcery
+damnation :: Card OTNSorcery
 damnation = Card "Damnation" $
   YourSorcery \_you ->
     ElectCard $
@@ -440,7 +440,7 @@ damnation = Card "Damnation" $
         , sorcery_creatureTypes = []
         , sorcery_abilities = []
         , sorcery_effect = thisObject \_this ->
-            All $ maskeds @OTCreature [] \creatures ->
+            All $ maskeds @OTNCreature [] \creatures ->
               effect $
                 WithList $ Each creatures \creature ->
                   Sequence
@@ -449,11 +449,11 @@ damnation = Card "Damnation" $
                     ]
         }
 
-fling :: Card OTInstant
+fling :: Card OTNInstant
 fling = Card "Fling" $
   YourInstant \you ->
     Choose you $ masked [ControlledBy you] \sacChoice ->
-      Target you $ masked @OTCreaturePlayer [] \target ->
+      Target you $ masked @OTNCreaturePlayer [] \target ->
         ElectCard $
           InstantFacet
             { instant_colors = toColors R
@@ -470,10 +470,10 @@ fling = Card "Fling" $
                     dealDamage sacChoice target $ VariableDamage power
             }
 
-forest :: Card OTLand
+forest :: Card OTNLand
 forest = mkBasicLand Forest
 
-holyStrength :: Card OTEnchantment
+holyStrength :: Card OTNEnchantment
 holyStrength = Card "Holy Strength" $
   YourEnchantment \_you ->
     EnchantmentFacet
@@ -488,13 +488,13 @@ holyStrength = Card "Holy Strength" $
       , enchantment_abilities = []
       }
 
-island :: Card OTLand
+island :: Card OTNLand
 island = mkBasicLand Island
 
-lavaAxe :: Card OTSorcery
+lavaAxe :: Card OTNSorcery
 lavaAxe = Card "Lava Axe" $
   YourSorcery \you ->
-    Target you $ masked @OTPlayerPlaneswalker [] \target ->
+    Target you $ masked @OTNPlayerPlaneswalker [] \target ->
       ElectCard $
         SorceryFacet
           { sorcery_colors = toColors R
@@ -505,10 +505,10 @@ lavaAxe = Card "Lava Axe" $
               effect $ dealDamage this target 5
           }
 
-manaLeak :: Card OTInstant
+manaLeak :: Card OTNInstant
 manaLeak = Card "Mana Leak" $
   YourInstant \you ->
-    Target you $ masked @OTSpell [] \spell ->
+    Target you $ masked @OTNSpell [] \spell ->
       ElectCard $
         InstantFacet
           { instant_colors = toColors U
@@ -521,10 +521,10 @@ manaLeak = Card "Mana Leak" $
                   effect $ counterSpell spell
           }
 
-mountain :: Card OTLand
+mountain :: Card OTNLand
 mountain = mkBasicLand Mountain
 
-nyxbornRollicker :: Card OTEnchantmentCreature
+nyxbornRollicker :: Card OTNEnchantmentCreature
 nyxbornRollicker = Card "Nyxborn Rollicker" $
   YourEnchantmentCreature \_you ->
     EnchantmentCreatureFacet
@@ -544,7 +544,7 @@ nyxbornRollicker = Card "Nyxborn Rollicker" $
           ]
       }
 
-ornithopter :: Card OTArtifactCreature
+ornithopter :: Card OTNArtifactCreature
 ornithopter = Card "Ornithopter" $
   YourArtifactCreature \_you ->
     ArtifactCreatureFacet
@@ -559,10 +559,10 @@ ornithopter = Card "Ornithopter" $
       , artifactCreature_artifactCreatureAbilities = []
       }
 
-plains :: Card OTLand
+plains :: Card OTNLand
 plains = mkBasicLand Plains
 
-plummet :: Card OTInstant
+plummet :: Card OTNInstant
 plummet = Card "Plummet" $
   YourInstant \you ->
     Target you $ masked [hasAbility \_this -> Static Flying] \target ->
@@ -576,10 +576,10 @@ plummet = Card "Plummet" $
               effect $ destroy target
           }
 
-pollutedDelta :: Card OTLand
+pollutedDelta :: Card OTNLand
 pollutedDelta = mkFetchLand "PollutedDelta" Island Swamp
 
-pradeshGypsies :: Card OTCreature
+pradeshGypsies :: Card OTNCreature
 pradeshGypsies = Card "Pradesh Gypsies" $
   YourCreature \_you ->
     CreatureFacet
@@ -612,7 +612,7 @@ pradeshGypsies = Card "Pradesh Gypsies" $
           ]
       }
 
-ragingGoblin :: Card OTCreature
+ragingGoblin :: Card OTNCreature
 ragingGoblin = Card "Raging Goblin" $
   YourCreature \_you ->
     CreatureFacet
@@ -624,10 +624,10 @@ ragingGoblin = Card "Raging Goblin" $
       , creature_abilities = [Static Haste]
       }
 
-shatter :: Card OTInstant
+shatter :: Card OTNInstant
 shatter = Card "Shatter" $
   YourInstant \you ->
-    Target you $ masked @OTArtifact [] \target ->
+    Target you $ masked @OTNArtifact [] \target ->
       ElectCard $
         InstantFacet
           { instant_colors = toColors R
@@ -638,10 +638,10 @@ shatter = Card "Shatter" $
               effect $ destroy target
           }
 
-shock :: Card OTInstant
+shock :: Card OTNInstant
 shock = Card "Shock" $
   YourInstant \you ->
-    Target you $ masked @OTCreaturePlayerPlaneswalker [] \target ->
+    Target you $ masked @OTNCreaturePlayerPlaneswalker [] \target ->
       ElectCard $
         InstantFacet
           { instant_colors = toColors R
@@ -652,10 +652,10 @@ shock = Card "Shock" $
               effect $ dealDamage this target 2
           }
 
-sinkhole :: Card OTSorcery
+sinkhole :: Card OTNSorcery
 sinkhole = Card "Sinkhole" $
   YourSorcery \you ->
-    Target you $ masked @OTLand [] \target ->
+    Target you $ masked @OTNLand [] \target ->
       ElectCard $
         SorceryFacet
           { sorcery_colors = toColors B
@@ -666,7 +666,7 @@ sinkhole = Card "Sinkhole" $
               effect $ destroy target
           }
 
-snuffOut :: Card OTInstant
+snuffOut :: Card OTNInstant
 snuffOut = Card "Snuff Out" $
   YourInstant \you ->
     ChooseOption
@@ -696,7 +696,7 @@ snuffOut = Card "Snuff Out" $
                     ]
               }
 
-soldierToken :: Token OTCreature
+soldierToken :: Token OTNCreature
 soldierToken = Token coPermanent $
   Card "Soldier Token" $
     YourCreature \_you ->
@@ -709,10 +709,10 @@ soldierToken = Token coPermanent $
         , creature_abilities = []
         }
 
-stifle :: Card OTInstant
+stifle :: Card OTNInstant
 stifle = Card "Stifle" $
   YourInstant \you ->
-    Target you $ masked @OTActivatedOrTriggeredAbility [] \target ->
+    Target you $ masked @OTNActivatedOrTriggeredAbility [] \target ->
       ElectCard $
         InstantFacet
           { instant_colors = toColors U
@@ -723,10 +723,10 @@ stifle = Card "Stifle" $
               effect $ counterAbility target
           }
 
-stoneRain :: Card OTSorcery
+stoneRain :: Card OTNSorcery
 stoneRain = Card "Stone Rain" $
   YourSorcery \you ->
-    Target you $ masked @OTLand [] \target ->
+    Target you $ masked @OTNLand [] \target ->
       ElectCard $
         SorceryFacet
           { sorcery_colors = toColors R
@@ -737,7 +737,7 @@ stoneRain = Card "Stone Rain" $
               effect $ destroy target
           }
 
-stoneThrowingDevils :: Card OTCreature
+stoneThrowingDevils :: Card OTNCreature
 stoneThrowingDevils = Card "Stone-Throwing Devils" $
   YourCreature \_you ->
     CreatureFacet
@@ -749,10 +749,10 @@ stoneThrowingDevils = Card "Stone-Throwing Devils" $
       , creature_abilities = [Static FirstStrike]
       }
 
-swamp :: Card OTLand
+swamp :: Card OTNLand
 swamp = mkBasicLand Swamp
 
-swanSong :: Card OTInstant
+swanSong :: Card OTNInstant
 swanSong = Card "Swan Song" $
   YourInstant \you ->
     Target you $ masked @(OT3 'OTEnchantment 'OTInstant 'OTSorcery) [] \target ->
@@ -770,10 +770,10 @@ swanSong = Card "Swan Song" $
                   ]
             }
 
-vindicate :: Card OTSorcery
+vindicate :: Card OTNSorcery
 vindicate = Card "Vindicate" $
   YourSorcery \you ->
-    Target you $ masked @OTPermanent [] \target ->
+    Target you $ masked @OTNPermanent [] \target ->
       ElectCard $
         SorceryFacet
           { sorcery_colors = toColors (W, B)
@@ -785,7 +785,7 @@ vindicate = Card "Vindicate" $
           }
 
 -- NOTE: Wastes does NOT have an intrinsic mana ability.
-wastes :: Card OTLand
+wastes :: Card OTNLand
 wastes = Card "Wastes" $
   YourLand \_you ->
     LandFacet
@@ -803,13 +803,13 @@ wastes = Card "Wastes" $
           ]
       }
 
-wear_tear :: Card (OTInstant, OTInstant)
+wear_tear :: Card (OTNInstant, OTNInstant)
 wear_tear = SplitCard wear tear [Static Fuse]
  where
-  wear :: Card OTInstant
+  wear :: Card OTNInstant
   wear = Card "Wear" $
     YourInstant \you ->
-      Target you $ masked @OTArtifact [] \target ->
+      Target you $ masked @OTNArtifact [] \target ->
         ElectCard $
           InstantFacet
             { instant_colors = toColors R
@@ -819,10 +819,10 @@ wear_tear = SplitCard wear tear [Static Fuse]
             , instant_effect = thisObject \_this ->
                 effect $ destroy target
             }
-  tear :: Card OTInstant
+  tear :: Card OTNInstant
   tear = Card "Tear" $
     YourInstant \you ->
-      Target you $ masked @OTEnchantment [] \target ->
+      Target you $ masked @OTNEnchantment [] \target ->
         ElectCard $
           InstantFacet
             { instant_colors = toColors W
@@ -833,7 +833,7 @@ wear_tear = SplitCard wear tear [Static Fuse]
                 effect $ destroy target
             }
 
-wrathOfGod :: Card OTSorcery
+wrathOfGod :: Card OTNSorcery
 wrathOfGod = Card "Wrath of God" $
   YourSorcery \_you ->
     ElectCard $
@@ -843,7 +843,7 @@ wrathOfGod = Card "Wrath of God" $
         , sorcery_creatureTypes = []
         , sorcery_abilities = []
         , sorcery_effect = thisObject \_this ->
-            All $ maskeds @OTCreature [] \creatures ->
+            All $ maskeds @OTNCreature [] \creatures ->
               effect $
                 WithList $ Each creatures \creature ->
                   Sequence

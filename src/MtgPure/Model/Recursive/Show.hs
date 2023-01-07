@@ -64,14 +64,14 @@ import safe MtgPure.Model.Object.OTN (
   OT6,
  )
 import safe MtgPure.Model.Object.OTNAliases (
-  OTAny,
-  OTCreaturePlaneswalker,
-  OTCreaturePlayer,
-  OTCreaturePlayerPlaneswalker,
-  OTDamageSource,
-  OTPermanent,
-  OTPlayerPlaneswalker,
-  OTSpell,
+  OTNAny,
+  OTNCreaturePlaneswalker,
+  OTNCreaturePlayer,
+  OTNCreaturePlayerPlaneswalker,
+  OTNDamageSource,
+  OTNPermanent,
+  OTNPlayerPlaneswalker,
+  OTNSpell,
  )
 import safe MtgPure.Model.Object.Object (Object (..))
 import safe MtgPure.Model.Object.ObjectId (
@@ -1005,7 +1005,7 @@ showElect = \case
   ControllerOf zObj contElect -> yesParens do
     objPrefix <-
       getObjectNamePrefix
-        let objN :: ObjectN OTAny
+        let objN :: ObjectN OTNAny
             objN = case zObj of
               ZO _ o -> o
          in visitObjectN' objectToId objN
@@ -1472,11 +1472,11 @@ showObject2 objN = visitObjectN' visit objN
   visit =
     showObjectNImpl rep $
       if
-          | rep == typeRep (Proxy @(ObjectN OTCreaturePlaneswalker)) ->
+          | rep == typeRep (Proxy @(ObjectN OTNCreaturePlaneswalker)) ->
             "asCreaturePlaneswalker"
-          | rep == typeRep (Proxy @(ObjectN OTCreaturePlayer)) ->
+          | rep == typeRep (Proxy @(ObjectN OTNCreaturePlayer)) ->
             "asCreaturePlayer"
-          | rep == typeRep (Proxy @(ObjectN OTPlayerPlaneswalker)) ->
+          | rep == typeRep (Proxy @(ObjectN OTNPlayerPlaneswalker)) ->
             "asPlayerPlaneswalker"
           | otherwise ->
             "toZO2"
@@ -1493,7 +1493,7 @@ showObject3 objN = visitObjectN' visit objN
   visit =
     showObjectNImpl rep $
       if
-          | rep == typeRep (Proxy @(ObjectN OTCreaturePlayerPlaneswalker)) ->
+          | rep == typeRep (Proxy @(ObjectN OTNCreaturePlayerPlaneswalker)) ->
             "asCreaturePlayerPlaneswalker"
           | otherwise ->
             "toZO3"
@@ -1524,7 +1524,7 @@ showObject5 objN = visitObjectN' visit objN
   visit =
     showObjectNImpl rep $
       if
-          | rep == typeRep (Proxy @(ObjectN OTPermanent)) -> "asPermanent"
+          | rep == typeRep (Proxy @(ObjectN OTNPermanent)) -> "asPermanent"
           | otherwise -> "toZO5"
 
 showObject6 ::
@@ -1539,7 +1539,7 @@ showObject6 objN = visitObjectN' visit objN
   visit =
     showObjectNImpl rep $
       if
-          | rep == typeRep (Proxy @(ObjectN OTSpell)) -> "asSpell"
+          | rep == typeRep (Proxy @(ObjectN OTNSpell)) -> "asSpell"
           | otherwise -> "toZO6"
 
 showObject7 ::
@@ -1568,7 +1568,7 @@ showObject8 objN = visitObjectN' visit objN
   visit =
     showObjectNImpl rep $
       if
-          | rep == typeRep (Proxy @(ObjectN OTDamageSource)) -> "asDamageSource"
+          | rep == typeRep (Proxy @(ObjectN OTNDamageSource)) -> "asDamageSource"
           | otherwise -> "toZO8"
 
 showObject9 ::
@@ -1625,7 +1625,7 @@ showObject12 objN = visitObjectN' visit objN
   visit =
     showObjectNImpl rep $
       if
-          | rep == typeRep (Proxy @(ObjectN OTAny)) -> "asAny"
+          | rep == typeRep (Proxy @(ObjectN OTNAny)) -> "asAny"
           | otherwise -> "toZO12"
 
 showObjectN :: forall zone ot. (IsZone zone, VisitObjectN ot) => ObjectN ot -> EnvM ParenItems

@@ -11,17 +11,17 @@ module MtgPure.Model.Hand (
 import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.IsCardList (IsCardList (..))
-import safe MtgPure.Model.Object.OTNAliases (OTCard)
+import safe MtgPure.Model.Object.OTNAliases (OTNCard)
 import safe MtgPure.Model.Zone (Zone (..))
 import safe MtgPure.Model.ZoneObject.ZoneObject (ZO)
 
 newtype Hand :: Type where
   Hand ::
-    { unHand :: [ZO 'ZHand OTCard]
+    { unHand :: [ZO 'ZHand OTNCard]
     } ->
     Hand
   deriving (Typeable)
 
-instance IsCardList Hand (ZO 'ZHand OTCard) where
+instance IsCardList Hand (ZO 'ZHand OTNCard) where
   toCardList = Hand
   fromCardList = unHand

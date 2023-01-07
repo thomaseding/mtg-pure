@@ -24,12 +24,12 @@ import safe MtgPure.Model.Object.OTN (
   OT4,
  )
 import safe MtgPure.Model.Object.OTNAliases (
-  OTArtifact,
-  OTCreature,
-  OTEnchantment,
-  OTLand,
-  OTPermanent,
-  OTPlaneswalker,
+  OTNArtifact,
+  OTNCreature,
+  OTNEnchantment,
+  OTNLand,
+  OTNPermanent,
+  OTNPlaneswalker,
  )
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.ZoneObject.ZoneObject (IsOT, ZO)
@@ -44,12 +44,12 @@ data PermanentType
 
 -- Witness type
 data WPermanent :: Type -> Type where
-  WPermanentArtifact :: WPermanent OTArtifact
-  WPermanentCreature :: WPermanent OTCreature
-  WPermanentEnchantment :: WPermanent OTEnchantment
-  WPermanentLand :: WPermanent OTLand
-  WPermanentPlaneswalker :: WPermanent OTPlaneswalker
-  WPermanent :: WPermanent OTPermanent
+  WPermanentArtifact :: WPermanent OTNArtifact
+  WPermanentCreature :: WPermanent OTNCreature
+  WPermanentEnchantment :: WPermanent OTNEnchantment
+  WPermanentLand :: WPermanent OTNLand
+  WPermanentPlaneswalker :: WPermanent OTNPlaneswalker
+  WPermanent :: WPermanent OTNPermanent
   WPermanent2 :: Inst2 IsPermanentType a b => WPermanent (OT2 a b)
   WPermanent3 :: Inst3 IsPermanentType a b c => WPermanent (OT3 a b c)
   WPermanent4 :: Inst4 IsPermanentType a b c d => WPermanent (OT4 a b c d)
@@ -58,11 +58,11 @@ data WPermanent :: Type -> Type where
 deriving instance Show (WPermanent a)
 
 data PermanentVisitor zone z = PermanentVisitor
-  { visitPArtifact :: ZO zone OTArtifact -> z
-  , visitPCreature :: ZO zone OTCreature -> z
-  , visitPEnchantment :: ZO zone OTEnchantment -> z
-  , visitPLand :: ZO zone OTLand -> z
-  , visitPPlaneswalker :: ZO zone OTPlaneswalker -> z
+  { visitPArtifact :: ZO zone OTNArtifact -> z
+  , visitPCreature :: ZO zone OTNCreature -> z
+  , visitPEnchantment :: ZO zone OTNEnchantment -> z
+  , visitPLand :: ZO zone OTNLand -> z
+  , visitPPlaneswalker :: ZO zone OTNPlaneswalker -> z
   }
   deriving (Typeable)
 
@@ -107,22 +107,22 @@ instance IsPermanentType 'OTPlaneswalker where
 class IsOT ot => CoPermanent ot where
   coPermanent :: WPermanent ot
 
-instance CoPermanent OTArtifact where
+instance CoPermanent OTNArtifact where
   coPermanent = WPermanentArtifact
 
-instance CoPermanent OTCreature where
+instance CoPermanent OTNCreature where
   coPermanent = WPermanentCreature
 
-instance CoPermanent OTEnchantment where
+instance CoPermanent OTNEnchantment where
   coPermanent = WPermanentEnchantment
 
-instance CoPermanent OTLand where
+instance CoPermanent OTNLand where
   coPermanent = WPermanentLand
 
-instance CoPermanent OTPlaneswalker where
+instance CoPermanent OTNPlaneswalker where
   coPermanent = WPermanentPlaneswalker
 
-instance CoPermanent OTPermanent where
+instance CoPermanent OTNPermanent where
   coPermanent = WPermanent
 
 instance Inst2 IsPermanentType a b => CoPermanent (OT2 a b) where

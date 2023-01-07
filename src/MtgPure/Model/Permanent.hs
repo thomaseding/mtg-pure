@@ -22,15 +22,15 @@ import safe MtgPure.Model.Damage (Damage, Damage' (..))
 import safe MtgPure.Model.Enchantment (AnyEnchantmentType (..), Enchantment (..))
 import safe MtgPure.Model.Land (Land (..))
 import safe MtgPure.Model.Object.OTNAliases (
-  OTArtifact,
-  OTArtifactCreature,
-  OTArtifactLand,
-  OTCreature,
-  OTEnchantment,
-  OTEnchantmentCreature,
-  OTLand,
-  OTPermanent,
-  OTPlaneswalker,
+  OTNArtifact,
+  OTNArtifactCreature,
+  OTNArtifactLand,
+  OTNCreature,
+  OTNEnchantment,
+  OTNEnchantmentCreature,
+  OTNLand,
+  OTNPermanent,
+  OTNPlaneswalker,
  )
 import safe MtgPure.Model.Object.Object (Object (..))
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
@@ -59,10 +59,10 @@ data Phased = PhasedIn | PhasedOut
 
 data Permanent :: Type where
   Permanent ::
-    { permanentAbilities :: [Some Ability OTPermanent]
+    { permanentAbilities :: [Some Ability OTNPermanent]
     , permanentArtifact :: Maybe Artifact
-    , permanentCard :: Either AnyCard AnyToken -- SomeCardOrToken OTPermanent
-    , permanentCardFacet :: Some CardFacet OTPermanent
+    , permanentCard :: Either AnyCard AnyToken -- SomeCardOrToken OTNPermanent
+    , permanentCardFacet :: Some CardFacet OTNPermanent
     , permanentColors :: Colors
     , permanentController :: Object 'OTPlayer
     , permanentCreature :: Maybe Creature
@@ -113,28 +113,28 @@ getColors = \case
     { sorcery_colors = colors
     } -> colors
 
-someArtifact :: liftOT OTArtifact -> Some liftOT OTPermanent
+someArtifact :: liftOT OTNArtifact -> Some liftOT OTNPermanent
 someArtifact = Some5a . SomeArtifact
 
-someCreature :: liftOT OTCreature -> Some liftOT OTPermanent
+someCreature :: liftOT OTNCreature -> Some liftOT OTNPermanent
 someCreature = Some5b . SomeCreature
 
-someEnchantment :: liftOT OTEnchantment -> Some liftOT OTPermanent
+someEnchantment :: liftOT OTNEnchantment -> Some liftOT OTNPermanent
 someEnchantment = Some5c . SomeEnchantment
 
-someLand :: liftOT OTLand -> Some liftOT OTPermanent
+someLand :: liftOT OTNLand -> Some liftOT OTNPermanent
 someLand = Some5d . SomeLand
 
-somePlaneswalker :: liftOT OTPlaneswalker -> Some liftOT OTPermanent
+somePlaneswalker :: liftOT OTNPlaneswalker -> Some liftOT OTNPermanent
 somePlaneswalker = Some5e . SomePlaneswalker
 
-someArtifactCreature :: liftOT OTArtifactCreature -> Some liftOT OTPermanent
+someArtifactCreature :: liftOT OTNArtifactCreature -> Some liftOT OTNPermanent
 someArtifactCreature = Some5ab . SomeArtifactCreature
 
-someArtifactLand :: liftOT OTArtifactLand -> Some liftOT OTPermanent
+someArtifactLand :: liftOT OTNArtifactLand -> Some liftOT OTNPermanent
 someArtifactLand = Some5ad . SomeArtifactLand
 
-someEnchantmentCreature :: liftOT OTEnchantmentCreature -> Some liftOT OTPermanent
+someEnchantmentCreature :: liftOT OTNEnchantmentCreature -> Some liftOT OTNPermanent
 someEnchantmentCreature = Some5bc . SomeEnchantmentCreature
 
 -- | Usage requirement: The provided CardFacet must actually be part of the provided AnyCard.
@@ -272,7 +272,7 @@ cardToPermanent owner card facet = case facet of
                     }
             }
  where
-  go :: AnyCard -> Some CardFacet OTPermanent -> Permanent
+  go :: AnyCard -> Some CardFacet OTNPermanent -> Permanent
   go anyCard someFacet =
     Permanent
       { permanentAbilities = mempty

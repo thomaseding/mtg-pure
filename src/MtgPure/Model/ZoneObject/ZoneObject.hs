@@ -44,30 +44,30 @@ import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.Object.IndexOT (IndexOT (..))
 import safe MtgPure.Model.Object.LitOT (LitOT)
 import safe MtgPure.Model.Object.OTNAliases (
-  OTAbility,
-  OTActivatedAbility,
-  OTActivatedOrTriggeredAbility,
-  OTAny,
-  OTArtifact,
-  OTArtifactCreature,
-  OTCard,
-  OTCreature,
-  OTCreaturePlaneswalker,
-  OTCreaturePlayer,
-  OTCreaturePlayerPlaneswalker,
-  OTEmblem,
-  OTEnchantment,
-  OTInstant,
-  OTLand,
-  OTNonCreature,
-  OTPermanent,
-  OTPlaneswalker,
-  OTPlayer,
-  OTPlayerPlaneswalker,
-  OTSorcery,
-  OTSpell,
-  OTStaticAbility,
-  OTTriggeredAbility,
+  OTNAbility,
+  OTNActivatedAbility,
+  OTNActivatedOrTriggeredAbility,
+  OTNAny,
+  OTNArtifact,
+  OTNArtifactCreature,
+  OTNCard,
+  OTNCreature,
+  OTNCreaturePlaneswalker,
+  OTNCreaturePlayer,
+  OTNCreaturePlayerPlaneswalker,
+  OTNEmblem,
+  OTNEnchantment,
+  OTNInstant,
+  OTNLand,
+  OTNNonCreature,
+  OTNPermanent,
+  OTNPlaneswalker,
+  OTNPlayer,
+  OTNPlayerPlaneswalker,
+  OTNSorcery,
+  OTNSpell,
+  OTNStaticAbility,
+  OTNTriggeredAbility,
  )
 import safe MtgPure.Model.Object.ObjectId (GetObjectId (..))
 import safe MtgPure.Model.Object.ObjectN (ObjectN (..))
@@ -119,55 +119,55 @@ type IsZO (zone :: Zone) (ot :: Type) =
   --, Show (ZO zone ot)
   )
 
-type ZOAny = ZO 'ZBattlefield OTAny
+type ZOAny = ZO 'ZBattlefield OTNAny
 
-type ZOAbility = ZO 'ZBattlefield OTAbility
+type ZOAbility = ZO 'ZBattlefield OTNAbility
 
-type ZOActivatedAbility = ZO 'ZBattlefield OTActivatedAbility
+type ZOActivatedAbility = ZO 'ZBattlefield OTNActivatedAbility
 
 type ZOActivatedOrTriggeredAbility =
-  ZO 'ZBattlefield OTActivatedOrTriggeredAbility
+  ZO 'ZBattlefield OTNActivatedOrTriggeredAbility
 
-type ZOArtifact = ZO 'ZBattlefield OTArtifact
+type ZOArtifact = ZO 'ZBattlefield OTNArtifact
 
-type ZOArtifactCreature = ZO 'ZBattlefield OTArtifactCreature
+type ZOArtifactCreature = ZO 'ZBattlefield OTNArtifactCreature
 
-type ZOCard = ZO 'ZBattlefield OTCard
+type ZOCard = ZO 'ZBattlefield OTNCard
 
-type ZOCreature = ZO 'ZBattlefield OTCreature
+type ZOCreature = ZO 'ZBattlefield OTNCreature
 
-type ZOCreaturePlaneswalker = ZO 'ZBattlefield OTCreaturePlaneswalker
+type ZOCreaturePlaneswalker = ZO 'ZBattlefield OTNCreaturePlaneswalker
 
-type ZOCreaturePlayer = ZO 'ZBattlefield OTCreaturePlayer
+type ZOCreaturePlayer = ZO 'ZBattlefield OTNCreaturePlayer
 
 type ZOCreaturePlayerPlaneswalker =
-  ZO 'ZBattlefield OTCreaturePlayerPlaneswalker
+  ZO 'ZBattlefield OTNCreaturePlayerPlaneswalker
 
-type ZOEmblem = ZO 'ZBattlefield OTEmblem
+type ZOEmblem = ZO 'ZBattlefield OTNEmblem
 
-type ZOEnchantment = ZO 'ZBattlefield OTEnchantment
+type ZOEnchantment = ZO 'ZBattlefield OTNEnchantment
 
-type ZOInstant = ZO 'ZBattlefield OTInstant
+type ZOInstant = ZO 'ZBattlefield OTNInstant
 
-type ZOLand = ZO 'ZBattlefield OTLand
+type ZOLand = ZO 'ZBattlefield OTNLand
 
-type ZONonCreature = ZO 'ZBattlefield OTNonCreature
+type ZONonCreature = ZO 'ZBattlefield OTNNonCreature
 
-type ZOPermanent = ZO 'ZBattlefield OTPermanent
+type ZOPermanent = ZO 'ZBattlefield OTNPermanent
 
-type ZOPlaneswalker = ZO 'ZBattlefield OTPlaneswalker
+type ZOPlaneswalker = ZO 'ZBattlefield OTNPlaneswalker
 
-type ZOPlayer = ZO 'ZBattlefield OTPlayer
+type ZOPlayer = ZO 'ZBattlefield OTNPlayer
 
-type ZOPlayerPlaneswalker = ZO 'ZBattlefield OTPlayerPlaneswalker
+type ZOPlayerPlaneswalker = ZO 'ZBattlefield OTNPlayerPlaneswalker
 
-type ZOSorcery = ZO 'ZBattlefield OTSorcery
+type ZOSorcery = ZO 'ZBattlefield OTNSorcery
 
-type ZOSpell = ZO 'ZBattlefield OTSpell
+type ZOSpell = ZO 'ZBattlefield OTNSpell
 
-type ZOStaticAbility = ZO 'ZBattlefield OTStaticAbility
+type ZOStaticAbility = ZO 'ZBattlefield OTNStaticAbility
 
-type ZOTriggeredAbility = ZO 'ZBattlefield OTTriggeredAbility
+type ZOTriggeredAbility = ZO 'ZBattlefield OTNTriggeredAbility
 
 toZone :: forall zone ot. IsZone zone => ObjectN ot -> ZO zone ot
 toZone = ZO (singZone @zone)

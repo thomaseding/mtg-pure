@@ -4,39 +4,39 @@
 {-# HLINT ignore "Use const" #-}
 
 module MtgPure.Model.Object.OTNAliases (
-  OTAbility,
-  OTActivatedAbility,
-  OTActivatedOrTriggeredAbility,
-  OTAny,
-  OTArtifact,
-  OTArtifactCreature,
-  OTArtifactLand,
-  OTCard,
-  OTCreature,
-  OTCreaturePlaneswalker,
-  OTCreaturePlayer,
-  OTCreaturePlayerPlaneswalker,
-  OTDamageSource,
-  OTEmblem,
-  OTEnchantment,
-  OTEnchantmentCreature,
-  OTInstant,
-  OTLand,
-  OTNonArtifactPermanent,
-  OTNonCreature,
-  OTNonCreaturePermanent,
-  OTNonEnchantmentPermanent,
-  OTNonLandPermanent,
-  OTNonPlaneswalkerPermanent,
-  OTPermanent,
-  OTPlaneswalker,
-  OTPlayer,
-  OTPlayerPlaneswalker,
-  OTSorcery,
-  OTSpell,
-  OTStaticAbility,
-  OTToken,
-  OTTriggeredAbility,
+  OTNAbility,
+  OTNActivatedAbility,
+  OTNActivatedOrTriggeredAbility,
+  OTNAny,
+  OTNArtifact,
+  OTNArtifactCreature,
+  OTNArtifactLand,
+  OTNCard,
+  OTNCreature,
+  OTNCreaturePlaneswalker,
+  OTNCreaturePlayer,
+  OTNCreaturePlayerPlaneswalker,
+  OTNDamageSource,
+  OTNEmblem,
+  OTNEnchantment,
+  OTNEnchantmentCreature,
+  OTNInstant,
+  OTNLand,
+  OTNNonArtifactPermanent,
+  OTNNonCreature,
+  OTNNonCreaturePermanent,
+  OTNNonEnchantmentPermanent,
+  OTNNonLandPermanent,
+  OTNNonPlaneswalkerPermanent,
+  OTNPermanent,
+  OTNPlaneswalker,
+  OTNPlayer,
+  OTNPlayerPlaneswalker,
+  OTNSorcery,
+  OTNSpell,
+  OTNStaticAbility,
+  OTNToken,
+  OTNTriggeredAbility,
 ) where
 
 import safe MtgPure.Model.Object.OTN (OTN)
@@ -55,33 +55,33 @@ import safe MtgPure.Model.Object.ObjectType (
 --   MkOT '(a, b, c, d, e, f) = '(OTN, a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType)
 --   MkOT '(a, b, c, d, e, f, g) = '(OTN, a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType)
 
-type OTActivatedAbility = OTN '( '(), 'OTActivatedAbility)
+type OTNActivatedAbility = OTN '( '(), 'OTActivatedAbility)
 
-type OTArtifact = OTN '( '(), 'OTArtifact)
+type OTNArtifact = OTN '( '(), 'OTArtifact)
 
-type OTCreature = OTN '( '(), 'OTCreature)
+type OTNCreature = OTN '( '(), 'OTCreature)
 
-type OTEmblem = OTN '( '(), 'OTEmblem)
+type OTNEmblem = OTN '( '(), 'OTEmblem)
 
-type OTEnchantment = OTN '( '(), 'OTEnchantment)
+type OTNEnchantment = OTN '( '(), 'OTEnchantment)
 
-type OTInstant = OTN '( '(), 'OTInstant)
+type OTNInstant = OTN '( '(), 'OTInstant)
 
-type OTLand = OTN '( '(), 'OTLand)
+type OTNLand = OTN '( '(), 'OTLand)
 
-type OTPlaneswalker = OTN '( '(), 'OTPlaneswalker)
+type OTNPlaneswalker = OTN '( '(), 'OTPlaneswalker)
 
-type OTPlayer = OTN '( '(), 'OTPlayer)
+type OTNPlayer = OTN '( '(), 'OTPlayer)
 
-type OTSorcery = OTN '( '(), 'OTSorcery)
+type OTNSorcery = OTN '( '(), 'OTSorcery)
 
-type OTStaticAbility = OTN '( '(), 'OTStaticAbility)
+type OTNStaticAbility = OTN '( '(), 'OTStaticAbility)
 
-type OTTriggeredAbility = OTN '( '(), 'OTTriggeredAbility)
+type OTNTriggeredAbility = OTN '( '(), 'OTTriggeredAbility)
 
-type OTToken = OTPermanent
+type OTNToken = OTNPermanent
 
-type OTAbility =
+type OTNAbility =
   OTN
     '( '()
      , 'OTActivatedAbility
@@ -89,64 +89,64 @@ type OTAbility =
      , 'OTTriggeredAbility
      )
 
-type OTActivatedOrTriggeredAbility =
+type OTNActivatedOrTriggeredAbility =
   OTN
     '( '()
      , 'OTActivatedAbility
      , 'OTTriggeredAbility
      )
 
-type OTArtifactCreature =
+type OTNArtifactCreature =
   OTN
     '( '()
      , 'OTArtifact
      , 'OTCreature
      )
 
-type OTArtifactLand =
+type OTNArtifactLand =
   OTN
     '( '()
      , 'OTArtifact
      , 'OTLand
      )
 
-type OTCreaturePlayer =
+type OTNCreaturePlayer =
   OTN
     '( '()
      , 'OTCreature
      , 'OTPlayer
      )
 
-type OTCreaturePlaneswalker =
+type OTNCreaturePlaneswalker =
   OTN
     '( '()
      , 'OTCreature
      , 'OTPlaneswalker
      )
 
-type OTPlayerPlaneswalker =
+type OTNPlayerPlaneswalker =
   OTN
     '( '()
-     , 'OTPlaneswalker
-     , 'OTPlayer
-     )
-
-type OTEnchantmentCreature =
-  OTN
-    '( '()
-     , 'OTCreature
-     , 'OTEnchantment
-     )
-
-type OTCreaturePlayerPlaneswalker =
-  OTN
-    '( '()
-     , 'OTCreature
      , 'OTPlaneswalker
      , 'OTPlayer
      )
 
-type OTNonArtifactPermanent =
+type OTNEnchantmentCreature =
+  OTN
+    '( '()
+     , 'OTCreature
+     , 'OTEnchantment
+     )
+
+type OTNCreaturePlayerPlaneswalker =
+  OTN
+    '( '()
+     , 'OTCreature
+     , 'OTPlaneswalker
+     , 'OTPlayer
+     )
+
+type OTNNonArtifactPermanent =
   OTN
     '( '()
      , 'OTCreature
@@ -155,7 +155,7 @@ type OTNonArtifactPermanent =
      , 'OTPlaneswalker
      )
 
-type OTNonCreaturePermanent =
+type OTNNonCreaturePermanent =
   OTN
     '( '()
      , 'OTArtifact
@@ -164,7 +164,7 @@ type OTNonCreaturePermanent =
      , 'OTPlaneswalker
      )
 
-type OTNonEnchantmentPermanent =
+type OTNNonEnchantmentPermanent =
   OTN
     '( '()
      , 'OTArtifact
@@ -173,7 +173,7 @@ type OTNonEnchantmentPermanent =
      , 'OTPlaneswalker
      )
 
-type OTNonLandPermanent =
+type OTNNonLandPermanent =
   OTN
     '( '()
      , 'OTArtifact
@@ -182,7 +182,7 @@ type OTNonLandPermanent =
      , 'OTPlaneswalker
      )
 
-type OTNonPlaneswalkerPermanent =
+type OTNNonPlaneswalkerPermanent =
   OTN
     '( '()
      , 'OTArtifact
@@ -191,7 +191,7 @@ type OTNonPlaneswalkerPermanent =
      , 'OTLand
      )
 
-type OTPermanent =
+type OTNPermanent =
   OTN
     '( '()
      , 'OTArtifact
@@ -201,7 +201,7 @@ type OTPermanent =
      , 'OTPlaneswalker
      )
 
-type OTNonCreature =
+type OTNNonCreature =
   OTN
     '( '()
      , 'OTArtifact
@@ -212,7 +212,7 @@ type OTNonCreature =
      , 'OTSorcery
      )
 
-type OTSpell =
+type OTNSpell =
   OTN
     '( '()
      , 'OTArtifact
@@ -223,7 +223,7 @@ type OTSpell =
      , 'OTSorcery
      )
 
-type OTCard =
+type OTNCard =
   OTN
     '( '()
      , 'OTArtifact
@@ -235,7 +235,7 @@ type OTCard =
      , 'OTSorcery
      )
 
-type OTDamageSource =
+type OTNDamageSource =
   OTN
     '( '()
      , 'OTArtifact
@@ -248,7 +248,7 @@ type OTDamageSource =
      , 'OTSorcery
      )
 
-type OTAny =
+type OTNAny =
   OTN
     '( '()
      , 'OTActivatedAbility

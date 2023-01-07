@@ -25,7 +25,7 @@ import safe MtgPure.Engine.Orphans ()
 import safe MtgPure.Engine.State (Magic, logCall)
 import safe MtgPure.Model.Land (Land (landTypes))
 import safe MtgPure.Model.LandType (LandType)
-import safe MtgPure.Model.Object.OTNAliases (OTLand)
+import safe MtgPure.Model.Object.OTNAliases (OTNLand)
 import safe MtgPure.Model.Object.ObjectId (getObjectId)
 import safe MtgPure.Model.Permanent (Permanent (..), Tapped (..))
 import safe MtgPure.Model.Recursive (Requirement (..))
@@ -60,7 +60,12 @@ satisfies zo = logCall 'satisfies \case
   R4{} -> undefined
   R5{} -> undefined
 
-hasLandType' :: forall zone m. (Monad m, IsZone zone) => ZO zone OTLand -> LandType -> Magic 'Private 'RO m Bool
+hasLandType' ::
+  forall zone m.
+  (Monad m, IsZone zone) =>
+  ZO zone OTNLand ->
+  LandType ->
+  Magic 'Private 'RO m Bool
 hasLandType' zo landType = logCall 'hasLandType' case singZone @zone of
   SZBattlefield -> do
     perm <- getPermanent $ zo0ToPermanent $ toZO0 zo

@@ -3,6 +3,7 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
+-- NOTE: OTN stands for ObjectTypeN
 module MtgPure.Model.Object.OTN_ (
   OTN' (..),
   OT0',

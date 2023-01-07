@@ -50,7 +50,7 @@ import safe MtgPure.Engine.State (
  )
 import safe MtgPure.Model.IsCardList (containsCard)
 import safe MtgPure.Model.Object.OTN (OTN)
-import safe MtgPure.Model.Object.OTNAliases (OTLand)
+import safe MtgPure.Model.Object.OTNAliases (OTNLand)
 import safe MtgPure.Model.Object.Object (Object)
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Permanent (cardToPermanent)
@@ -115,7 +115,7 @@ playLandZO ::
   forall m zone.
   (Monad m, IsZone zone) =>
   Object 'OTPlayer ->
-  ZO zone OTLand ->
+  ZO zone OTNLand ->
   Magic 'Private 'RW m Legality
 playLandZO oPlayer zoLand = logCall 'playLandZO do
   let logCall' s = logCall ('playLandZO, s :: String)
@@ -127,7 +127,7 @@ playLandZO oPlayer zoLand = logCall 'playLandZO do
       hand = playerHand player
       zoPlayer = oToZO1 oPlayer
       --
-      invalid :: (ZO zone OTLand -> InvalidPlayLand) -> Magic 'Private 'RW m Legality
+      invalid :: (ZO zone OTNLand -> InvalidPlayLand) -> Magic 'Private 'RW m Legality
       invalid ex = do
         lift $ exceptionInvalidPlayLand prompt opaque oPlayer $ ex zoLand
         pure Illegal

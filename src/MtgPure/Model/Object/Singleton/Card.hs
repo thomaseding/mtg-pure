@@ -27,28 +27,28 @@ import safe MtgPure.Model.Object.OTN (
   OT3,
  )
 import safe MtgPure.Model.Object.OTNAliases (
-  OTArtifact,
-  OTCard,
-  OTCreature,
-  OTEnchantment,
-  OTInstant,
-  OTLand,
-  OTPlaneswalker,
-  OTSorcery,
+  OTNArtifact,
+  OTNCard,
+  OTNCreature,
+  OTNEnchantment,
+  OTNInstant,
+  OTNLand,
+  OTNPlaneswalker,
+  OTNSorcery,
  )
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.ZoneObject.ZoneObject (IsOT, ZO)
 
 -- Witness type
 data WCard :: Type -> Type where
-  WCardArtifact :: WCard OTArtifact
-  WCardCreature :: WCard OTCreature
-  WCardEnchantment :: WCard OTEnchantment
-  WCardInstant :: WCard OTInstant
-  WCardLand :: WCard OTLand
-  WCardPlaneswalker :: WCard OTPlaneswalker
-  WCardSorcery :: WCard OTSorcery
-  WCard :: WCard OTCard
+  WCardArtifact :: WCard OTNArtifact
+  WCardCreature :: WCard OTNCreature
+  WCardEnchantment :: WCard OTNEnchantment
+  WCardInstant :: WCard OTNInstant
+  WCardLand :: WCard OTNLand
+  WCardPlaneswalker :: WCard OTNPlaneswalker
+  WCardSorcery :: WCard OTNSorcery
+  WCard :: WCard OTNCard
   WCard2 :: Inst2 IsCardType a b => WCard (OT2 a b)
   WCard3 :: Inst3 IsCardType a b c => WCard (OT3 a b c)
   deriving (Typeable)
@@ -56,13 +56,13 @@ data WCard :: Type -> Type where
 deriving instance Show (WCard a)
 
 data CardVisitor zone z = CardVisitor
-  { visitCArtifact :: ZO zone OTArtifact -> z
-  , visitCCreature :: ZO zone OTCreature -> z
-  , visitCInstant :: ZO zone OTInstant -> z
-  , visitCEnchantment :: ZO zone OTEnchantment -> z
-  , visitCLand :: ZO zone OTLand -> z
-  , visitCPlaneswalker :: ZO zone OTPlaneswalker -> z
-  , visitCSorcery :: ZO zone OTSorcery -> z
+  { visitCArtifact :: ZO zone OTNArtifact -> z
+  , visitCCreature :: ZO zone OTNCreature -> z
+  , visitCInstant :: ZO zone OTNInstant -> z
+  , visitCEnchantment :: ZO zone OTNEnchantment -> z
+  , visitCLand :: ZO zone OTNLand -> z
+  , visitCPlaneswalker :: ZO zone OTNPlaneswalker -> z
+  , visitCSorcery :: ZO zone OTNSorcery -> z
   }
   deriving (Typeable)
 
@@ -125,28 +125,28 @@ instance IsCardType 'OTSorcery where
 class IsOT ot => CoCard ot where
   coCard :: WCard ot
 
-instance CoCard OTArtifact where
+instance CoCard OTNArtifact where
   coCard = WCardArtifact
 
-instance CoCard OTCreature where
+instance CoCard OTNCreature where
   coCard = WCardCreature
 
-instance CoCard OTEnchantment where
+instance CoCard OTNEnchantment where
   coCard = WCardEnchantment
 
-instance CoCard OTInstant where
+instance CoCard OTNInstant where
   coCard = WCardInstant
 
-instance CoCard OTLand where
+instance CoCard OTNLand where
   coCard = WCardLand
 
-instance CoCard OTPlaneswalker where
+instance CoCard OTNPlaneswalker where
   coCard = WCardPlaneswalker
 
-instance CoCard OTSorcery where
+instance CoCard OTNSorcery where
   coCard = WCardSorcery
 
-instance CoCard OTCard where
+instance CoCard OTNCard where
   coCard = WCard
 
 instance Inst2 IsCardType a b => CoCard (OT2 a b) where

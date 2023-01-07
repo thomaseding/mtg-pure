@@ -78,13 +78,13 @@ import safe MtgPure.Model.Object.OTN (
   OT9,
  )
 import safe MtgPure.Model.Object.OTNAliases (
-  OTActivatedOrTriggeredAbility,
-  OTAny,
-  OTCard,
-  OTCreaturePlayerPlaneswalker,
-  OTDamageSource,
-  OTPermanent,
-  OTSpell,
+  OTNActivatedOrTriggeredAbility,
+  OTNAny,
+  OTNCard,
+  OTNCreaturePlayerPlaneswalker,
+  OTNDamageSource,
+  OTNPermanent,
+  OTNSpell,
  )
 import safe MtgPure.Model.Object.OTN_ (OTN' (..))
 import safe MtgPure.Model.Object.Object (Object (..))
@@ -448,38 +448,38 @@ type AsAny ot =
 asActivatedOrTriggeredAbility ::
   AsActivatedOrTriggeredAbility ot =>
   ZO zone ot ->
-  ZO zone OTActivatedOrTriggeredAbility
+  ZO zone OTNActivatedOrTriggeredAbility
 asActivatedOrTriggeredAbility = toZO2
 
 asCreaturePlayerPlaneswalker ::
   AsCreaturePlayerPlaneswalker ot =>
   ZO zone ot ->
-  ZO zone OTCreaturePlayerPlaneswalker
+  ZO zone OTNCreaturePlayerPlaneswalker
 asCreaturePlayerPlaneswalker = toZO3
 
-asPermanent :: AsPermanent ot => ZO zone ot -> ZO zone OTPermanent
+asPermanent :: AsPermanent ot => ZO zone ot -> ZO zone OTNPermanent
 asPermanent = toZO5
 
-asSpell :: AsSpell ot => ZO zone ot -> ZO zone OTSpell
+asSpell :: AsSpell ot => ZO zone ot -> ZO zone OTNSpell
 asSpell = toZO6
 
-asCard :: AsCard ot => ZO zone ot -> ZO zone OTCard
+asCard :: AsCard ot => ZO zone ot -> ZO zone OTNCard
 asCard = toZO7
 
-asDamageSource :: AsDamageSource ot => ZO zone ot -> ZO zone OTDamageSource
+asDamageSource :: AsDamageSource ot => ZO zone ot -> ZO zone OTNDamageSource
 asDamageSource = toZO8
 
-asAny :: AsAny ot => ZO zone ot -> ZO zone OTAny
+asAny :: AsAny ot => ZO zone ot -> ZO zone OTNAny
 asAny = toZO12
 
-zo0ToPermanent :: ZO 'ZBattlefield OT0 -> ZO 'ZBattlefield OTPermanent
+zo0ToPermanent :: ZO 'ZBattlefield OT0 -> ZO 'ZBattlefield OTNPermanent
 zo0ToPermanent = asPermanent . ZO SZBattlefield . O1 . Object SLand . getUntypedObject
 
-zo0ToSpell :: forall zone. IsZone zone => ZO zone OT0 -> ZO zone OTSpell
+zo0ToSpell :: forall zone. IsZone zone => ZO zone OT0 -> ZO zone OTNSpell
 zo0ToSpell = asSpell . ZO (singZone @zone) . O1 . Object SArtifact . getUntypedObject
 
-zo0ToCard :: forall zone. IsZone zone => ZO zone OT0 -> ZO zone OTCard
+zo0ToCard :: forall zone. IsZone zone => ZO zone OT0 -> ZO zone OTNCard
 zo0ToCard = asCard . ZO (singZone @zone) . O1 . Object SLand . getUntypedObject
 
-zo0ToAny :: forall zone. IsZone zone => ZO zone OT0 -> ZO zone OTAny
+zo0ToAny :: forall zone. IsZone zone => ZO zone OT0 -> ZO zone OTNAny
 zo0ToAny = asAny . ZO (singZone @zone) . O1 . Object SLand . getUntypedObject

@@ -13,16 +13,16 @@ import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.Object.OTN (OT0)
 import safe MtgPure.Model.Object.OTNAliases (
-  OTActivatedOrTriggeredAbility,
-  OTSpell,
+  OTNActivatedOrTriggeredAbility,
+  OTNSpell,
  )
 import safe MtgPure.Model.Zone (Zone (..))
 import safe MtgPure.Model.ZoneObject.Convert (toZO0)
 import safe MtgPure.Model.ZoneObject.ZoneObject (ZO)
 
 data StackObject :: Type where
-  StackAbility :: ZO 'ZStack OTActivatedOrTriggeredAbility -> StackObject
-  StackSpell :: ZO 'ZStack OTSpell -> StackObject
+  StackAbility :: ZO 'ZStack OTNActivatedOrTriggeredAbility -> StackObject
+  StackSpell :: ZO 'ZStack OTNSpell -> StackObject
   deriving (Typeable)
 
 newtype Stack :: Type where

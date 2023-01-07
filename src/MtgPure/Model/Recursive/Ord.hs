@@ -43,7 +43,7 @@ import safe MtgPure.Model.Object.OTN (
   OT5,
   OT6,
  )
-import safe MtgPure.Model.Object.OTNAliases (OTAny, OTDamageSource)
+import safe MtgPure.Model.Object.OTNAliases (OTNAny, OTNDamageSource)
 import safe MtgPure.Model.Object.Object (Object (..))
 import safe MtgPure.Model.Object.ObjectId (
   ObjectId (..),
@@ -785,10 +785,10 @@ ordEffect x = case x of
     DealDamage source2 victim2 damage2 ->
       let go ::
             forall zone1 zone2.
-            IsZO zone1 OTDamageSource =>
-            IsZO zone2 OTDamageSource =>
-            ZO zone1 OTDamageSource ->
-            ZO zone2 OTDamageSource ->
+            IsZO zone1 OTNDamageSource =>
+            IsZO zone2 OTNDamageSource =>
+            ZO zone1 OTNDamageSource ->
+            ZO zone2 OTNDamageSource ->
             EnvM Ordering
           go _ _ = case cast source2 of
             Nothing -> compareZone @zone1 @zone2
@@ -1027,7 +1027,7 @@ ordElectEl x = case x of
     ControllerOf obj2 playerToElect2 ->
       let go ::
             forall zone1 zone2 ot'.
-            ot' ~ OTAny =>
+            ot' ~ OTNAny =>
             IsZO zone1 ot' =>
             IsZO zone2 ot' =>
             ZO zone1 ot' ->

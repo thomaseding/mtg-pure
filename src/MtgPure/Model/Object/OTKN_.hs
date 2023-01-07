@@ -3,6 +3,7 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
+-- NOTE: OTKN stands for ObjectTypeKindN
 module MtgPure.Model.Object.OTKN_ (
   OTK0',
   OTK1',

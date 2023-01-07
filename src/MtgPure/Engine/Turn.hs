@@ -46,7 +46,7 @@ import safe MtgPure.Engine.Monad (
  )
 import safe MtgPure.Engine.Prompt (PlayerCount (..), PlayerIndex (..), Prompt' (..))
 import safe MtgPure.Engine.State (GameState (..), Magic, MagicCont, logCall, runMagicCont)
-import safe MtgPure.Model.Object.OTNAliases (OTPermanent)
+import safe MtgPure.Model.Object.OTNAliases (OTNPermanent)
 import safe MtgPure.Model.Object.Object (Object)
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Permanent (Permanent (..), Phased (..))
@@ -159,7 +159,7 @@ untapStep = do
   upkeepStep
 
 -- TODO: Make this an Effect constructor
-togglePermanentPhase :: Monad m => ZO 'ZBattlefield OTPermanent -> Magic 'Private 'RW m ()
+togglePermanentPhase :: Monad m => ZO 'ZBattlefield OTNPermanent -> Magic 'Private 'RW m ()
 togglePermanentPhase oPerm = do
   perm <- fromRO $ getPermanent oPerm
   setPermanent

@@ -77,22 +77,22 @@ import MtgPure.Model.Object.IndexOT (IndexOT)
 import safe MtgPure.Model.Object.IsObjectType (IsObjectType)
 import safe MtgPure.Model.Object.OTN (OT1, OT2, OT3, OT4, OT5, OT6, OTN)
 import safe MtgPure.Model.Object.OTNAliases (
-  OTActivatedOrTriggeredAbility,
-  OTAny,
-  OTArtifact,
-  OTArtifactCreature,
-  OTArtifactLand,
-  OTCreature,
-  OTDamageSource,
-  OTEnchantment,
-  OTEnchantmentCreature,
-  OTInstant,
-  OTLand,
-  OTPermanent,
-  OTPlaneswalker,
-  OTPlayer,
-  OTSorcery,
-  OTSpell,
+  OTNActivatedOrTriggeredAbility,
+  OTNAny,
+  OTNArtifact,
+  OTNArtifactCreature,
+  OTNArtifactLand,
+  OTNCreature,
+  OTNDamageSource,
+  OTNEnchantment,
+  OTNEnchantmentCreature,
+  OTNInstant,
+  OTNLand,
+  OTNPermanent,
+  OTNPlaneswalker,
+  OTNPlayer,
+  OTNSorcery,
+  OTNSpell,
  )
 import safe MtgPure.Model.Object.Singleton.Any (WAny)
 import safe MtgPure.Model.Object.Singleton.Card (WCard)
@@ -183,16 +183,16 @@ instance IsUser Color
 -- TODO: EnchantmentArtifactCreature [Hammer of Purphoros]
 -- TODO: LandCreature [Dryad Arbor]
 data SpecificCard (ot :: Type) :: Type where
-  ArtifactCard :: OTArtifact ~ ot => SpecificCard ot
-  ArtifactCreatureCard :: OTArtifactCreature ~ ot => SpecificCard ot
-  ArtifactLandCard :: OTArtifactLand ~ ot => SpecificCard ot
-  CreatureCard :: OTCreature ~ ot => SpecificCard ot
-  EnchantmentCard :: OTEnchantment ~ ot => SpecificCard ot
-  EnchantmentCreatureCard :: OTEnchantmentCreature ~ ot => SpecificCard ot
-  InstantCard :: OTInstant ~ ot => SpecificCard ot
-  LandCard :: OTLand ~ ot => SpecificCard ot
-  PlaneswalkerCard :: OTPlaneswalker ~ ot => SpecificCard ot
-  SorceryCard :: OTSorcery ~ ot => SpecificCard ot
+  ArtifactCard :: OTNArtifact ~ ot => SpecificCard ot
+  ArtifactCreatureCard :: OTNArtifactCreature ~ ot => SpecificCard ot
+  ArtifactLandCard :: OTNArtifactLand ~ ot => SpecificCard ot
+  CreatureCard :: OTNCreature ~ ot => SpecificCard ot
+  EnchantmentCard :: OTNEnchantment ~ ot => SpecificCard ot
+  EnchantmentCreatureCard :: OTNEnchantmentCreature ~ ot => SpecificCard ot
+  InstantCard :: OTNInstant ~ ot => SpecificCard ot
+  LandCard :: OTNLand ~ ot => SpecificCard ot
+  PlaneswalkerCard :: OTNPlaneswalker ~ ot => SpecificCard ot
+  SorceryCard :: OTNSorcery ~ ot => SpecificCard ot
   deriving (Typeable)
 
 instance ConsIndex (SpecificCard ot) where
@@ -211,34 +211,34 @@ instance ConsIndex (SpecificCard ot) where
 class IsOT ot => IsSpecificCard (ot :: Type) where
   singSpecificCard :: SpecificCard ot
 
-instance IsSpecificCard OTArtifact where
+instance IsSpecificCard OTNArtifact where
   singSpecificCard = ArtifactCard
 
-instance IsSpecificCard OTArtifactCreature where
+instance IsSpecificCard OTNArtifactCreature where
   singSpecificCard = ArtifactCreatureCard
 
-instance IsSpecificCard OTArtifactLand where
+instance IsSpecificCard OTNArtifactLand where
   singSpecificCard = ArtifactLandCard
 
-instance IsSpecificCard OTCreature where
+instance IsSpecificCard OTNCreature where
   singSpecificCard = CreatureCard
 
-instance IsSpecificCard OTEnchantment where
+instance IsSpecificCard OTNEnchantment where
   singSpecificCard = EnchantmentCard
 
-instance IsSpecificCard OTEnchantmentCreature where
+instance IsSpecificCard OTNEnchantmentCreature where
   singSpecificCard = EnchantmentCreatureCard
 
-instance IsSpecificCard OTInstant where
+instance IsSpecificCard OTNInstant where
   singSpecificCard = InstantCard
 
-instance IsSpecificCard OTLand where
+instance IsSpecificCard OTNLand where
   singSpecificCard = LandCard
 
-instance IsSpecificCard OTPlaneswalker where
+instance IsSpecificCard OTNPlaneswalker where
   singSpecificCard = PlaneswalkerCard
 
-instance IsSpecificCard OTSorcery where
+instance IsSpecificCard OTNSorcery where
   singSpecificCard = SorceryCard
 
 ----------------------------------------
@@ -310,93 +310,93 @@ instance HasCardName (Card ot) where
 data CardFacet (ot :: Type) :: Type where
   ArtifactFacet ::
     { artifact_colors :: Colors
-    , artifact_cost :: Cost OTArtifact
+    , artifact_cost :: Cost OTNArtifact
     , artifact_artifactTypes :: [ArtifactType]
     , artifact_creatureTypes :: [CreatureType]
-    , artifact_abilities :: [Ability OTArtifact]
+    , artifact_abilities :: [Ability OTNArtifact]
     } ->
-    CardFacet OTArtifact
+    CardFacet OTNArtifact
   ArtifactCreatureFacet ::
     { artifactCreature_colors :: Colors
-    , artifactCreature_cost :: Cost OTArtifactCreature
+    , artifactCreature_cost :: Cost OTNArtifactCreature
     , artifactCreature_artifactTypes :: [ArtifactType]
     , artifactCreature_creatureTypes :: [CreatureType]
     , artifactCreature_power :: Power
     , artifactCreature_toughness :: Toughness
-    , artifactCreature_artifactAbilities :: [Ability OTArtifact]
-    , artifactCreature_creatureAbilities :: [Ability OTCreature]
-    , artifactCreature_artifactCreatureAbilities :: [Ability OTArtifactCreature]
+    , artifactCreature_artifactAbilities :: [Ability OTNArtifact]
+    , artifactCreature_creatureAbilities :: [Ability OTNCreature]
+    , artifactCreature_artifactCreatureAbilities :: [Ability OTNArtifactCreature]
     } ->
-    CardFacet OTArtifactCreature
+    CardFacet OTNArtifactCreature
   ArtifactLandFacet ::
     { artifactLand_artifactTypes :: [ArtifactType]
     , artifactLand_creatureTypes :: [CreatureType]
     , artifactLand_landTypes :: [LandType]
-    , artifactLand_artifactAbilities :: [Ability OTArtifact]
-    , artifactLand_landAbilities :: [Ability OTLand]
-    , artifactLand_artifactLandAbilities :: [Ability OTArtifactLand]
+    , artifactLand_artifactAbilities :: [Ability OTNArtifact]
+    , artifactLand_landAbilities :: [Ability OTNLand]
+    , artifactLand_artifactLandAbilities :: [Ability OTNArtifactLand]
     } ->
-    CardFacet OTArtifactLand
+    CardFacet OTNArtifactLand
   CreatureFacet ::
     { creature_colors :: Colors
-    , creature_cost :: Cost OTCreature
+    , creature_cost :: Cost OTNCreature
     , creature_creatureTypes :: [CreatureType]
     , creature_power :: Power
     , creature_toughness :: Toughness
-    , creature_abilities :: [Ability OTCreature]
+    , creature_abilities :: [Ability OTNCreature]
     } ->
-    CardFacet OTCreature
+    CardFacet OTNCreature
   EnchantmentFacet ::
     { enchantment_colors :: Colors
-    , enchantment_cost :: Cost OTEnchantment
+    , enchantment_cost :: Cost OTNEnchantment
     , enchantment_creatureTypes :: [CreatureType]
-    , enchantment_enchantmentTypes :: [EnchantmentType OTEnchantment]
-    , enchantment_abilities :: [Ability OTEnchantment]
+    , enchantment_enchantmentTypes :: [EnchantmentType OTNEnchantment]
+    , enchantment_abilities :: [Ability OTNEnchantment]
     } ->
-    CardFacet OTEnchantment
+    CardFacet OTNEnchantment
   EnchantmentCreatureFacet ::
     { enchantmentCreature_colors :: Colors
-    , enchantmentCreature_cost :: Cost OTEnchantmentCreature
+    , enchantmentCreature_cost :: Cost OTNEnchantmentCreature
     , enchantmentCreature_creatureTypes :: [CreatureType]
-    , enchantmentCreature_enchantmentTypes :: [EnchantmentType OTEnchantmentCreature]
+    , enchantmentCreature_enchantmentTypes :: [EnchantmentType OTNEnchantmentCreature]
     , enchantmentCreature_power :: Power
     , enchantmentCreature_toughness :: Toughness
-    , enchantmentCreature_creatureAbilities :: [Ability OTCreature]
-    , enchantmentCreature_enchantmentAbilities :: [Ability OTEnchantment]
-    , enchantmentCreature_enchantmentCreatureAbilities :: [Ability OTEnchantmentCreature]
+    , enchantmentCreature_creatureAbilities :: [Ability OTNCreature]
+    , enchantmentCreature_enchantmentAbilities :: [Ability OTNEnchantment]
+    , enchantmentCreature_enchantmentCreatureAbilities :: [Ability OTNEnchantmentCreature]
     } ->
-    CardFacet OTEnchantmentCreature
+    CardFacet OTNEnchantmentCreature
   InstantFacet ::
     { instant_colors :: Colors
-    , instant_cost :: Cost OTInstant
+    , instant_cost :: Cost OTNInstant
     , instant_creatureTypes :: [CreatureType]
     , -- instant_oneShotTypes :: [OneShotType] e.g. Arcane
-      instant_abilities :: [Ability OTInstant]
-    , instant_effect :: WithThisOneShot OTInstant
+      instant_abilities :: [Ability OTNInstant]
+    , instant_effect :: WithThisOneShot OTNInstant
     } ->
-    CardFacet OTInstant
+    CardFacet OTNInstant
   LandFacet ::
     { land_creatureTypes :: [CreatureType]
     , land_landTypes :: [LandType]
-    , land_abilities :: [Ability OTLand]
+    , land_abilities :: [Ability OTNLand]
     } ->
-    CardFacet OTLand
+    CardFacet OTNLand
   PlaneswalkerFacet ::
     { planeswalker_colors :: Colors
-    , planeswalker_cost :: Cost OTPlaneswalker
+    , planeswalker_cost :: Cost OTNPlaneswalker
     , planeswalker_loyalty :: Loyalty
-    , planeswalker_abilities :: [Ability OTPlaneswalker]
+    , planeswalker_abilities :: [Ability OTNPlaneswalker]
     } ->
-    CardFacet OTPlaneswalker
+    CardFacet OTNPlaneswalker
   SorceryFacet ::
     { sorcery_colors :: Colors
-    , sorcery_cost :: Cost OTSorcery
+    , sorcery_cost :: Cost OTNSorcery
     , sorcery_creatureTypes :: [CreatureType]
     , -- instant_oneShotTypes :: [OneShotType] e.g. Arcane
-      sorcery_abilities :: [Ability OTSorcery]
-    , sorcery_effect :: WithThisOneShot OTSorcery
+      sorcery_abilities :: [Ability OTNSorcery]
+    , sorcery_effect :: WithThisOneShot OTNSorcery
     } ->
-    CardFacet OTSorcery
+    CardFacet OTNSorcery
   deriving (Typeable)
 
 instance ConsIndex (CardFacet ot) where
@@ -462,7 +462,7 @@ data Cost (ot :: Type) :: Type where
   AndCosts :: [Cost ot] -> Cost ot
   CostCase :: Case (Cost ot) -> Cost ot
   DiscardRandomCost :: Int -> Cost ot -- TODO: PositiveInt
-  LoyaltyCost :: Loyalty -> Cost OTPlaneswalker
+  LoyaltyCost :: Loyalty -> Cost OTNPlaneswalker
   ManaCost :: ManaCost 'Var -> Cost ot
   OrCosts :: [Cost ot] -> Cost ot
   PayLife :: Int -> Cost ot -- TODO: PositiveInt
@@ -489,9 +489,9 @@ data Effect (ef :: EffectType) :: Type where
   AddToBattlefield :: IsOT ot => WPermanent ot -> ZOPlayer -> Token ot -> Effect 'OneShot
   CantBeRegenerated :: ZOCreature -> Effect 'Continuous
   ChangeTo :: (ot ~ OTN x, IsOT ot) => WPermanent ot -> ZOPermanent -> Card ot -> Effect 'Continuous
-  CounterAbility :: ZO 'ZStack OTActivatedOrTriggeredAbility -> Effect 'OneShot
-  CounterSpell :: ZO 'ZStack OTSpell -> Effect 'OneShot
-  DealDamage :: IsZO zone OTDamageSource => ZO zone OTDamageSource -> ZOCreaturePlayerPlaneswalker -> Damage 'Var -> Effect 'OneShot
+  CounterAbility :: ZO 'ZStack OTNActivatedOrTriggeredAbility -> Effect 'OneShot
+  CounterSpell :: ZO 'ZStack OTNSpell -> Effect 'OneShot
+  DealDamage :: IsZO zone OTNDamageSource => ZO zone OTNDamageSource -> ZOCreaturePlayerPlaneswalker -> Damage 'Var -> Effect 'OneShot
   Destroy :: ZOPermanent -> Effect 'OneShot
   DrawCards :: ZOPlayer -> Int -> Effect 'OneShot
   EffectCase :: Case (Effect ef) -> Effect ef
@@ -504,9 +504,9 @@ data Effect (ef :: EffectType) :: Type where
   Sequence :: [Effect ef] -> Effect ef
   ShuffleLibrary :: ZOPlayer -> Effect 'OneShot
   StatDelta :: ZOCreature -> Power -> Toughness -> Effect 'Continuous
-  Tap :: ZO 'ZBattlefield OTPermanent -> Effect 'OneShot
-  Untap :: ZO 'ZBattlefield OTPermanent -> Effect 'OneShot
-  Until :: Elect 'Post Event OTPlayer -> Effect 'Continuous -> Effect 'Continuous
+  Tap :: ZO 'ZBattlefield OTNPermanent -> Effect 'OneShot
+  Untap :: ZO 'ZBattlefield OTNPermanent -> Effect 'OneShot
+  Until :: Elect 'Post Event OTNPlayer -> Effect 'Continuous -> Effect 'Continuous
   WithList :: IsZO zone ot => WithList (Effect ef) zone ot -> Effect ef
   deriving (Typeable)
 
@@ -550,7 +550,7 @@ data Elect (p :: PrePost) (el :: Type) (ot :: Type) :: Type where
     Elect p el ot
   ChooseOption :: (IsUser u, IsNat n) => ZOPlayer -> NatList u n Condition -> (Variable (Fin u n) -> Elect p el ot) -> Elect p el ot
   Condition :: Condition -> Elect p Condition ot
-  ControllerOf :: IsZO zone OTAny => ZO zone OTAny -> (ZOPlayer -> Elect p el ot) -> Elect p el ot
+  ControllerOf :: IsZO zone OTNAny => ZO zone OTNAny -> (ZOPlayer -> Elect p el ot) -> Elect p el ot
   Cost :: Cost ot -> Elect 'Pre (Cost ot) ot -- XXX: can this constructor be removed?
   Effect :: Typeable ef => [Effect ef] -> Elect 'Post (Effect ef) ot
   Elect :: Typeable el => Elect 'Post el ot -> ElectPrePost el ot
@@ -638,7 +638,7 @@ instance ConsIndex (Enchant zone ot) where
 ----------------------------------------
 
 data EnchantmentType (ot :: Type) :: Type where
-  Aura :: (ot ~ OTEnchantment, IsZO zone ot') => Enchant zone ot' -> EnchantmentType ot
+  Aura :: (ot ~ OTNEnchantment, IsZO zone ot') => Enchant zone ot' -> EnchantmentType ot
   deriving (Typeable)
 
 instance ConsIndex (EnchantmentType ot) where
@@ -656,7 +656,7 @@ data EventListener' (liftOT :: Type -> Type) :: Type where
   BecomesTapped :: (IsOT ot, Typeable liftOT) => WPermanent ot -> WithLinkedObject 'ZBattlefield liftOT ot -> EventListener' liftOT
   Events :: [EventListener' liftOT] -> EventListener' liftOT
   SpellIsCast :: IsOT ot => WSpell ot -> WithLinkedObject 'ZBattlefield liftOT ot -> EventListener' liftOT
-  TimePoint :: Typeable p => TimePoint p -> liftOT OTPlayer -> EventListener' liftOT
+  TimePoint :: Typeable p => TimePoint p -> liftOT OTNPlayer -> EventListener' liftOT
   deriving (Typeable)
 
 instance ConsIndex (EventListener' liftOT) where
@@ -691,15 +691,15 @@ instance ConsIndex (NonProxy liftOT) where
 
 data Requirement (zone :: Zone) (ot :: Type) :: Type where
   ControlledBy :: IsOT ot => ZOPlayer -> Requirement 'ZBattlefield ot
-  ControlsA :: IsOT ot => Requirement 'ZBattlefield ot -> Requirement zone OTPlayer
+  ControlsA :: IsOT ot => Requirement 'ZBattlefield ot -> Requirement zone OTNPlayer
   HasAbility :: IsZO zone ot => WithThis zone Ability ot -> Requirement zone ot -- Non-unique differing representations will not be considered the same
-  HasLandType :: IsZO zone OTLand => LandType -> Requirement zone OTLand
+  HasLandType :: IsZO zone OTNLand => LandType -> Requirement zone OTNLand
   Is :: IsZO zone ot => WAny ot -> ZO zone ot -> Requirement zone ot
   IsTapped :: IsOT ot => WPermanent ot -> Requirement 'ZBattlefield ot
   Not :: IsZO zone ot => Requirement zone ot -> Requirement zone ot
   OfColors :: IsZO zone ot => Colors -> Requirement zone ot -- needs `WCard a` witness
   OwnedBy :: IsZO zone ot => ZOPlayer -> Requirement zone ot
-  PlayerPays :: IsZO zone OTPlayer => Cost OTPlayer -> Requirement zone OTPlayer
+  PlayerPays :: IsZO zone OTNPlayer => Cost OTNPlayer -> Requirement zone OTNPlayer
   RAnd :: IsZO zone ot => [Requirement zone ot] -> Requirement zone ot
   ROr :: IsZO zone ot => [Requirement zone ot] -> Requirement zone ot
   -- TODO: Try to add some combinators that go from: forall a b. [forall liftOT. Requirement x] -> Requirement (ON2 a, b)
@@ -809,16 +809,16 @@ data Some (liftOT :: Type -> Type) (ot :: Type) :: Type where
   deriving (Typeable)
 
 data SomeTerm (liftOT :: Type -> Type) (ot :: Type) :: Type where
-  SomeArtifact :: liftOT OTArtifact -> SomeTerm liftOT OTArtifact
-  SomeCreature :: liftOT OTCreature -> SomeTerm liftOT OTCreature
-  SomeEnchantment :: liftOT OTEnchantment -> SomeTerm liftOT OTEnchantment
-  SomeInstant :: liftOT OTInstant -> SomeTerm liftOT OTInstant
-  SomeLand :: liftOT OTLand -> SomeTerm liftOT OTLand
-  SomePlaneswalker :: liftOT OTPlaneswalker -> SomeTerm liftOT OTPlaneswalker
-  SomeSorcery :: liftOT OTSorcery -> SomeTerm liftOT OTSorcery
-  SomeArtifactCreature :: liftOT OTArtifactCreature -> SomeTerm liftOT OTArtifactCreature
-  SomeArtifactLand :: liftOT OTArtifactLand -> SomeTerm liftOT OTArtifactLand
-  SomeEnchantmentCreature :: liftOT OTEnchantmentCreature -> SomeTerm liftOT OTEnchantmentCreature
+  SomeArtifact :: liftOT OTNArtifact -> SomeTerm liftOT OTNArtifact
+  SomeCreature :: liftOT OTNCreature -> SomeTerm liftOT OTNCreature
+  SomeEnchantment :: liftOT OTNEnchantment -> SomeTerm liftOT OTNEnchantment
+  SomeInstant :: liftOT OTNInstant -> SomeTerm liftOT OTNInstant
+  SomeLand :: liftOT OTNLand -> SomeTerm liftOT OTNLand
+  SomePlaneswalker :: liftOT OTNPlaneswalker -> SomeTerm liftOT OTNPlaneswalker
+  SomeSorcery :: liftOT OTNSorcery -> SomeTerm liftOT OTNSorcery
+  SomeArtifactCreature :: liftOT OTNArtifactCreature -> SomeTerm liftOT OTNArtifactCreature
+  SomeArtifactLand :: liftOT OTNArtifactLand -> SomeTerm liftOT OTNArtifactLand
+  SomeEnchantmentCreature :: liftOT OTNEnchantmentCreature -> SomeTerm liftOT OTNEnchantmentCreature
   deriving (Typeable)
 
 data SomeCard (ot :: Type) :: Type where
@@ -913,11 +913,11 @@ fromSome some f = case some of
 data StaticAbility (zone :: Zone) (ot :: Type) :: Type where
   As :: (ot ~ OTN x, IsOT ot) => Elect 'Post EventListener ot -> StaticAbility 'ZBattlefield ot -- 603.6d: not a triggered ability
   -- XXX: BestowPre and BestowPost
-  Bestow :: ot ~ OTEnchantmentCreature => Elect 'Pre (Cost ot) ot -> Enchant 'ZBattlefield OTCreature -> StaticAbility 'ZBattlefield ot
-  FirstStrike :: ot ~ OTCreature => StaticAbility 'ZBattlefield ot
-  Flying :: ot ~ OTCreature => StaticAbility 'ZBattlefield ot
-  Fuse :: IsOT ot => StaticAbility 'ZHand (ot, ot) -- TODO: Add witness or constraint for OTInstant or OTSorcery
-  Haste :: ot ~ OTCreature => StaticAbility 'ZBattlefield ot
+  Bestow :: ot ~ OTNEnchantmentCreature => Elect 'Pre (Cost ot) ot -> Enchant 'ZBattlefield OTNCreature -> StaticAbility 'ZBattlefield ot
+  FirstStrike :: ot ~ OTNCreature => StaticAbility 'ZBattlefield ot
+  Flying :: ot ~ OTNCreature => StaticAbility 'ZBattlefield ot
+  Fuse :: IsOT ot => StaticAbility 'ZHand (ot, ot) -- TODO: Add witness or constraint for OTNInstant or OTNSorcery
+  Haste :: ot ~ OTNCreature => StaticAbility 'ZBattlefield ot
   StaticContinuous :: (ot ~ OTN x, IsOT ot) => Elect 'Post (Effect 'Continuous) ot -> StaticAbility 'ZBattlefield ot -- 611.3
   -- XXX: SuspendPre and SuspendPost
   Suspend :: (ot ~ OTN x, IsOT ot) => Int -> Elect 'Pre (Cost ot) ot -> StaticAbility 'ZBattlefield ot -- PositiveInt
@@ -1140,16 +1140,16 @@ type YourDirect liftOT ot = ZOPlayer -> liftOT ot
 type YourElected liftOT ot = ZOPlayer -> Elect 'Pre (liftOT ot) ot
 
 data YourCardFacet (ot :: Type) :: Type where
-  YourArtifact :: OTArtifact ~ ot => YourDirect CardFacet ot -> YourCardFacet ot
-  YourArtifactCreature :: OTArtifactCreature ~ ot => YourDirect CardFacet ot -> YourCardFacet ot
-  YourArtifactLand :: OTArtifactLand ~ ot => YourDirect CardFacet ot -> YourCardFacet ot
-  YourCreature :: OTCreature ~ ot => YourDirect CardFacet ot -> YourCardFacet ot
-  YourEnchantment :: OTEnchantment ~ ot => YourDirect CardFacet ot -> YourCardFacet ot
-  YourEnchantmentCreature :: OTEnchantmentCreature ~ ot => YourDirect CardFacet ot -> YourCardFacet ot
-  YourInstant :: OTInstant ~ ot => YourElected CardFacet ot -> YourCardFacet ot
-  YourLand :: OTLand ~ ot => YourDirect CardFacet ot -> YourCardFacet ot
-  YourPlaneswalker :: OTPlaneswalker ~ ot => YourDirect CardFacet ot -> YourCardFacet ot
-  YourSorcery :: OTSorcery ~ ot => YourElected CardFacet ot -> YourCardFacet ot
+  YourArtifact :: OTNArtifact ~ ot => YourDirect CardFacet ot -> YourCardFacet ot
+  YourArtifactCreature :: OTNArtifactCreature ~ ot => YourDirect CardFacet ot -> YourCardFacet ot
+  YourArtifactLand :: OTNArtifactLand ~ ot => YourDirect CardFacet ot -> YourCardFacet ot
+  YourCreature :: OTNCreature ~ ot => YourDirect CardFacet ot -> YourCardFacet ot
+  YourEnchantment :: OTNEnchantment ~ ot => YourDirect CardFacet ot -> YourCardFacet ot
+  YourEnchantmentCreature :: OTNEnchantmentCreature ~ ot => YourDirect CardFacet ot -> YourCardFacet ot
+  YourInstant :: OTNInstant ~ ot => YourElected CardFacet ot -> YourCardFacet ot
+  YourLand :: OTNLand ~ ot => YourDirect CardFacet ot -> YourCardFacet ot
+  YourPlaneswalker :: OTNPlaneswalker ~ ot => YourDirect CardFacet ot -> YourCardFacet ot
+  YourSorcery :: OTNSorcery ~ ot => YourElected CardFacet ot -> YourCardFacet ot
 
 instance ConsIndex (YourCardFacet ot) where
   consIndex = \case

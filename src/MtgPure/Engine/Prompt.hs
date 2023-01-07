@@ -34,7 +34,7 @@ import safe Data.Typeable (Typeable, cast)
 import safe MtgPure.Engine.Orphans.ZO ()
 import safe MtgPure.Model.GenericMana (GenericMana)
 import safe MtgPure.Model.ManaPool (CompleteManaPool)
-import safe MtgPure.Model.Object.OTNAliases (OTLand, OTPermanent, OTSpell)
+import safe MtgPure.Model.Object.OTNAliases (OTNLand, OTNPermanent, OTNSpell)
 import safe MtgPure.Model.Object.Object (Object)
 import safe MtgPure.Model.Object.ObjectId (GetObjectId (getUntypedObject), ObjectId)
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
@@ -51,7 +51,7 @@ data InternalLogicError :: Type where
   CorruptCallStackLogging :: InternalLogicError
   ExpectedCardToBeAPermanentCard :: InternalLogicError
   ExpectedStackObjectToExist :: IsZO zone ot => ZO zone ot -> InternalLogicError
-  InvalidPermanent :: ZO 'ZBattlefield OTPermanent -> InternalLogicError
+  InvalidPermanent :: ZO 'ZBattlefield OTNPermanent -> InternalLogicError
   InvalidPlayer :: Object 'OTPlayer -> InternalLogicError
   ManaAbilitiesDontHaveTargetsSoNoZoShouldBeNeeded :: InternalLogicError
   NotSureWhatThisEntails :: InternalLogicError
@@ -164,10 +164,10 @@ data PriorityAction (a :: Type) :: Type where
   ActivateAbility :: IsZO zone ot => SomeActivatedAbility zone ot -> PriorityAction ActivateAbility
   AskPriorityActionAgain :: PriorityAction () -- NOTE: This is handy for client code.
   -- NOTE (305.9): Lands + other types can never be cast
-  -- Unfortuantely OTSpell intersects OTArtifactLand. Such is life.
+  -- Unfortuantely OTNSpell intersects OTArtifactLand. Such is life.
   -- Prolly don't want to model `SomeButNot allowed disallowed`? Maybe `SomeButNot` is okay for Runtime,
   -- though it's probably unnecessary for Authoring (thankfully).
-  CastSpell :: IsZO zone OTSpell => ZO zone OTSpell -> PriorityAction CastSpell
+  CastSpell :: IsZO zone OTNSpell => ZO zone OTNSpell -> PriorityAction CastSpell
   PassPriority :: PriorityAction ()
   PriorityAction :: PriorityAction a -> PriorityAction ()
   SpecialAction :: SpecialAction a -> PriorityAction a
@@ -175,36 +175,36 @@ data PriorityAction (a :: Type) :: Type where
 deriving instance Show (PriorityAction a)
 
 data SpecialAction (a :: Type) :: Type where
-  PlayLand :: IsZO zone OTLand => ZO zone OTLand -> SpecialAction PlayLand
+  PlayLand :: IsZO zone OTNLand => ZO zone OTNLand -> SpecialAction PlayLand
 
 deriving instance Show (SpecialAction a)
 
 data InvalidPlayLand :: Type where
-  PlayLand_AtMaxLands :: IsZone zone => ZO zone OTLand -> InvalidPlayLand
-  PlayLand_CannotPlayFromZone :: IsZone zone => ZO zone OTLand -> InvalidPlayLand
-  PlayLand_NoPriority :: IsZone zone => ZO zone OTLand -> InvalidPlayLand
-  PlayLand_NotActive :: IsZone zone => ZO zone OTLand -> InvalidPlayLand
-  PlayLand_NotALand :: IsZone zone => ZO zone OTLand -> InvalidPlayLand
-  PlayLand_NotInZone :: ZO zone OTLand -> InvalidPlayLand
-  PlayLand_NotMainPhase :: IsZone zone => ZO zone OTLand -> InvalidPlayLand
-  PlayLand_NotOwned :: IsZone zone => ZO zone OTLand -> InvalidPlayLand
-  PlayLand_StackNonEmpty :: IsZone zone => ZO zone OTLand -> InvalidPlayLand
+  PlayLand_AtMaxLands :: IsZone zone => ZO zone OTNLand -> InvalidPlayLand
+  PlayLand_CannotPlayFromZone :: IsZone zone => ZO zone OTNLand -> InvalidPlayLand
+  PlayLand_NoPriority :: IsZone zone => ZO zone OTNLand -> InvalidPlayLand
+  PlayLand_NotActive :: IsZone zone => ZO zone OTNLand -> InvalidPlayLand
+  PlayLand_NotALand :: IsZone zone => ZO zone OTNLand -> InvalidPlayLand
+  PlayLand_NotInZone :: ZO zone OTNLand -> InvalidPlayLand
+  PlayLand_NotMainPhase :: IsZone zone => ZO zone OTNLand -> InvalidPlayLand
+  PlayLand_NotOwned :: IsZone zone => ZO zone OTNLand -> InvalidPlayLand
+  PlayLand_StackNonEmpty :: IsZone zone => ZO zone OTNLand -> InvalidPlayLand
 
 deriving instance Show InvalidPlayLand
 
 data InvalidCastSpell :: Type where
-  CastSpell_CannotPlayFromZone :: IsZone zone => ZO zone OTSpell -> InvalidCastSpell
-  CastSpell_NoPriority :: IsZone zone => ZO zone OTSpell -> InvalidCastSpell
-  CastSpell_NotASpell :: IsZone zone => ZO zone OTSpell -> InvalidCastSpell
-  CastSpell_NotInZone :: ZO zone OTSpell -> InvalidCastSpell
-  CastSpell_NotOwned :: ZO zone OTSpell -> InvalidCastSpell
+  CastSpell_CannotPlayFromZone :: IsZone zone => ZO zone OTNSpell -> InvalidCastSpell
+  CastSpell_NoPriority :: IsZone zone => ZO zone OTNSpell -> InvalidCastSpell
+  CastSpell_NotASpell :: IsZone zone => ZO zone OTNSpell -> InvalidCastSpell
+  CastSpell_NotInZone :: ZO zone OTNSpell -> InvalidCastSpell
+  CastSpell_NotOwned :: ZO zone OTNSpell -> InvalidCastSpell
 
 deriving instance Show InvalidCastSpell
 
 data EnactInfo = EnactInfo
   { enactInfo_ :: ()
-  , enactInfo_becameTapped :: [ZO 'ZBattlefield OTPermanent]
-  , enactInfo_becameUntapped :: [ZO 'ZBattlefield OTPermanent]
+  , enactInfo_becameTapped :: [ZO 'ZBattlefield OTNPermanent]
+  , enactInfo_becameUntapped :: [ZO 'ZBattlefield OTNPermanent]
   , enactInfo_couldAddMana :: Bool
   }
   deriving (Show)

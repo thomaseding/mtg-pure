@@ -102,7 +102,7 @@ import safe MtgPure.Engine.State (
 import MtgPure.Model.BasicLandType (BasicLandType)
 import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.Object.OTN (OT0)
-import safe MtgPure.Model.Object.OTNAliases (OTCard, OTPermanent)
+import safe MtgPure.Model.Object.OTNAliases (OTNCard, OTNPermanent)
 import safe MtgPure.Model.Object.Object (Object)
 import safe MtgPure.Model.Object.ObjectId (ObjectId)
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
@@ -149,21 +149,21 @@ data Api (m :: Type -> Type) (v :: Visibility) (rw :: ReadWrite) (ret :: Type) :
   ActivePlayer :: Api m 'Public 'RO (Object 'OTPlayer)
   AlivePlayers :: Api m 'Public 'RO [Object 'OTPlayer]
   AlivePlayerCount :: Api m 'Public 'RO PlayerCount
-  AllPermanents :: Api m 'Public 'RO [ZO 'ZBattlefield OTPermanent]
+  AllPermanents :: Api m 'Public 'RO [ZO 'ZBattlefield OTNPermanent]
   AllZOActivatedAbilities :: IsZO zone ot => Api m 'Private 'RO [SomeActivatedAbility zone ot]
   AllZOs :: IsZO zone ot => Api m 'Private 'RO [ZO zone ot]
   CaseOf :: (x -> Api m 'Private 'RW a) -> Case x -> Api m 'Private 'RW a
   ControllerOf :: IsZO zone ot => ZO zone ot -> Api m 'Private 'RO (Object 'OTPlayer)
   DoesZoneObjectExist :: IsZO zone ot => ZO zone ot -> Api m 'Private 'RO Bool
   Enact :: Effect 'OneShot -> Api m 'Private 'RW EnactInfo
-  FindHandCard :: Object 'OTPlayer -> ZO 'ZHand OTCard -> Api m 'Private 'RO (Maybe AnyCard)
-  FindLibraryCard :: Object 'OTPlayer -> ZO 'ZLibrary OTCard -> Api m 'Private 'RO (Maybe AnyCard)
-  FindPermanent :: ZO 'ZBattlefield OTPermanent -> Api m 'Private 'RO (Maybe Permanent)
+  FindHandCard :: Object 'OTPlayer -> ZO 'ZHand OTNCard -> Api m 'Private 'RO (Maybe AnyCard)
+  FindLibraryCard :: Object 'OTPlayer -> ZO 'ZLibrary OTNCard -> Api m 'Private 'RO (Maybe AnyCard)
+  FindPermanent :: ZO 'ZBattlefield OTNPermanent -> Api m 'Private 'RO (Maybe Permanent)
   FindPlayer :: Object 'OTPlayer -> Api m 'Private 'RO (Maybe Player)
   GainPriority :: Object 'OTPlayer -> Api m 'Private 'RW ()
   GetAPNAP :: Api m v 'RO (Stream.Stream (Object 'OTPlayer))
   GetZoneOf :: ObjectId -> Api m 'Private 'RO Zone
-  GetPermanent :: ZO 'ZBattlefield OTPermanent -> Api m 'Private 'RO Permanent
+  GetPermanent :: ZO 'ZBattlefield OTNPermanent -> Api m 'Private 'RO Permanent
   GetPlayer :: Object 'OTPlayer -> Api m 'Private 'RO Player
   HasPriority :: Object 'OTPlayer -> Api m 'Public 'RO Bool
   IndexToActivated :: IsZO zone ot => AbsoluteActivatedAbilityIndex -> Api m 'Private 'RO (Maybe (SomeActivatedAbility zone ot))
@@ -173,13 +173,13 @@ data Api (m :: Type -> Type) (v :: Visibility) (rw :: ReadWrite) (ret :: Type) :
   PerformElections :: AndLike (Maybe ret) => ZO 'ZStack OT0 -> (el -> Api m 'Private 'RW (Maybe ret)) -> Elect p el ot -> Api m 'Private 'RW (Maybe ret)
   PerformStateBasedActions :: Api m 'Private 'RW ()
   PlayerWithPriority :: Api m 'Public 'RO (Maybe (Object 'OTPlayer))
-  PushHandCard :: Object 'OTPlayer -> AnyCard -> Api m 'Private 'RW (ZO 'ZHand OTCard)
-  PushLibraryCard :: Object 'OTPlayer -> AnyCard -> Api m 'Private 'RW (ZO 'ZLibrary OTCard)
-  RemoveHandCard :: Object 'OTPlayer -> ZO 'ZHand OTCard -> Api m 'Private 'RW (Maybe AnyCard)
-  RemoveLibraryCard :: Object 'OTPlayer -> ZO 'ZLibrary OTCard -> Api m 'Private 'RW (Maybe AnyCard)
+  PushHandCard :: Object 'OTPlayer -> AnyCard -> Api m 'Private 'RW (ZO 'ZHand OTNCard)
+  PushLibraryCard :: Object 'OTPlayer -> AnyCard -> Api m 'Private 'RW (ZO 'ZLibrary OTNCard)
+  RemoveHandCard :: Object 'OTPlayer -> ZO 'ZHand OTNCard -> Api m 'Private 'RW (Maybe AnyCard)
+  RemoveLibraryCard :: Object 'OTPlayer -> ZO 'ZLibrary OTNCard -> Api m 'Private 'RW (Maybe AnyCard)
   ResolveTopOfStack :: Api m 'Private 'RW ()
   Satisfies :: IsZO zone ot => ZO zone ot -> Requirement zone ot -> Api m 'Private 'RO Bool
-  SetPermanent :: ZO 'ZBattlefield OTPermanent -> Maybe Permanent -> Api m 'Private 'RW ()
+  SetPermanent :: ZO 'ZBattlefield OTNPermanent -> Maybe Permanent -> Api m 'Private 'RW ()
   SetPlayer :: Object 'OTPlayer -> Player -> Api m 'Private 'RW ()
   StartGame :: Api m 'Private 'RW Void
   ToZO :: IsZO zone ot => ObjectId -> Api m 'Private 'RO (Maybe (ZO zone ot))
@@ -268,10 +268,10 @@ allZOActivatedAbilities = fwd0 fwd_allZOActivatedAbilities
 allControlledPermanentsOf ::
   Monad m =>
   Object 'OTPlayer ->
-  Magic 'Public 'RO m [ZO 'ZBattlefield OTPermanent]
+  Magic 'Public 'RO m [ZO 'ZBattlefield OTNPermanent]
 allControlledPermanentsOf = fwd1 fwd_allControlledPermanentsOf
 
-allPermanents :: Monad m => Magic 'Public 'RO m [ZO 'ZBattlefield OTPermanent]
+allPermanents :: Monad m => Magic 'Public 'RO m [ZO 'ZBattlefield OTNPermanent]
 allPermanents = fwd0 fwd_allPermanents
 
 allZOs :: (IsZO zone ot, Monad m) => Magic 'Private 'RO m [ZO zone ot]
@@ -295,13 +295,13 @@ doesZoneObjectExist = fwd1 fwd_doesZoneObjectExist
 enact :: Monad m => Effect 'OneShot -> Magic 'Private 'RW m EnactInfo
 enact = fwd1 fwd_enact
 
-findHandCard :: Monad m => Object 'OTPlayer -> ZO 'ZHand OTCard -> Magic 'Private 'RO m (Maybe AnyCard)
+findHandCard :: Monad m => Object 'OTPlayer -> ZO 'ZHand OTNCard -> Magic 'Private 'RO m (Maybe AnyCard)
 findHandCard = fwd2 fwd_findHandCard
 
-findLibraryCard :: Monad m => Object 'OTPlayer -> ZO 'ZLibrary OTCard -> Magic 'Private 'RO m (Maybe AnyCard)
+findLibraryCard :: Monad m => Object 'OTPlayer -> ZO 'ZLibrary OTNCard -> Magic 'Private 'RO m (Maybe AnyCard)
 findLibraryCard = fwd2 fwd_findLibraryCard
 
-findPermanent :: Monad m => ZO 'ZBattlefield OTPermanent -> Magic 'Private 'RO m (Maybe Permanent)
+findPermanent :: Monad m => ZO 'ZBattlefield OTNPermanent -> Magic 'Private 'RO m (Maybe Permanent)
 findPermanent = fwd1 fwd_findPermanent
 
 findPlayer :: Monad m => Object 'OTPlayer -> Magic 'Private 'RO m (Maybe Player)
@@ -328,7 +328,7 @@ getBasicLandTypes = fwd1 fwd_getBasicLandTypes
 getHasPriority :: Monad m => Object 'OTPlayer -> Magic 'Public 'RO m Bool
 getHasPriority = fwd1 fwd_getHasPriority
 
-getPermanent :: Monad m => ZO 'ZBattlefield OTPermanent -> Magic 'Private 'RO m Permanent
+getPermanent :: Monad m => ZO 'ZBattlefield OTNPermanent -> Magic 'Private 'RO m Permanent
 getPermanent = fwd1 fwd_getPermanent
 
 getPlayer :: Monad m => Object 'OTPlayer -> Magic 'Private 'RO m Player
@@ -366,16 +366,16 @@ performStateBasedActions = fwd0 fwd_performStateBasedActions
 playLand :: forall m. Monad m => Object 'OTPlayer -> SpecialAction PlayLand -> Magic 'Private 'RW m Legality
 playLand = fwd2 fwd_playLand
 
-pushHandCard :: Monad m => Object 'OTPlayer -> AnyCard -> Magic 'Private 'RW m (ZO 'ZHand OTCard)
+pushHandCard :: Monad m => Object 'OTPlayer -> AnyCard -> Magic 'Private 'RW m (ZO 'ZHand OTNCard)
 pushHandCard = fwd2 fwd_pushHandCard
 
-pushLibraryCard :: Monad m => Object 'OTPlayer -> AnyCard -> Magic 'Private 'RW m (ZO 'ZLibrary OTCard)
+pushLibraryCard :: Monad m => Object 'OTPlayer -> AnyCard -> Magic 'Private 'RW m (ZO 'ZLibrary OTNCard)
 pushLibraryCard = fwd2 fwd_pushLibraryCard
 
-removeHandCard :: Monad m => Object 'OTPlayer -> ZO 'ZHand OTCard -> Magic 'Private 'RW m (Maybe AnyCard)
+removeHandCard :: Monad m => Object 'OTPlayer -> ZO 'ZHand OTNCard -> Magic 'Private 'RW m (Maybe AnyCard)
 removeHandCard = fwd2 fwd_removeHandCard
 
-removeLibraryCard :: Monad m => Object 'OTPlayer -> ZO 'ZLibrary OTCard -> Magic 'Private 'RW m (Maybe AnyCard)
+removeLibraryCard :: Monad m => Object 'OTPlayer -> ZO 'ZLibrary OTNCard -> Magic 'Private 'RW m (Maybe AnyCard)
 removeLibraryCard = fwd2 fwd_removeLibraryCard
 
 requiresTargets :: Monad m => Elect p el ot -> Magic 'Private 'RO m Bool
@@ -390,7 +390,7 @@ resolveTopOfStack = fwd0 fwd_resolveTopOfStack
 satisfies :: (Monad m, IsZO zone ot) => ZO zone ot -> Requirement zone ot -> Magic 'Private 'RO m Bool
 satisfies = fwd2 fwd_satisfies
 
-setPermanent :: Monad m => ZO 'ZBattlefield OTPermanent -> Maybe Permanent -> Magic 'Private 'RW m ()
+setPermanent :: Monad m => ZO 'ZBattlefield OTNPermanent -> Maybe Permanent -> Magic 'Private 'RW m ()
 setPermanent = fwd2 fwd_setPermanent
 
 setPlayer :: Monad m => Object 'OTPlayer -> Player -> Magic 'Private 'RW m ()

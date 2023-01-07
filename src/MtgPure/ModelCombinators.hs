@@ -95,9 +95,9 @@ import safe MtgPure.Model.Object.OTN (
   OTN,
  )
 import safe MtgPure.Model.Object.OTNAliases (
-  OTDamageSource,
-  OTLand,
-  OTPlayer,
+  OTNDamageSource,
+  OTNLand,
+  OTNPlayer,
  )
 import safe MtgPure.Model.Object.Singleton.Any (CoAny (..))
 import safe MtgPure.Model.Object.Singleton.Card (CoCard (..))
@@ -284,7 +284,7 @@ dealDamage ::
   ( AsDamageSource source
   , AsCreaturePlayerPlaneswalker target
   , AsDamage damage
-  , IsZO zone OTDamageSource
+  , IsZO zone OTNDamageSource
   ) =>
   ZO zone source ->
   ZO 'ZBattlefield target ->
@@ -355,7 +355,7 @@ instance AsCost (Cost ot) ot where
 instance AsCost (ManaCost 'Var) ot where
   asCost = ManaCost
 
-playerPays :: (IsZone zone, AsCost c OTPlayer) => c -> Requirement zone OTPlayer
+playerPays :: (IsZone zone, AsCost c OTNPlayer) => c -> Requirement zone OTNPlayer
 playerPays = PlayerPays . asCost
 
 class ElectEffect effect elect where
@@ -414,10 +414,10 @@ ifThenElse ::
   AsIfThenElse el ot => Condition -> Elect 'Post el ot -> Elect 'Post el ot -> Elect 'Post el ot
 ifThenElse cond then_ else_ = If cond then_ $ liftElse else_
 
-isBasic :: IsZone zone => Requirement zone OTLand
+isBasic :: IsZone zone => Requirement zone OTNLand
 isBasic = ROr $ map (HasLandType . BasicLand) [minBound ..]
 
-nonBasic :: IsZone zone => Requirement zone OTLand
+nonBasic :: IsZone zone => Requirement zone OTNLand
 nonBasic = RAnd $ map (Not . HasLandType . BasicLand) [minBound ..]
 
 nonBlack :: IsZO zone ot => Requirement zone ot
@@ -507,7 +507,7 @@ loseAbility :: CoAny ot => ZO 'ZBattlefield ot -> Ability ot -> Effect 'Continuo
 loseAbility = LoseAbility coAny
 
 class HasLandType a where
-  hasLandType :: IsZone zone => a -> Requirement zone OTLand
+  hasLandType :: IsZone zone => a -> Requirement zone OTNLand
 
 instance HasLandType BasicLandType where
   hasLandType = HasLandType . BasicLand
@@ -534,7 +534,7 @@ searchLibrary = SearchLibrary coCard
 --  ActivateAbility LandID r -- tap for red
 --  ActivateAbility LandID g -- tap for green
 --  ActivateAbility LandID i -- infer (only avail when has exactly one basic land type)
-basicManaAbility :: BasicLandType -> WithThisActivated 'ZBattlefield OTLand
+basicManaAbility :: BasicLandType -> WithThisActivated 'ZBattlefield OTNLand
 basicManaAbility ty = thisObject \this ->
   controllerOf this \you ->
     ElectActivated $

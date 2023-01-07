@@ -23,13 +23,13 @@ import safe MtgPure.Model.Object.OTN (
   OT4,
  )
 import safe MtgPure.Model.Object.OTNAliases (
-  OTArtifact,
-  OTCreature,
-  OTEnchantment,
-  OTInstant,
-  OTPlaneswalker,
-  OTSorcery,
-  OTSpell,
+  OTNArtifact,
+  OTNCreature,
+  OTNEnchantment,
+  OTNInstant,
+  OTNPlaneswalker,
+  OTNSorcery,
+  OTNSpell,
  )
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.ZoneObject.ZoneObject (ZO)
@@ -45,13 +45,13 @@ data SpellType
 
 -- Witness type
 data WSpell :: Type -> Type where
-  WSpellArtifact :: WSpell OTArtifact
-  WSpellCreature :: WSpell OTCreature
-  WSpellEnchantment :: WSpell OTEnchantment
-  WSpellInstant :: WSpell OTInstant
-  WSpellPlaneswalker :: WSpell OTPlaneswalker
-  WSpellSorcery :: WSpell OTSorcery
-  WSpell :: WSpell OTSpell
+  WSpellArtifact :: WSpell OTNArtifact
+  WSpellCreature :: WSpell OTNCreature
+  WSpellEnchantment :: WSpell OTNEnchantment
+  WSpellInstant :: WSpell OTNInstant
+  WSpellPlaneswalker :: WSpell OTNPlaneswalker
+  WSpellSorcery :: WSpell OTNSorcery
+  WSpell :: WSpell OTNSpell
   WSpell2 :: Inst2 IsSpellType a b => WSpell (OT2 a b)
   WSpell3 :: Inst3 IsSpellType a b c => WSpell (OT3 a b c)
   WSpell4 :: Inst4 IsSpellType a b c d => WSpell (OT4 a b c d)
@@ -60,12 +60,12 @@ data WSpell :: Type -> Type where
 deriving instance Show (WSpell a)
 
 data SpellVisitor zone z = SpellVisitor
-  { visitSArtifact :: ZO zone OTArtifact -> z
-  , visitSCreature :: ZO zone OTCreature -> z
-  , visitSEnchantment :: ZO zone OTEnchantment -> z
-  , visitSInstant :: ZO zone OTInstant -> z
-  , visitSPlaneswalker :: ZO zone OTPlaneswalker -> z
-  , visitSSorcery :: ZO zone OTSorcery -> z
+  { visitSArtifact :: ZO zone OTNArtifact -> z
+  , visitSCreature :: ZO zone OTNCreature -> z
+  , visitSEnchantment :: ZO zone OTNEnchantment -> z
+  , visitSInstant :: ZO zone OTNInstant -> z
+  , visitSPlaneswalker :: ZO zone OTNPlaneswalker -> z
+  , visitSSorcery :: ZO zone OTNSorcery -> z
   }
   deriving (Typeable)
 

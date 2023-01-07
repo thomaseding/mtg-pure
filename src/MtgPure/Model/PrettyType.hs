@@ -8,6 +8,7 @@ module MtgPure.Model.PrettyType (
   PrettyType (..),
 ) where
 
+import Control.Exception (assert)
 import safe Data.Inst (
   Inst10,
   Inst11,
@@ -42,16 +43,16 @@ import safe MtgPure.Model.Object.OTN (
   OT9,
  )
 import safe MtgPure.Model.Object.OTNAliases (
-  OTAny,
-  OTArtifactCreature,
-  OTCreaturePlaneswalker,
-  OTCreaturePlayer,
-  OTCreaturePlayerPlaneswalker,
-  OTDamageSource,
-  OTEnchantmentCreature,
-  OTPermanent,
-  OTPlayerPlaneswalker,
-  OTSpell,
+  OTNAny,
+  OTNArtifactCreature,
+  OTNCreaturePlaneswalker,
+  OTNCreaturePlayer,
+  OTNCreaturePlayerPlaneswalker,
+  OTNDamageSource,
+  OTNEnchantmentCreature,
+  OTNPermanent,
+  OTNPlayerPlaneswalker,
+  OTNSpell,
  )
 import safe MtgPure.Model.Object.ObjectType (
   ObjectType (..),
@@ -87,16 +88,16 @@ instance IsObjectType a => PrettyType (OT1 a) where
 instance Inst2 IsObjectType a b => PrettyType (OT2 a b) where
   prettyType =
     if
-        | rep == getRep @OTArtifactCreature ->
-          "OTArtifactCreature"
-        | rep == getRep @OTCreaturePlaneswalker ->
-          "OTCreaturePlaneswalker"
-        | rep == getRep @OTCreaturePlayer ->
-          "OTCreaturePlayer"
-        | rep == getRep @OTEnchantmentCreature ->
-          "OTEnchantmentCreature"
-        | rep == getRep @OTPlayerPlaneswalker ->
-          "OTPlayerPlaneswalker"
+        | rep == getRep @OTNArtifactCreature ->
+          "OTNArtifactCreature"
+        | rep == getRep @OTNCreaturePlaneswalker ->
+          "OTNCreaturePlaneswalker"
+        | rep == getRep @OTNCreaturePlayer ->
+          "OTNCreaturePlayer"
+        | rep == getRep @OTNEnchantmentCreature ->
+          "OTNEnchantmentCreature"
+        | rep == getRep @OTNPlayerPlaneswalker ->
+          "OTNPlayerPlaneswalker"
         | otherwise ->
           "OTN '( '(), "
             ++ show (getRep @a)
@@ -109,8 +110,8 @@ instance Inst2 IsObjectType a b => PrettyType (OT2 a b) where
 instance Inst3 IsObjectType a b c => PrettyType (OT3 a b c) where
   prettyType =
     if
-        | rep == getRep @OTCreaturePlayerPlaneswalker ->
-          "OTCreaturePlayerPlaneswalker"
+        | rep == getRep @OTNCreaturePlayerPlaneswalker ->
+          "OTNCreaturePlayerPlaneswalker"
         | otherwise ->
           "OTN '( '(), "
             ++ show (getRep @a)
@@ -141,8 +142,8 @@ instance Inst4 IsObjectType a b c d => PrettyType (OT4 a b c d) where
 instance Inst5 IsObjectType a b c d e => PrettyType (OT5 a b c d e) where
   prettyType =
     if
-        | rep == getRep @OTPermanent ->
-          "OTPermanent"
+        | rep == getRep @OTNPermanent ->
+          "OTNPermanent"
         | otherwise ->
           "OTN '( '(), "
             ++ show (getRep @a)
@@ -161,8 +162,8 @@ instance Inst5 IsObjectType a b c d e => PrettyType (OT5 a b c d e) where
 instance Inst6 IsObjectType a b c d e f => PrettyType (OT6 a b c d e f) where
   prettyType =
     if
-        | rep == getRep @OTSpell ->
-          "OTSpell"
+        | rep == getRep @OTNSpell ->
+          "OTNSpell"
         | otherwise ->
           "OTN '( '(), "
             ++ show (getRep @a)
@@ -205,8 +206,8 @@ instance Inst7 IsObjectType a b c d e f g => PrettyType (OT7 a b c d e f g) wher
 instance Inst8 IsObjectType a b c d e f g h => PrettyType (OT8 a b c d e f g h) where
   prettyType =
     if
-        | rep == getRep @OTDamageSource ->
-          "OTDamageSource"
+        | rep == getRep @OTNDamageSource ->
+          "OTNDamageSource"
         | otherwise ->
           "OTN '( '(), "
             ++ show (getRep @a)
@@ -315,33 +316,34 @@ instance Inst11 IsObjectType a b c d e f g h i j k => PrettyType (OT11 a b c d e
 instance Inst12 IsObjectType a b c d e f g h i j k l => PrettyType (OT12 a b c d e f g h i j k l) where
   prettyType =
     if
-        | rep == getRep @OTAny ->
-          "OTAny"
+        | rep == getRep @OTNAny ->
+          "OTNAny"
         | otherwise ->
-          "OTN '( '(), "
-            ++ show (getRep @a)
-            ++ ", "
-            ++ show (getRep @b)
-            ++ ", "
-            ++ show (getRep @c)
-            ++ ", "
-            ++ show (getRep @d)
-            ++ ", "
-            ++ show (getRep @e)
-            ++ ", "
-            ++ show (getRep @f)
-            ++ ", "
-            ++ show (getRep @g)
-            ++ ", "
-            ++ show (getRep @h)
-            ++ ","
-            ++ show (getRep @i)
-            ++ ","
-            ++ show (getRep @j)
-            ++ ","
-            ++ show (getRep @k)
-            ++ ","
-            ++ show (getRep @l)
-            ++ ")"
+          assert False $ -- should hit OTNAny
+            "OTN '( '(), "
+              ++ show (getRep @a)
+              ++ ", "
+              ++ show (getRep @b)
+              ++ ", "
+              ++ show (getRep @c)
+              ++ ", "
+              ++ show (getRep @d)
+              ++ ", "
+              ++ show (getRep @e)
+              ++ ", "
+              ++ show (getRep @f)
+              ++ ", "
+              ++ show (getRep @g)
+              ++ ", "
+              ++ show (getRep @h)
+              ++ ","
+              ++ show (getRep @i)
+              ++ ","
+              ++ show (getRep @j)
+              ++ ","
+              ++ show (getRep @k)
+              ++ ","
+              ++ show (getRep @l)
+              ++ ")"
    where
     rep = getRep @(OT12 a b c d e f g h i j k l)

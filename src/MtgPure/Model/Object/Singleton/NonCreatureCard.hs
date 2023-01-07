@@ -22,13 +22,13 @@ import safe MtgPure.Model.Object.OTN (
   OT3,
  )
 import safe MtgPure.Model.Object.OTNAliases (
-  OTArtifact,
-  OTEnchantment,
-  OTInstant,
-  OTLand,
-  OTNonCreature,
-  OTPlaneswalker,
-  OTSorcery,
+  OTNArtifact,
+  OTNEnchantment,
+  OTNInstant,
+  OTNLand,
+  OTNNonCreature,
+  OTNPlaneswalker,
+  OTNSorcery,
  )
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.ZoneObject.ZoneObject (ZO)
@@ -44,13 +44,13 @@ data NonCreatureCardType
 
 -- Witness type
 data WNonCreatureCard :: Type -> Type where
-  WNonCreatureArtifact :: WNonCreatureCard OTArtifact
-  WNonCreatureEnchantment :: WNonCreatureCard OTEnchantment
-  WNonCreatureInstant :: WNonCreatureCard OTInstant
-  WNonCreatureLand :: WNonCreatureCard OTLand
-  WNonCreaturePlaneswalker :: WNonCreatureCard OTPlaneswalker
-  WNonCreatureSorcery :: WNonCreatureCard OTSorcery
-  WNonCreatureCard :: WNonCreatureCard OTNonCreature
+  WNonCreatureArtifact :: WNonCreatureCard OTNArtifact
+  WNonCreatureEnchantment :: WNonCreatureCard OTNEnchantment
+  WNonCreatureInstant :: WNonCreatureCard OTNInstant
+  WNonCreatureLand :: WNonCreatureCard OTNLand
+  WNonCreaturePlaneswalker :: WNonCreatureCard OTNPlaneswalker
+  WNonCreatureSorcery :: WNonCreatureCard OTNSorcery
+  WNonCreatureCard :: WNonCreatureCard OTNNonCreature
   WNonCreatureCard2 :: Inst2 IsNonCreatureCardType a b => WNonCreatureCard (OT2 a b)
   WNonCreatureCard3 :: Inst3 IsNonCreatureCardType a b c => WNonCreatureCard (OT3 a b c)
   deriving (Typeable)
@@ -58,12 +58,12 @@ data WNonCreatureCard :: Type -> Type where
 deriving instance Show (WNonCreatureCard a)
 
 data NonCreatureCardVisitor zone z = NonCreatureCardVisitor
-  { visitNCArtifact :: ZO zone OTArtifact -> z
-  , visitNCInstant :: ZO zone OTInstant -> z
-  , visitNCEnchantment :: ZO zone OTEnchantment -> z
-  , visitNCLand :: ZO zone OTLand -> z
-  , visitNCPlaneswalker :: ZO zone OTPlaneswalker -> z
-  , visitNCSorcery :: ZO zone OTSorcery -> z
+  { visitNCArtifact :: ZO zone OTNArtifact -> z
+  , visitNCInstant :: ZO zone OTNInstant -> z
+  , visitNCEnchantment :: ZO zone OTNEnchantment -> z
+  , visitNCLand :: ZO zone OTNLand -> z
+  , visitNCPlaneswalker :: ZO zone OTNPlaneswalker -> z
+  , visitNCSorcery :: ZO zone OTNSorcery -> z
   }
   deriving (Typeable)
 

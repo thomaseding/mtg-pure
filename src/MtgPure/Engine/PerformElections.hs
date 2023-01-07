@@ -41,7 +41,7 @@ import safe MtgPure.Engine.State (
   withHeadlessPrompt,
  )
 import safe MtgPure.Model.Object.OTN (OT0)
-import safe MtgPure.Model.Object.OTNAliases (OTAny)
+import safe MtgPure.Model.Object.OTNAliases (OTNAny)
 import safe MtgPure.Model.Object.Object (Object (..))
 import safe MtgPure.Model.Object.ObjectId (
   UntypedObject (..),
@@ -135,9 +135,9 @@ controllerOf zo = logCall 'controllerOf case singZone @zone of
 
 electControllerOf ::
   forall p zone m el ot x.
-  (IsZO zone OTAny, Monad m) =>
+  (IsZO zone OTNAny, Monad m) =>
   (Elect p el ot -> Magic 'Private 'RW m x) ->
-  ZO zone OTAny ->
+  ZO zone OTNAny ->
   (ZOPlayer -> Elect p el ot) ->
   Magic 'Private 'RW m x
 electControllerOf goElect zo cont = logCall 'electControllerOf do

@@ -68,15 +68,15 @@ import safe MtgPure.Model.IsCardList (containsCard)
 import safe MtgPure.Model.Object.IsObjectType (IsObjectType (..))
 import safe MtgPure.Model.Object.OTN (OT0, OT1, OTN)
 import safe MtgPure.Model.Object.OTNAliases (
-  OTArtifact,
-  OTArtifactCreature,
-  OTCreature,
-  OTEnchantment,
-  OTEnchantmentCreature,
-  OTInstant,
-  OTPlaneswalker,
-  OTSorcery,
-  OTSpell,
+  OTNArtifact,
+  OTNArtifactCreature,
+  OTNCreature,
+  OTNEnchantment,
+  OTNEnchantmentCreature,
+  OTNInstant,
+  OTNPlaneswalker,
+  OTNSorcery,
+  OTNSpell,
  )
 import safe MtgPure.Model.Object.Object (Object)
 import safe MtgPure.Model.Object.ObjectId (
@@ -160,56 +160,56 @@ data CastMeta (ot :: Type) :: Type where
     } ->
     CastMeta ot
 
-artifactCastMeta :: CastMeta OTArtifact
+artifactCastMeta :: CastMeta OTNArtifact
 artifactCastMeta =
   CastMeta
     { castMeta_effect = Nothing
     , castMeta_cost = artifact_cost
     }
 
-artifactCreatureCastMeta :: CastMeta OTArtifactCreature
+artifactCreatureCastMeta :: CastMeta OTNArtifactCreature
 artifactCreatureCastMeta =
   CastMeta
     { castMeta_effect = Nothing
     , castMeta_cost = artifactCreature_cost
     }
 
-creatureCastMeta :: CastMeta OTCreature
+creatureCastMeta :: CastMeta OTNCreature
 creatureCastMeta =
   CastMeta
     { castMeta_effect = Nothing
     , castMeta_cost = creature_cost
     }
 
-enchantmentCastMeta :: CastMeta OTEnchantment
+enchantmentCastMeta :: CastMeta OTNEnchantment
 enchantmentCastMeta =
   CastMeta
     { castMeta_effect = Nothing
     , castMeta_cost = enchantment_cost
     }
 
-enchantmentCreatureCastMeta :: CastMeta OTEnchantmentCreature
+enchantmentCreatureCastMeta :: CastMeta OTNEnchantmentCreature
 enchantmentCreatureCastMeta =
   CastMeta
     { castMeta_effect = Nothing
     , castMeta_cost = enchantmentCreature_cost
     }
 
-instantCastMeta :: CastMeta OTInstant
+instantCastMeta :: CastMeta OTNInstant
 instantCastMeta =
   CastMeta
     { castMeta_effect = Just instant_effect
     , castMeta_cost = instant_cost
     }
 
-planeswalkerCastMeta :: CastMeta OTPlaneswalker
+planeswalkerCastMeta :: CastMeta OTNPlaneswalker
 planeswalkerCastMeta =
   CastMeta
     { castMeta_effect = Nothing
     , castMeta_cost = planeswalker_cost
     }
 
-sorceryCastMeta :: CastMeta OTSorcery
+sorceryCastMeta :: CastMeta OTNSorcery
 sorceryCastMeta =
   CastMeta
     { castMeta_effect = Just sorcery_effect
@@ -223,7 +223,7 @@ castSpell :: forall m. Monad m => Object 'OTPlayer -> PriorityAction CastSpell -
 castSpell oCaster = logCall 'castSpell \case
   CastSpell zoSpell -> goSpell zoSpell
  where
-  goSpell :: forall zone. IsZO zone OTSpell => ZO zone OTSpell -> Magic 'Private 'RW m Legality
+  goSpell :: forall zone. IsZO zone OTNSpell => ZO zone OTNSpell -> Magic 'Private 'RW m Legality
   goSpell zoSpell = do
     st <- fromRO get
     reqs <- fromRO $ getCastSpellReqs oCaster
@@ -233,7 +233,7 @@ castSpell oCaster = logCall 'castSpell \case
         hand = playerHand player
         --zoCaster = oToZO1 oCaster
         --
-        invalid :: (ZO zone OTSpell -> InvalidCastSpell) -> Magic 'Private 'RW m Legality
+        invalid :: (ZO zone OTNSpell -> InvalidCastSpell) -> Magic 'Private 'RW m Legality
         invalid ex = do
           lift $ exceptionInvalidCastSpell prompt opaque oCaster $ ex zoSpell
           pure Illegal
@@ -525,28 +525,28 @@ class ot ~ otdummy => PayElected (ac :: ActivateCast) (ot :: Type) (otdummy :: T
 instance IsOT ot => PayElected 'Activate ot ot where
   payElectedAndPutOnStack' = payElectedAndPutOnStackAbility @ot
 
-instance PayElected 'Cast OTArtifact OTArtifact where
+instance PayElected 'Cast OTNArtifact OTNArtifact where
   payElectedAndPutOnStack' = payElectedAndPutOnStackSpell @ 'OTArtifact
 
-instance PayElected 'Cast OTArtifactCreature OTArtifactCreature where
+instance PayElected 'Cast OTNArtifactCreature OTNArtifactCreature where
   payElectedAndPutOnStack' = payElectedAndPutOnStackSpell @ 'OTCreature
 
-instance PayElected 'Cast OTCreature OTCreature where
+instance PayElected 'Cast OTNCreature OTNCreature where
   payElectedAndPutOnStack' = payElectedAndPutOnStackSpell @ 'OTCreature
 
-instance PayElected 'Cast OTEnchantment OTEnchantment where
+instance PayElected 'Cast OTNEnchantment OTNEnchantment where
   payElectedAndPutOnStack' = payElectedAndPutOnStackSpell @ 'OTEnchantment
 
-instance PayElected 'Cast OTEnchantmentCreature OTEnchantmentCreature where
+instance PayElected 'Cast OTNEnchantmentCreature OTNEnchantmentCreature where
   payElectedAndPutOnStack' = payElectedAndPutOnStackSpell @ 'OTCreature
 
-instance PayElected 'Cast OTInstant OTInstant where
+instance PayElected 'Cast OTNInstant OTNInstant where
   payElectedAndPutOnStack' = payElectedAndPutOnStackSpell @ 'OTInstant
 
-instance PayElected 'Cast OTPlaneswalker OTPlaneswalker where
+instance PayElected 'Cast OTNPlaneswalker OTNPlaneswalker where
   payElectedAndPutOnStack' = payElectedAndPutOnStackSpell @ 'OTPlaneswalker
 
-instance PayElected 'Cast OTSorcery OTSorcery where
+instance PayElected 'Cast OTNSorcery OTNSorcery where
   payElectedAndPutOnStack' = payElectedAndPutOnStackSpell @ 'OTSorcery
 
 payElectedAndPutOnStackAbility ::

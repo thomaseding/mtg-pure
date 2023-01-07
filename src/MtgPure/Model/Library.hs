@@ -10,17 +10,17 @@ module MtgPure.Model.Library (
 import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.IsCardList (IsCardList (..))
-import safe MtgPure.Model.Object.OTNAliases (OTCard)
+import safe MtgPure.Model.Object.OTNAliases (OTNCard)
 import safe MtgPure.Model.Zone (Zone (..))
 import safe MtgPure.Model.ZoneObject.ZoneObject (ZO)
 
 newtype Library :: Type where
   Library ::
-    { unLibrary :: [ZO 'ZLibrary OTCard]
+    { unLibrary :: [ZO 'ZLibrary OTNCard]
     } ->
     Library
   deriving (Typeable)
 
-instance IsCardList Library (ZO 'ZLibrary OTCard) where
+instance IsCardList Library (ZO 'ZLibrary OTNCard) where
   toCardList = Library
   fromCardList = unLibrary
