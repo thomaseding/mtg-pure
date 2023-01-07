@@ -72,7 +72,7 @@ hasLandType' zo landType = logCall 'hasLandType' case singZone @zone of
     pure case permanentLand perm of
       Nothing -> False
       Just land -> landType `elem` landTypes land
-  _ -> undefined
+  _ -> undefined -- XXX: sung zone
 
 isTapped' :: (IsOT ot, Monad m) => ZO 'ZBattlefield ot -> Magic 'Private 'RO m Bool
 isTapped' zo = logCall 'isTapped' do
@@ -90,7 +90,7 @@ controlledBy' zo zoPlayer = logCall 'controlledBy' case singZone @zone of
     findPermanent (zo0ToPermanent $ toZO0 zo) <&> \case
       Nothing -> getObjectId zo == getObjectId zoPlayer -- TODO: [Mindslaver]
       Just perm -> getObjectId (permanentController perm) == getObjectId zoPlayer
-  _ -> undefined
+  _ -> undefined -- XXX: sung zone
 
 is' :: (Monad m, IsZO zone ot) => ZO zone ot -> ZO zone ot -> Magic 'Private 'RO m Bool
 is' zo zo' = logCall 'is' do

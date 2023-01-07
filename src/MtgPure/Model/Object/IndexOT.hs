@@ -44,6 +44,7 @@ idx :: forall ot. IsObjectType ot => ObjectType
 idx = litObjectType @ot
 
 class Typeable ot => IndexOT ot where
+  -- | Prerequisite: Inner lists may not contain duplicate entries.
   indexOT :: [[ObjectType]]
 
 instance Inst2 IndexOT ot1 ot2 => IndexOT (ot1, ot2) where

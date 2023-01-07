@@ -163,43 +163,43 @@ rewindIllegal m = logCall 'rewindIllegal do
 
 allZOs :: forall zone ot m. (Monad m, IsZO zone ot) => Magic 'Private 'RO m [ZO zone ot]
 allZOs = logCall 'allZOs case singZone @zone of
-  SZBattlefield -> case indexOT @ot of
-    [objectTypes] ->
-      let goPerms :: ObjectType -> Magic 'Private 'RO m [ZO zone ot]
-          goPerms ot = do
-            perms <- fromPublic allPermanents
-            catMaybes <$> eachLogged perms \oPerm -> do
-              perm <- getPermanent oPerm
-              let goPerm ::
-                    forall a x.
-                    IsObjectType a =>
-                    (Permanent -> Maybe x) ->
-                    Maybe (ZO 'ZBattlefield ot)
-                  goPerm viewPerm = case viewPerm perm of
-                    Nothing -> Nothing
-                    Just{} -> castOToZO $ idToObject @a $ UntypedObject DefaultObjectDiscriminant $ getObjectId oPerm
-              pure case ot of
-                OTArtifact -> goPerm @ 'OTArtifact permanentArtifact
-                OTCreature -> goPerm @ 'OTCreature permanentCreature
-                --OTEnchantment -> goPerm @ 'OTEnchantment undefined
-                OTLand -> goPerm @ 'OTLand permanentLand
-                --OTPlaneswalker -> goPerm @ 'OTPlaneswalker undefined
-                _ -> Nothing
-          goPlayers :: ObjectType -> Magic 'Private 'RO m [ZO zone ot]
-          goPlayers = \case
-            OTPlayer -> mapMaybe castOToZO <$> fromPublic getAlivePlayers
-            _ -> pure []
-          goRec :: [ObjectType] -> Magic 'Private 'RO m (DList.DList (ZO zone ot))
-          goRec = \case
-            [] -> pure DList.empty
-            ot : ots -> do
-              oPerms <- goPerms ot
-              oPlayers <- goPlayers ot
-              oRecs <- goRec ots
-              pure $ DList.fromList oPerms <> DList.fromList oPlayers <> oRecs
-       in DList.toList <$> goRec objectTypes
-    _ -> undefined
-  _ -> undefined
+  SZBattlefield ->
+    let goPerms :: ObjectType -> Magic 'Private 'RO m [ZO zone ot]
+        goPerms ot = do
+          perms <- fromPublic allPermanents
+          catMaybes <$> eachLogged perms \oPerm -> do
+            perm <- getPermanent oPerm
+            let goPerm ::
+                  forall a x.
+                  IsObjectType a =>
+                  (Permanent -> Maybe x) ->
+                  Maybe (ZO 'ZBattlefield ot)
+                goPerm viewPerm = case viewPerm perm of
+                  Nothing -> Nothing
+                  Just{} -> castOToZO $ idToObject @a $ UntypedObject DefaultObjectDiscriminant $ getObjectId oPerm
+            pure case ot of
+              OTArtifact -> goPerm @ 'OTArtifact permanentArtifact
+              OTCreature -> goPerm @ 'OTCreature permanentCreature
+              --OTEnchantment -> goPerm @ 'OTEnchantment undefined
+              OTLand -> goPerm @ 'OTLand permanentLand
+              --OTPlaneswalker -> goPerm @ 'OTPlaneswalker undefined
+              _ -> Nothing
+        goPlayers :: ObjectType -> Magic 'Private 'RO m [ZO zone ot]
+        goPlayers = \case
+          OTPlayer -> mapMaybe castOToZO <$> fromPublic getAlivePlayers
+          _ -> pure []
+        goRec :: [ObjectType] -> Magic 'Private 'RO m (DList.DList (ZO zone ot))
+        goRec = \case
+          [] -> pure DList.empty
+          ot : ots -> do
+            oPerms <- goPerms ot
+            oPlayers <- goPlayers ot
+            oRecs <- goRec ots
+            pure $ DList.fromList oPerms <> DList.fromList oPlayers <> oRecs
+     in DList.toList <$> case indexOT @ot of
+          [ots] -> goRec ots
+          otts -> goRec $ List.nub $ concat otts
+  _ -> undefined -- XXX: sung zone
  where
   castOToZO :: IsObjectType z => Object z -> Maybe (ZO zone ot)
   castOToZO = fmap toZone . castOToON
@@ -262,7 +262,7 @@ getActivatedAbilitiesOf zo = logCall 'getActivatedAbilitiesOf do
           fromSome ability \case
             Activated withThis -> go withThis
             _ -> Nothing
-    _ -> undefined
+    _ -> undefined -- XXX: sung zone
  where
   go ::
     forall zone' ot'.
@@ -330,9 +330,17 @@ getBasicLandTypes zo = logCall 'getBasicLandTypes do
                 ArtifactLandFacet{artifactLand_landTypes = tys} -> fromLandTypes tys
               YourLand playerToFacet -> case playerToFacet zoPlayer of
                 LandFacet{land_landTypes = tys} -> fromLandTypes tys
-              _ -> undefined
+              --
+              YourArtifact{} -> []
+              YourArtifactCreature{} -> []
+              YourCreature{} -> []
+              YourEnchantment{} -> []
+              YourEnchantmentCreature{} -> []
+              YourInstant{} -> []
+              YourPlaneswalker{} -> []
+              YourSorcery{} -> []
             AnyCard2{} -> undefined
-    _ -> undefined
+    _ -> undefined -- XXX: sung zone
  where
   fromLandTypes :: [LandType] -> [BasicLandType]
   fromLandTypes tys =

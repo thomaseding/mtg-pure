@@ -18,7 +18,6 @@ import safe Control.Exception (assert)
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
 import safe Control.Monad.Trans (lift)
 import safe Control.Monad.Util (untilJust)
-import safe Data.ConsIndex (consIndex)
 import safe Data.List.NonEmpty (NonEmpty (..))
 import safe qualified Data.Map.Strict as Map
 import safe MtgPure.Engine.Fwd.Api (
@@ -93,8 +92,11 @@ performElections' ::
   Elect p el ot ->
   Magic 'Private 'RW m x
 performElections' bhv failureX zoStack goTerm = logCall 'performElections' \case
+  ActivePlayer{} -> undefined
   All masked -> electAll goRec masked
   Choose oPlayer thisToElect -> electA Choose' zoStack failureX goRec oPlayer thisToElect
+  ChooseOption{} -> undefined
+  Condition{} -> undefined
   ControllerOf zo cont -> electControllerOf goRec zo cont
   Cost cost -> goTerm cost
   ElectActivated activated -> goTerm activated
@@ -102,9 +104,13 @@ performElections' bhv failureX zoStack goTerm = logCall 'performElections' \case
   ElectCase case_ -> caseOf goRec case_
   Effect effect -> goTerm $ Sequence effect
   Elect elect -> goTerm elect
+  Event{} -> undefined
+  If{} -> undefined
+  Listen{} -> undefined
+  Random{} -> undefined
   Target zoPlayer thisToElect -> goTarget zoPlayer thisToElect
+  VariableFromPower{} -> undefined
   VariableInt cont -> electVariableInt goRec cont
-  x -> error $ show $ consIndex x
  where
   goRec = performElections' bhv failureX zoStack goTerm
   --
@@ -131,7 +137,7 @@ controllerOf zo = logCall 'controllerOf case singZone @zone of
   SZBattlefield -> do
     perm <- fromRO $ getPermanent $ zo0ToPermanent $ toZO0 zo
     pure $ permanentController perm
-  _ -> undefined
+  _ -> undefined -- XXX: sung zone
 
 electControllerOf ::
   forall p zone m el ot x.
