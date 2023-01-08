@@ -85,10 +85,10 @@ import safe MtgPure.Model.Object.ObjectId (
   getObjectId,
   pattern DefaultObjectDiscriminant,
  )
-import safe MtgPure.Model.Object.ObjectN (ObjectN (O1))
+import safe MtgPure.Model.Object.ObjectN_ (ObjectN' (O1))
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
+import safe MtgPure.Model.Object.PromoteIdToObjectN (promoteIdToObjectN)
 import safe MtgPure.Model.Object.ToObjectN.Classes (ToObject2' (..), ToObject6' (..))
-import safe MtgPure.Model.Object.VisitObjectN (VisitObjectN (promoteIdToObjectN))
 import safe MtgPure.Model.Player (Player (..))
 import safe MtgPure.Model.PrePost (PrePost (..))
 import safe MtgPure.Model.Recursive (
@@ -434,7 +434,7 @@ isPendingManaEffect (Pending effect) = logCall 'isPendingManaEffect do
   requiresTargets effect >>= \case
     True -> pure False
     False -> internalFromRW goGameResult $ local withHeadlessPrompt do
-      mEnactInfo <- resolveOneShot zoStack effect
+      mEnactInfo <- resolveOneShot zoStack Nothing effect
       pure case mEnactInfo of
         Nothing -> False -- XXX: It could still be a mana ability despite failing to be legal at the moment.
         Just enactInfo -> enactInfo_couldAddMana enactInfo
@@ -588,6 +588,7 @@ payElectedAndPutOnStackImpl zoStack idToStackObject elected = do
     st
       { magicStack = Stack $ stackItem : unStack (magicStack st)
       , magicStackEntryElectedMap = Map.insert zoStack (AnyElected elected) $ magicStackEntryElectedMap st
+      , magicOwnershipMap = Map.insert stackId (electedObject_controller elected) $ magicOwnershipMap st
       }
   payElected elected
 

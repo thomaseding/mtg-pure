@@ -15,10 +15,7 @@ import safe MtgPure.Model.Zone (Zone (..))
 import safe MtgPure.Model.ZoneObject.ZoneObject (ZO)
 
 newtype Library :: Type where
-  Library ::
-    { unLibrary :: [ZO 'ZLibrary OTNCard]
-    } ->
-    Library
+  Library :: {unLibrary :: [ZO 'ZLibrary OTNCard]} -> Library
   deriving (Typeable)
 
 instance IsCardList Library (ZO 'ZLibrary OTNCard) where

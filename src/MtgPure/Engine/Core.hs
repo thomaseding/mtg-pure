@@ -17,6 +17,7 @@ module MtgPure.Engine.Core (
   doesObjectIdExist,
   doesObjectNExist,
   doesZoneObjectExist,
+  findGraveyardCard,
   findHandCard,
   findLibraryCard,
   findPermanent,
@@ -31,8 +32,11 @@ module MtgPure.Engine.Core (
   getPlayer,
   indexToActivated,
   newObjectId,
+  pickOneZO,
+  pushGraveyardCard,
   pushHandCard,
   pushLibraryCard,
+  removeGraveyardCard,
   removeHandCard,
   removeLibraryCard,
   rewindIllegal,
@@ -44,9 +48,12 @@ module MtgPure.Engine.Core (
 import safe Control.Exception (assert)
 import safe qualified Control.Monad as M
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
+import safe qualified Control.Monad.Trans as M
+import safe Control.Monad.Util (untilJust)
 import safe qualified Data.DList as DList
 import safe Data.Functor ((<&>))
 import safe qualified Data.List as List
+import safe Data.List.NonEmpty (NonEmpty (..))
 import safe qualified Data.Map.Strict as Map
 import safe Data.Maybe (catMaybes, isJust, mapMaybe)
 import safe qualified Data.Stream as Stream
@@ -69,6 +76,7 @@ import safe MtgPure.Engine.Prompt (
   AbsoluteActivatedAbilityIndex (AbsoluteActivatedAbilityIndex),
   InternalLogicError (..),
   PlayerCount (..),
+  Prompt' (..),
   RelativeAbilityIndex (RelativeAbilityIndex),
   SomeActivatedAbility (..),
  )
@@ -77,8 +85,10 @@ import safe MtgPure.Engine.State (
   GameState (..),
   Magic,
   logCall,
+  mkOpaqueGameState,
  )
 import safe MtgPure.Model.BasicLandType (BasicLandType)
+import safe MtgPure.Model.Graveyard (Graveyard (..))
 import safe MtgPure.Model.Hand (Hand (..))
 import safe MtgPure.Model.IsCardList (pushCard)
 import safe MtgPure.Model.Land (Land (..))
@@ -95,7 +105,8 @@ import safe MtgPure.Model.Object.ObjectId (
   getObjectId,
   pattern DefaultObjectDiscriminant,
  )
-import safe MtgPure.Model.Object.ObjectN (ObjectN (O0))
+import safe MtgPure.Model.Object.ObjectN (ObjectN)
+import safe MtgPure.Model.Object.ObjectN_ (ObjectN' (O0))
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Object.ToObjectN (toObject1, toObjectNAny)
 import safe MtgPure.Model.Permanent (Permanent (..))
@@ -111,6 +122,7 @@ import safe MtgPure.Model.Recursive (
  )
 import safe MtgPure.Model.Zone (IsZone (..), SZone (..), Zone (..))
 import safe MtgPure.Model.ZoneObject.Convert (
+  ToZO0,
   castOToON,
   oToZO1,
   toZO0,
@@ -160,6 +172,22 @@ rewindIllegal m = logCall 'rewindIllegal do
   m' >>= \case
     Legal -> pure True
     Illegal -> put st >> pure False
+
+pickOneZO ::
+  (IsZO zone ot, Monad m) =>
+  Object 'OTPlayer ->
+  [ZO zone ot] ->
+  Magic 'Private 'RO m (Maybe (ZO zone ot))
+pickOneZO oPlayer = \case
+  [] -> pure Nothing
+  zos@(zosHead : zosTail) -> do
+    prompt <- gets magicPrompt
+    opaque <- gets mkOpaqueGameState
+    Just <$> untilJust \attempt -> do
+      zo <- M.lift $ promptPickZO prompt attempt opaque oPlayer $ zosHead :| zosTail
+      pure case zo `elem` zos of
+        False -> Nothing
+        True -> Just zo
 
 allZOs :: forall zone ot m. (Monad m, IsZO zone ot) => Magic 'Private 'RO m [ZO zone ot]
 allZOs = logCall 'allZOs case singZone @zone of
@@ -317,36 +345,44 @@ getBasicLandTypes zo = logCall 'getBasicLandTypes do
         Just perm -> case permanentLand perm of
           Nothing -> []
           Just land -> fromLandTypes $ landTypes land
-    SZHand -> do
-      let zoHand = zo0ToCard $ toZO0 zo
-      oPlayers <- fromPublic getAlivePlayers
-      concat <$> T.for oPlayers \oPlayer -> do
-        let zoPlayer = oToZO1 @ 'ZBattlefield oPlayer
-        findHandCard oPlayer zoHand <&> \case
-          Nothing -> []
-          Just handCard -> case handCard of -- TODO: make a type class to fetch facets
-            AnyCard1 (Card _ card) -> case card of
+    SZHand -> goFindCard findHandCard
+    SZLibrary -> goFindCard findLibraryCard
+    SZGraveyard -> goFindCard findGraveyardCard
+    _ -> undefined -- XXX: sung zone
+ where
+  goFindCard ::
+    (Object 'OTPlayer -> ZO zone OTNCard -> Magic 'Private 'RO m (Maybe AnyCard)) ->
+    Magic 'Private 'RO m [BasicLandType]
+  goFindCard findCard = do
+    let zoCard = zo0ToCard $ toZO0 zo
+    oPlayers <- fromPublic getAlivePlayers
+    uniquify . concat <$> T.for oPlayers \oPlayer -> do
+      let zoPlayer = oToZO1 @ 'ZBattlefield oPlayer
+          goRec :: AnyCard -> Magic 'Private 'RO m [BasicLandType]
+          goRec = \case
+            AnyCard1 (Card _ card) -> pure case card of
               YourArtifactLand playerToFacet -> case playerToFacet zoPlayer of
                 ArtifactLandFacet{artifactLand_landTypes = tys} -> fromLandTypes tys
               YourLand playerToFacet -> case playerToFacet zoPlayer of
                 LandFacet{land_landTypes = tys} -> fromLandTypes tys
-              --
-              YourArtifact{} -> []
-              YourArtifactCreature{} -> []
-              YourCreature{} -> []
-              YourEnchantment{} -> []
-              YourEnchantmentCreature{} -> []
-              YourInstant{} -> []
-              YourPlaneswalker{} -> []
-              YourSorcery{} -> []
-            AnyCard2{} -> undefined
-    _ -> undefined -- XXX: sung zone
- where
+              _ -> []
+            AnyCard2 (DoubleSidedCard c1 c2) -> do
+              tys1 <- goRec $ AnyCard1 c1
+              tys2 <- goRec $ AnyCard1 c2
+              pure $ tys1 ++ tys2
+            AnyCard2 SplitCard{splitCard_card1 = c1, splitCard_card2 = c2} -> do
+              tys1 <- goRec $ AnyCard1 c1
+              tys2 <- goRec $ AnyCard1 c2
+              pure $ tys1 ++ tys2
+      findCard oPlayer zoCard >>= \case
+        Nothing -> pure []
+        Just card -> goRec card
   fromLandTypes :: [LandType] -> [BasicLandType]
   fromLandTypes tys =
     tys >>= \case
       BasicLand ty -> [ty]
       _ -> []
+  uniquify = List.nub . List.sort
 
 newObjectId :: Monad m => Magic 'Private 'RW m ObjectId
 newObjectId = logCall 'newObjectId do
@@ -354,67 +390,128 @@ newObjectId = logCall 'newObjectId do
   modify \st -> st{magicNextObjectId = ObjectId $ i + 1}
   pure $ ObjectId i
 
-pushLibraryCard :: Monad m => Object 'OTPlayer -> AnyCard -> Magic 'Private 'RW m (ZO 'ZLibrary OTNCard)
-pushLibraryCard oPlayer card = logCall 'pushLibraryCard do
+data PlayerCardsInfo zone m = PlayerCardsInfo
+  { pci_ :: ()
+  , pci_magicZoneCards :: GameState m -> Map.Map (ZO zone OT0) AnyCard
+  , pci_setMagicZoneCards :: GameState m -> Map.Map (ZO zone OT0) AnyCard -> GameState m
+  , pci_playerZoneCards :: Player -> [ZO zone OTNCard]
+  , pci_setPlayerZoneCards :: Player -> [ZO zone OTNCard] -> Player
+  , pci_pushZoneCard :: ZO zone OTNCard -> [ZO zone OTNCard] -> [ZO zone OTNCard]
+  }
+
+pciGraveyard :: PlayerCardsInfo 'ZGraveyard m
+pciGraveyard =
+  PlayerCardsInfo
+    { pci_ = ()
+    , pci_magicZoneCards = magicGraveyardCards
+    , pci_setMagicZoneCards = \st cards -> st{magicGraveyardCards = cards}
+    , pci_playerZoneCards = unGraveyard . playerGraveyard
+    , pci_setPlayerZoneCards = \player cards -> player{playerGraveyard = Graveyard cards}
+    , pci_pushZoneCard = \zo -> unGraveyard . pushCard zo . Graveyard
+    }
+
+pciHand :: PlayerCardsInfo 'ZHand m
+pciHand =
+  PlayerCardsInfo
+    { pci_ = ()
+    , pci_magicZoneCards = magicHandCards
+    , pci_setMagicZoneCards = \st cards -> st{magicHandCards = cards}
+    , pci_playerZoneCards = unHand . playerHand
+    , pci_setPlayerZoneCards = \player cards -> player{playerHand = Hand cards}
+    , pci_pushZoneCard = \zo -> unHand . pushCard zo . Hand
+    }
+
+pciLibrary :: PlayerCardsInfo 'ZLibrary m
+pciLibrary =
+  PlayerCardsInfo
+    { pci_ = ()
+    , pci_magicZoneCards = magicLibraryCards
+    , pci_setMagicZoneCards = \st cards -> st{magicLibraryCards = cards}
+    , pci_playerZoneCards = unLibrary . playerLibrary
+    , pci_setPlayerZoneCards = \player cards -> player{playerLibrary = Library cards}
+    , pci_pushZoneCard = \zo -> unLibrary . pushCard zo . Library
+    }
+
+pushZoneCard ::
+  ( IsZO zone OTNCard
+  , Monad m
+  ) =>
+  PlayerCardsInfo zone m ->
+  Object 'OTPlayer ->
+  AnyCard ->
+  Magic 'Private 'RW m (ZO zone OTNCard)
+pushZoneCard info oPlayer card = logCall 'pushZoneCard do
   player <- fromRO $ getPlayer oPlayer
   i <- newObjectId
   let zo0 = toZO0 i
       zoCard = zo0ToCard zo0
-  modify \st -> st{magicLibraryCards = Map.insert zo0 card $ magicLibraryCards st}
-  setPlayer oPlayer player{playerLibrary = pushCard zoCard $ playerLibrary player}
+  modify \st -> pci_setMagicZoneCards info st $ Map.insert zo0 card $ pci_magicZoneCards info st
+  setPlayer oPlayer $
+    pci_setPlayerZoneCards info player $
+      pci_pushZoneCard info zoCard $
+        pci_playerZoneCards info player
   pure zoCard
+
+pushGraveyardCard :: Monad m => Object 'OTPlayer -> AnyCard -> Magic 'Private 'RW m (ZO 'ZGraveyard OTNCard)
+pushGraveyardCard = logCall 'pushGraveyardCard $ pushZoneCard pciGraveyard
+
+pushLibraryCard :: Monad m => Object 'OTPlayer -> AnyCard -> Magic 'Private 'RW m (ZO 'ZLibrary OTNCard)
+pushLibraryCard = logCall 'pushLibraryCard $ pushZoneCard pciLibrary
 
 pushHandCard :: Monad m => Object 'OTPlayer -> AnyCard -> Magic 'Private 'RW m (ZO 'ZHand OTNCard)
-pushHandCard oPlayer card = logCall 'pushHandCard do
-  player <- fromRO $ getPlayer oPlayer
-  i <- newObjectId
-  let zo0 = toZO0 i
-      zoCard = zo0ToCard zo0
-  modify \st -> st{magicHandCards = Map.insert zo0 card $ magicHandCards st}
-  setPlayer oPlayer player{playerHand = pushCard zoCard $ playerHand player}
-  pure zoCard
+pushHandCard = logCall 'pushHandCard $ pushZoneCard pciHand
+
+findZoneCard ::
+  (IsZO zone OTNCard, Monad m, ToZO0 zone (ZO zone OTNCard)) =>
+  PlayerCardsInfo zone m ->
+  Object 'OTPlayer ->
+  ZO zone OTNCard ->
+  Magic 'Private 'RO m (Maybe AnyCard)
+findZoneCard info oPlayer zoCard = logCall 'findZoneCard do
+  fromRO (gets $ Map.lookup (toZO0 zoCard) . pci_magicZoneCards info) >>= \case
+    Nothing -> pure Nothing
+    Just card -> do
+      player <- fromRO $ getPlayer oPlayer
+      pure case zoCard `elem` pci_playerZoneCards info player of
+        False -> Nothing
+        True -> Just card
+
+findGraveyardCard :: Monad m => Object 'OTPlayer -> ZO 'ZGraveyard OTNCard -> Magic 'Private 'RO m (Maybe AnyCard)
+findGraveyardCard = logCall 'findGraveyardCard $ findZoneCard pciGraveyard
 
 findHandCard :: Monad m => Object 'OTPlayer -> ZO 'ZHand OTNCard -> Magic 'Private 'RO m (Maybe AnyCard)
-findHandCard oPlayer zoCard = logCall 'findHandCard do
-  fromRO (gets $ Map.lookup (toZO0 zoCard) . magicHandCards) >>= \case
-    Nothing -> pure Nothing
-    Just card -> do
-      player <- fromRO $ getPlayer oPlayer
-      pure case zoCard `elem` unHand (playerHand player) of
-        False -> Nothing
-        True -> Just card
+findHandCard = logCall 'findHandCard $ findZoneCard pciHand
 
 findLibraryCard :: Monad m => Object 'OTPlayer -> ZO 'ZLibrary OTNCard -> Magic 'Private 'RO m (Maybe AnyCard)
-findLibraryCard oPlayer zoCard = logCall 'findLibraryCard do
-  fromRO (gets $ Map.lookup (toZO0 zoCard) . magicLibraryCards) >>= \case
+findLibraryCard = logCall 'findLibraryCard $ findZoneCard pciLibrary
+
+removeZoneCard ::
+  (IsZO zone OTNCard, Monad m, ToZO0 zone (ZO zone OTNCard)) =>
+  PlayerCardsInfo zone m ->
+  Object 'OTPlayer ->
+  ZO zone OTNCard ->
+  Magic 'Private 'RW m (Maybe AnyCard)
+removeZoneCard info oPlayer zoCard = logCall 'removeZoneCard do
+  fromRO (findZoneCard info oPlayer zoCard) >>= \case
     Nothing -> pure Nothing
-    Just card -> do
+    Just{} -> do
+      mCard <- fromRO $ gets $ Map.lookup (toZO0 zoCard) . pci_magicZoneCards info
+      modify \st -> pci_setMagicZoneCards info st $ Map.delete (toZO0 zoCard) $ pci_magicZoneCards info st
       player <- fromRO $ getPlayer oPlayer
-      pure case zoCard `elem` unLibrary (playerLibrary player) of
-        False -> Nothing
-        True -> Just card
+      setPlayer oPlayer $
+        pci_setPlayerZoneCards info player $
+          List.delete zoCard $
+            pci_playerZoneCards info player
+      pure $ assert (isJust mCard) mCard
+
+removeGraveyardCard :: Monad m => Object 'OTPlayer -> ZO 'ZGraveyard OTNCard -> Magic 'Private 'RW m (Maybe AnyCard)
+removeGraveyardCard = logCall 'removeGraveyardCard $ removeZoneCard pciGraveyard
 
 removeHandCard :: Monad m => Object 'OTPlayer -> ZO 'ZHand OTNCard -> Magic 'Private 'RW m (Maybe AnyCard)
-removeHandCard oPlayer zoCard = logCall 'removeHandCard do
-  fromRO (findHandCard oPlayer zoCard) >>= \case
-    Nothing -> pure Nothing
-    Just{} -> do
-      mCard <- fromRO $ gets $ Map.lookup (toZO0 zoCard) . magicHandCards
-      modify \st -> st{magicHandCards = Map.delete (toZO0 zoCard) $ magicHandCards st}
-      player <- fromRO $ getPlayer oPlayer
-      setPlayer oPlayer player{playerHand = Hand $ List.delete zoCard $ unHand $ playerHand player}
-      pure $ assert (isJust mCard) mCard
+removeHandCard = logCall 'removeHandCard $ removeZoneCard pciHand
 
 removeLibraryCard :: Monad m => Object 'OTPlayer -> ZO 'ZLibrary OTNCard -> Magic 'Private 'RW m (Maybe AnyCard)
-removeLibraryCard oPlayer zoCard = logCall 'removeLibraryCard do
-  fromRO (findLibraryCard oPlayer zoCard) >>= \case
-    Nothing -> pure Nothing
-    Just{} -> do
-      mCard <- fromRO $ gets $ Map.lookup (toZO0 zoCard) . magicLibraryCards
-      modify \st -> st{magicLibraryCards = Map.delete (toZO0 zoCard) $ magicLibraryCards st}
-      player <- fromRO $ getPlayer oPlayer
-      setPlayer oPlayer player{playerLibrary = Library $ List.delete zoCard $ unLibrary (playerLibrary player)}
-      pure $ assert (isJust mCard) mCard
+removeLibraryCard = logCall 'removeLibraryCard $ removeZoneCard pciLibrary
 
 findPermanent :: Monad m => ZO 'ZBattlefield OTNPermanent -> Magic 'Private 'RO m (Maybe Permanent)
 findPermanent zoPerm = logCall 'findPermanent $ gets $ Map.lookup (toZO0 zoPerm) . magicPermanents

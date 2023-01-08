@@ -9,10 +9,15 @@ module MtgPure.Model.Graveyard (
 
 import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
+import safe MtgPure.Model.IsCardList (IsCardList (..))
 import safe MtgPure.Model.Object.OTNAliases (OTNCard)
 import safe MtgPure.Model.Zone (Zone (..))
 import safe MtgPure.Model.ZoneObject.ZoneObject (ZO)
 
 newtype Graveyard :: Type where
-  Graveyard :: [ZO 'ZGraveyard OTNCard] -> Graveyard
+  Graveyard :: {unGraveyard :: [ZO 'ZGraveyard OTNCard]} -> Graveyard
   deriving (Typeable)
+
+instance IsCardList Graveyard (ZO 'ZGraveyard OTNCard) where
+  toCardList = Graveyard
+  fromCardList = unGraveyard

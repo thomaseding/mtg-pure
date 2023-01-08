@@ -14,7 +14,7 @@ module MtgPure.Engine.Enact (
 
 import safe qualified Control.Monad as M
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
-import safe Control.Monad.Trans (lift)
+import safe qualified Control.Monad.Trans as M
 import safe Control.Monad.Util (untilJust)
 import safe qualified Data.List as List
 import safe MtgPure.Engine.Fwd.Api (
@@ -67,6 +67,9 @@ enact = logCall 'enact \case
   DrawCards oPlayer amount -> drawCards' amount $ zo1ToO oPlayer
   EffectCase case_ -> caseOf enact case_
   EffectContinuous{} -> undefined
+  Exile{} -> undefined
+  GainLife{} -> undefined
+  LoseLife{} -> undefined
   PutOntoBattlefield{} -> undefined
   Sacrifice{} -> undefined
   SearchLibrary{} -> undefined
@@ -137,14 +140,13 @@ shuffleLibrary' oPlayer = logCall 'shuffleLibrary' do
   let library = fromCardList $ playerLibrary player
       count = length library
       ordered = [0 .. count - 1]
-  ordering <- lift $
-    untilJust \attempt -> do
-      ordering <- promptShuffle prompt attempt (CardCount count) oPlayer
-      case List.sort (map unCardIndex ordering) == ordered of
-        True -> pure $ Just ordering
-        False -> do
-          exceptionInvalidShuffle prompt (CardCount count) ordering
-          pure Nothing
+  ordering <- untilJust \attempt -> do
+    ordering <- M.lift $ promptShuffle prompt attempt (CardCount count) oPlayer
+    case List.sort (map unCardIndex ordering) == ordered of
+      True -> pure $ Just ordering
+      False -> do
+        M.lift $ exceptionInvalidShuffle prompt (CardCount count) ordering
+        pure Nothing
   let library' = map snd $ List.sortOn fst $ zip ordering library
   setPlayer oPlayer $ player{playerLibrary = toCardList library'}
   pure mempty

@@ -70,8 +70,9 @@ import safe MtgPure.Model.Object.OTNAliases (
   OTNTriggeredAbility,
  )
 import safe MtgPure.Model.Object.ObjectId (GetObjectId (..))
-import safe MtgPure.Model.Object.ObjectN (ObjectN (..))
-import safe MtgPure.Model.Object.VisitObjectN (VisitObjectN (..))
+import safe MtgPure.Model.Object.ObjectN (ObjectN)
+import safe MtgPure.Model.Object.PromoteIdToObjectN (PromoteIdToObjectN)
+import safe MtgPure.Model.Object.VisitObjectN ()
 import safe MtgPure.Model.PrettyType (PrettyType (..))
 import safe MtgPure.Model.Zone (IsZone (..), SZone (..), Zone (..))
 
@@ -98,21 +99,19 @@ instance (IsZone zone, PrettyType ot) => PrettyType (ZO zone ot) where
       True -> ("(", ")")
       False -> ("", "")
 
-instance GetObjectId (ObjectN ot) => GetObjectId (ZO zone ot) where
+instance GetObjectId (ZO zone ot) where
   getUntypedObject = getUntypedObject . zoToObjectN
 
 type IsOTN (ot :: Type) =
   ( IndexOT ot
-  , VisitObjectN ot
+  , PromoteIdToObjectN ot
   , PrettyType ot
   , LitOTN ot
-  , GetObjectId (ObjectN ot)
   )
 
 type IsZO (zone :: Zone) (ot :: Type) =
   ( IsOTN ot
   , IsZone zone
-  , PrettyType (ZO zone ot)
   -- XXX: Prolly dont want to put these here so they dont leak to Authoring
   --, Eq (ZO zone ot)
   --, Ord (ZO zone ot)

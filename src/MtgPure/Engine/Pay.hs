@@ -17,12 +17,15 @@ import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
 import safe qualified Control.Monad.Trans as M
 import safe Control.Monad.Util (untilJust)
 import safe Data.Functor ((<&>))
-import safe Data.List.NonEmpty (NonEmpty (..))
 import safe Data.Monoid (First (..))
 import safe MtgPure.Engine.Fwd.Api (
   enact,
   findPlayer,
+  getPermanent,
+  pickOneZO,
+  pushGraveyardCard,
   satisfies,
+  setPermanent,
   setPlayer,
   zosSatisfying,
  )
@@ -36,9 +39,10 @@ import safe MtgPure.Model.Mana (IsManaNoVar, IsSnow, Mana)
 import safe MtgPure.Model.ManaCost (ManaCost (..))
 import safe MtgPure.Model.ManaPool (CompleteManaPool (..), ManaPool (..))
 import safe MtgPure.Model.Object.Object (Object)
-import safe MtgPure.Model.Object.ObjectN (ObjectN (..))
+import safe MtgPure.Model.Object.ObjectN_ (ObjectN' (..))
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Object.Singleton.Permanent (CoPermanent)
+import safe MtgPure.Model.Permanent (Permanent (..))
 import safe MtgPure.Model.Player (Player (..))
 import safe MtgPure.Model.Recursive (Cost (..), Effect (..), Requirement (..))
 import safe MtgPure.Model.Variable (ForceVars (forceVars), Var (..))
@@ -56,7 +60,7 @@ pay oPlayer = logCall 'pay \case
   ManaCost manaCost -> payManaCost oPlayer manaCost
   OrCosts costs -> payOrCosts oPlayer costs
   PayLife{} -> undefined
-  SacrificeCost{} -> undefined
+  SacrificeCost reqs -> paySacrificeCost oPlayer $ RAnd reqs
   TapCost reqs -> payTapCost oPlayer $ RAnd reqs
 
 class FindMana manas var | manas -> var where
@@ -112,17 +116,40 @@ payManaCost oPlayer (forceVars -> cost) = logCall 'payManaCost do
                 _ -> do
                   prompt <- fromRO $ gets magicPrompt
                   opaque <- fromRO $ gets mkOpaqueGameState
-                  M.lift $ untilJust \attempt -> do
-                    fullPayment <- promptPayGeneric prompt attempt opaque oPlayer generic'
+                  untilJust \attempt -> do
+                    fullPayment <- M.lift $ promptPayGeneric prompt attempt opaque oPlayer generic'
                     let payment = poolNonSnow fullPayment
                     case countMana payment == generic of
                       True -> pure $ Just payment
                       False -> do
-                        exceptionInvalidGenericManaPayment prompt generic' fullPayment
+                        M.lift $ exceptionInvalidGenericManaPayment prompt generic' fullPayment
                         pure Nothing
               let pool'' = pool' - payment
               setPlayer oPlayer player{playerMana = (playerMana player){poolNonSnow = pool''}}
               pure Legal
+
+paySacrificeCost ::
+  (Monad m, IsZO 'ZBattlefield ot, CoPermanent ot) =>
+  Object 'OTPlayer ->
+  Requirement 'ZBattlefield ot ->
+  Magic 'Private 'RW m Legality
+paySacrificeCost oPlayer req = logCall 'paySacrificeCost do
+  fromRO (zosSatisfying req' >>= pickOneZO oPlayer) >>= \case
+    Nothing -> pure Illegal
+    Just zo -> do
+      let zoPerm = zo0ToPermanent $ toZO0 zo
+      perm <- fromRO $ getPermanent zoPerm
+      setPermanent zoPerm Nothing
+      case permanentCard perm of
+        Left card -> M.void $ pushGraveyardCard oPlayer card
+        Right _token -> pure ()
+      pure Legal
+ where
+  req' =
+    RAnd
+      [ ControlledBy $ ZO SZBattlefield $ O1 oPlayer
+      , req
+      ]
 
 payTapCost ::
   (Monad m, IsZO 'ZBattlefield ot, CoPermanent ot) =>
@@ -130,20 +157,12 @@ payTapCost ::
   Requirement 'ZBattlefield ot ->
   Magic 'Private 'RW m Legality
 payTapCost oPlayer req = logCall 'payTapCost do
-  fromRO (zosSatisfying req') >>= \case
-    [] -> pure Illegal
-    zos@(zosHead : zosTail) -> do
-      prompt <- fromRO $ gets magicPrompt
-      opaque <- fromRO $ gets mkOpaqueGameState
-      zo <- M.lift $
-        untilJust \attempt -> do
-          zo <- promptPickZO prompt attempt opaque oPlayer $ zosHead :| zosTail
-          pure case zo `elem` zos of
-            False -> Nothing
-            True -> Just zo
-      let oPerm = zo0ToPermanent $ toZO0 zo
-      M.void $ enact $ Tap oPerm
-      fromRO $ satisfies oPerm isTapped <&> toLegality
+  fromRO (zosSatisfying req' >>= pickOneZO oPlayer) >>= \case
+    Nothing -> pure Illegal
+    Just zo -> do
+      let zoPerm = zo0ToPermanent $ toZO0 zo
+      M.void $ enact $ Tap zoPerm
+      fromRO $ satisfies zoPerm isTapped <&> toLegality
  where
   req' =
     RAnd

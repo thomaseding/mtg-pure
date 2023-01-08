@@ -60,13 +60,13 @@ replayLog = Nothing -- Just "replay-Mountain-Shock.log"
 
 replayInputs :: [String]
 replayInputs =
-  [ "Pass"
-  , "Pass"
-  , "Pass"
-  , "Pass"
-  , "PlayLand 8"
-  , "ActivateAbility 11 R"
-  , "CastSpell 7"
-  , "Pass"
-  , "Pass"
+  [ "Pass ; O=1 UpkeepStep Turn1"
+  , "Pass ; O=2 UpkeepStep Turn1"
+  , "Pass ; O=1 DrawStep Turn1"
+  , "Pass ; O=2 DrawStep Turn1"
+  , "PlayLand 8 ; O=1 PreCombatMainPhase Turn1"
+  , "ActivateAbility 11 R ; O=1 PreCombatMainPhase Turn1"
+  , "CastSpell 7 ; O=1 PreCombatMainPhase Turn1"
+  , "Pass ; O=1 PreCombatMainPhase Turn1"
+  , "Pass ; O=2 PreCombatMainPhase Turn1"
   ]

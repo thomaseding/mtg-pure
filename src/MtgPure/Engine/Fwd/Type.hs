@@ -22,6 +22,7 @@ import safe MtgPure.Engine.Prompt (
   ActivateAbility,
   CastSpell,
   EnactInfo,
+  OwnedCard,
   PlayLand,
   PlayerCount (..),
   PriorityAction,
@@ -65,6 +66,7 @@ data Fwd' ex st m where
     , fwd_controllerOf :: forall zone ot. IsZO zone ot => ZO zone ot -> Magic' ex st 'Private 'RO m (Object 'OTPlayer)
     , fwd_doesZoneObjectExist :: forall zone ot. IsZO zone ot => ZO zone ot -> Magic' ex st 'Private 'RO m Bool
     , fwd_enact :: Effect 'OneShot -> Magic' ex st 'Private 'RW m EnactInfo
+    , fwd_findGraveyardCard :: Object 'OTPlayer -> ZO 'ZGraveyard OTNCard -> Magic' ex st 'Private 'RO m (Maybe AnyCard)
     , fwd_findHandCard :: Object 'OTPlayer -> ZO 'ZHand OTNCard -> Magic' ex st 'Private 'RO m (Maybe AnyCard)
     , fwd_findLibraryCard :: Object 'OTPlayer -> ZO 'ZLibrary OTNCard -> Magic' ex st 'Private 'RO m (Maybe AnyCard)
     , fwd_findPermanent :: ZO 'ZBattlefield OTNPermanent -> Magic' ex st 'Private 'RO m (Maybe Permanent)
@@ -81,16 +83,20 @@ data Fwd' ex st m where
     , fwd_getPlayerWithPriority :: Magic' ex st 'Public 'RO m (Maybe (Object 'OTPlayer))
     , fwd_indexToAbility :: forall zone ot. IsZO zone ot => AbsoluteActivatedAbilityIndex -> Magic' ex st 'Private 'RO m (Maybe (SomeActivatedAbility zone ot))
     , fwd_newObjectId :: Magic' ex st 'Private 'RW m ObjectId
+    , fwd_ownerOf :: forall zone ot. IsZO zone ot => ZO zone ot -> Magic' ex st 'Private 'RO m (Object 'OTPlayer)
     , fwd_pay :: forall ot. Object 'OTPlayer -> Cost ot -> Magic' ex st 'Private 'RW m Legality
     , fwd_performElections :: forall ot p el x. ZO 'ZStack OT0 -> (el -> Magic' ex st 'Private 'RW m (Maybe x)) -> Elect p el ot -> Magic' ex st 'Private 'RW m (Maybe x)
     , fwd_performStateBasedActions :: Magic' ex st 'Private 'RW m ()
+    , fwd_pickOneZO :: forall zone ot. IsZO zone ot => Object 'OTPlayer -> [ZO zone ot] -> Magic' ex st 'Private 'RO m (Maybe (ZO zone ot))
     , fwd_playLand :: Object 'OTPlayer -> SpecialAction PlayLand -> Magic' ex st 'Private 'RW m Legality
+    , fwd_pushGraveyardCard :: Object 'OTPlayer -> AnyCard -> Magic' ex st 'Private 'RW m (ZO 'ZGraveyard OTNCard)
     , fwd_pushHandCard :: Object 'OTPlayer -> AnyCard -> Magic' ex st 'Private 'RW m (ZO 'ZHand OTNCard)
     , fwd_pushLibraryCard :: Object 'OTPlayer -> AnyCard -> Magic' ex st 'Private 'RW m (ZO 'ZLibrary OTNCard)
+    , fwd_removeGraveyardCard :: Object 'OTPlayer -> ZO 'ZGraveyard OTNCard -> Magic' ex st 'Private 'RW m (Maybe AnyCard)
     , fwd_removeHandCard :: Object 'OTPlayer -> ZO 'ZHand OTNCard -> Magic' ex st 'Private 'RW m (Maybe AnyCard)
     , fwd_removeLibraryCard :: Object 'OTPlayer -> ZO 'ZLibrary OTNCard -> Magic' ex st 'Private 'RW m (Maybe AnyCard)
     , fwd_requiresTargets :: forall p el ot. Elect p el ot -> Magic' ex st 'Private 'RO m Bool
-    , fwd_resolveOneShot :: forall ot. ZO 'ZStack OT0 -> Elect 'Post (Effect 'OneShot) ot -> Magic' ex st 'Private 'RW m (Maybe EnactInfo)
+    , fwd_resolveOneShot :: forall ot. ZO 'ZStack OT0 -> Maybe OwnedCard -> Elect 'Post (Effect 'OneShot) ot -> Magic' ex st 'Private 'RW m (Maybe EnactInfo)
     , fwd_resolveTopOfStack :: Magic' ex st 'Private 'RW m ()
     , fwd_rewindIllegal :: Magic' ex st 'Private 'RW m Legality -> Magic' ex st 'Private 'RW m Bool
     , fwd_satisfies :: forall zone ot. IsZO zone ot => ZO zone ot -> Requirement zone ot -> Magic' ex st 'Private 'RO m Bool

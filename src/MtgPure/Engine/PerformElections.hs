@@ -12,11 +12,12 @@ module MtgPure.Engine.PerformElections (
   performElections,
   requiresTargets,
   controllerOf,
+  ownerOf,
 ) where
 
 import safe Control.Exception (assert)
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
-import safe Control.Monad.Trans (lift)
+import safe qualified Control.Monad.Trans as M
 import safe Control.Monad.Util (untilJust)
 import safe Data.List.NonEmpty (NonEmpty (..))
 import safe qualified Data.Map.Strict as Map
@@ -39,6 +40,7 @@ import safe MtgPure.Engine.State (
   mkOpaqueGameState,
   withHeadlessPrompt,
  )
+import safe MtgPure.Model.Object.MapObjectN (mapObjectN)
 import safe MtgPure.Model.Object.OTN (OT0)
 import safe MtgPure.Model.Object.OTNAliases (OTNAny)
 import safe MtgPure.Model.Object.Object (Object (..))
@@ -48,7 +50,6 @@ import safe MtgPure.Model.Object.ObjectId (
   pattern DefaultObjectDiscriminant,
  )
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
-import safe MtgPure.Model.Object.VisitObjectN (VisitObjectN (..))
 import safe MtgPure.Model.Permanent (Permanent (..))
 import safe MtgPure.Model.PrePost (PrePost (..))
 import safe MtgPure.Model.Recursive (
@@ -107,6 +108,7 @@ performElections' bhv failureX zoStack goTerm = logCall 'performElections' \case
   Event{} -> undefined
   If{} -> undefined
   Listen{} -> undefined
+  OwnerOf zo cont -> electOwnerOf goRec zo cont
   Random{} -> undefined
   Target zoPlayer thisToElect -> goTarget zoPlayer thisToElect
   VariableFromPower{} -> undefined
@@ -149,6 +151,28 @@ electControllerOf ::
 electControllerOf goElect zo cont = logCall 'electControllerOf do
   controller <- fromRO $ controllerOf zo
   let elect = cont $ oToZO1 controller
+  goElect elect
+
+ownerOf ::
+  forall zone ot m.
+  (IsZO zone ot, Monad m) =>
+  ZO zone ot ->
+  Magic 'Private 'RO m (Object 'OTPlayer)
+ownerOf zo = logCall 'ownerOf do
+  gets (Map.lookup (getObjectId zo) . magicOwnershipMap) >>= \case
+    Nothing -> error $ show (undefined :: InternalLogicError)
+    Just owner -> pure owner
+
+electOwnerOf ::
+  forall p zone m el ot x.
+  (IsZO zone OTNAny, Monad m) =>
+  (Elect p el ot -> Magic 'Private 'RW m x) ->
+  ZO zone OTNAny ->
+  (ZOPlayer -> Elect p el ot) ->
+  Magic 'Private 'RW m x
+electOwnerOf goElect zo cont = logCall 'electOwnerOf do
+  owner <- fromRO $ ownerOf zo
+  let elect = cont $ oToZO1 owner
   goElect elect
 
 data Selection
@@ -217,12 +241,11 @@ electA sel zoStack failureX goElect oPlayer = logCall 'electA \case
       [] -> pure failureX
       zos@(zosHead : zosTail) -> do
         opaque <- fromRO $ gets mkOpaqueGameState
-        zo <- lift $
-          untilJust \attempt -> do
-            zo <- promptPickZO prompt attempt opaque (zo1ToO oPlayer) $ zosHead :| zosTail
-            pure case zo `elem` zos of
-              False -> Nothing
-              True -> Just zo
+        zo <- untilJust \attempt -> do
+          zo <- M.lift $ promptPickZO prompt attempt opaque (zo1ToO oPlayer) $ zosHead :| zosTail
+          pure case zo `elem` zos of
+            False -> Nothing
+            True -> Just zo
         zo' <- case sel of
           Choose' -> pure zo
           Target' -> newTarget zoStack zo $ RAnd reqs

@@ -8,11 +8,11 @@ module MtgPure.Model (
   module MtgPure.Model.CardSet,
   module MtgPure.Model.CardType,
   module MtgPure.Model.Color,
+  module MtgPure.Model.ColorToManaType,
   module MtgPure.Model.ColoredMana,
   module MtgPure.Model.ColorlessMana,
   module MtgPure.Model.Colors,
   module MtgPure.Model.ColorsLike,
-  module MtgPure.Model.ColorToManaType,
   module MtgPure.Model.CountMana,
   module MtgPure.Model.Creature,
   module MtgPure.Model.CreatureType,
@@ -20,7 +20,6 @@ module MtgPure.Model (
   module MtgPure.Model.Deck,
   module MtgPure.Model.EffectType,
   module MtgPure.Model.Enchantment,
-  module MtgPure.Model.Exile,
   module MtgPure.Model.GenericMana,
   module MtgPure.Model.Graveyard,
   module MtgPure.Model.Hand,
@@ -39,23 +38,27 @@ module MtgPure.Model (
   module MtgPure.Model.Object.IndexOT,
   module MtgPure.Model.Object.IsObjectType,
   module MtgPure.Model.Object.LitOTN,
-  module MtgPure.Model.Object.Object,
-  module MtgPure.Model.Object.ObjectId,
-  module MtgPure.Model.Object.ObjectN,
-  module MtgPure.Model.Object.ObjectType,
-  module MtgPure.Model.Object.ObjectTypeN,
+  module MtgPure.Model.Object.MapObjectN,
   module MtgPure.Model.Object.OTKN,
   module MtgPure.Model.Object.OTKN_,
   module MtgPure.Model.Object.OTN,
   module MtgPure.Model.Object.OTNAliases,
   module MtgPure.Model.Object.OTN_,
+  module MtgPure.Model.Object.Object,
+  module MtgPure.Model.Object.ObjectId,
+  module MtgPure.Model.Object.ObjectN,
+  module MtgPure.Model.Object.ObjectN_,
+  module MtgPure.Model.Object.ObjectType,
+  module MtgPure.Model.Object.ObjectTypeN,
+  module MtgPure.Model.Object.PromoteIdToObjectN,
+  module MtgPure.Model.Object.SObjectType,
   module MtgPure.Model.Object.Singleton.Any,
   module MtgPure.Model.Object.Singleton.Card,
   module MtgPure.Model.Object.Singleton.NonCreatureCard,
   module MtgPure.Model.Object.Singleton.Permanent,
   module MtgPure.Model.Object.Singleton.Spell,
-  module MtgPure.Model.Object.SObjectType,
   module MtgPure.Model.Object.ToObjectN,
+  module MtgPure.Model.Object.ViewObjectN,
   module MtgPure.Model.Object.VisitObjectN,
   module MtgPure.Model.Permanent,
   module MtgPure.Model.Phase,
@@ -107,7 +110,6 @@ import safe MtgPure.Model.Damage
 import safe MtgPure.Model.Deck
 import safe MtgPure.Model.EffectType
 import safe MtgPure.Model.Enchantment
-import safe MtgPure.Model.Exile
 import safe MtgPure.Model.GenericMana
 import safe MtgPure.Model.Graveyard
 import safe MtgPure.Model.Hand
@@ -126,6 +128,7 @@ import safe MtgPure.Model.ManaTypeToColor
 import safe MtgPure.Model.Object.IndexOT
 import safe MtgPure.Model.Object.IsObjectType
 import safe MtgPure.Model.Object.LitOTN
+import safe MtgPure.Model.Object.MapObjectN
 import safe MtgPure.Model.Object.OTKN
 import safe MtgPure.Model.Object.OTKN_
 import safe MtgPure.Model.Object.OTN
@@ -134,8 +137,10 @@ import safe MtgPure.Model.Object.OTN_
 import safe MtgPure.Model.Object.Object
 import safe MtgPure.Model.Object.ObjectId
 import safe MtgPure.Model.Object.ObjectN
+import safe MtgPure.Model.Object.ObjectN_
 import safe MtgPure.Model.Object.ObjectType
 import safe MtgPure.Model.Object.ObjectTypeN
+import safe MtgPure.Model.Object.PromoteIdToObjectN
 import safe MtgPure.Model.Object.SObjectType
 import safe MtgPure.Model.Object.Singleton.Any
 import safe MtgPure.Model.Object.Singleton.Card
@@ -143,6 +148,7 @@ import safe MtgPure.Model.Object.Singleton.NonCreatureCard
 import safe MtgPure.Model.Object.Singleton.Permanent
 import safe MtgPure.Model.Object.Singleton.Spell
 import safe MtgPure.Model.Object.ToObjectN
+import safe MtgPure.Model.Object.ViewObjectN
 import safe MtgPure.Model.Object.VisitObjectN
 import safe MtgPure.Model.Permanent
 import safe MtgPure.Model.Phase

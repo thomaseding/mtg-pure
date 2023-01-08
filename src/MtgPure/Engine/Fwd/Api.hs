@@ -30,6 +30,7 @@ module MtgPure.Engine.Fwd.Api (
   controllerOf,
   doesZoneObjectExist,
   enact,
+  findGraveyardCard,
   findHandCard,
   findLibraryCard,
   findPermanent,
@@ -47,12 +48,16 @@ module MtgPure.Engine.Fwd.Api (
   indexToActivated,
   modifyPlayer,
   newObjectId,
+  ownerOf,
   pay,
   performElections,
   performStateBasedActions,
+  pickOneZO,
   playLand,
+  pushGraveyardCard,
   pushHandCard,
   pushLibraryCard,
+  removeGraveyardCard,
   removeHandCard,
   removeLibraryCard,
   requiresTargets,
@@ -86,6 +91,7 @@ import safe MtgPure.Engine.Prompt (
   ActivateAbility,
   CastSpell,
   EnactInfo,
+  OwnedCard,
   PlayLand,
   PlayerCount (..),
   PriorityAction,
@@ -142,6 +148,11 @@ fwd3 :: (IsReadWrite rw, Monad m) => (Fwd m -> (a -> b -> c -> Magic v rw m z)) 
 fwd3 go a b c = do
   fwd <- getFwd
   go fwd a b c
+
+-- fwd4 :: (IsReadWrite rw, Monad m) => (Fwd m -> (a -> b -> c -> d -> Magic v rw m z)) -> a -> b -> c -> d -> Magic v rw m z
+-- fwd4 go a b c d = do
+--   fwd <- getFwd
+--   go fwd a b c d
 
 data Api (m :: Type -> Type) (v :: Visibility) (rw :: ReadWrite) (ret :: Type) :: Type where
   ActivatedToIndex :: IsZO zone ot => SomeActivatedAbility zone ot -> Api m 'Private 'RO AbsoluteActivatedAbilityIndex
@@ -295,6 +306,9 @@ doesZoneObjectExist = fwd1 fwd_doesZoneObjectExist
 enact :: Monad m => Effect 'OneShot -> Magic 'Private 'RW m EnactInfo
 enact = fwd1 fwd_enact
 
+findGraveyardCard :: Monad m => Object 'OTPlayer -> ZO 'ZGraveyard OTNCard -> Magic 'Private 'RO m (Maybe AnyCard)
+findGraveyardCard = fwd2 fwd_findGraveyardCard
+
 findHandCard :: Monad m => Object 'OTPlayer -> ZO 'ZHand OTNCard -> Magic 'Private 'RO m (Maybe AnyCard)
 findHandCard = fwd2 fwd_findHandCard
 
@@ -348,6 +362,9 @@ modifyPlayer o f = do
 newObjectId :: Monad m => Magic 'Private 'RW m ObjectId
 newObjectId = fwd0 fwd_newObjectId
 
+ownerOf :: (IsZO zone ot, Monad m) => ZO zone ot -> Magic 'Private 'RO m (Object 'OTPlayer)
+ownerOf = fwd1 fwd_ownerOf
+
 pay :: Monad m => Object 'OTPlayer -> Cost ot -> Magic 'Private 'RW m Legality
 pay = fwd2 fwd_pay
 
@@ -363,14 +380,23 @@ performElections = fwd3 fwd_performElections
 performStateBasedActions :: Monad m => Magic 'Private 'RW m ()
 performStateBasedActions = fwd0 fwd_performStateBasedActions
 
-playLand :: forall m. Monad m => Object 'OTPlayer -> SpecialAction PlayLand -> Magic 'Private 'RW m Legality
+pickOneZO :: (IsZO zone ot, Monad m) => Object 'OTPlayer -> [ZO zone ot] -> Magic 'Private 'RO m (Maybe (ZO zone ot))
+pickOneZO = fwd2 fwd_pickOneZO
+
+playLand :: Monad m => Object 'OTPlayer -> SpecialAction PlayLand -> Magic 'Private 'RW m Legality
 playLand = fwd2 fwd_playLand
+
+pushGraveyardCard :: Monad m => Object 'OTPlayer -> AnyCard -> Magic 'Private 'RW m (ZO 'ZGraveyard OTNCard)
+pushGraveyardCard = fwd2 fwd_pushGraveyardCard
 
 pushHandCard :: Monad m => Object 'OTPlayer -> AnyCard -> Magic 'Private 'RW m (ZO 'ZHand OTNCard)
 pushHandCard = fwd2 fwd_pushHandCard
 
 pushLibraryCard :: Monad m => Object 'OTPlayer -> AnyCard -> Magic 'Private 'RW m (ZO 'ZLibrary OTNCard)
 pushLibraryCard = fwd2 fwd_pushLibraryCard
+
+removeGraveyardCard :: Monad m => Object 'OTPlayer -> ZO 'ZGraveyard OTNCard -> Magic 'Private 'RW m (Maybe AnyCard)
+removeGraveyardCard = fwd2 fwd_removeGraveyardCard
 
 removeHandCard :: Monad m => Object 'OTPlayer -> ZO 'ZHand OTNCard -> Magic 'Private 'RW m (Maybe AnyCard)
 removeHandCard = fwd2 fwd_removeHandCard
@@ -381,8 +407,8 @@ removeLibraryCard = fwd2 fwd_removeLibraryCard
 requiresTargets :: Monad m => Elect p el ot -> Magic 'Private 'RO m Bool
 requiresTargets = fwd1 fwd_requiresTargets
 
-resolveOneShot :: Monad m => ZO 'ZStack OT0 -> Elect 'Post (Effect 'OneShot) ot -> Magic 'Private 'RW m (Maybe EnactInfo)
-resolveOneShot = fwd2 fwd_resolveOneShot
+resolveOneShot :: Monad m => ZO 'ZStack OT0 -> Maybe OwnedCard -> Elect 'Post (Effect 'OneShot) ot -> Magic 'Private 'RW m (Maybe EnactInfo)
+resolveOneShot = fwd3 fwd_resolveOneShot
 
 resolveTopOfStack :: Monad m => Magic 'Private 'RW m ()
 resolveTopOfStack = fwd0 fwd_resolveTopOfStack

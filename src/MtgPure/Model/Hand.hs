@@ -16,10 +16,7 @@ import safe MtgPure.Model.Zone (Zone (..))
 import safe MtgPure.Model.ZoneObject.ZoneObject (ZO)
 
 newtype Hand :: Type where
-  Hand ::
-    { unHand :: [ZO 'ZHand OTNCard]
-    } ->
-    Hand
+  Hand :: {unHand :: [ZO 'ZHand OTNCard]} -> Hand
   deriving (Typeable)
 
 instance IsCardList Hand (ZO 'ZHand OTNCard) where

@@ -73,7 +73,7 @@ import safe MtgPure.Model.Loyalty (Loyalty)
 import safe MtgPure.Model.Mana (Snow (..))
 import safe MtgPure.Model.ManaCost (ManaCost)
 import safe MtgPure.Model.ManaPool (ManaPool)
-import MtgPure.Model.Object.IndexOT (IndexOT)
+import safe MtgPure.Model.Object.IndexOT (IndexOT)
 import safe MtgPure.Model.Object.IsObjectType (IsObjectType)
 import safe MtgPure.Model.Object.OTN (OT1, OT2, OT3, OT4, OT5, OT6, OTN)
 import safe MtgPure.Model.Object.OTNAliases (
@@ -95,7 +95,7 @@ import safe MtgPure.Model.Object.OTNAliases (
   OTNSpell,
  )
 import safe MtgPure.Model.Object.Singleton.Any (WAny)
-import safe MtgPure.Model.Object.Singleton.Card (WCard)
+import safe MtgPure.Model.Object.Singleton.Card (CoCard, WCard)
 import safe MtgPure.Model.Object.Singleton.Permanent (CoPermanent, WPermanent)
 import safe MtgPure.Model.Object.Singleton.Spell (WSpell (..))
 import safe MtgPure.Model.Power (Power)
@@ -154,11 +154,13 @@ data ActivatedAbility (zone :: Zone) (ot :: Type) :: Type where
     , activated_effect :: Elect 'Post (Effect 'OneShot) ot
     } ->
     ActivatedAbility zone ot
+  Cycling :: (ot ~ OTN x, IsOTN ot) => Cost ot -> ActivatedAbility 'ZHand ot
   deriving (Typeable)
 
 instance ConsIndex (ActivatedAbility zone ot) where
   consIndex = \case
     Ability{} -> 1
+    Cycling{} -> 2
 
 ----------------------------------------
 
@@ -276,9 +278,9 @@ instance HasCardName AnyToken where
 
 data Card (ot :: Type) :: Type where
   Card :: (ot ~ OTN x, IsSpecificCard ot) => CardName -> YourCardFacet ot -> Card ot
-  DoubleSidedCard :: Inst2 IsSpecificCard ot1 ot2 => Card ot1 -> Card ot2 -> Card (ot1, ot2)
+  DoubleSidedCard :: (ot1 ~ OTN x, ot2 ~ OTN y, Inst2 IsSpecificCard ot1 ot2) => Card ot1 -> Card ot2 -> Card (ot1, ot2)
   SplitCard ::
-    Inst2 IsSpecificCard ot1 ot2 =>
+    (ot1 ~ OTN x, ot2 ~ OTN y, Inst2 IsSpecificCard ot1 ot2) =>
     { splitCard_card1 :: Card ot1
     , splitCard_card2 :: Card ot2
     , splitCard_abilities :: [Ability (ot1, ot2)]
@@ -466,7 +468,7 @@ data Cost (ot :: Type) :: Type where
   ManaCost :: ManaCost 'Var -> Cost ot
   OrCosts :: [Cost ot] -> Cost ot
   PayLife :: Int -> Cost ot -- TODO: PositiveInt
-  SacrificeCost :: IsZO 'ZBattlefield ot' => WPermanent ot' -> [Requirement 'ZBattlefield ot'] -> Cost ot
+  SacrificeCost :: (CoPermanent ot', IsZO 'ZBattlefield ot') => [Requirement 'ZBattlefield ot'] -> Cost ot
   TapCost :: (CoPermanent ot', IsZO 'ZBattlefield ot') => [Requirement 'ZBattlefield ot'] -> Cost ot
   deriving (Typeable)
 
@@ -496,8 +498,11 @@ data Effect (ef :: EffectType) :: Type where
   DrawCards :: ZOPlayer -> Int -> Effect 'OneShot
   EffectCase :: Case (Effect ef) -> Effect ef
   EffectContinuous :: Effect 'Continuous -> Effect 'OneShot -- 611.2
+  Exile :: (IsZO zone ot, CoCard ot) => ZO zone ot -> Effect 'OneShot -- TODO: zone /= 'ZExile
   GainAbility :: IsOTN ot => WAny ot -> ZO 'ZBattlefield ot -> Ability ot -> Effect 'Continuous
+  GainLife :: ZOPlayer -> Int -> Effect 'OneShot -- TODO: PositiveInt
   LoseAbility :: IsOTN ot => WAny ot -> ZO 'ZBattlefield ot -> Ability ot -> Effect 'Continuous
+  LoseLife :: ZOPlayer -> Int -> Effect 'OneShot -- TODO: PositiveInt
   PutOntoBattlefield :: IsZO zone ot => WPermanent ot -> ZOPlayer -> ZO zone ot -> Effect 'OneShot -- TODO: zone /= 'ZBattlefield
   Sacrifice :: IsOTN ot => WPermanent ot -> ZOPlayer -> [Requirement 'ZBattlefield ot] -> Effect 'OneShot
   SearchLibrary :: IsOTN ot => WCard ot -> ZOPlayer -> WithLinkedObject 'ZLibrary (Elect 'Post (Effect 'OneShot)) ot -> Effect 'OneShot
@@ -523,18 +528,21 @@ instance ConsIndex (Effect ef) where
     DrawCards{} -> 9
     EffectCase{} -> 10
     EffectContinuous{} -> 11
-    GainAbility{} -> 12
-    LoseAbility{} -> 13
-    PutOntoBattlefield{} -> 14
-    Sacrifice{} -> 15
-    SearchLibrary{} -> 16
-    Sequence{} -> 17
-    ShuffleLibrary{} -> 18
-    StatDelta{} -> 19
-    Tap{} -> 20
-    Untap{} -> 21
-    Until{} -> 22
-    WithList{} -> 23
+    Exile{} -> 12
+    GainAbility{} -> 13
+    GainLife{} -> 14
+    LoseAbility{} -> 15
+    LoseLife{} -> 16
+    PutOntoBattlefield{} -> 17
+    Sacrifice{} -> 18
+    SearchLibrary{} -> 19
+    Sequence{} -> 20
+    ShuffleLibrary{} -> 21
+    StatDelta{} -> 22
+    Tap{} -> 23
+    Untap{} -> 24
+    Until{} -> 25
+    WithList{} -> 26
 
 ----------------------------------------
 
@@ -560,6 +568,7 @@ data Elect (p :: PrePost) (el :: Type) (ot :: Type) :: Type where
   Event :: Event -> Elect 'Post Event ot
   If :: Condition -> Elect 'Post el ot -> Else el ot -> Elect 'Post el ot -- NOTE: It is probably correct to allow this constructor with CardTypeDef usage in order to encode split cards and such.
   Listen :: EventListener -> Elect 'Post EventListener ot
+  OwnerOf :: IsZO zone OTNAny => ZO zone OTNAny -> (ZOPlayer -> Elect p el ot) -> Elect p el ot
   -- TODO: Add `IsZO zone ot` witness and change `'ZBattlefield` to `zone`.
   -- TODO: Prolly allow both 'Pre and 'Post
   -- XXX: `Random` is potentially problematic when done within an aggrogate Elect such as `All`...
@@ -599,10 +608,11 @@ instance ConsIndex (Elect p el ot) where
     Event{} -> 13
     If{} -> 14
     Listen{} -> 15
-    Random{} -> 16
-    Target{} -> 17
-    VariableFromPower{} -> 18
-    VariableInt{} -> 19
+    OwnerOf{} -> 16
+    Random{} -> 17
+    Target{} -> 18
+    VariableFromPower{} -> 19
+    VariableInt{} -> 20
 
 type ElectPrePost el ot = Elect 'Pre (Elect 'Post el ot) ot
 
@@ -921,6 +931,7 @@ data StaticAbility (zone :: Zone) (ot :: Type) :: Type where
   StaticContinuous :: (ot ~ OTN x, IsOTN ot) => Elect 'Post (Effect 'Continuous) ot -> StaticAbility 'ZBattlefield ot -- 611.3
   -- XXX: SuspendPre and SuspendPost
   Suspend :: (ot ~ OTN x, IsOTN ot) => Int -> Elect 'Pre (Cost ot) ot -> StaticAbility 'ZBattlefield ot -- PositiveInt
+  Trample :: ot ~ OTNCreature => StaticAbility 'ZBattlefield ot
   deriving (Typeable)
 
 instance ConsIndex (StaticAbility zone ot) where
@@ -933,6 +944,7 @@ instance ConsIndex (StaticAbility zone ot) where
     Haste{} -> 6
     StaticContinuous{} -> 7
     Suspend{} -> 8
+    Trample{} -> 9
 
 ----------------------------------------
 

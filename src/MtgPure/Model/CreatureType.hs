@@ -10,7 +10,8 @@ module MtgPure.Model.CreatureType (
 import safe Data.Typeable (Typeable)
 
 data CreatureType
-  = Bird
+  = Bear
+  | Bird
   | Devil
   | Eldrazi
   | Elf

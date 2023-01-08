@@ -62,6 +62,7 @@ import safe MtgPure.Model.Object.OTN (
   OT4,
   OT5,
   OT6,
+  OTN,
  )
 import safe MtgPure.Model.Object.OTNAliases (
   OTNAny,
@@ -73,6 +74,7 @@ import safe MtgPure.Model.Object.OTNAliases (
   OTNPlayerPlaneswalker,
   OTNSpell,
  )
+import safe MtgPure.Model.Object.OTN_ (OTN' (..))
 import safe MtgPure.Model.Object.Object (Object (..))
 import safe MtgPure.Model.Object.ObjectId (
   ObjectId (ObjectId),
@@ -94,14 +96,16 @@ import safe MtgPure.Model.Object.ObjectN (
   ON7,
   ON8,
   ON9,
-  ObjectN (..),
+  ObjectN,
  )
+import safe MtgPure.Model.Object.ObjectN_ (ObjectN' (..))
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Object.Singleton.Any (WAny (..))
 import safe MtgPure.Model.Object.Singleton.Card (WCard (..))
 import safe MtgPure.Model.Object.Singleton.Permanent (WPermanent (..))
 import safe MtgPure.Model.Object.Singleton.Spell (WSpell (..))
-import safe MtgPure.Model.Object.VisitObjectN (KnownObjectN (..), VisitObjectN (..))
+import safe MtgPure.Model.Object.ViewObjectN (viewOTN')
+import safe MtgPure.Model.Object.VisitObjectN (visitObjectN')
 import safe MtgPure.Model.Power (Power)
 import safe MtgPure.Model.PrettyType (PrettyType (..))
 import safe MtgPure.Model.Recursive (
@@ -509,6 +513,9 @@ showActivatedAbility = \case
     sCost <- parens <$> showCost cost
     sEffect <- dollar <$> showElect effect
     pure $ pure "Ability " <> sCost <> sEffect
+  Cycling cost -> yesParens do
+    sCost <- parens <$> showCost cost
+    pure $ pure "Cycling " <> sCost
 
 showArtifactType :: ArtifactType -> EnvM ParenItems
 showArtifactType = noParens . pure . pure . fromString . show
@@ -847,10 +854,9 @@ showCost = \case
   PayLife amount -> yesParens do
     let sAmount = pure $ fromString $ show amount
     pure $ pure "PayLife " <> sAmount
-  SacrificeCost perm reqs -> yesParens do
-    sPerm <- parens <$> showWPermanent perm
+  SacrificeCost reqs -> yesParens do
     sReqs <- dollar <$> showRequirements reqs
-    pure $ pure "SacrificeCost " <> sPerm <> sReqs
+    pure $ pure "SacrificeCost" <> sReqs
   TapCost reqs -> yesParens do
     sReqs <- dollar <$> showRequirements reqs
     pure $ pure "TapCost" <> sReqs
@@ -913,16 +919,27 @@ showEffect = \case
   EffectContinuous effect -> yesParens do
     sEffect <- dollar <$> showEffect effect
     pure $ pure "EffectContinuous" <> sEffect
+  Exile obj -> yesParens do
+    sObj <- dollar <$> showZoneObject obj
+    pure $ pure "Exile" <> sObj
   GainAbility wAny obj ability -> yesParens do
     sWAny <- parens <$> showWAny wAny
     sObj <- parens <$> showZoneObject obj
     sAbility <- dollar <$> showAbility ability
     pure $ pure "GainAbility " <> sWAny <> pure " " <> sObj <> sAbility
+  GainLife player n -> yesParens do
+    sPlayer <- parens <$> showZoneObject player
+    let amount = fromString $ show n
+    pure $ pure "GainLife " <> sPlayer <> pure " " <> pure amount
   LoseAbility wAny obj ability -> yesParens do
     sWAny <- parens <$> showWAny wAny
     sObj <- parens <$> showZoneObject obj
     sAbility <- dollar <$> showAbility ability
     pure $ pure "LoseAbility " <> sWAny <> pure " " <> sObj <> sAbility
+  LoseLife player n -> yesParens do
+    sPlayer <- parens <$> showZoneObject player
+    let amount = fromString $ show n
+    pure $ pure "LoseLife " <> sPlayer <> pure " " <> pure amount
   PutOntoBattlefield wPerm player obj -> yesParens do
     sWPerm <- parens <$> showWPermanent wPerm
     sPlayer <- parens <$> showZoneObject player
@@ -1002,30 +1019,8 @@ showElect = \case
   Condition cond -> yesParens do
     sCond <- dollar <$> showCondition cond
     pure $ pure "Condition" <> sCond
-  ControllerOf zObj contElect -> yesParens do
-    objPrefix <-
-      getObjectNamePrefix
-        let objN :: ObjectN OTNAny
-            objN = case zObj of
-              ZO _ o -> o
-         in visitObjectN' objectToId objN
-    (controller', snap) <-
-      newObjectN @ 'OTPlayer O1 case objPrefix == "this" of
-        True -> "you"
-        False -> "controller"
-    let controller = toZone controller'
-    sController <- parens <$> showZoneObject controller
-    sZObj <- parens <$> showZoneObject zObj
-    let elect = contElect controller
-    sElect <- dropParens <$> showElect elect
-    restoreObject snap
-    pure $
-      pure "ControllerOf "
-        <> sZObj
-        <> pure " $ \\"
-        <> sController
-        <> pure " -> "
-        <> sElect
+  ControllerOf zObj contElect -> do
+    goPlayerOf "ControllerOf" "controller" zObj contElect
   Cost cost -> yesParens do
     sCost <- dollar <$> showCost cost
     pure $ pure "Cost" <> sCost
@@ -1055,6 +1050,8 @@ showElect = \case
   Listen listener -> yesParens do
     sListener <- dollar <$> showEventListener listener
     pure $ pure "Listen" <> sListener
+  OwnerOf zObj contElect -> do
+    goPlayerOf "OwnerOf" "owner" zObj contElect
   Random withObject -> yesParens do
     sWithObject <- dollar <$> showWithMaskedObject showElect "rand" withObject
     pure $ pure "Random" <> sWithObject
@@ -1085,6 +1082,32 @@ showElect = \case
         elect = contElect var
     sElect <- dropParens <$> showElect elect
     pure $ pure "VariableInt $ \\" <> pure varName <> pure " -> " <> sElect
+ where
+  goPlayerOf consName varName zObj contElect = yesParens do
+    objPrefix <-
+      getObjectNamePrefix
+        let objN :: ObjectN OTNAny
+            objN = case zObj of
+              ZO _ o -> o
+         in visitObjectN' objectToId objN
+    (player', snap) <-
+      newObjectN @ 'OTPlayer O1 case objPrefix == "this" of
+        True -> "you"
+        False -> varName
+    let player = toZone player'
+    sPlayer <- parens <$> showZoneObject player
+    sZObj <- parens <$> showZoneObject zObj
+    let elect = contElect player
+    sElect <- dropParens <$> showElect elect
+    restoreObject snap
+    pure $
+      pure consName
+        <> pure " "
+        <> sZObj
+        <> pure " $ \\"
+        <> sPlayer
+        <> pure " -> "
+        <> sElect
 
 showElse :: Else e ot -> EnvM ParenItems
 showElse = \case
@@ -1628,21 +1651,24 @@ showObject12 objN = visitObjectN' visit objN
           | rep == typeRep (Proxy @(ObjectN OTNAny)) -> "asAny"
           | otherwise -> "toZO12"
 
-showObjectN :: forall zone ot. (IsZone zone, VisitObjectN ot) => ObjectN ot -> EnvM ParenItems
-showObjectN objN = case knownObjectN objN of
-  KO0 obj0 -> showObject0 @zone obj0
-  KO1 obj1 -> showObject1 @zone obj1
-  KO2 obj2 -> showObject2 @zone obj2
-  KO3 obj3 -> showObject3 @zone obj3
-  KO4 obj4 -> showObject4 @zone obj4
-  KO5 obj5 -> showObject5 @zone obj5
-  KO6 obj6 -> showObject6 @zone obj6
-  KO7 obj7 -> showObject7 @zone obj7
-  KO8 obj8 -> showObject8 @zone obj8
-  KO9 obj9 -> showObject9 @zone obj9
-  KO10 obj10 -> showObject10 @zone obj10
-  KO11 obj11 -> showObject11 @zone obj11
-  KO12 obj12 -> showObject12 @zone obj12
+showObjectN :: forall zone ot. IsZO zone ot => ObjectN ot -> EnvM ParenItems
+showObjectN objN' = viewOTN' objN' go
+ where
+  go :: ObjectN (OTN otk) -> OTN otk -> EnvM ParenItems
+  go objN = \case
+    OT0 -> showObject0 @zone objN
+    OT1 -> showObject1 @zone objN
+    OT2 -> showObject2 @zone objN
+    OT3 -> showObject3 @zone objN
+    OT4 -> showObject4 @zone objN
+    OT5 -> showObject5 @zone objN
+    OT6 -> showObject6 @zone objN
+    OT7 -> showObject7 @zone objN
+    OT8 -> showObject8 @zone objN
+    OT9 -> showObject9 @zone objN
+    OT10 -> showObject10 @zone objN
+    OT11 -> showObject11 @zone objN
+    OT12 -> showObject12 @zone objN
 
 showPower :: Power -> EnvM ParenItems
 showPower = yesParens . pure . pure . fromString . show
@@ -1764,6 +1790,8 @@ showStaticAbility = \case
     let sTime = pure $ fromString $ show time
     sCost <- dollar <$> showElect cost
     pure $ pure "Suspend " <> sTime <> sCost
+  Trample -> noParens do
+    pure $ pure "Trample"
 
 showTimePoint :: TimePoint p -> EnvM ParenItems
 showTimePoint = yesParens . pure . pure . fromString . show

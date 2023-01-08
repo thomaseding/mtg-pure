@@ -6,6 +6,7 @@
 module MtgPure.Model.PhaseStep (
   PhaseStep (..),
   isMainPhase,
+  prettyPhaseStep,
 ) where
 
 import safe Data.Kind (Type)
@@ -26,3 +27,11 @@ isMainPhase = \case
   PSPreCombatMainPhase -> True
   PSPostCombatMainPhase -> True
   _ -> False
+
+prettyPhaseStep :: PhaseStep -> String
+prettyPhaseStep = \case
+  PSBeginningPhase step -> show step
+  PSPreCombatMainPhase -> "PreCombatMainPhase"
+  PSCombatPhase step -> show step
+  PSPostCombatMainPhase -> "PostCombatMainPhase"
+  PSEndingPhase step -> show step

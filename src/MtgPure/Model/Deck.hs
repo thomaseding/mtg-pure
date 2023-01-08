@@ -12,5 +12,5 @@ import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.Recursive (AnyCard)
 
 newtype Deck :: Type where
-  Deck :: [AnyCard] -> Deck
+  Deck :: {unDeck :: [AnyCard]} -> Deck
   deriving (Typeable)

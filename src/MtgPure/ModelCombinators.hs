@@ -332,7 +332,7 @@ satisfies ::
 satisfies = Satisfies coAny
 
 sacrificeCost :: CoPermanent ot' => [Requirement 'ZBattlefield ot'] -> Cost ot
-sacrificeCost = SacrificeCost coPermanent
+sacrificeCost = SacrificeCost
 
 tapCost :: CoPermanent ot' => [Requirement 'ZBattlefield ot'] -> Cost ot
 tapCost = TapCost

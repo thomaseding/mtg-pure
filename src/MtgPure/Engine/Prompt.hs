@@ -13,10 +13,13 @@ module MtgPure.Engine.Prompt (
   CardCount (..),
   CardIndex (..),
   CastSpell,
+  DeclaredAttacker (..),
+  DeclaredBlocker (..),
   EnactInfo (..),
   InternalLogicError (..),
   InvalidCastSpell (..),
   InvalidPlayLand (..),
+  OwnedCard (..),
   PlayerCount (..),
   PlayerIndex (..),
   PlayLand,
@@ -34,7 +37,7 @@ import safe Data.Typeable (Typeable, cast)
 import safe MtgPure.Engine.Orphans.ZO ()
 import safe MtgPure.Model.GenericMana (GenericMana)
 import safe MtgPure.Model.ManaPool (CompleteManaPool)
-import safe MtgPure.Model.Object.OTNAliases (OTNLand, OTNPermanent, OTNSpell)
+import safe MtgPure.Model.Object.OTNAliases (OTNCreature, OTNLand, OTNPermanent, OTNPlayerPlaneswalker, OTNSpell)
 import safe MtgPure.Model.Object.Object (Object)
 import safe MtgPure.Model.Object.ObjectId (GetObjectId (getUntypedObject), ObjectId)
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
@@ -51,6 +54,7 @@ data InternalLogicError :: Type where
   CorruptCallStackLogging :: InternalLogicError
   ExpectedCardToBeAPermanentCard :: InternalLogicError
   ExpectedStackObjectToExist :: IsZO zone ot => ZO zone ot -> InternalLogicError
+  GameShouldHaveEndedBecauseThereIsOnlyOnePlayerLeft :: InternalLogicError
   InvalidPermanent :: ZO 'ZBattlefield OTNPermanent -> InternalLogicError
   InvalidPlayer :: Object 'OTPlayer -> InternalLogicError
   ManaAbilitiesDontHaveTargetsSoNoZoShouldBeNeeded :: InternalLogicError
@@ -76,6 +80,8 @@ newtype CardIndex = CardIndex {unCardIndex :: Int}
 newtype RelativeAbilityIndex = RelativeAbilityIndex {unRelativeAbilityIndex :: Int}
   deriving (Eq, Ord, Show, Typeable)
 
+data OwnedCard = OwnedCard (Object 'OTPlayer) AnyCard
+
 type CallFrameId = Int
 
 data CallFrameInfo = CallFrameInfo
@@ -83,6 +89,16 @@ data CallFrameInfo = CallFrameInfo
   , callFrameName :: String
   }
   deriving (Eq, Ord, Show)
+
+data DeclaredAttacker = DeclaredAttacker
+  { declaredAttacker_attacker :: ZO 'ZBattlefield OTNCreature
+  , declaredAttacker_victim :: ZO 'ZBattlefield OTNPlayerPlaneswalker
+  }
+
+data DeclaredBlocker = DeclaredBlocker
+  { declaredBlocker_blocker :: ZO 'ZBattlefield OTNCreature
+  , declaredBlocker_attackers :: NonEmpty (ZO 'ZBattlefield OTNCreature)
+  }
 
 data Prompt' (opaqueGameState :: (Type -> Type) -> Type) (m :: Type -> Type) = Prompt
   { exceptionCantBeginGameWithoutPlayers :: m ()
@@ -92,6 +108,8 @@ data Prompt' (opaqueGameState :: (Type -> Type) -> Type) (m :: Type -> Type) = P
   , exceptionInvalidShuffle :: CardCount -> [CardIndex] -> m ()
   , exceptionInvalidStartingPlayer :: PlayerCount -> PlayerIndex -> m ()
   , exceptionZoneObjectDoesNotExist :: forall zone ot. IsZO zone ot => ZO zone ot -> m ()
+  , promptChooseAttackers :: Attempt -> opaqueGameState m -> Object 'OTPlayer -> m [DeclaredAttacker]
+  , promptChooseBlockers :: Attempt -> opaqueGameState m -> Object 'OTPlayer -> NonEmpty DeclaredAttacker -> m [DeclaredBlocker]
   , promptDebugMessage :: String -> m ()
   , promptGetStartingPlayer :: Attempt -> PlayerCount -> m PlayerIndex
   , promptLogCallPop :: opaqueGameState m -> CallFrameInfo -> m ()

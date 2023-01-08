@@ -42,6 +42,7 @@ import safe MtgPure.Model.Object.IsObjectType (IsObjectType (..))
 import safe MtgPure.Model.Object.ObjectId (
   ObjectId (..),
   UntypedObject (..),
+  getObjectId,
   pattern DefaultObjectDiscriminant,
  )
 import safe MtgPure.Model.PhaseStep (PhaseStep (..))
@@ -102,12 +103,14 @@ mkGameState fwd input = case playerObjects of
       GameState
         { magicCurrentTurn = 0
         , magicFwd = fwd
+        , magicExiledCards = mempty
         , magicGraveyardCards = mempty
         , magicHandCards = mempty
         , magicLibraryCards = mempty
         , magicManaBurn = False
         , magicNextObjectDiscriminant = (1 +) <$> DefaultObjectDiscriminant
         , magicNextObjectId = ObjectId $ 1 + playerCount
+        , magicOwnershipMap = Map.fromList $ map (\o -> (getObjectId o, o)) playerObjects
         , magicPermanents = mempty
         , magicPhaseStep = PSBeginningPhase UntapStep
         , magicPlayers = playerMap

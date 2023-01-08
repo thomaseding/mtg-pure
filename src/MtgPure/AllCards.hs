@@ -12,6 +12,7 @@ module MtgPure.AllCards (
 import safe MtgPure.Cards (
   acceptableLosses,
   allIsDust,
+  ancestralRecall,
   ancestralVision,
   backlash,
   bayou,
@@ -21,14 +22,25 @@ import safe MtgPure.Cards (
   cityOfBrass,
   cleanse,
   conversion,
+  counterspell,
   damnation,
+  darkRitual,
+  divination,
   fling,
   forest,
+  grizzlyBears,
   holyStrength,
   island,
   lavaAxe,
+  lightningBolt,
+  llanowarElves,
   manaLeak,
   mountain,
+  moxEmerald,
+  moxJet,
+  moxPearl,
+  moxRuby,
+  moxSapphire,
   nyxbornRollicker,
   ornithopter,
   plains,
@@ -46,6 +58,7 @@ import safe MtgPure.Cards (
   stoneThrowingDevils,
   swamp,
   swanSong,
+  unholyStrength,
   vindicate,
   wastes,
   wear_tear,
@@ -58,6 +71,7 @@ allCards :: [AnyCard]
 allCards =
   [ toCard acceptableLosses
   , toCard allIsDust
+  , toCard ancestralRecall
   , toCard ancestralVision
   , toCard backlash
   , toCard bayou
@@ -66,14 +80,25 @@ allCards =
   , toCard cityOfBrass
   , toCard cleanse
   , toCard conversion
+  , toCard counterspell
   , toCard damnation
+  , toCard darkRitual
+  , toCard divination
   , toCard fling
   , toCard forest
+  , toCard grizzlyBears
   , toCard holyStrength
   , toCard island
   , toCard lavaAxe
+  , toCard lightningBolt
+  , toCard llanowarElves
   , toCard manaLeak
   , toCard mountain
+  , toCard moxEmerald
+  , toCard moxJet
+  , toCard moxPearl
+  , toCard moxRuby
+  , toCard moxSapphire
   , toCard nyxbornRollicker
   , toCard ornithopter
   , toCard ragingGoblin
@@ -90,6 +115,7 @@ allCards =
   , toCard stoneThrowingDevils
   , toCard swamp
   , toCard swanSong
+  , toCard unholyStrength
   , toCard vindicate
   , toCard wastes
   , toCard wear_tear

@@ -172,12 +172,14 @@ data GameState (m :: Type -> Type) where
   GameState ::
     { magicCurrentTurn :: Int
     , magicFwd :: Fwd m
+    , magicExiledCards :: Map.Map (ZO 'ZExile OT0) AnyCard
     , magicGraveyardCards :: Map.Map (ZO 'ZGraveyard OT0) AnyCard
     , magicHandCards :: Map.Map (ZO 'ZHand OT0) AnyCard
     , magicLibraryCards :: Map.Map (ZO 'ZLibrary OT0) AnyCard
     , magicManaBurn :: Bool
     , magicNextObjectDiscriminant :: ObjectDiscriminant
     , magicNextObjectId :: ObjectId
+    , magicOwnershipMap :: Map.Map ObjectId (Object 'OTPlayer)
     , magicPermanents :: Map.Map (ZO 'ZBattlefield OT0) Permanent
     , magicPhaseStep :: PhaseStep
     , magicPlayers :: Map.Map (Object 'OTPlayer) Player -- contains all players
@@ -248,6 +250,8 @@ headlessPrompt =
     , exceptionInvalidShuffle = \_ _ -> pure ()
     , exceptionInvalidStartingPlayer = \_ _ -> pure ()
     , exceptionZoneObjectDoesNotExist = \_ -> pure ()
+    , promptChooseAttackers = \_ _ _ -> pure []
+    , promptChooseBlockers = \_ _ _ _ -> pure []
     , promptDebugMessage = \_ -> pure ()
     , promptGetStartingPlayer = \_ _ -> pure $ PlayerIndex 0
     , promptLogCallPop = \_ _ -> pure ()

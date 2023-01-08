@@ -66,7 +66,8 @@ header =
   \    Inst12,\n\
   \  )\n\
   \import safe MtgPure.Model.Object.IsObjectType (IsObjectType)\n\
-  \import safe MtgPure.Model.Object.ObjectN (ObjectN (..))\n\
+  \import safe MtgPure.Model.Object.ObjectN (ObjectN)\n\
+  \import safe MtgPure.Model.Object.ObjectN_ (ObjectN' (..))\n\
   \import safe MtgPure.Model.Object.OTN (OTN)\n\
   \import safe MtgPure.Model.Object.ToObjectN.Classes\n\
   \  ( ToObject1'(..),\n\

@@ -24,13 +24,15 @@ import safe MtgPure.Engine.Fwd.Api (
   gainPriority,
   getActivePlayer,
   newObjectId,
+  ownerOf,
   performElections,
+  pushGraveyardCard,
   setPermanent,
  )
 import safe MtgPure.Engine.Legality (Legality (..))
 import safe MtgPure.Engine.Monad (fromPublicRO, fromRO, get, gets, modify)
 import safe MtgPure.Engine.Orphans ()
-import safe MtgPure.Engine.Prompt (EnactInfo, InternalLogicError (..))
+import safe MtgPure.Engine.Prompt (EnactInfo, InternalLogicError (..), OwnedCard (..))
 import safe MtgPure.Engine.State (
   AnyElected (..),
   Elected (..),
@@ -42,6 +44,7 @@ import safe MtgPure.Engine.State (
 import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.Object.OTN (OT0)
 import safe MtgPure.Model.Object.Object (Object)
+import safe MtgPure.Model.Object.ObjectId (getObjectId)
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Permanent (cardToPermanent)
 import safe MtgPure.Model.PrePost (PrePost (..))
@@ -64,6 +67,7 @@ resolveTopOfStack = logCall 'resolveTopOfStack do
         st
           { magicStackEntryTargetsMap = Map.delete zoStack $ magicStackEntryTargetsMap st
           , magicStackEntryElectedMap = Map.delete zoStack $ magicStackEntryElectedMap st
+          , magicOwnershipMap = Map.delete (getObjectId zoStack) $ magicOwnershipMap st
           }
       oActive <- fromPublicRO getActivePlayer
       gainPriority oActive
@@ -89,21 +93,35 @@ resolveManaAbility elected = logCall 'resolveManaAbility do
 resolveElected :: forall ot m. (IsOTN ot, Monad m) => ZO 'ZStack OT0 -> Elected 'Pre ot -> Magic 'Private 'RW m ()
 resolveElected zoStack elected = logCall 'resolveElected do
   case elected of
-    ElectedActivatedAbility{} -> M.void $ resolveOneShot zoStack $ unPending $ electedActivatedAbility_effect elected
-    ElectedSpell{} -> case electedSpell_effect elected of
-      Just effect -> M.void $ resolveOneShot zoStack $ unPending effect
-      Nothing ->
-        let electedPerm =
-              ElectedPermanent
-                { electedPermanent_controller = electedSpell_controller elected
-                , electedPermanent_card = electedSpell_card elected
-                , electedPermanent_facet = electedSpell_facet elected
-                }
-         in resolvePermanent electedPerm
+    ElectedActivatedAbility{} -> do
+      M.void $ resolveOneShot zoStack Nothing $ unPending $ electedActivatedAbility_effect elected
+    ElectedSpell{} -> do
+      owner <- fromRO $ ownerOf zoStack
+      let card = electedSpell_card elected
+          ownedCard = Just $ OwnedCard owner card
+      case electedSpell_effect elected of
+        Just effect -> M.void $ resolveOneShot zoStack ownedCard $ unPending effect
+        Nothing -> do
+          let electedPerm =
+                ElectedPermanent
+                  { electedPermanent_controller = electedSpell_controller elected
+                  , electedPermanent_card = card
+                  , electedPermanent_facet = electedSpell_facet elected
+                  }
+          resolvePermanent electedPerm
 
-resolveOneShot :: Monad m => ZO 'ZStack OT0 -> Elect 'Post (Effect 'OneShot) ot -> Magic 'Private 'RW m (Maybe EnactInfo)
-resolveOneShot zoStack elect = logCall 'resolveOneShot do
-  performElections zoStack goEffect elect
+resolveOneShot ::
+  Monad m =>
+  ZO 'ZStack OT0 ->
+  Maybe OwnedCard ->
+  Elect 'Post (Effect 'OneShot) ot ->
+  Magic 'Private 'RW m (Maybe EnactInfo)
+resolveOneShot zoStack mCard elect = logCall 'resolveOneShot do
+  result <- performElections zoStack goEffect elect
+  case mCard of
+    Nothing -> pure ()
+    Just (OwnedCard oPlayer card) -> M.void $ pushGraveyardCard oPlayer card
+  pure result
  where
   goEffect :: Monad m => Effect 'OneShot -> Magic 'Private 'RW m (Maybe EnactInfo)
   goEffect = fmap Just . enact

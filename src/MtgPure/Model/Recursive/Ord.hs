@@ -51,7 +51,8 @@ import safe MtgPure.Model.Object.ObjectId (
   getObjectId,
   pattern DefaultObjectDiscriminant,
  )
-import safe MtgPure.Model.Object.ObjectN (ObjectN (..))
+import safe MtgPure.Model.Object.ObjectN (ObjectN)
+import safe MtgPure.Model.Object.ObjectN_ (ObjectN' (..))
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Object.Singleton.Any (WAny (..))
 import safe MtgPure.Model.Object.Singleton.Card (WCard (..))
@@ -60,7 +61,7 @@ import safe MtgPure.Model.Object.Singleton.Permanent (WPermanent (..))
 import safe MtgPure.Model.Object.Singleton.Spell (WSpell (..))
 import safe MtgPure.Model.Object.ToObjectN.Classes (ToObject1' (toObject1'))
 import safe MtgPure.Model.Object.ToObjectN.Instances ()
-import safe MtgPure.Model.Object.VisitObjectN (VisitObjectN (..))
+import safe MtgPure.Model.Object.VisitObjectN (visitObjectN')
 import safe MtgPure.Model.PrePost (IsPrePost (..), PrePost (..))
 import safe MtgPure.Model.Recursive (
   Ability (..),
@@ -437,6 +438,10 @@ ordActivatedAbility :: ActivatedAbility zone ot -> ActivatedAbility zone ot -> E
 ordActivatedAbility x = case x of
   Ability cost1 effect1 -> \case
     Ability cost2 effect2 -> seqM [ordCost cost1 cost2, ordElectEl effect1 effect2]
+    y -> compareIndexM x y
+  Cycling cost1 -> \case
+    Cycling cost2 -> ordCost cost1 cost2
+    y -> compareIndexM x y
 
 ordAnyCard :: AnyCard -> AnyCard -> EnvM Ordering
 ordAnyCard x = case x of
@@ -693,8 +698,8 @@ ordCost x = case x of
   PayLife amount1 -> \case
     PayLife amount2 -> pure $ compare amount1 amount2
     y -> compareIndexM x y
-  SacrificeCost perm1 reqs1 -> \case
-    SacrificeCost perm2 reqs2 ->
+  SacrificeCost reqs1 -> \case
+    SacrificeCost reqs2 ->
       let go ::
             forall zone1 zone2 ot1 ot2.
             IsZO zone1 ot1 =>
@@ -702,9 +707,9 @@ ordCost x = case x of
             [Requirement zone1 ot1] ->
             [Requirement zone2 ot2] ->
             EnvM Ordering
-          go _ _ = case cast (perm2, reqs2) of
+          go _ _ = case cast reqs2 of
             Nothing -> compareZoneOT @zone1 @zone2 @ot1 @ot2
-            Just (perm2, reqs2) -> seqM [ordWPermanent perm1 perm2, ordRequirements reqs1 reqs2]
+            Just reqs2 -> seqM [ordRequirements reqs1 reqs2]
        in go reqs1 reqs2
     y -> compareIndexM x y
   TapCost reqs1 -> \case
@@ -813,6 +818,20 @@ ordEffect x = case x of
   EffectCase case1 -> \case
     EffectCase case2 -> ordCase ordEffect case1 case2
     y -> compareIndexM x y
+  Exile obj1 -> \case
+    Exile obj2 ->
+      let go ::
+            forall zone1 zone2 ot1 ot2.
+            IsZO zone1 ot1 =>
+            IsZO zone2 ot2 =>
+            ZO zone1 ot1 ->
+            ZO zone2 ot2 ->
+            EnvM Ordering
+          go _ _ = case cast obj2 of
+            Nothing -> compareZoneOT @zone1 @zone2 @ot1 @ot2
+            Just obj2 -> ordZoneObject obj1 obj2
+       in go obj1 obj2
+    y -> compareIndexM x y
   GainAbility any1 obj1 ability1 -> \case
     GainAbility any2 obj2 ability2 ->
       let go ::
@@ -834,6 +853,10 @@ ordEffect x = case x of
                 ]
        in go obj1 obj2
     y -> compareIndexM x y
+  GainLife player1 amount1 -> \case
+    GainLife player2 amount2 ->
+      seqM [pure $ compare amount1 amount2, ordZoneObject player1 player2]
+    y -> compareIndexM x y
   LoseAbility any1 obj1 ability1 -> \case
     LoseAbility any2 obj2 ability2 ->
       let go ::
@@ -854,6 +877,10 @@ ordEffect x = case x of
                 , ordAbility ability1 ability2
                 ]
        in go obj1 obj2
+    y -> compareIndexM x y
+  LoseLife player1 amount1 -> \case
+    LoseLife player2 amount2 ->
+      seqM [pure $ compare amount1 amount2, ordZoneObject player1 player2]
     y -> compareIndexM x y
   PutOntoBattlefield wPerm1 player1 card1 -> \case
     PutOntoBattlefield wPerm2 player2 card2 ->
@@ -1082,6 +1109,26 @@ ordElectEl x = case x of
     y -> compareIndexM x y
   Listen listener1 -> \case
     Listen listener2 -> ordEventListener listener1 listener2
+    y -> compareIndexM x y
+  OwnerOf obj1 playerToElect1 -> \case
+    OwnerOf obj2 playerToElect2 ->
+      let go ::
+            forall zone1 zone2 ot'.
+            ot' ~ OTNAny =>
+            IsZO zone1 ot' =>
+            IsZO zone2 ot' =>
+            ZO zone1 ot' ->
+            ZO zone2 ot' ->
+            EnvM Ordering
+          go _ _ = case cast obj2 of
+            Nothing -> compareZone @zone1 @zone2
+            Just obj2 -> do
+              player' <- newObjectN @ 'OTPlayer toObject1'
+              let player = toZone player'
+                  elect1 = playerToElect1 player
+                  elect2 = playerToElect2 player
+              seqM [ordZoneObject obj1 obj2, ordElectEl elect1 elect2]
+       in go obj1 obj2
     y -> compareIndexM x y
   Random with1 -> \case
     Random with2 -> ordWithMaskedObjectElectEl with1 with2
@@ -1390,7 +1437,7 @@ ordObject0 objN1 objN2 = do
       i2 = getObjectId objN2
   pure $ compare i1 i2
 
-ordObjectN' :: VisitObjectN ot => ObjectN ot -> ObjectN ot -> EnvM Ordering
+ordObjectN' :: ObjectN ot -> ObjectN ot -> EnvM Ordering
 ordObjectN' objN1 objN2 = do
   let i1 = visitObjectN' objectToId objN1
       i2 = visitObjectN' objectToId objN2
@@ -1686,6 +1733,9 @@ ordStaticAbility x = case x of
   Suspend duration1 elect1 -> \case
     Suspend duration2 elect2 ->
       seqM [pure $ compare duration1 duration2, ordElectEl elect1 elect2]
+    y -> compareIndexM x y
+  Trample -> \case
+    Trample -> pure EQ
     y -> compareIndexM x y
 
 ordTimePoint :: TimePoint p -> TimePoint p -> EnvM Ordering

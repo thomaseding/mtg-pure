@@ -71,7 +71,6 @@ data Permanent :: Type where
     , permanentFace :: Face
     , permanentFlipped :: Flipped
     , permanentLand :: Maybe Land
-    , permanentOwner :: Object 'OTPlayer
     , permanentPhased :: Phased
     , permanentPlaneswalker :: Maybe Planeswalker
     , permanentSummoningSickness :: Bool
@@ -143,153 +142,147 @@ cardToPermanent ::
   AnyCard ->
   CardFacet ot ->
   Maybe Permanent
-cardToPermanent owner card facet = case facet of
+cardToPermanent owner card facet = case viewPermanentFacet facet of
+  Nothing -> Nothing
+  Just someFacet ->
+    Just
+      Permanent
+        { permanentAbilities = permanentAbilitiesOf facet
+        , permanentArtifact = facetToArtifact facet
+        , permanentCard = Left card
+        , permanentCardFacet = someFacet
+        , permanentColors = getColors facet
+        , permanentController = owner
+        , permanentCreature = facetToCreature facet
+        , permanentCreatureDamage = Damage 0
+        , permanentEnchantment = facetToEnchantment facet
+        , permanentFace = FaceUp
+        , permanentFlipped = Unflipped
+        , permanentLand = facetToLand facet
+        , permanentPhased = PhasedIn
+        , permanentPlaneswalker = facetToPlaneswalker facet
+        , permanentSummoningSickness = True
+        , permanentTapped = Untapped
+        }
+
+viewPermanentFacet :: CardFacet ot -> Maybe (Some CardFacet OTNPermanent)
+viewPermanentFacet facet = case facet of
   InstantFacet{} -> Nothing
   SorceryFacet{} -> Nothing
-  --
-  ArtifactFacet{} ->
-    let some = someArtifact
-     in Just
-          (go card (some facet))
-            { permanentAbilities = map some $ artifact_abilities facet
-            , permanentArtifact =
-                Just
-                  Artifact
-                    { artifactTypes = artifact_artifactTypes facet
-                    }
-            }
-  CreatureFacet{} ->
-    let some = someCreature
-     in Just
-          (go card (some facet))
-            { permanentAbilities = map some $ creature_abilities facet
-            , permanentCreature =
-                Just
-                  Creature
-                    { creatureTypes = creature_creatureTypes facet
-                    , creaturePower = creature_power facet
-                    , creatureToughness = creature_toughness facet
-                    }
-            }
-  EnchantmentFacet{} ->
-    let some = someEnchantment
-     in Just
-          (go card (some facet))
-            { permanentAbilities = map some $ enchantment_abilities facet
-            , permanentEnchantment =
-                Just
-                  Enchantment
-                    { enchantmentTypes = map AnyEnchantmentType $ enchantment_enchantmentTypes facet
-                    }
-            }
-  LandFacet{} ->
-    let some = someLand
-     in Just
-          (go card (some facet))
-            { permanentAbilities = map some $ land_abilities facet
-            , permanentLand =
-                Just
-                  Land
-                    { landTypes = land_landTypes facet
-                    }
-            }
-  PlaneswalkerFacet{} ->
-    let some = somePlaneswalker
-     in Just
-          (go card (some facet))
-            { permanentAbilities = map some $ planeswalker_abilities facet
-            , permanentPlaneswalker =
-                Just
-                  Planeswalker
-                    { planeswalkerLoyalty = planeswalker_loyalty facet
-                    }
-            }
+  ArtifactFacet{} -> Just $ someArtifact facet
+  CreatureFacet{} -> Just $ someCreature facet
+  EnchantmentFacet{} -> Just $ someEnchantment facet
+  LandFacet{} -> Just $ someLand facet
+  PlaneswalkerFacet{} -> Just $ somePlaneswalker facet
+  ArtifactCreatureFacet{} -> Just $ someArtifactCreature facet
+  ArtifactLandFacet{} -> Just $ someArtifactLand facet
+  EnchantmentCreatureFacet{} -> Just $ someEnchantmentCreature facet
+
+permanentAbilitiesOf :: CardFacet ot -> [Some Ability OTNPermanent]
+permanentAbilitiesOf facet = case facet of
+  InstantFacet{} -> []
+  SorceryFacet{} -> []
+  ArtifactFacet{} -> map someArtifact $ artifact_abilities facet
+  CreatureFacet{} -> map someCreature $ creature_abilities facet
+  EnchantmentFacet{} -> map someEnchantment $ enchantment_abilities facet
+  LandFacet{} -> map someLand $ land_abilities facet
+  PlaneswalkerFacet{} -> map somePlaneswalker $ planeswalker_abilities facet
   ArtifactCreatureFacet{} ->
-    let some = someArtifactCreature
-     in Just
-          (go card (some facet))
-            { permanentAbilities =
-                concat
-                  [ map someArtifact $ artifactCreature_artifactAbilities facet
-                  , map someCreature $ artifactCreature_creatureAbilities facet
-                  , map someArtifactCreature $ artifactCreature_artifactCreatureAbilities facet
-                  ]
-            , permanentArtifact =
-                Just
-                  Artifact
-                    { artifactTypes = artifactCreature_artifactTypes facet
-                    }
-            , permanentCreature =
-                Just
-                  Creature
-                    { creatureTypes = artifactCreature_creatureTypes facet
-                    , creaturePower = artifactCreature_power facet
-                    , creatureToughness = artifactCreature_toughness facet
-                    }
-            }
+    concat
+      [ map someArtifact $ artifactCreature_artifactAbilities facet
+      , map someCreature $ artifactCreature_creatureAbilities facet
+      , map someArtifactCreature $ artifactCreature_artifactCreatureAbilities facet
+      ]
   ArtifactLandFacet{} ->
-    let some = someArtifactLand
-     in Just
-          (go card (some facet))
-            { permanentAbilities =
-                concat
-                  [ map someArtifact $ artifactLand_artifactAbilities facet
-                  , map someLand $ artifactLand_landAbilities facet
-                  , map someArtifactLand $ artifactLand_artifactLandAbilities facet
-                  ]
-            , permanentArtifact =
-                Just
-                  Artifact
-                    { artifactTypes = artifactLand_artifactTypes facet
-                    }
-            , permanentLand =
-                Just
-                  Land
-                    { landTypes = artifactLand_landTypes facet
-                    }
-            }
+    concat
+      [ map someArtifact $ artifactLand_artifactAbilities facet
+      , map someLand $ artifactLand_landAbilities facet
+      , map someArtifactLand $ artifactLand_artifactLandAbilities facet
+      ]
   EnchantmentCreatureFacet{} ->
-    let some = someEnchantmentCreature
-     in Just
-          (go card (some facet))
-            { permanentAbilities =
-                concat
-                  [ map someCreature $ enchantmentCreature_creatureAbilities facet
-                  , map someEnchantment $ enchantmentCreature_enchantmentAbilities facet
-                  , map someEnchantmentCreature $ enchantmentCreature_enchantmentCreatureAbilities facet
-                  ]
-            , permanentCreature =
-                Just
-                  Creature
-                    { creatureTypes = enchantmentCreature_creatureTypes facet
-                    , creaturePower = enchantmentCreature_power facet
-                    , creatureToughness = enchantmentCreature_toughness facet
-                    }
-            , permanentEnchantment =
-                Just
-                  Enchantment
-                    { enchantmentTypes = map AnyEnchantmentType $ enchantmentCreature_enchantmentTypes facet
-                    }
-            }
- where
-  go :: AnyCard -> Some CardFacet OTNPermanent -> Permanent
-  go anyCard someFacet =
-    Permanent
-      { permanentAbilities = mempty
-      , permanentArtifact = Nothing
-      , permanentCard = Left anyCard
-      , permanentCardFacet = someFacet
-      , permanentColors = getColors facet
-      , permanentController = owner
-      , permanentCreature = Nothing
-      , permanentCreatureDamage = Damage 0
-      , permanentEnchantment = Nothing
-      , permanentFace = FaceUp
-      , permanentFlipped = Unflipped
-      , permanentLand = Nothing
-      , permanentOwner = owner
-      , permanentPhased = PhasedIn
-      , permanentPlaneswalker = Nothing
-      , permanentSummoningSickness = True
-      , permanentTapped = Untapped
-      }
+    concat
+      [ map someEnchantment $ enchantmentCreature_enchantmentAbilities facet
+      , map someCreature $ enchantmentCreature_creatureAbilities facet
+      , map someEnchantmentCreature $ enchantmentCreature_enchantmentCreatureAbilities facet
+      ]
+
+facetToArtifact :: CardFacet ot -> Maybe Artifact
+facetToArtifact facet = case facet of
+  ArtifactFacet{} ->
+    Just
+      Artifact
+        { artifactTypes = artifact_artifactTypes facet
+        }
+  ArtifactCreatureFacet{} ->
+    Just
+      Artifact
+        { artifactTypes = artifactCreature_artifactTypes facet
+        }
+  ArtifactLandFacet{} ->
+    Just
+      Artifact
+        { artifactTypes = artifactLand_artifactTypes facet
+        }
+  _ -> Nothing
+
+facetToCreature :: CardFacet ot -> Maybe Creature
+facetToCreature facet = case facet of
+  CreatureFacet{} ->
+    Just
+      Creature
+        { creatureTypes = creature_creatureTypes facet
+        , creaturePower = creature_power facet
+        , creatureToughness = creature_toughness facet
+        }
+  ArtifactCreatureFacet{} ->
+    Just
+      Creature
+        { creatureTypes = artifactCreature_creatureTypes facet
+        , creaturePower = artifactCreature_power facet
+        , creatureToughness = artifactCreature_toughness facet
+        }
+  EnchantmentCreatureFacet{} ->
+    Just
+      Creature
+        { creatureTypes = enchantmentCreature_creatureTypes facet
+        , creaturePower = enchantmentCreature_power facet
+        , creatureToughness = enchantmentCreature_toughness facet
+        }
+  _ -> Nothing
+
+facetToEnchantment :: CardFacet ot -> Maybe Enchantment
+facetToEnchantment facet = case facet of
+  EnchantmentFacet{} ->
+    Just
+      Enchantment
+        { enchantmentTypes = map AnyEnchantmentType $ enchantment_enchantmentTypes facet
+        }
+  EnchantmentCreatureFacet{} ->
+    Just
+      Enchantment
+        { enchantmentTypes = map AnyEnchantmentType $ enchantmentCreature_enchantmentTypes facet
+        }
+  _ -> Nothing
+
+facetToLand :: CardFacet ot -> Maybe Land
+facetToLand facet = case facet of
+  LandFacet{} ->
+    Just
+      Land
+        { landTypes = land_landTypes facet
+        }
+  ArtifactLandFacet{} ->
+    Just
+      Land
+        { landTypes = artifactLand_landTypes facet
+        }
+  _ -> Nothing
+
+facetToPlaneswalker :: CardFacet ot -> Maybe Planeswalker
+facetToPlaneswalker facet = case facet of
+  PlaneswalkerFacet{} ->
+    Just
+      Planeswalker
+        { planeswalkerLoyalty = planeswalker_loyalty facet
+        }
+  _ -> Nothing

@@ -24,6 +24,7 @@ import safe MtgPure.Engine.Core (
   allZOActivatedAbilities,
   allZOs,
   doesZoneObjectExist,
+  findGraveyardCard,
   findHandCard,
   findLibraryCard,
   findPermanent,
@@ -38,8 +39,11 @@ import safe MtgPure.Engine.Core (
   getPlayer,
   indexToActivated,
   newObjectId,
+  pickOneZO,
+  pushGraveyardCard,
   pushHandCard,
   pushLibraryCard,
+  removeGraveyardCard,
   removeHandCard,
   removeLibraryCard,
   rewindIllegal,
@@ -50,7 +54,7 @@ import safe MtgPure.Engine.Core (
 import safe MtgPure.Engine.Enact (enact)
 import safe MtgPure.Engine.Fwd.Type (Fwd' (..))
 import safe MtgPure.Engine.Pay (pay)
-import safe MtgPure.Engine.PerformElections (controllerOf, performElections, requiresTargets)
+import safe MtgPure.Engine.PerformElections (controllerOf, ownerOf, performElections, requiresTargets)
 import safe MtgPure.Engine.PlayLand (playLand)
 import safe MtgPure.Engine.Priority (
   askPriorityAction,
@@ -81,6 +85,7 @@ fwdImpl =
     , fwd_controllerOf = controllerOf
     , fwd_doesZoneObjectExist = doesZoneObjectExist
     , fwd_enact = enact
+    , fwd_findGraveyardCard = findGraveyardCard
     , fwd_findHandCard = findHandCard
     , fwd_findLibraryCard = findLibraryCard
     , fwd_findPermanent = findPermanent
@@ -97,12 +102,16 @@ fwdImpl =
     , fwd_getPlayerWithPriority = getPlayerWithPriority
     , fwd_indexToAbility = indexToActivated
     , fwd_newObjectId = newObjectId
+    , fwd_ownerOf = ownerOf
     , fwd_pay = pay
     , fwd_performElections = performElections
     , fwd_performStateBasedActions = performStateBasedActions
+    , fwd_pickOneZO = pickOneZO
     , fwd_playLand = playLand
+    , fwd_pushGraveyardCard = pushGraveyardCard
     , fwd_pushHandCard = pushHandCard
     , fwd_pushLibraryCard = pushLibraryCard
+    , fwd_removeGraveyardCard = removeGraveyardCard
     , fwd_removeHandCard = removeHandCard
     , fwd_removeLibraryCard = removeLibraryCard
     , fwd_requiresTargets = requiresTargets

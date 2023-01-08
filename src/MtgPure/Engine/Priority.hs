@@ -16,7 +16,7 @@ module MtgPure.Engine.Priority (
 ) where
 
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
-import qualified Control.Monad.Trans as M
+import safe qualified Control.Monad.Trans as M
 import safe Control.Monad.Util (Attempt, Attempt' (..))
 import safe Data.Functor ((<&>))
 import safe qualified Data.Stream as Stream

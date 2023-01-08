@@ -81,6 +81,7 @@ import safe MtgPure.Model.Object.Object (Object (..))
 import safe MtgPure.Model.Object.ObjectId (ObjectId (ObjectId), getObjectId)
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Object.ToObjectN.Instances ()
+import safe MtgPure.Model.PhaseStep (prettyPhaseStep)
 import safe MtgPure.Model.Player (Player (..))
 import safe MtgPure.Model.Sideboard (Sideboard (..))
 import safe MtgPure.Model.ToManaPool (toCompleteManaPool)
@@ -158,6 +159,8 @@ gameInput decks =
           , exceptionInvalidShuffle = \_ _ -> liftIO $ putStrLn "exceptionInvalidShuffle"
           , exceptionInvalidStartingPlayer = \_ _ -> liftIO $ putStrLn "exceptionInvalidStartingPlayer"
           , exceptionZoneObjectDoesNotExist = \zo -> liftIO $ print ("exceptionZoneObjectDoesNotExist", zo)
+          , promptChooseAttackers = \_ _ _ -> pure []
+          , promptChooseBlockers = \_ _ _ _ -> pure []
           , promptDebugMessage = \msg -> liftIO $ putStrLn $ "DEBUG: " ++ msg
           , promptGetStartingPlayer = \_attempt _count -> pure $ PlayerIndex 0
           , promptLogCallPop = consoleLogCallPop
@@ -234,17 +237,28 @@ instance Show CommandInput where
     3 : xs -> "PlayLand " ++ go xs
     xs -> go xs
    where
-    go = unwords . map show
+    go = unwords . map show'
+    show' = \case
+      -1 -> "W"
+      -2 -> "U"
+      -3 -> "B"
+      -4 -> "R"
+      -5 -> "G"
+      -6 -> "I"
+      x -> show x
 
 instance Read CommandInput where
   readsPrec _ = readsCommandInput
 
 readsCommandInput :: String -> [(CommandInput, String)]
-readsCommandInput = readsCommandInput' True . map dotToSpace
+readsCommandInput = readsCommandInput' True . map dotToSpace . takeWhile (not . isComment)
  where
   dotToSpace = \case
     '.' -> ' '
     c -> c
+  isComment = \case
+    ';' -> True
+    _ -> False
 
 readsCommandInput' :: Bool -> String -> [(CommandInput, String)]
 readsCommandInput' isHead s0 = case reads' s0 of
@@ -316,8 +330,16 @@ consolePriorityAction attempt opaque oPlayer = do
     pure (action, commandInput)
   Console (State.gets console_replayLog) >>= \case
     Nothing -> pure ()
-    Just file -> liftIO $ appendFile file $ show commandInput ++ "\n"
+    Just file -> do
+      info <- getPriorityInfo opaque oPlayer
+      liftIO $ appendFile file $ show commandInput ++ " ; " ++ info ++ "\n"
   pure action
+
+getPriorityInfo :: OpaqueGameState Console -> Object 'OTPlayer -> Console String
+getPriorityInfo opaque oPlayer = queryMagic opaque do
+  phaseStep <- internalFromPrivate $ gets magicPhaseStep
+  turnNumber <- internalFromPrivate $ gets magicCurrentTurn
+  pure $ show oPlayer ++ " " ++ prettyPhaseStep phaseStep ++ " Turn" ++ show turnNumber
 
 consolePromptPayGeneric :: Attempt -> OpaqueGameState Console -> Object 'OTPlayer -> GenericMana 'NoVar -> Console CompleteManaPool
 consolePromptPayGeneric attempt opaque oPlayer generic = do
@@ -326,7 +348,7 @@ consolePromptPayGeneric attempt opaque oPlayer generic = do
     liftIO case attempt of
       Attempt 0 -> pure ()
       Attempt n -> putStrLn $ "Retrying[" ++ show n ++ "]..."
-    text <- M.lift $ prompt $ "PayGeneric (" ++ show x ++ ") " ++ show oPlayer ++ ": "
+    text <- M.lift $ prompt $ "PayGeneric X=" ++ show x ++ " " ++ show oPlayer ++ ": "
     let pool = case parseManaPool text of
           Nothing -> mempty
           Just p -> p

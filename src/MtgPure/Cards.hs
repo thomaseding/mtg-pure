@@ -9,6 +9,7 @@
 
 module MtgPure.Cards (
   acceptableLosses,
+  ancestralRecall,
   allIsDust,
   ancestralVision,
   backlash,
@@ -18,14 +19,25 @@ module MtgPure.Cards (
   cityOfBrass,
   cleanse,
   conversion,
+  counterspell,
   damnation,
+  darkRitual,
+  divination,
   fling,
   forest,
+  grizzlyBears,
   holyStrength,
   island,
   lavaAxe,
+  lightningBolt,
+  llanowarElves,
   manaLeak,
   mountain,
+  moxEmerald,
+  moxJet,
+  moxPearl,
+  moxRuby,
+  moxSapphire,
   nyxbornRollicker,
   ornithopter,
   ragingGoblin,
@@ -42,6 +54,7 @@ module MtgPure.Cards (
   stoneThrowingDevils,
   swamp,
   swanSong,
+  unholyStrength,
   vindicate,
   wastes,
   wear_tear,
@@ -59,6 +72,7 @@ import safe MtgPure.Model.CreatureType (CreatureType (..))
 import safe MtgPure.Model.Damage (Damage' (..))
 import safe MtgPure.Model.GenericMana (GenericMana (..))
 import safe MtgPure.Model.LandType (LandType (..))
+import safe MtgPure.Model.Mana (Snow (..))
 import safe MtgPure.Model.ManaSymbol (ManaSymbol (..))
 import safe MtgPure.Model.Object.OTN (OT3)
 import safe MtgPure.Model.Object.OTNAliases (
@@ -199,18 +213,17 @@ mkBasicLand ty = Card name $
  where
   name = CardName $ show ty
 
-mkDualLand :: String -> BasicLandType -> BasicLandType -> Card OTNLand
-mkDualLand name ty1 ty2 =
-  Card (CardName name) $
-    YourLand \_you ->
-      LandFacet
-        { land_creatureTypes = []
-        , land_landTypes = [BasicLand ty1, BasicLand ty2]
-        , land_abilities = []
-        }
+mkDualLand :: CardName -> BasicLandType -> BasicLandType -> Card OTNLand
+mkDualLand name ty1 ty2 = Card name $
+  YourLand \_you ->
+    LandFacet
+      { land_creatureTypes = []
+      , land_landTypes = [BasicLand ty1, BasicLand ty2]
+      , land_abilities = []
+      }
 
-mkFetchLand :: String -> BasicLandType -> BasicLandType -> Card OTNLand
-mkFetchLand name ty1 ty2 = Card (CardName name) $
+mkFetchLand :: CardName -> BasicLandType -> BasicLandType -> Card OTNLand
+mkFetchLand name ty1 ty2 = Card name $
   YourLand \_you ->
     LandFacet
       { land_creatureTypes = []
@@ -232,6 +245,26 @@ mkFetchLand name ty1 ty2 = Card (CardName name) $
                             linked
                               [ROr [HasLandType $ BasicLand ty1, HasLandType $ BasicLand ty2]]
                               \card -> effect $ putOntoBattlefield you card
+                      }
+          ]
+      }
+
+mkMox :: ToManaPool 'NonSnow (ManaSymbol mt) => CardName -> ManaSymbol mt -> Card OTNArtifact
+mkMox name sym = Card name $
+  YourArtifact \_you ->
+    ArtifactFacet
+      { artifact_colors = toColors ()
+      , artifact_cost = spellCost 0
+      , artifact_artifactTypes = []
+      , artifact_creatureTypes = []
+      , artifact_abilities =
+          [ Activated @ 'ZBattlefield $
+              thisObject \this ->
+                controllerOf this \you ->
+                  ElectActivated $
+                    Ability
+                      { activated_cost = tapCost [is this]
+                      , activated_effect = effect $ AddMana you $ toManaPool sym
                       }
           ]
       }
@@ -273,6 +306,19 @@ allIsDust = Card "All Is Dust" $
                     WithList $
                       SuchThat [ControlledBy player] $ Each perms \perm ->
                         sacrifice player [is perm]
+        }
+
+ancestralRecall :: Card OTNInstant
+ancestralRecall = Card "Ancestral Recall" $
+  YourInstant \you ->
+    ElectCard $
+      InstantFacet
+        { instant_colors = toColors U
+        , instant_cost = noCost
+        , instant_creatureTypes = []
+        , instant_abilities = []
+        , instant_effect = thisObject \_this ->
+            effect $ DrawCards you 3
         }
 
 ancestralVision :: Card OTNSorcery
@@ -354,6 +400,20 @@ bloodMoon = Card "Blood Moon" $
                       changeTo land mountain
           ]
       }
+
+counterspell :: Card OTNInstant
+counterspell = Card "Counterspell" $
+  YourInstant \you ->
+    Target you $ masked @OTNSpell [] \target ->
+      ElectCard $
+        InstantFacet
+          { instant_colors = toColors U
+          , instant_cost = spellCost (U, U)
+          , instant_creatureTypes = []
+          , instant_abilities = []
+          , instant_effect = thisObject \_this ->
+              effect $ counterSpell target
+          }
 
 cityOfBrass :: Card OTNLand
 cityOfBrass = Card "City of Brass" $
@@ -449,6 +509,32 @@ damnation = Card "Damnation" $
                     ]
         }
 
+darkRitual :: Card OTNInstant
+darkRitual = Card "Dark Ritual" $
+  YourInstant \you ->
+    ElectCard $
+      InstantFacet
+        { instant_colors = toColors B
+        , instant_cost = spellCost B
+        , instant_creatureTypes = []
+        , instant_abilities = []
+        , instant_effect = thisObject \_this ->
+            effect $ AddMana you $ toManaPool (B, B, B)
+        }
+
+divination :: Card OTNSorcery
+divination = Card "Divination" $
+  YourSorcery \you ->
+    ElectCard $
+      SorceryFacet
+        { sorcery_colors = toColors U
+        , sorcery_cost = spellCost (2, U)
+        , sorcery_creatureTypes = []
+        , sorcery_abilities = []
+        , sorcery_effect = thisObject \_this ->
+            effect $ DrawCards you 2
+        }
+
 fling :: Card OTNInstant
 fling = Card "Fling" $
   YourInstant \you ->
@@ -473,6 +559,18 @@ fling = Card "Fling" $
 forest :: Card OTNLand
 forest = mkBasicLand Forest
 
+grizzlyBears :: Card OTNCreature
+grizzlyBears = Card "Grizzly Bears" $
+  YourCreature \_you ->
+    CreatureFacet
+      { creature_colors = toColors G
+      , creature_cost = spellCost (1, G)
+      , creature_creatureTypes = [Bear]
+      , creature_power = Power 2
+      , creature_toughness = Toughness 2
+      , creature_abilities = []
+      }
+
 holyStrength :: Card OTNEnchantment
 holyStrength = Card "Holy Strength" $
   YourEnchantment \_you ->
@@ -491,6 +589,27 @@ holyStrength = Card "Holy Strength" $
 island :: Card OTNLand
 island = mkBasicLand Island
 
+llanowarElves :: Card OTNCreature
+llanowarElves = Card "Llanowar Elves" $
+  YourCreature \_you ->
+    CreatureFacet
+      { creature_colors = toColors G
+      , creature_cost = spellCost G
+      , creature_creatureTypes = [Elf]
+      , creature_power = Power 1
+      , creature_toughness = Toughness 1
+      , creature_abilities =
+          [ Activated @ 'ZBattlefield $
+              thisObject \this ->
+                controllerOf this \you ->
+                  ElectActivated $
+                    Ability
+                      { activated_cost = tapCost [is this]
+                      , activated_effect = effect $ AddMana you $ toManaPool G
+                      }
+          ]
+      }
+
 lavaAxe :: Card OTNSorcery
 lavaAxe = Card "Lava Axe" $
   YourSorcery \you ->
@@ -503,6 +622,20 @@ lavaAxe = Card "Lava Axe" $
           , sorcery_abilities = []
           , sorcery_effect = thisObject \this ->
               effect $ dealDamage this target 5
+          }
+
+lightningBolt :: Card OTNInstant
+lightningBolt = Card "Lightning Bolt" $
+  YourInstant \you ->
+    Target you $ masked @OTNCreaturePlayerPlaneswalker [] \target ->
+      ElectCard $
+        InstantFacet
+          { instant_colors = toColors R
+          , instant_cost = spellCost R
+          , instant_creatureTypes = []
+          , instant_abilities = []
+          , instant_effect = thisObject \this ->
+              effect $ dealDamage this target 3
           }
 
 manaLeak :: Card OTNInstant
@@ -523,6 +656,21 @@ manaLeak = Card "Mana Leak" $
 
 mountain :: Card OTNLand
 mountain = mkBasicLand Mountain
+
+moxEmerald :: Card OTNArtifact
+moxEmerald = mkMox "Mox Emerald" G
+
+moxJet :: Card OTNArtifact
+moxJet = mkMox "Mox Jet" B
+
+moxPearl :: Card OTNArtifact
+moxPearl = mkMox "Mox Pearl" W
+
+moxRuby :: Card OTNArtifact
+moxRuby = mkMox "Mox Ruby" R
+
+moxSapphire :: Card OTNArtifact
+moxSapphire = mkMox "Mox Sapphire" U
 
 nyxbornRollicker :: Card OTNEnchantmentCreature
 nyxbornRollicker = Card "Nyxborn Rollicker" $
@@ -769,6 +917,21 @@ swanSong = Card "Swan Song" $
                   , addToBattlefield controller birdToken
                   ]
             }
+
+unholyStrength :: Card OTNEnchantment
+unholyStrength = Card "Unholy Strength" $
+  YourEnchantment \_you ->
+    EnchantmentFacet
+      { enchantment_colors = toColors B
+      , enchantment_cost = spellCost B
+      , enchantment_creatureTypes = []
+      , enchantment_enchantmentTypes =
+          [ Aura $
+              Enchant $ linked [] \enchanted ->
+                effect $ StatDelta enchanted (Power 2) (Toughness 1)
+          ]
+      , enchantment_abilities = []
+      }
 
 vindicate :: Card OTNSorcery
 vindicate = Card "Vindicate" $
