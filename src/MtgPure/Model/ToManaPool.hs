@@ -10,6 +10,7 @@ module MtgPure.Model.ToManaPool (
 
 import safe Data.Inst (Inst2, Inst3, Inst4, Inst5, Inst6)
 import safe Data.Kind (Type)
+import safe MtgPure.Model.Color (Color (..))
 import safe MtgPure.Model.Mana (Mana (..), Snow (..))
 import safe MtgPure.Model.ManaPool (CompleteManaPool (..), ManaPool (..))
 import safe MtgPure.Model.ManaSymbol (ManaSymbol (..))
@@ -138,6 +139,22 @@ instance ToManaPool 'NonSnow (ManaSymbol 'MTGreen) where
 instance ToManaPool 'NonSnow (ManaSymbol 'MTColorless) where
   toManaPool = \case
     C -> toManaPool (C, 1 :: Int)
+
+instance ToManaPool 'NonSnow Color where
+  toManaPool = \case
+    White -> toManaPool W
+    Blue -> toManaPool U
+    Black -> toManaPool B
+    Red -> toManaPool R
+    Green -> toManaPool G
+
+instance ToManaPool 'NonSnow (Color, Int) where
+  toManaPool = \case
+    (White, n) -> toManaPool (W, n)
+    (Blue, n) -> toManaPool (U, n)
+    (Black, n) -> toManaPool (B, n)
+    (Red, n) -> toManaPool (R, n)
+    (Green, n) -> toManaPool (G, n)
 
 ----------------------------------------
 
