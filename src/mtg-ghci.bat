@@ -1,8 +1,16 @@
-rem TODO: Enable more than -Wall...
 rem https://ghc.gitlab.haskell.org/ghc/doc/users_guide/using-warnings.html
 rem https://medium.com/mercury-bank/enable-all-the-warnings-a0517bc081c3
 ghci -hidir .output -odir .output -fobject-code^
- -Wall -Werror -Wno-type-defaults^
+ -Wall^
+ -Werror^
+ -Wno-type-defaults^
+ -Wincomplete-uni-patterns^
+ -Wincomplete-record-updates^
+ -Wcpp-undef^
+ -Wmissing-export-lists^
+ -Wsafe^
+ -Wunsafe^
+ -Wtrustworthy-safe^
  -XAllowAmbiguousTypes^
  -XBangPatterns^
  -XBlockArguments^
