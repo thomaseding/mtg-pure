@@ -1785,9 +1785,6 @@ showWithLinkedObject ::
   WithLinkedObject zone x ot ->
   EnvM ParenItems
 showWithLinkedObject showM memo = \case
-  LinkedProxy reqs -> yesParens do
-    sReqs <- dollar <$> showRequirements reqs
-    pure $ pure "LinkedProxy" <> sReqs
   Linked1 nonProxy reqs cont ->
     let ty = getType reqs
      in go ty nonProxy reqs $ showO1 @zone p showM memo (cont . toZone)

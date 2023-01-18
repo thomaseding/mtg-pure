@@ -1823,9 +1823,6 @@ ordWithLinkedObject ::
   WithLinkedObject zone x ot ->
   EnvM Ordering
 ordWithLinkedObject ordM x = case x of
-  LinkedProxy reqs1 -> \case
-    LinkedProxy reqs2 -> ordRequirements reqs1 reqs2
-  --
   Linked1 NonProxyElectEffect reqs1 cont1 -> \case
     Linked1 NonProxyElectEffect reqs2 cont2 ->
       ordO1 ordM reqs1 reqs2 cont1 cont2

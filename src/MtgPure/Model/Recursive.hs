@@ -992,7 +992,6 @@ instance ConsIndex (TriggeredAbility zone ot) where
 -- "Linked" is used to denote that the object fed into the continuation has the same `ot`
 -- as WithLinkedObject's `ot` type.
 data WithLinkedObject (zone :: Zone) (liftOT :: Type -> Type) (ot :: Type) :: Type where
-  LinkedProxy :: [Requirement zone ot] -> WithLinkedObject zone Proxy ot
   Linked1 ::
     (IsOTN (OT1 a), Inst1 IsObjectType a) =>
     NonProxy liftOT ->
@@ -1027,12 +1026,11 @@ data WithLinkedObject (zone :: Zone) (liftOT :: Type -> Type) (ot :: Type) :: Ty
 
 instance ConsIndex (WithLinkedObject zone liftOT ot) where
   consIndex = \case
-    LinkedProxy{} -> 1
-    Linked1{} -> 2
-    Linked2{} -> 3
-    Linked3{} -> 4
-    Linked4{} -> 5
-    Linked5{} -> 6
+    Linked1{} -> 1
+    Linked2{} -> 2
+    Linked3{} -> 3
+    Linked4{} -> 4
+    Linked5{} -> 5
 
 ----------------------------------------
 
