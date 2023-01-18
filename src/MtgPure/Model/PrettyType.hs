@@ -8,7 +8,7 @@ module MtgPure.Model.PrettyType (
   PrettyType (..),
 ) where
 
-import Control.Exception (assert)
+import safe Control.Exception (assert)
 import safe Data.Inst (
   Inst10,
   Inst11,

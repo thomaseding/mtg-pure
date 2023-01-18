@@ -23,7 +23,7 @@ import safe Data.Inst (
   Inst9,
  )
 import safe MtgPure.Model.Object.IsObjectType (IsObjectType (singObjectType))
-import MtgPure.Model.Object.OTN (
+import safe MtgPure.Model.Object.OTN (
   OT0,
   OT1,
   OT10,

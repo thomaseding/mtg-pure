@@ -10,16 +10,16 @@
 {-# HLINT ignore "Redundant pure" #-}
 
 -- https://github.com/stoeffel/haskell-simple-dsl-examples/blob/master/ChatGADT.hs
-module MtgPure.Test.Direct (
-  module MtgPure.Test.Direct,
+module MtgPure.Test.SerializableMonadApi.ProofOfConcept (
+  module MtgPure.Test.SerializableMonadApi.ProofOfConcept,
 ) where
 
 import safe qualified Control.Monad.State.Strict as State
 import safe Data.IORef (modifyIORef', newIORef, readIORef)
 import safe Data.Kind (Type)
 import safe qualified Data.Map.Strict as Map
-import safe MtgPure.Test.Variabled (Env (..), EnvM, EnvShow (..), RS, Var (Lit, Var), VarID, runEnvM)
-import safe qualified MtgPure.Test.VariabledMonad as X
+import safe MtgPure.Test.SerializableMonadApi.Variabled (Env (..), EnvM, EnvShow (..), RS, Var (Lit, Var), VarID, runEnvM)
+import safe qualified MtgPure.Test.SerializableMonadApi.VariabledMonad as X
 
 data InterpM (dsl :: Type -> Type -> Type) (s :: Type) (a :: Type) :: Type where
   Interp :: dsl s a -> InterpM dsl s a

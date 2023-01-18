@@ -3,17 +3,18 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.ToManaCost (
+module MtgPure.Model.Mana.ToManaCost (
   ToManaCost (..),
 ) where
 
 import safe Data.Inst (Inst2, Inst3, Inst4, Inst5, Inst6, Inst7)
 import safe Data.Kind (Type)
-import safe MtgPure.Model.GenericMana (GenericMana (GenericMana'))
-import safe MtgPure.Model.Mana (Mana (..), Snow (..))
-import safe MtgPure.Model.ManaCost (ManaCost (..), emptyManaCost)
-import safe MtgPure.Model.ManaSymbol (ManaSymbol (..))
-import safe MtgPure.Model.ToMana (toMana)
+import safe MtgPure.Model.Mana.Mana (Mana (..), castManaType)
+import safe MtgPure.Model.Mana.ManaCost (ManaCost (..), emptyManaCost)
+import safe MtgPure.Model.Mana.ManaSymbol (ManaSymbol (..))
+import safe MtgPure.Model.Mana.ManaType (IsManaType (..), ManaType (..), SManaType (..))
+import safe MtgPure.Model.Mana.Snow (Snow (..))
+import safe MtgPure.Model.Mana.ToMana (toMana)
 import safe MtgPure.Model.Variable (Var (..))
 
 -- NOTE: This takes `'Var` instead of `var :: Var` to avoid some authoring ambiguities
@@ -60,20 +61,19 @@ instance ToManaCost Integer where
   toManaCost n = toManaCost (fromInteger n :: Int)
 
 instance ToManaCost Int where
-  toManaCost = toManaCost . GenericMana' @ 'Var
+  toManaCost = toManaCost @(Mana 'Var 'NonSnow 'MTGeneric) . Mana
 
-instance ToManaCost (GenericMana 'Var) where
-  toManaCost x = emptyManaCost{costGeneric = GenericMana x}
-
-instance ToManaCost (Mana 'Var 'NonSnow a) where
-  toManaCost = \case
-    x@(WhiteMana _) -> emptyManaCost{costWhite = x}
-    x@(BlueMana _) -> emptyManaCost{costBlue = x}
-    x@(BlackMana _) -> emptyManaCost{costBlack = x}
-    x@(RedMana _) -> emptyManaCost{costRed = x}
-    x@(GreenMana _) -> emptyManaCost{costGreen = x}
-    x@ColorlessMana{} -> emptyManaCost{costColorless = x}
-    x@GenericMana{} -> emptyManaCost{costGeneric = x}
+instance IsManaType snow mt => ToManaCost (Mana 'Var snow mt) where
+  toManaCost x = case singManaType @snow @mt of
+    SMTWhite -> emptyManaCost{costWhite = x}
+    SMTBlue -> emptyManaCost{costBlue = x}
+    SMTBlack -> emptyManaCost{costBlack = x}
+    SMTRed -> emptyManaCost{costRed = x}
+    SMTGreen -> emptyManaCost{costGreen = x}
+    SMTColorless -> emptyManaCost{costColorless = x}
+    SMTGeneric -> emptyManaCost{costGeneric = x}
+    SMTSnow -> emptyManaCost{costSnow = castManaType x}
+    SMTHybridBG -> emptyManaCost{costHybridBG = x}
 
 instance ToManaCost (ManaSymbol a, Int) where
   toManaCost = \case
@@ -84,6 +84,7 @@ instance ToManaCost (ManaSymbol a, Int) where
     x@(G, _) -> emptyManaCost{costGreen = toMana x}
     x@(C, _) -> emptyManaCost{costColorless = toMana x}
     x@(S, _) -> emptyManaCost{costSnow = toMana x}
+    x@(BG, _) -> emptyManaCost{costHybridBG = toMana x}
 
 instance ToManaCost (ManaSymbol a) where
   toManaCost = \case
@@ -94,3 +95,4 @@ instance ToManaCost (ManaSymbol a) where
     G -> toManaCost (G, 1 :: Int)
     C -> toManaCost (C, 1 :: Int)
     S -> toManaCost (S, 1 :: Int)
+    BG -> toManaCost (BG, 1 :: Int)

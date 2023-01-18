@@ -17,21 +17,29 @@ import safe qualified Data.DList as DList
 import safe qualified Data.Map.Strict as Map
 import safe qualified Data.Stream as Stream
 import safe MtgPure.Engine.Orphans.ZO ()
-import safe MtgPure.Engine.State (
+import safe MtgPure.Engine.Prompt (
   AnyElected (..),
   Elected (..),
+ )
+import safe MtgPure.Engine.State (
   GameResult (..),
   GameState (..),
  )
 import safe MtgPure.Model.Artifact (Artifact (..))
 import safe MtgPure.Model.CardName (HasCardName (getCardName))
 import safe MtgPure.Model.Creature (Creature (..))
+import safe MtgPure.Model.Damage (Damage, Damage' (..))
 import safe MtgPure.Model.Deck (Deck (..))
 import safe MtgPure.Model.Enchantment (AnyEnchantmentType (..), Enchantment (..))
 import safe MtgPure.Model.Graveyard (Graveyard (..))
 import safe MtgPure.Model.Hand (Hand (..))
 import safe MtgPure.Model.Land (Land (..))
 import safe MtgPure.Model.Library (Library (..))
+import safe MtgPure.Model.Life (Life (..))
+import safe MtgPure.Model.Mana.Mana (IsManaNoVar, Mana (..))
+import safe MtgPure.Model.Mana.ManaCost (ManaCost (ManaCost'))
+import safe MtgPure.Model.Mana.ManaPool (CompleteManaPool (..), ManaPool (..))
+import safe MtgPure.Model.Mana.Snow (IsSnow)
 import safe MtgPure.Model.Permanent (Permanent (..))
 import safe MtgPure.Model.PhaseStep (PhaseStep (..))
 import safe MtgPure.Model.Planeswalker (Planeswalker (..))
@@ -47,6 +55,7 @@ import safe MtgPure.Model.Recursive (
 import safe MtgPure.Model.Recursive.Show ()
 import safe MtgPure.Model.Sideboard (Sideboard (..))
 import safe MtgPure.Model.Stack (Stack (..), StackObject (..))
+import safe MtgPure.Model.Variable (ForceVars (forceVars), Var (NoVar))
 
 newtype Bulleted a = Bulleted a
   deriving (Eq, Ord)
@@ -70,6 +79,167 @@ tellPrint s = tell $ DList.fromList (show s) <> "\n"
 
 tellLine :: DString -> Writer DString ()
 tellLine s = tell $ s <> "\n"
+
+mapManaCost ::
+  ( forall snow color.
+    (IsManaNoVar snow color) =>
+    Mana var snow color ->
+    Mana var' snow color
+  ) ->
+  ManaCost var ->
+  ManaCost var'
+mapManaCost f (ManaCost' w u b r g c x s bg) =
+  ManaCost' (f w) (f u) (f b) (f r) (f g) (f c) (f x) (f s) (f bg)
+
+mapManaCost2 ::
+  ( forall snow color.
+    IsManaNoVar snow color =>
+    Mana var snow color ->
+    Mana var snow color ->
+    Mana var' snow color
+  ) ->
+  ManaCost var ->
+  ManaCost var ->
+  ManaCost var'
+mapManaCost2
+  f
+  (ManaCost' w1 u1 b1 r1 g1 c1 x1 s1 bg1)
+  (ManaCost' w2 u2 b2 r2 g2 c2 x2 s2 bg2) =
+    ManaCost'
+      (f w1 w2)
+      (f u1 u2)
+      (f b1 b2)
+      (f r1 r2)
+      (f g1 g2)
+      (f c1 c2)
+      (f x1 x2)
+      (f s1 s2)
+      (f bg1 bg2)
+
+mapManaPool ::
+  IsSnow snow =>
+  ( forall color.
+    IsManaNoVar snow color =>
+    Mana 'NoVar snow color ->
+    Mana 'NoVar snow color
+  ) ->
+  ManaPool snow ->
+  ManaPool snow
+mapManaPool f (ManaPool w u b r g c) =
+  ManaPool (f w) (f u) (f b) (f r) (f g) (f c)
+
+mapManaPool2 ::
+  IsSnow snow =>
+  ( forall color.
+    IsManaNoVar snow color =>
+    Mana 'NoVar snow color ->
+    Mana 'NoVar snow color ->
+    Mana 'NoVar snow color
+  ) ->
+  ManaPool snow ->
+  ManaPool snow ->
+  ManaPool snow
+mapManaPool2
+  f
+  (ManaPool w1 u1 b1 r1 g1 c1)
+  (ManaPool w2 u2 b2 r2 g2 c2) =
+    ManaPool
+      (f w1 w2)
+      (f u1 u2)
+      (f b1 b2)
+      (f r1 r2)
+      (f g1 g2)
+      (f c1 c2)
+
+mapCompleteManaPool ::
+  ( forall snow.
+    IsSnow snow =>
+    ManaPool snow ->
+    ManaPool snow
+  ) ->
+  CompleteManaPool ->
+  CompleteManaPool
+mapCompleteManaPool f (CompleteManaPool snow nonSnow) =
+  CompleteManaPool (f snow) (f nonSnow)
+
+mapCompleteManaPool2 ::
+  ( forall snow.
+    IsSnow snow =>
+    ManaPool snow ->
+    ManaPool snow ->
+    ManaPool snow
+  ) ->
+  CompleteManaPool ->
+  CompleteManaPool ->
+  CompleteManaPool
+mapCompleteManaPool2
+  f
+  (CompleteManaPool snow1 nonSnow1)
+  (CompleteManaPool snow2 nonSnow2) =
+    CompleteManaPool
+      (f snow1 snow2)
+      (f nonSnow1 nonSnow2)
+
+instance Num CompleteManaPool where
+  (+) = mapCompleteManaPool2 (+)
+  (-) = mapCompleteManaPool2 (-)
+  (*) = mapCompleteManaPool2 (*)
+  abs = mapCompleteManaPool abs
+  signum = mapCompleteManaPool signum
+  negate = mapCompleteManaPool negate
+  fromInteger n = mempty{poolNonSnow = fromInteger n}
+
+instance Num (Damage 'NoVar) where
+  (+) (Damage x) (Damage y) = Damage $ x + y
+  (-) (Damage x) (Damage y) = Damage $ x - y
+  (*) (Damage x) (Damage y) = Damage $ x * y
+  abs (Damage x) = Damage $ abs x
+  signum (Damage x) = Damage $ signum x
+  negate (Damage x) = Damage $ negate x
+  fromInteger = Damage . fromInteger
+
+instance Num Life where
+  Life a + Life b = Life (a + b)
+  Life a - Life b = Life (a - b)
+  Life a * Life b = Life (a * b)
+  abs (Life a) = Life (abs a)
+  signum (Life a) = Life (signum a)
+  fromInteger a = Life (fromInteger a)
+
+instance Num (Mana 'NoVar snow mt) where
+  (+) (Mana x) (Mana y) = Mana $ x + y
+  (-) (Mana x) (Mana y) = Mana $ x - y
+  (*) (Mana x) (Mana y) = Mana $ x * y
+  abs (Mana x) = Mana $ abs x
+  signum (Mana x) = Mana $ signum x
+  negate (Mana x) = Mana $ negate x
+  fromInteger = Mana . fromInteger
+
+instance IsSnow snow => Num (ManaPool snow) where
+  (+) = mapManaPool2 (+)
+  (-) = mapManaPool2 (-)
+  (*) = mapManaPool2 (*)
+  abs = mapManaPool abs
+  signum = mapManaPool signum
+  negate = mapManaPool negate
+  fromInteger = \case
+    0 -> mempty
+    -- NOTE: I could support a sound `fromInteger` definition, but it prolly isn't worth
+    -- it because it would have to support only Colorless or all the mana types together,
+    -- neither of which is particularly desirable.
+    _ -> error "(fromInteger :: ManaPool snow) only supports n=0"
+
+instance Num (ManaCost 'NoVar) where
+  (+) = mapManaCost2 (+)
+  (-) = mapManaCost2 (-)
+  (*) = mapManaCost2 (*)
+  abs = mapManaCost abs
+  signum = mapManaCost signum
+  negate = mapManaCost negate
+  fromInteger x = ManaCost' 0 0 0 0 0 0 (fromInteger x) 0 0
+
+instance ForceVars (ManaCost var) (ManaCost 'NoVar) where
+  forceVars = mapManaCost forceVars
 
 deriving instance Show (AnyElected pEffect)
 

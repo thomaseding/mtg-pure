@@ -40,6 +40,8 @@ module MtgPure.Engine.Core (
   removeHandCard,
   removeLibraryCard,
   rewindIllegal,
+  rewindIllegalActivation,
+  rewindNothing,
   setPermanent,
   setPlayer,
   toZO,
@@ -73,11 +75,12 @@ import safe MtgPure.Engine.Monad (
   put,
  )
 import safe MtgPure.Engine.Prompt (
-  AbsoluteActivatedAbilityIndex (AbsoluteActivatedAbilityIndex),
+  AbsoluteActivatedAbilityIndex (..),
+  ActivateResult (..),
   InternalLogicError (..),
   PlayerCount (..),
   Prompt' (..),
-  RelativeAbilityIndex (RelativeAbilityIndex),
+  RelativeAbilityIndex (..),
   SomeActivatedAbility (..),
  )
 import safe MtgPure.Engine.State (
@@ -161,17 +164,50 @@ allControlledPermanentsOf oPlayer =
       perm <- internalFromPrivate $ fromRO $ getPermanent zoPerm
       pure $ permanentController perm == oPlayer
 
-rewindIllegal :: Monad m => Magic 'Private 'RW m Legality -> Magic 'Private 'RW m Bool
-rewindIllegal m = logCall 'rewindIllegal do
+rewindLeft :: Monad m => ex -> Magic 'Private 'RW m (Either ex a) -> Magic 'Private 'RW m (Either ex a)
+rewindLeft ex m = logCall 'rewindLeft do
   -- (104.1) (727.1) XXX: Is it possible for GameResult to be thrown during an illegal action?
   -- If so, is should it sometimes/always/never be rewound?
   let m' = magicCatch m \case
-        GameResult{gameWinners = []} -> pure Illegal
-        ex -> magicThrow ex
+        GameResult{gameWinners = []} -> pure $ Left ex
+        gameResult -> magicThrow gameResult
   st <- fromRO get
-  m' >>= \case
-    Legal -> pure True
-    Illegal -> put st >> pure False
+  result <- m'
+  case result of
+    Right{} -> pure result
+    Left{} -> put st >> pure result
+
+rewindNothing :: Monad m => Magic 'Private 'RW m (Maybe a) -> Magic 'Private 'RW m (Maybe a)
+rewindNothing m = logCall 'rewindNothing do
+  result <-
+    rewindLeft () $
+      m <&> \case
+        Nothing -> Left ()
+        Just x -> Right x
+  pure case result of
+    Left () -> Nothing
+    Right x -> Just x
+
+rewindIllegal :: Monad m => Magic 'Private 'RW m Legality -> Magic 'Private 'RW m Bool
+rewindIllegal m = logCall 'rewindIllegal do
+  result <-
+    rewindLeft () $
+      m <&> \case
+        Legal -> Right ()
+        Illegal -> Left ()
+  pure case result of
+    Left () -> False
+    Right () -> True
+
+rewindIllegalActivation :: Monad m => Magic 'Private 'RW m ActivateResult -> Magic 'Private 'RW m ActivateResult
+rewindIllegalActivation m = logCall 'rewindIllegalActivation do
+  result <-
+    rewindLeft IllegalActivation $
+      m <&> \x -> case x of
+        IllegalActivation{} -> Left x
+        ActivatedManaAbility{} -> Right x
+        ActivatedNonManaAbility{} -> Right x
+  pure $ either id id result
 
 pickOneZO ::
   (IsZO zone ot, Monad m) =>

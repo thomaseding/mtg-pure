@@ -31,13 +31,16 @@ import safe MtgPure.Engine.Fwd.Api (
  )
 import safe MtgPure.Engine.Legality (Legality (..), toLegality)
 import safe MtgPure.Engine.Monad (fromRO, gets)
+import safe MtgPure.Engine.Orphans ()
 import safe MtgPure.Engine.Prompt (Prompt' (..))
 import safe MtgPure.Engine.State (GameState (..), Magic, logCall, mkOpaqueGameState)
-import safe MtgPure.Model.CountMana (countMana)
-import safe MtgPure.Model.GenericMana (GenericMana (..))
-import safe MtgPure.Model.Mana (IsManaNoVar, IsSnow, Mana)
-import safe MtgPure.Model.ManaCost (ManaCost (..))
-import safe MtgPure.Model.ManaPool (CompleteManaPool (..), ManaPool (..))
+import safe MtgPure.Model.Combinators (isTapped)
+import safe MtgPure.Model.Life (Life (..))
+import safe MtgPure.Model.Mana.CountMana (countMana)
+import safe MtgPure.Model.Mana.Mana (IsManaNoVar, Mana (..))
+import safe MtgPure.Model.Mana.ManaCost (ManaCost (..))
+import safe MtgPure.Model.Mana.ManaPool (CompleteManaPool (..), ManaPool (..))
+import safe MtgPure.Model.Mana.Snow (IsSnow)
 import safe MtgPure.Model.Object.Object (Object)
 import safe MtgPure.Model.Object.ObjectN_ (ObjectN' (..))
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
@@ -49,17 +52,17 @@ import safe MtgPure.Model.Variable (ForceVars (forceVars), Var (..))
 import safe MtgPure.Model.Zone (SZone (..), Zone (..))
 import safe MtgPure.Model.ZoneObject.Convert (toZO0, zo0ToPermanent)
 import safe MtgPure.Model.ZoneObject.ZoneObject (IsZO, ZoneObject (..))
-import safe MtgPure.ModelCombinators (isTapped)
 
 pay :: Monad m => Object 'OTPlayer -> Cost ot -> Magic 'Private 'RW m Legality
 pay oPlayer = logCall 'pay \case
   AndCosts costs -> payAndCosts oPlayer costs
   CostCase{} -> undefined
   DiscardRandomCost{} -> undefined
+  ExileCost{} -> undefined
   LoyaltyCost{} -> undefined
   ManaCost manaCost -> payManaCost oPlayer manaCost
   OrCosts costs -> payOrCosts oPlayer costs
-  PayLife{} -> undefined
+  PayLife life -> payLife oPlayer $ Life life
   SacrificeCost reqs -> paySacrificeCost oPlayer $ RAnd reqs
   TapCost reqs -> payTapCost oPlayer $ RAnd reqs
 
@@ -73,10 +76,6 @@ class FindMana manas var | manas -> var where
     ) ->
     Maybe x
 
-instance FindMana (ManaCost var) var where
-  findMana (ManaCost' w u b r g c x s) f =
-    getFirst $ mconcat $ map First [f w, f u, f b, f r, f g, f c, f x, f s]
-
 instance IsSnow snow => FindMana (ManaPool snow) 'NoVar where
   findMana (ManaPool w u b r g c) f =
     getFirst $ mconcat $ map First [f w, f u, f b, f r, f g, f c]
@@ -84,6 +83,18 @@ instance IsSnow snow => FindMana (ManaPool snow) 'NoVar where
 instance FindMana CompleteManaPool 'NoVar where
   findMana pool f =
     getFirst $ mconcat $ map First [poolNonSnow pool `findMana` f, poolSnow pool `findMana` f]
+
+payLife :: Monad m => Object 'OTPlayer -> Life -> Magic 'Private 'RW m Legality
+payLife oPlayer life = logCall 'payLife do
+  fromRO (findPlayer oPlayer) >>= \case
+    Nothing -> pure Illegal
+    Just player -> do
+      let life' = playerLife player - life
+      case life' < 0 of
+        True -> pure Illegal
+        False -> do
+          setPlayer oPlayer $ player{playerLife = life'}
+          pure Legal
 
 -- TODO: snow costs and snow payments
 payManaCost :: Monad m => Object 'OTPlayer -> ManaCost 'Var -> Magic 'Private 'RW m Legality
@@ -107,7 +118,7 @@ payManaCost oPlayer (forceVars -> cost) = logCall 'payManaCost do
         Nothing -> do
           let avail = countMana pool'
               generic = countMana $ costGeneric cost
-              generic' = GenericMana' generic
+              generic' = Mana generic
           case generic > avail of
             True -> pure Illegal
             False -> do

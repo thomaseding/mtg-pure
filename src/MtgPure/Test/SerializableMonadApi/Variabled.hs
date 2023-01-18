@@ -9,7 +9,7 @@
 {-# HLINT ignore "Use if" #-}
 {-# HLINT ignore "Redundant pure" #-}
 
-module MtgPure.Test.Variabled (
+module MtgPure.Test.SerializableMonadApi.Variabled (
   VarID,
   Var (..),
   DString,

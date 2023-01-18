@@ -30,8 +30,8 @@ import safe Data.Typeable (Typeable, cast, typeRep)
 import safe MtgPure.Model.Color (Color (..))
 import safe MtgPure.Model.Colors (Colors)
 import safe MtgPure.Model.Damage (Damage)
-import safe MtgPure.Model.ManaCost (ManaCost)
-import safe MtgPure.Model.ManaPool (ManaPool)
+import safe MtgPure.Model.Mana.ManaCost (ManaCost)
+import safe MtgPure.Model.Mana.ManaPool (ManaPool)
 import safe MtgPure.Model.Object.IndexOT (IndexOT (indexOT))
 import safe MtgPure.Model.Object.IsObjectType (IsObjectType (..))
 import safe MtgPure.Model.Object.OTN (
@@ -164,7 +164,7 @@ instance Eq (Token ot) where
 instance IndexOT ot => Eq (TriggeredAbility zone ot) where
   (==) x y = runEnvM (ordTriggeredAbility x y) == EQ
 
-instance (Typeable el, Typeable p, IsZO zone ot) => Eq (WithMaskedObject zone (Elect p el ot)) where
+instance (Typeable el, Typeable p, IsZO zone ot) => Eq (WithMaskedObject zone (Elect p el) ot) where
   (==) x y = runEnvM (ordWithMaskedObjectElectEl x y) == EQ
 
 instance IsZO zone ot => Eq (WithThis zone Ability ot) where
@@ -244,7 +244,7 @@ instance Ord (Token ot) where
 instance IndexOT ot => Ord (TriggeredAbility zone ot) where
   compare x y = runEnvM (ordTriggeredAbility x y)
 
-instance (Typeable el, Typeable p, IsZO zone ot) => Ord (WithMaskedObject zone (Elect p el ot)) where
+instance (Typeable el, Typeable p, IsZO zone ot) => Ord (WithMaskedObject zone (Elect p el) ot) where
   compare x y = runEnvM (ordWithMaskedObjectElectEl x y)
 
 instance IsZO zone ot => Ord (WithThis zone Ability ot) where
@@ -686,6 +686,20 @@ ordCost x = case x of
   DiscardRandomCost amount1 -> \case
     DiscardRandomCost amount2 -> pure $ compare amount1 amount2
     y -> compareIndexM x y
+  ExileCost reqs1 -> \case
+    ExileCost reqs2 ->
+      let go ::
+            forall zone1 zone2 ot1 ot2.
+            IsZO zone1 ot1 =>
+            IsZO zone2 ot2 =>
+            [Requirement zone1 ot1] ->
+            [Requirement zone2 ot2] ->
+            EnvM Ordering
+          go _ _ = case cast reqs2 of
+            Nothing -> compareZoneOT @zone1 @zone2 @ot1 @ot2
+            Just reqs2 -> seqM [ordRequirements reqs1 reqs2]
+       in go reqs1 reqs2
+    y -> compareIndexM x y
   LoyaltyCost amount1 -> \case
     LoyaltyCost amount2 -> pure $ compare amount1 amount2
     y -> compareIndexM x y
@@ -818,6 +832,9 @@ ordEffect x = case x of
   EffectCase case1 -> \case
     EffectCase case2 -> ordCase ordEffect case1 case2
     y -> compareIndexM x y
+  EndTheTurn -> \case
+    EndTheTurn -> pure EQ
+    y -> compareIndexM x y
   Exile obj1 -> \case
     Exile obj2 ->
       let go ::
@@ -850,6 +867,25 @@ ordEffect x = case x of
                 [ ordWAny any1 any2
                 , ordZoneObject obj1 obj2
                 , ordAbility ability1 ability2
+                ]
+       in go obj1 obj2
+    y -> compareIndexM x y
+  GainControl any1 player1 obj1 -> \case
+    GainControl any2 player2 obj2 ->
+      let go ::
+            forall zone1 zone2 ot1 ot2.
+            IsZO zone1 ot1 =>
+            IsZO zone2 ot2 =>
+            ZO zone1 ot1 ->
+            ZO zone2 ot2 ->
+            EnvM Ordering
+          go _ _ = case cast (any2, player2, obj2) of
+            Nothing -> compareZoneOT @zone1 @zone2 @ot1 @ot2
+            Just (any2, player2, obj2) ->
+              seqM
+                [ ordWAny any1 any2
+                , ordZoneObject player1 player2
+                , ordZoneObject obj1 obj2
                 ]
        in go obj1 obj2
     y -> compareIndexM x y
@@ -1006,8 +1042,8 @@ ordElectEl x = case x of
             Typeable el =>
             IsZO zone1 ot =>
             IsZO zone2 ot =>
-            WithMaskedObject zone1 (Elect p el ot) ->
-            WithMaskedObject zone2 (Elect p el ot) ->
+            WithMaskedObject zone1 (Elect p el) ot ->
+            WithMaskedObject zone2 (Elect p el) ot ->
             EnvM Ordering
           go _ _ = case cast with2 of
             Nothing -> compareZoneOT @zone1 @zone2 @ot @ot
@@ -1140,8 +1176,8 @@ ordElectEl x = case x of
             Typeable el =>
             IsZO zone1 ot =>
             IsZO zone2 ot =>
-            WithMaskedObject zone1 (Elect 'Pre el ot) ->
-            WithMaskedObject zone2 (Elect 'Pre el ot) ->
+            WithMaskedObject zone1 (Elect 'Pre el) ot ->
+            WithMaskedObject zone2 (Elect 'Pre el) ot ->
             EnvM Ordering
           go _ _ = case cast with2 of
             Nothing -> compareZoneOT @zone1 @zone2 @ot @ot
@@ -1632,6 +1668,9 @@ ordRequirement x = case x of
   Is any1 obj1 -> \case
     Is any2 obj2 -> seqM [ordWAny any1 any2, ordZoneObject obj1 obj2]
     y -> compareIndexM x y
+  IsOpponentOf player1 -> \case
+    IsOpponentOf player2 -> ordZoneObject player1 player2
+    y -> compareIndexM x y
   IsTapped perm1 -> \case
     IsTapped perm2 -> ordWPermanent perm1 perm2
     y -> compareIndexM x y
@@ -1727,6 +1766,9 @@ ordStaticAbility x = case x of
   Haste -> \case
     Haste -> pure EQ
     y -> compareIndexM x y
+  Landwalk reqs1 -> \case
+    Landwalk reqs2 -> ordRequirements reqs1 reqs2
+    y -> compareIndexM x y
   StaticContinuous elect1 -> \case
     StaticContinuous elect2 -> ordElectEl elect1 elect2
     y -> compareIndexM x y
@@ -1781,39 +1823,39 @@ ordWithLinkedObject ::
   WithLinkedObject zone x ot ->
   EnvM Ordering
 ordWithLinkedObject ordM x = case x of
-  LProxy reqs1 -> \case
-    LProxy reqs2 -> ordRequirements reqs1 reqs2
+  LinkedProxy reqs1 -> \case
+    LinkedProxy reqs2 -> ordRequirements reqs1 reqs2
   --
-  L1 NonProxyElectEffect reqs1 cont1 -> \case
-    L1 NonProxyElectEffect reqs2 cont2 ->
+  Linked1 NonProxyElectEffect reqs1 cont1 -> \case
+    Linked1 NonProxyElectEffect reqs2 cont2 ->
       ordO1 ordM reqs1 reqs2 cont1 cont2
-  L2 NonProxyElectEffect reqs1 cont1 -> \case
-    L2 NonProxyElectEffect reqs2 cont2 ->
+  Linked2 NonProxyElectEffect reqs1 cont1 -> \case
+    Linked2 NonProxyElectEffect reqs2 cont2 ->
       ordO2 ordM reqs1 reqs2 cont1 cont2
-  L3 NonProxyElectEffect reqs1 cont1 -> \case
-    L3 NonProxyElectEffect reqs2 cont2 ->
+  Linked3 NonProxyElectEffect reqs1 cont1 -> \case
+    Linked3 NonProxyElectEffect reqs2 cont2 ->
       ordO3 ordM reqs1 reqs2 cont1 cont2
-  L4 NonProxyElectEffect reqs1 cont1 -> \case
-    L4 NonProxyElectEffect reqs2 cont2 ->
+  Linked4 NonProxyElectEffect reqs1 cont1 -> \case
+    Linked4 NonProxyElectEffect reqs2 cont2 ->
       ordO4 ordM reqs1 reqs2 cont1 cont2
-  L5 NonProxyElectEffect reqs1 cont1 -> \case
-    L5 NonProxyElectEffect reqs2 cont2 ->
+  Linked5 NonProxyElectEffect reqs1 cont1 -> \case
+    Linked5 NonProxyElectEffect reqs2 cont2 ->
       ordO5 ordM reqs1 reqs2 cont1 cont2
   --
-  L1 NonProxyElectPrePostEffect reqs1 cont1 -> \case
-    L1 NonProxyElectPrePostEffect reqs2 cont2 ->
+  Linked1 NonProxyElectPrePostEffect reqs1 cont1 -> \case
+    Linked1 NonProxyElectPrePostEffect reqs2 cont2 ->
       ordO1 ordM reqs1 reqs2 cont1 cont2
-  L2 NonProxyElectPrePostEffect reqs1 cont1 -> \case
-    L2 NonProxyElectPrePostEffect reqs2 cont2 ->
+  Linked2 NonProxyElectPrePostEffect reqs1 cont1 -> \case
+    Linked2 NonProxyElectPrePostEffect reqs2 cont2 ->
       ordO2 ordM reqs1 reqs2 cont1 cont2
-  L3 NonProxyElectPrePostEffect reqs1 cont1 -> \case
-    L3 NonProxyElectPrePostEffect reqs2 cont2 ->
+  Linked3 NonProxyElectPrePostEffect reqs1 cont1 -> \case
+    Linked3 NonProxyElectPrePostEffect reqs2 cont2 ->
       ordO3 ordM reqs1 reqs2 cont1 cont2
-  L4 NonProxyElectPrePostEffect reqs1 cont1 -> \case
-    L4 NonProxyElectPrePostEffect reqs2 cont2 ->
+  Linked4 NonProxyElectPrePostEffect reqs1 cont1 -> \case
+    Linked4 NonProxyElectPrePostEffect reqs2 cont2 ->
       ordO4 ordM reqs1 reqs2 cont1 cont2
-  L5 NonProxyElectPrePostEffect reqs1 cont1 -> \case
-    L5 NonProxyElectPrePostEffect reqs2 cont2 ->
+  Linked5 NonProxyElectPrePostEffect reqs1 cont1 -> \case
+    Linked5 NonProxyElectPrePostEffect reqs2 cont2 ->
       ordO5 ordM reqs1 reqs2 cont1 cont2
 
 ordWithList :: (ret -> ret -> EnvM Ordering) -> WithList ret zone ot -> WithList ret zone ot -> EnvM Ordering
@@ -1846,8 +1888,8 @@ ordWithMaskedObjectElectEl ::
   Typeable p =>
   Typeable el =>
   IsZO zone ot =>
-  WithMaskedObject zone (Elect p el ot) ->
-  WithMaskedObject zone (Elect p el ot) ->
+  WithMaskedObject zone (Elect p el) ot ->
+  WithMaskedObject zone (Elect p el) ot ->
   EnvM Ordering
 ordWithMaskedObjectElectEl x = case x of
   Masked1 reqs1 cont1 -> \case

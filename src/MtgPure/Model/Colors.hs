@@ -9,8 +9,8 @@ module MtgPure.Model.Colors (
 
 import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
-import safe MtgPure.Model.ManaSymbol (ManaSymbol)
-import safe MtgPure.Model.ManaType (ManaType (..))
+import safe MtgPure.Model.Mana.ManaSymbol (ManaSymbol)
+import safe MtgPure.Model.Mana.ManaType (ManaType (..))
 
 data Colors :: Type where
   Colors ::

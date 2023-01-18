@@ -11,23 +11,23 @@
 {-# HLINT ignore "Redundant fmap" #-}
 {-# HLINT ignore "Evaluate" #-}
 
-module MtgPure.Test.MountainShock (
+module MtgPure.Test.Game.MountainRagingGoblin (
   main,
-  mainMountainShock,
+  mainMountainRagingGoblin,
 ) where
 
-import safe MtgPure.Cards (mountain, shock)
+import safe MtgPure.Cards (mountain, ragingGoblin)
 import safe MtgPure.Client.Console (ConsoleInput (..), playConsoleGame, runConsole)
 import safe MtgPure.Model.Deck (Deck (..))
 import safe MtgPure.Model.Recursive (AnyCard (..))
 import safe MtgPure.Model.Sideboard (Sideboard (..))
 
 main :: IO ()
-main = mainMountainShock
+main = mainMountainRagingGoblin
 
 -- NOTE: Still a WIP
-mainMountainShock :: IO ()
-mainMountainShock = runConsole input do
+mainMountainRagingGoblin :: IO ()
+mainMountainRagingGoblin = runConsole input do
   playConsoleGame $ replicate 2 (deck, side)
  where
   input =
@@ -44,7 +44,7 @@ deck =
       replicate
         (if True then 1 else 30)
         [ AnyCard1 mountain
-        , AnyCard1 shock
+        , AnyCard1 ragingGoblin
         ]
 
 side :: Sideboard
@@ -52,21 +52,11 @@ side =
   Sideboard $
     concat
       [ replicate (if True then 1 else 7) $ AnyCard1 mountain
-      , replicate (if True then 1 else 8) $ AnyCard1 shock
+      , replicate (if True then 1 else 8) $ AnyCard1 ragingGoblin
       ]
 
 replayLog :: Maybe FilePath
-replayLog = Nothing -- Just "replay-Mountain-Shock.log"
+replayLog = Nothing -- Just "replay-Mountain-RagingGoblin.log"
 
 replayInputs :: [String]
-replayInputs =
-  [ "Pass ; O=1 UpkeepStep Turn1"
-  , "Pass ; O=2 UpkeepStep Turn1"
-  , "Pass ; O=1 DrawStep Turn1"
-  , "Pass ; O=2 DrawStep Turn1"
-  , "PlayLand 8 ; O=1 PreCombatMainPhase Turn1"
-  , "ActivateAbility 11 R ; O=1 PreCombatMainPhase Turn1"
-  , "CastSpell 7 ; O=1 PreCombatMainPhase Turn1"
-  , "Pass ; O=1 PreCombatMainPhase Turn1"
-  , "Pass ; O=2 PreCombatMainPhase Turn1"
-  ]
+replayInputs = []

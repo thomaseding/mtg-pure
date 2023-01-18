@@ -11,7 +11,7 @@
 {-# HLINT ignore "Redundant fmap" #-}
 {-# HLINT ignore "Evaluate" #-}
 
-module MtgPure.Test.MountainStoneRain (
+module MtgPure.Test.Game.MountainStoneRain (
   main,
   mainMountainStoneRain,
 ) where

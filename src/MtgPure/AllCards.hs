@@ -17,14 +17,17 @@ import safe MtgPure.Cards (
   backlash,
   bayou,
   birdToken,
+  blackLotus,
   blaze,
   bloodMoon,
+  braidwoodCup,
   cityOfBrass,
   cleanse,
   conversion,
   counterspell,
   damnation,
   darkRitual,
+  deathriteShaman,
   divination,
   fling,
   forest,
@@ -62,10 +65,11 @@ import safe MtgPure.Cards (
   vindicate,
   wastes,
   wear_tear,
+  witchEngine,
   wrathOfGod,
  )
+import safe MtgPure.Model.Combinators (ToCard (..), ToToken (..))
 import safe MtgPure.Model.Recursive (AnyCard, AnyToken)
-import safe MtgPure.ModelCombinators (ToCard (..), ToToken (..))
 
 allCards :: [AnyCard]
 allCards =
@@ -75,14 +79,17 @@ allCards =
   , toCard ancestralVision
   , toCard backlash
   , toCard bayou
+  , toCard blackLotus
   , toCard blaze
   , toCard bloodMoon
+  , toCard braidwoodCup
   , toCard cityOfBrass
   , toCard cleanse
   , toCard conversion
   , toCard counterspell
   , toCard damnation
   , toCard darkRitual
+  , toCard deathriteShaman
   , toCard divination
   , toCard fling
   , toCard forest
@@ -119,6 +126,7 @@ allCards =
   , toCard vindicate
   , toCard wastes
   , toCard wear_tear
+  , toCard witchEngine
   , toCard wrathOfGod
   ]
 

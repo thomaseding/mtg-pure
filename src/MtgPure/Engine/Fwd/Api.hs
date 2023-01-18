@@ -14,6 +14,8 @@ module MtgPure.Engine.Fwd.Api (
   run,
   runCont,
   rewindIllegal,
+  rewindIllegalActivation,
+  rewindNothing,
   eachLogged,
   eachLogged_,
   --
@@ -62,7 +64,7 @@ module MtgPure.Engine.Fwd.Api (
   removeLibraryCard,
   requiresTargets,
   resolveTopOfStack,
-  resolveOneShot,
+  resolveElected,
   satisfies,
   setPermanent,
   setPlayer,
@@ -89,12 +91,14 @@ import safe MtgPure.Engine.Monad (
 import safe MtgPure.Engine.Prompt (
   AbsoluteActivatedAbilityIndex,
   ActivateAbility,
+  ActivateResult,
   CastSpell,
+  Elected,
   EnactInfo,
-  OwnedCard,
   PlayLand,
   PlayerCount (..),
   PriorityAction,
+  ResolveElected,
   SomeActivatedAbility,
   SpecialAction,
  )
@@ -105,7 +109,7 @@ import safe MtgPure.Engine.State (
   MagicCont,
   logCall,
  )
-import MtgPure.Model.BasicLandType (BasicLandType)
+import safe MtgPure.Model.BasicLandType (BasicLandType)
 import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.Object.OTN (OT0)
 import safe MtgPure.Model.Object.OTNAliases (OTNCard, OTNPermanent)
@@ -124,7 +128,7 @@ import safe MtgPure.Model.Recursive (
   Requirement,
  )
 import safe MtgPure.Model.Zone (Zone (..))
-import safe MtgPure.Model.ZoneObject.ZoneObject (IsZO, ZO)
+import safe MtgPure.Model.ZoneObject.ZoneObject (IsOTN, IsZO, ZO)
 
 getFwd :: (Monad m, IsReadWrite rw) => Magic v rw m (Fwd m)
 getFwd = internalFromPrivate $ fromRO $ gets magicFwd
@@ -188,7 +192,6 @@ data Api (m :: Type -> Type) (v :: Visibility) (rw :: ReadWrite) (ret :: Type) :
   PushLibraryCard :: Object 'OTPlayer -> AnyCard -> Api m 'Private 'RW (ZO 'ZLibrary OTNCard)
   RemoveHandCard :: Object 'OTPlayer -> ZO 'ZHand OTNCard -> Api m 'Private 'RW (Maybe AnyCard)
   RemoveLibraryCard :: Object 'OTPlayer -> ZO 'ZLibrary OTNCard -> Api m 'Private 'RW (Maybe AnyCard)
-  ResolveTopOfStack :: Api m 'Private 'RW ()
   Satisfies :: IsZO zone ot => ZO zone ot -> Requirement zone ot -> Api m 'Private 'RO Bool
   SetPermanent :: ZO 'ZBattlefield OTNPermanent -> Maybe Permanent -> Api m 'Private 'RW ()
   SetPlayer :: Object 'OTPlayer -> Player -> Api m 'Private 'RW ()
@@ -196,8 +199,9 @@ data Api (m :: Type -> Type) (v :: Visibility) (rw :: ReadWrite) (ret :: Type) :
   ToZO :: IsZO zone ot => ObjectId -> Api m 'Private 'RO (Maybe (ZO zone ot))
   ZOsSatisfying :: IsZO zone ot => Requirement zone ot -> Api m 'Private 'RO [ZO zone ot]
 
-data ApiCont (v :: Visibility) (rw :: ReadWrite) (y :: Type) (z :: Type) :: Type where
-  AskPriorityAction :: Object 'OTPlayer -> ApiCont 'Private 'RW () ()
+data ApiCont (m :: Type -> Type) (v :: Visibility) (rw :: ReadWrite) (y :: Type) (z :: Type) :: Type where
+  AskPriorityAction :: Object 'OTPlayer -> ApiCont m 'Private 'RW () ()
+  ResolveTopOfStack :: ApiCont m 'Private 'RW () Void
 
 run :: Monad m => Api m v rw z -> Magic v rw m z
 run = \case
@@ -234,7 +238,6 @@ run = \case
   PushLibraryCard a b -> pushLibraryCard a b
   RemoveHandCard a b -> removeHandCard a b
   RemoveLibraryCard a b -> removeLibraryCard a b
-  ResolveTopOfStack -> resolveTopOfStack
   Satisfies a b -> satisfies a b
   SetPermanent a b -> setPermanent a b
   SetPlayer a b -> setPlayer a b
@@ -242,15 +245,19 @@ run = \case
   ToZO a -> toZO a
   ZOsSatisfying a -> zosSatisfying a
 
-runCont :: Monad m => ApiCont v rw y z -> MagicCont v rw m y z
+runCont :: Monad m => ApiCont m v rw y z -> MagicCont v rw m y z
 runCont = \case
-  AskPriorityAction a -> do
-    fwd <- liftCont getFwd
-    fwd_askPriorityAction fwd a
+  AskPriorityAction a -> askPriorityAction a
+  ResolveTopOfStack -> resolveTopOfStack
 
--- generalize?: e.g. (Maybe a) or (Either a a) or (Legality, a) or (Bool, a)
 rewindIllegal :: Monad m => Magic 'Private 'RW m Legality -> Magic 'Private 'RW m Bool
 rewindIllegal = fwd1 fwd_rewindIllegal
+
+rewindIllegalActivation :: Monad m => Magic 'Private 'RW m ActivateResult -> Magic 'Private 'RW m ActivateResult
+rewindIllegalActivation = fwd1 fwd_rewindIllegalActivation
+
+rewindNothing :: Monad m => Magic 'Private 'RW m (Maybe a) -> Magic 'Private 'RW m (Maybe a)
+rewindNothing = fwd1 fwd_rewindNothing
 
 eachLogged :: (IsReadWrite rw, Monad m) => [a] -> (a -> Magic v rw m z) -> Magic v rw m [z]
 eachLogged f = logCall 'eachLogged . T.for f
@@ -264,6 +271,11 @@ askPriorityAction :: Monad m => Object 'OTPlayer -> MagicCont 'Private 'RW m () 
 askPriorityAction a = do
   fwd <- liftCont getFwd
   fwd_askPriorityAction fwd a
+
+resolveTopOfStack :: Monad m => MagicCont 'Private 'RW m () Void
+resolveTopOfStack = do
+  fwd <- liftCont getFwd
+  fwd_resolveTopOfStack fwd
 
 ----------------------------------------
 
@@ -291,7 +303,7 @@ allZOs = fwd0 fwd_allZOs
 caseOf :: Monad m => (x -> Magic 'Private 'RW m a) -> Case x -> Magic 'Private 'RW m a
 caseOf = fwd2 fwd_caseOf
 
-activateAbility :: forall m. Monad m => Object 'OTPlayer -> PriorityAction ActivateAbility -> Magic 'Private 'RW m Legality
+activateAbility :: forall m. Monad m => Object 'OTPlayer -> PriorityAction ActivateAbility -> Magic 'Private 'RW m ActivateResult
 activateAbility = fwd2 fwd_activateAbility
 
 castSpell :: forall m. Monad m => Object 'OTPlayer -> PriorityAction CastSpell -> Magic 'Private 'RW m Legality
@@ -407,11 +419,8 @@ removeLibraryCard = fwd2 fwd_removeLibraryCard
 requiresTargets :: Monad m => Elect p el ot -> Magic 'Private 'RO m Bool
 requiresTargets = fwd1 fwd_requiresTargets
 
-resolveOneShot :: Monad m => ZO 'ZStack OT0 -> Maybe OwnedCard -> Elect 'Post (Effect 'OneShot) ot -> Magic 'Private 'RW m (Maybe EnactInfo)
-resolveOneShot = fwd3 fwd_resolveOneShot
-
-resolveTopOfStack :: Monad m => Magic 'Private 'RW m ()
-resolveTopOfStack = fwd0 fwd_resolveTopOfStack
+resolveElected :: (Monad m, IsOTN ot) => ZO 'ZStack OT0 -> Elected 'Pre ot -> Magic 'Private 'RW m ResolveElected
+resolveElected = fwd2 fwd_resolveElected
 
 satisfies :: (Monad m, IsZO zone ot) => ZO zone ot -> Requirement zone ot -> Magic 'Private 'RO m Bool
 satisfies = fwd2 fwd_satisfies

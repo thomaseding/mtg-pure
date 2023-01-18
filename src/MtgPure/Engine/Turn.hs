@@ -248,7 +248,9 @@ declareAttackersStep = do
       oActive <- fromPublicRO getActivePlayer
       attackers <- fromRO $ untilJust \attempt -> do
         attackers <- M.lift $ promptChooseAttackers prompt attempt opaque oActive
-        pure $ Just attackers -- TODO: validate attackers
+        pure () -- TODO: validate attackers
+        pure () -- TODO: store attackers in game state for Elects and Effects
+        pure $ Just attackers
       gainPriority oActive
       pure attackers
   case NonEmpty.nonEmpty attackers of
@@ -271,9 +273,10 @@ type AssignedCombatOrdering = Map.Map (ZO 'ZBattlefield OTNCreature) [ZO 'ZBattl
 
 assignCombatDamageOrder :: Monad m => NonEmpty DeclaredAttacker -> [DeclaredBlocker] -> Magic 'Private 'RW m AssignedCombatOrdering
 assignCombatDamageOrder attackers blockers = do
+  let attackerToBlockers = mkAttackerToBlockers attackers blockers
   attackerOrderings <- T.for (NonEmpty.toList attackers) \attacker -> do
     let attacker' = declaredAttacker_attacker attacker
-    (,) attacker' . map declaredBlocker_blocker <$> case Map.findWithDefault [] attacker' attackerToBlockers of
+    (,) attacker' <$> case attackerToBlockers attacker' of
       [] -> pure []
       [blocker] -> pure [blocker]
       _ -> undefined -- TODO: prompt how to assign combat damage to multiple blockers
@@ -283,12 +286,24 @@ assignCombatDamageOrder attackers blockers = do
       attacker :| [] -> pure [attacker]
       _ -> undefined -- TODO: prompt how to assign combat damage to multiple attackers
   pure $ Map.fromList $ attackerOrderings <> blockerOrderings
- where
-  attackerToBlockers :: Map.Map (ZO 'ZBattlefield OTNCreature) [DeclaredBlocker]
-  attackerToBlockers = Map.fromListWith (++) $ do
-    blocker <- blockers
-    attacker <- NonEmpty.toList $ declaredBlocker_attackers blocker
-    pure (attacker, [blocker])
+
+type AttackerToBlockers = ZO 'ZBattlefield OTNCreature -> [ZO 'ZBattlefield OTNCreature]
+
+mkAttackerToBlockers :: NonEmpty DeclaredAttacker -> [DeclaredBlocker] -> AttackerToBlockers
+mkAttackerToBlockers attackers blockers =
+  let mapping = attackerToBlockers' blockers
+      attackers' = map declaredAttacker_attacker $ NonEmpty.toList attackers
+   in \attacker -> case Map.lookup attacker mapping of
+        Just blockers' -> blockers'
+        Nothing -> case attacker `elem` attackers' of
+          True -> []
+          False -> error $ show (undefined :: InternalLogicError)
+
+attackerToBlockers' :: [DeclaredBlocker] -> Map.Map (ZO 'ZBattlefield OTNCreature) [ZO 'ZBattlefield OTNCreature]
+attackerToBlockers' blockers = Map.fromListWith (++) $ do
+  blocker <- blockers
+  attacker <- NonEmpty.toList $ declaredBlocker_attackers blocker
+  pure (attacker, [declaredBlocker_blocker blocker])
 
 declareBlockersStep :: Monad m => NonEmpty DeclaredAttacker -> MagicCont 'Private 'RW m Void Void
 declareBlockersStep attackers = do
@@ -300,7 +315,9 @@ declareBlockersStep attackers = do
       oDefender <- fromRO getDefendingPlayer
       blockers <- fromRO $ untilJust \attempt -> do
         blockers <- M.lift $ promptChooseBlockers prompt attempt opaque oDefender attackers
-        pure $ Just blockers -- TODO: validate blockers
+        pure () -- TODO: validate blockers
+        pure () -- TODO: store blockers in game state for Elects and Effects
+        pure $ Just blockers
       oActive <- fromPublicRO getActivePlayer
       ordering <- assignCombatDamageOrder attackers blockers
       gainPriority oActive

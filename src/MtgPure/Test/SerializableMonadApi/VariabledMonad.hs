@@ -9,12 +9,12 @@
 {-# HLINT ignore "Use if" #-}
 {-# HLINT ignore "Redundant pure" #-}
 
-module MtgPure.Test.VariabledMonad (
+module MtgPure.Test.SerializableMonadApi.VariabledMonad (
   Monad (..),
 ) where
 
 import safe Data.Kind (Type)
-import safe MtgPure.Test.Variabled (RS, Var)
+import safe MtgPure.Test.SerializableMonadApi.Variabled (RS, Var)
 import safe Prelude ()
 
 class Monad (s :: Type) (m :: Type -> Type -> Type) where

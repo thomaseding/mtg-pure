@@ -3,12 +3,12 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.ManaTypeToColor (
+module MtgPure.Model.Mana.ManaTypeToColor (
   ManaTypeToColor,
 ) where
 
 import safe MtgPure.Model.Color (Color (..))
-import safe MtgPure.Model.ManaType (ManaType (..))
+import safe MtgPure.Model.Mana.ManaType (ManaType (..))
 
 type family ManaTypeToColor (mt :: ManaType) = (c :: Color) | c -> mt where
   ManaTypeToColor 'MTWhite = 'White

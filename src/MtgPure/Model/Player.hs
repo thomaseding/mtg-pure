@@ -14,13 +14,12 @@ import safe MtgPure.Model.Graveyard (Graveyard)
 import safe MtgPure.Model.Hand (Hand)
 import safe MtgPure.Model.Library (Library)
 import safe MtgPure.Model.Life (Life)
-import safe MtgPure.Model.ManaPool (CompleteManaPool)
+import safe MtgPure.Model.Mana.ManaPool (CompleteManaPool)
 import safe MtgPure.Model.Sideboard (Sideboard)
 
 data Player :: Type where
   Player ::
-    { -- playerControlledObjects :: Set.Set ObjectId
-      playerDrewFromEmptyLibrary :: Bool
+    { playerDrewFromEmptyLibrary :: Bool
     , playerGraveyard :: Graveyard
     , playerHand :: Hand
     , playerLandsPlayedThisTurn :: Int

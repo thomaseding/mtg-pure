@@ -20,12 +20,14 @@ import safe MtgPure.Engine.Monad (Magic', MagicCont')
 import safe MtgPure.Engine.Prompt (
   AbsoluteActivatedAbilityIndex,
   ActivateAbility,
+  ActivateResult,
   CastSpell,
+  Elected,
   EnactInfo,
-  OwnedCard,
   PlayLand,
   PlayerCount (..),
   PriorityAction,
+  ResolveElected,
   SomeActivatedAbility,
   SpecialAction,
  )
@@ -48,13 +50,13 @@ import safe MtgPure.Model.Recursive (
   Requirement,
  )
 import safe MtgPure.Model.Zone (Zone (..))
-import safe MtgPure.Model.ZoneObject.ZoneObject (IsZO, ZO)
+import safe MtgPure.Model.ZoneObject.ZoneObject (IsOTN, IsZO, ZO)
 
 data Fwd' ex st m where
   Fwd ::
     { fwd_ :: ()
     , fwd_abilityToIndex :: forall zone ot. IsZO zone ot => SomeActivatedAbility zone ot -> Magic' ex st 'Private 'RO m AbsoluteActivatedAbilityIndex
-    , fwd_activateAbility :: Object 'OTPlayer -> PriorityAction ActivateAbility -> Magic' ex st 'Private 'RW m Legality
+    , fwd_activateAbility :: Object 'OTPlayer -> PriorityAction ActivateAbility -> Magic' ex st 'Private 'RW m ActivateResult
     , fwd_activatedAbilitiesOf :: forall zone ot. IsZO zone ot => ZO zone ot -> Magic' ex st 'Private 'RO m [SomeActivatedAbility zone ot]
     , fwd_allControlledPermanentsOf :: Object 'OTPlayer -> Magic' ex st 'Public 'RO m [ZO 'ZBattlefield OTNPermanent]
     , fwd_allPermanents :: Magic' ex st 'Public 'RO m [ZO 'ZBattlefield OTNPermanent]
@@ -96,9 +98,11 @@ data Fwd' ex st m where
     , fwd_removeHandCard :: Object 'OTPlayer -> ZO 'ZHand OTNCard -> Magic' ex st 'Private 'RW m (Maybe AnyCard)
     , fwd_removeLibraryCard :: Object 'OTPlayer -> ZO 'ZLibrary OTNCard -> Magic' ex st 'Private 'RW m (Maybe AnyCard)
     , fwd_requiresTargets :: forall p el ot. Elect p el ot -> Magic' ex st 'Private 'RO m Bool
-    , fwd_resolveOneShot :: forall ot. ZO 'ZStack OT0 -> Maybe OwnedCard -> Elect 'Post (Effect 'OneShot) ot -> Magic' ex st 'Private 'RW m (Maybe EnactInfo)
-    , fwd_resolveTopOfStack :: Magic' ex st 'Private 'RW m ()
+    , fwd_resolveElected :: forall ot. IsOTN ot => ZO 'ZStack OT0 -> Elected 'Pre ot -> Magic' ex st 'Private 'RW m ResolveElected
+    , fwd_resolveTopOfStack :: MagicCont' ex st 'Private 'RW m () Void
     , fwd_rewindIllegal :: Magic' ex st 'Private 'RW m Legality -> Magic' ex st 'Private 'RW m Bool
+    , fwd_rewindIllegalActivation :: Magic' ex st 'Private 'RW m ActivateResult -> Magic' ex st 'Private 'RW m ActivateResult
+    , fwd_rewindNothing :: forall a. Magic' ex st 'Private 'RW m (Maybe a) -> Magic' ex st 'Private 'RW m (Maybe a)
     , fwd_satisfies :: forall zone ot. IsZO zone ot => ZO zone ot -> Requirement zone ot -> Magic' ex st 'Private 'RO m Bool
     , fwd_setPermanent :: ZO 'ZBattlefield OTNPermanent -> Maybe Permanent -> Magic' ex st 'Private 'RW m ()
     , fwd_setPlayer :: Object 'OTPlayer -> Player -> Magic' ex st 'Private 'RW m ()

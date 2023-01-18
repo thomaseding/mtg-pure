@@ -47,6 +47,8 @@ import safe MtgPure.Engine.Core (
   removeHandCard,
   removeLibraryCard,
   rewindIllegal,
+  rewindIllegalActivation,
+  rewindNothing,
   setPermanent,
   setPlayer,
   toZO,
@@ -62,7 +64,7 @@ import safe MtgPure.Engine.Priority (
   getHasPriority,
   getPlayerWithPriority,
  )
-import safe MtgPure.Engine.Resolve (resolveOneShot, resolveTopOfStack)
+import safe MtgPure.Engine.Resolve (resolveElected, resolveTopOfStack)
 import safe MtgPure.Engine.Satisfies (satisfies, zosSatisfying)
 import safe MtgPure.Engine.State (Fwd)
 import safe MtgPure.Engine.StateBasedActions (performStateBasedActions)
@@ -115,9 +117,11 @@ fwdImpl =
     , fwd_removeHandCard = removeHandCard
     , fwd_removeLibraryCard = removeLibraryCard
     , fwd_requiresTargets = requiresTargets
-    , fwd_resolveOneShot = resolveOneShot
+    , fwd_resolveElected = resolveElected
     , fwd_resolveTopOfStack = resolveTopOfStack
     , fwd_rewindIllegal = rewindIllegal
+    , fwd_rewindIllegalActivation = rewindIllegalActivation
+    , fwd_rewindNothing = rewindNothing
     , fwd_satisfies = satisfies
     , fwd_setPermanent = setPermanent
     , fwd_setPlayer = setPlayer

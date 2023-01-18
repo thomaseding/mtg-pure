@@ -4,7 +4,7 @@
 {-# HLINT ignore "Use const" #-}
 {-# HLINT ignore "Use camelCase" #-}
 
-module MtgPure.ModelCombinators (
+module MtgPure.Model.Combinators (
   addManaAnyColor,
   addToBattlefield,
   AsCost (..),
@@ -32,6 +32,7 @@ module MtgPure.ModelCombinators (
   ElectEffect (..),
   event,
   gainAbility,
+  gainControl,
   hasAbility,
   HasLandType (..),
   ifElse,
@@ -54,7 +55,8 @@ module MtgPure.ModelCombinators (
   sacrificeCost,
   satisfies,
   searchLibrary,
-  spellCost,
+  manaCostOf,
+  swampwalk,
   tapCost,
   ToCard (..),
   ToToken (..),
@@ -81,9 +83,11 @@ import safe MtgPure.Model.ColorsLike (ColorsLike (..))
 import safe MtgPure.Model.Damage (Damage, Damage' (..))
 import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.LandType (LandType (BasicLand))
-import safe MtgPure.Model.Mana (Snow (..))
-import safe MtgPure.Model.ManaCost (ManaCost)
-import safe MtgPure.Model.ManaSymbol (ManaSymbol (..))
+import safe MtgPure.Model.Mana.ManaCost (ManaCost)
+import safe MtgPure.Model.Mana.ManaSymbol (ManaSymbol (..))
+import safe MtgPure.Model.Mana.Snow (Snow (..))
+import safe MtgPure.Model.Mana.ToManaCost (ToManaCost (..))
+import safe MtgPure.Model.Mana.ToManaPool (ToManaPool (..))
 import safe MtgPure.Model.Object.IsObjectType (IsObjectType)
 import safe MtgPure.Model.Object.OTN (
   OT1,
@@ -95,6 +99,7 @@ import safe MtgPure.Model.Object.OTN (
   OTN,
  )
 import safe MtgPure.Model.Object.OTNAliases (
+  OTNCreature,
   OTNDamageSource,
   OTNLand,
   OTNPlayer,
@@ -122,6 +127,7 @@ import safe MtgPure.Model.Recursive (
   List,
   NonProxy (..),
   Requirement (..),
+  StaticAbility (Landwalk),
   Token (..),
   WithLinkedObject (..),
   WithMaskedObject (..),
@@ -132,8 +138,6 @@ import safe MtgPure.Model.Recursive (
  )
 import safe MtgPure.Model.Step (Step (..))
 import safe MtgPure.Model.TimePoint (TimePoint (..))
-import safe MtgPure.Model.ToManaCost (ToManaCost (..))
-import safe MtgPure.Model.ToManaPool (ToManaPool (..))
 import safe MtgPure.Model.Variable (Var (Var), Variable)
 import safe MtgPure.Model.Zone (IsZone, Zone (..))
 import safe MtgPure.Model.ZoneObject.Convert (
@@ -194,22 +198,22 @@ class (IsOTN ot, Typeable liftOT) => AsWithLinkedObject ot zone liftOT where
   linked :: [Requirement zone ot] -> (ZO zone ot -> liftOT ot) -> WithLinkedObject zone liftOT ot
 
 instance (CoNonProxy x, Inst1 IsObjectType a) => AsWithLinkedObject (OT1 a) zone x where
-  linked = L1 coNonProxy
+  linked = Linked1 coNonProxy
 
 instance (CoNonProxy x, Inst2 IsObjectType a b) => AsWithLinkedObject (OT2 a b) zone x where
-  linked = L2 coNonProxy
+  linked = Linked2 coNonProxy
 
 instance (CoNonProxy x, Inst3 IsObjectType a b c) => AsWithLinkedObject (OT3 a b c) zone x where
-  linked = L3 coNonProxy
+  linked = Linked3 coNonProxy
 
 instance (CoNonProxy x, Inst4 IsObjectType a b c d) => AsWithLinkedObject (OT4 a b c d) zone x where
-  linked = L4 coNonProxy
+  linked = Linked4 coNonProxy
 
 instance (CoNonProxy x, Inst5 IsObjectType a b c d e) => AsWithLinkedObject (OT5 a b c d e) zone x where
-  linked = L5 coNonProxy
+  linked = Linked5 coNonProxy
 
 class AsWithMaskedObject ot where
-  masked :: forall zone z. Typeable z => [Requirement zone ot] -> (ZO zone ot -> z) -> WithMaskedObject zone z
+  masked :: forall zone liftOT ot'. Typeable (liftOT ot') => [Requirement zone ot] -> (ZO zone ot -> liftOT ot') -> WithMaskedObject zone liftOT ot'
 
 instance Inst1 IsObjectType a => AsWithMaskedObject (OT1 a) where
   masked = Masked1
@@ -274,8 +278,8 @@ instance AsDamage (Damage 'Var) where
 instance AsDamage (Variable Int) where
   asDamage = VariableDamage
 
-spellCost :: ToManaCost a => a -> Cost ot
-spellCost = ManaCost . toManaCost
+manaCostOf :: ToManaCost a => a -> Cost ot
+manaCostOf = ManaCost . toManaCost
 
 noCost :: Cost ot
 noCost = OrCosts []
@@ -506,6 +510,9 @@ gainAbility = GainAbility coAny
 loseAbility :: CoAny ot => ZO 'ZBattlefield ot -> Ability ot -> Effect 'Continuous
 loseAbility = LoseAbility coAny
 
+gainControl :: CoAny ot => ZOPlayer -> ZO 'ZBattlefield ot -> Effect 'Continuous
+gainControl = GainControl coAny
+
 class HasLandType a where
   hasLandType :: IsZone zone => a -> Requirement zone OTNLand
 
@@ -570,3 +577,9 @@ unlifted_isBasicManaAbility :: IsZO zone ot => WithThisActivated zone ot -> Bool
 unlifted_isBasicManaAbility ability = case cast ability of
   Just landAbility -> landAbility `elem` allBasicManaAbilities
   Nothing -> False
+
+mkBasicLandwalk :: BasicLandType -> Ability OTNCreature
+mkBasicLandwalk = Static . Landwalk . pure . HasLandType . BasicLand
+
+swampwalk :: Ability OTNCreature
+swampwalk = mkBasicLandwalk Swamp

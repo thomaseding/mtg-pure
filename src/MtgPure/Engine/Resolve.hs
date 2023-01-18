@@ -10,15 +10,16 @@
 
 module MtgPure.Engine.Resolve (
   resolveTopOfStack,
-  resolveManaAbility,
-  resolveOneShot,
+  resolveElected,
 ) where
 
 import safe qualified Control.Monad as M
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
+import safe Data.Functor ((<&>))
 import safe Data.Kind (Type)
 import safe qualified Data.Map.Strict as Map
 import safe Data.Typeable (Typeable)
+import safe Data.Void (Void)
 import safe MtgPure.Engine.Fwd.Api (
   enact,
   gainPriority,
@@ -29,16 +30,21 @@ import safe MtgPure.Engine.Fwd.Api (
   pushGraveyardCard,
   setPermanent,
  )
-import safe MtgPure.Engine.Legality (Legality (..))
-import safe MtgPure.Engine.Monad (fromPublicRO, fromRO, get, gets, modify)
+import safe MtgPure.Engine.Monad (fromPublicRO, fromRO, get, gets, liftCont, magicCont, modify)
 import safe MtgPure.Engine.Orphans ()
-import safe MtgPure.Engine.Prompt (EnactInfo, InternalLogicError (..), OwnedCard (..))
-import safe MtgPure.Engine.State (
+import safe MtgPure.Engine.Prompt (
   AnyElected (..),
   Elected (..),
+  EnactInfo (..),
+  InternalLogicError (..),
+  OwnedCard (..),
+  PendingReady (..),
+  ResolveElected (..),
+ )
+import safe MtgPure.Engine.State (
   GameState (..),
   Magic,
-  PendingReady (..),
+  MagicCont,
   logCall,
  )
 import safe MtgPure.Model.EffectType (EffectType (..))
@@ -54,25 +60,32 @@ import safe MtgPure.Model.Zone (Zone (..))
 import safe MtgPure.Model.ZoneObject.Convert (toZO0, zo0ToPermanent)
 import safe MtgPure.Model.ZoneObject.ZoneObject (IsOTN, ZO)
 
-resolveTopOfStack :: Monad m => Magic 'Private 'RW m ()
+resolveTopOfStack :: Monad m => MagicCont 'Private 'RW m () Void
 resolveTopOfStack = logCall 'resolveTopOfStack do
-  Stack stack <- fromRO $ gets magicStack
+  Stack stack <- liftCont $ fromRO $ gets magicStack
   case stack of -- (117.4) (405.5)
-    [] -> pure ()
+    [] -> magicCont $ pure () -- "if the stack is empty, the phase or step ends"
     item : items -> do
       let zoStack = stackObjectToZo0 item
-      modify \st -> st{magicStack = Stack items}
-      resolveStackObject zoStack
-      modify \st ->
+      liftCont $ modify \st -> st{magicStack = Stack items}
+      result <- liftCont $ resolveStackObject zoStack
+      liftCont $ modify \st ->
         st
           { magicStackEntryTargetsMap = Map.delete zoStack $ magicStackEntryTargetsMap st
           , magicStackEntryElectedMap = Map.delete zoStack $ magicStackEntryElectedMap st
           , magicOwnershipMap = Map.delete (getObjectId zoStack) $ magicOwnershipMap st
           }
-      oActive <- fromPublicRO getActivePlayer
-      gainPriority oActive
+      case result of
+        ResolvedEffect (enactInfo_endTheTurn -> True) -> endTheTurn
+        _ -> do
+          oActive <- liftCont $ fromPublicRO getActivePlayer
+          magicCont $ gainPriority oActive
 
-resolveStackObject :: Monad m => ZO 'ZStack OT0 -> Magic 'Private 'RW m ()
+endTheTurn :: Monad m => MagicCont 'Private 'RW m () Void
+endTheTurn = logCall 'endTheTurn do
+  magicCont undefined -- TODO: (721.)
+
+resolveStackObject :: Monad m => ZO 'ZStack OT0 -> Magic 'Private 'RW m ResolveElected
 resolveStackObject zoStack = logCall 'resolveStackObject do
   st <- fromRO get
   case Map.lookup zoStack $ magicStackEntryElectedMap st of
@@ -80,27 +93,22 @@ resolveStackObject zoStack = logCall 'resolveStackObject do
     Just anyElected -> case anyElected of
       AnyElected elected -> resolveElected zoStack elected
 
-resolveManaAbility :: (IsOTN ot, Monad m) => Elected 'Pre ot -> Magic 'Private 'RW m Legality
-resolveManaAbility elected = logCall 'resolveManaAbility do
-  let isManaAbility = True -- TODO
-  case isManaAbility of
-    False -> pure Illegal
-    True -> do
-      let zoStack = error $ show ManaAbilitiesDontHaveTargetsSoNoZoShouldBeNeeded
-      resolveElected zoStack elected
-      pure Legal
-
-resolveElected :: forall ot m. (IsOTN ot, Monad m) => ZO 'ZStack OT0 -> Elected 'Pre ot -> Magic 'Private 'RW m ()
+resolveElected :: forall ot m. (IsOTN ot, Monad m) => ZO 'ZStack OT0 -> Elected 'Pre ot -> Magic 'Private 'RW m ResolveElected
 resolveElected zoStack elected = logCall 'resolveElected do
   case elected of
     ElectedActivatedAbility{} -> do
-      M.void $ resolveOneShot zoStack Nothing $ unPending $ electedActivatedAbility_effect elected
+      resolveOneShot zoStack Nothing (unPending $ electedActivatedAbility_effect elected) <&> \case
+        Nothing -> Fizzled
+        Just enactInfo -> ResolvedEffect enactInfo
     ElectedSpell{} -> do
       owner <- fromRO $ ownerOf zoStack
       let card = electedSpell_card elected
           ownedCard = Just $ OwnedCard owner card
       case electedSpell_effect elected of
-        Just effect -> M.void $ resolveOneShot zoStack ownedCard $ unPending effect
+        Just effect ->
+          resolveOneShot zoStack ownedCard (unPending effect) <&> \case
+            Nothing -> Fizzled
+            Just enactInfo -> ResolvedEffect enactInfo
         Nothing -> do
           let electedPerm =
                 ElectedPermanent
@@ -109,7 +117,9 @@ resolveElected zoStack elected = logCall 'resolveElected do
                   , electedPermanent_facet = electedSpell_facet elected
                   }
           resolvePermanent electedPerm
+          pure PermanentResolved
 
+-- | Returns `Nothing` iff fizzled.
 resolveOneShot ::
   Monad m =>
   ZO 'ZStack OT0 ->
@@ -129,7 +139,7 @@ resolveOneShot zoStack mCard elect = logCall 'resolveOneShot do
 data ElectedPermanent (ot :: Type) :: Type where
   ElectedPermanent ::
     { electedPermanent_controller :: Object 'OTPlayer
-    , electedPermanent_card :: AnyCard -- Card ot
+    , electedPermanent_card :: AnyCard -- TODO: OwnedCard
     , electedPermanent_facet :: CardFacet ot
     } ->
     ElectedPermanent ot

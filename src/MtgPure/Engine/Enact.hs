@@ -30,6 +30,7 @@ import safe MtgPure.Engine.Fwd.Api (
   setPlayer,
  )
 import safe MtgPure.Engine.Monad (fromPublicRO, fromRO, gets)
+import safe MtgPure.Engine.Orphans ()
 import safe MtgPure.Engine.Prompt (
   CardCount (..),
   CardIndex (..),
@@ -42,8 +43,8 @@ import safe MtgPure.Model.Damage (Damage, Damage' (..))
 import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.IsCardList (IsCardList (..), popCard)
 import safe MtgPure.Model.Life (Life (..))
-import safe MtgPure.Model.Mana (Snow (..))
-import safe MtgPure.Model.ManaPool (CompleteManaPool (..), ManaPool (..))
+import safe MtgPure.Model.Mana.ManaPool (CompleteManaPool (..), ManaPool (..))
+import safe MtgPure.Model.Mana.Snow (Snow (..))
 import safe MtgPure.Model.Object.OTNAliases (OTNDamageSource, OTNPermanent)
 import safe MtgPure.Model.Object.Object (Object)
 import safe MtgPure.Model.Object.ObjectId (getObjectId)
@@ -67,6 +68,7 @@ enact = logCall 'enact \case
   DrawCards oPlayer amount -> drawCards' amount $ zo1ToO oPlayer
   EffectCase case_ -> caseOf enact case_
   EffectContinuous{} -> undefined
+  EndTheTurn -> undefined
   Exile{} -> undefined
   GainLife{} -> undefined
   LoseLife{} -> undefined
@@ -86,7 +88,7 @@ addMana' oPlayer mana = logCall 'addMana' do
     Just player -> do
       let mana' = playerMana player + mempty{poolNonSnow = mana}
       setPlayer (zo1ToO oPlayer) player{playerMana = mana'}
-  pure mempty{enactInfo_couldAddMana = True}
+  pure mempty
 
 dealDamage' ::
   Monad m =>

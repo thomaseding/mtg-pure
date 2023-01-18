@@ -9,8 +9,8 @@ module MtgPure.Model.ColorsLike (
 
 import safe MtgPure.Model.Color (Color (..))
 import safe MtgPure.Model.Colors (Colors (..))
-import safe MtgPure.Model.ManaSymbol (ManaSymbol (..))
-import safe MtgPure.Model.ManaType (ManaType (..))
+import safe MtgPure.Model.Mana.ManaSymbol (ManaSymbol (..))
+import safe MtgPure.Model.Mana.ManaType (ManaType (..))
 
 class ColorsLike a where
   toColors :: a -> Colors

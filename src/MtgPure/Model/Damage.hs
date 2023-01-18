@@ -27,15 +27,6 @@ deriving instance Show a => Show (Damage' v a)
 
 type Damage v = Damage' v Int
 
-instance Num (Damage 'NoVar) where
-  (+) (Damage x) (Damage y) = Damage $ x + y
-  (-) (Damage x) (Damage y) = Damage $ x - y
-  (*) (Damage x) (Damage y) = Damage $ x * y
-  abs (Damage x) = Damage $ abs x
-  signum (Damage x) = Damage $ signum x
-  negate (Damage x) = Damage $ negate x
-  fromInteger = Damage . fromInteger
-
 instance ForceVars (Damage v) (Damage 'NoVar) where
   forceVars = \case
     Damage n -> Damage n

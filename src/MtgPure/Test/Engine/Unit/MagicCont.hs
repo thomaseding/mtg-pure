@@ -6,9 +6,9 @@
 {-# HLINT ignore "Use if" #-}
 {-# HLINT ignore "Redundant pure" #-}
 
-module MtgPure.Test.MagicContUnit (
+module MtgPure.Test.Engine.Unit.MagicCont (
   main,
-  magicContUnitMain,
+  mainUnitMagicCont,
 ) where
 
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
@@ -24,7 +24,7 @@ import safe MtgPure.Engine.Monad (
  )
 
 main :: IO ()
-main = magicContUnitMain
+main = mainUnitMagicCont
 
 data Ex = Ex
   deriving (Show)
@@ -56,8 +56,8 @@ runUnitCont f action = runMagicRW st $ runMagicCont' envLogCall f action
       , stMsgs = []
       }
 
-magicContUnitMain :: IO ()
-magicContUnitMain = do
+mainUnitMagicCont :: IO ()
+mainUnitMagicCont = do
   unitCont1
   unitCont2
   unitCont3

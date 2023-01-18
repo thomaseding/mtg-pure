@@ -65,12 +65,16 @@ import safe MtgPure.Engine.State (
  )
 import safe MtgPure.Model.BasicLandType (BasicLandType (..))
 import safe MtgPure.Model.CardName (CardName (..), HasCardName (..))
+import safe MtgPure.Model.Combinators (basicManaAbility)
 import safe MtgPure.Model.Deck (Deck (..))
-import safe MtgPure.Model.GenericMana (GenericMana (..))
 import safe MtgPure.Model.Hand (Hand (..))
 import safe MtgPure.Model.Library (Library (..))
-import safe MtgPure.Model.ManaPool (CompleteManaPool)
-import safe MtgPure.Model.ManaSymbol (ManaSymbol (..))
+import safe MtgPure.Model.Mana.Mana (Mana (..))
+import safe MtgPure.Model.Mana.ManaPool (CompleteManaPool)
+import safe MtgPure.Model.Mana.ManaSymbol (ManaSymbol (..))
+import safe MtgPure.Model.Mana.ManaType (ManaType (..))
+import safe MtgPure.Model.Mana.Snow (Snow (..))
+import safe MtgPure.Model.Mana.ToManaPool (toCompleteManaPool)
 import safe MtgPure.Model.Mulligan (Mulligan (..))
 import safe MtgPure.Model.Object.OTNAliases (
   OTNAny,
@@ -84,12 +88,10 @@ import safe MtgPure.Model.Object.ToObjectN.Instances ()
 import safe MtgPure.Model.PhaseStep (prettyPhaseStep)
 import safe MtgPure.Model.Player (Player (..))
 import safe MtgPure.Model.Sideboard (Sideboard (..))
-import safe MtgPure.Model.ToManaPool (toCompleteManaPool)
 import safe MtgPure.Model.Variable (Var (..))
 import safe MtgPure.Model.Zone (Zone (..))
 import safe MtgPure.Model.ZoneObject.Convert (toZO0, toZO1, zo0ToSpell)
 import safe MtgPure.Model.ZoneObject.ZoneObject (IsZO, ZO)
-import safe MtgPure.ModelCombinators (basicManaAbility)
 import safe qualified System.IO as IO
 import safe Text.Read (readMaybe)
 
@@ -341,10 +343,15 @@ getPriorityInfo opaque oPlayer = queryMagic opaque do
   turnNumber <- internalFromPrivate $ gets magicCurrentTurn
   pure $ show oPlayer ++ " " ++ prettyPhaseStep phaseStep ++ " Turn" ++ show turnNumber
 
-consolePromptPayGeneric :: Attempt -> OpaqueGameState Console -> Object 'OTPlayer -> GenericMana 'NoVar -> Console CompleteManaPool
+consolePromptPayGeneric ::
+  Attempt ->
+  OpaqueGameState Console ->
+  Object 'OTPlayer ->
+  Mana 'NoVar 'NonSnow 'MTGeneric ->
+  Console CompleteManaPool
 consolePromptPayGeneric attempt opaque oPlayer generic = do
   (pool, text) <- queryMagic opaque do
-    let GenericMana' x = generic
+    let Mana x = generic
     liftIO case attempt of
       Attempt 0 -> pure ()
       Attempt n -> putStrLn $ "Retrying[" ++ show n ++ "]..."

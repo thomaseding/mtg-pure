@@ -25,7 +25,7 @@ import safe MtgPure.Engine.Orphans ()
 import safe MtgPure.Engine.State (Magic, logCall)
 import safe MtgPure.Model.Land (Land (landTypes))
 import safe MtgPure.Model.LandType (LandType)
-import safe MtgPure.Model.Object.OTNAliases (OTNLand)
+import safe MtgPure.Model.Object.OTNAliases (OTNLand, OTNPlayer)
 import safe MtgPure.Model.Object.ObjectId (getObjectId)
 import safe MtgPure.Model.Permanent (Permanent (..), Tapped (..))
 import safe MtgPure.Model.Recursive (Requirement (..))
@@ -48,6 +48,7 @@ satisfies zo = logCall 'satisfies \case
   HasAbility{} -> undefined
   HasLandType landType -> hasLandType' zo landType
   Is _wAny zo' -> is' zo zo'
+  IsOpponentOf zoPlayer -> isOpponentOf' zo zoPlayer
   IsTapped _wPerm -> isTapped' zo
   Not req -> not' zo req
   OfColors{} -> undefined
@@ -102,6 +103,18 @@ not' ::
   Requirement zone ot ->
   Magic 'Private 'RO m Bool
 not' zo = logCall 'not' $ fmap not . satisfies zo
+
+isOpponentOf' ::
+  forall m zone.
+  (Monad m, IsZO zone OTNPlayer) =>
+  ZO zone OTNPlayer ->
+  ZOPlayer ->
+  Magic 'Private 'RO m Bool
+isOpponentOf' candidatePlayer referencePlayer = logCall 'isOpponentOf' do
+  -- TODO: multiplayer
+  let candidateId = getObjectId candidatePlayer
+      referenceId = getObjectId referencePlayer
+  pure $ candidateId /= referenceId
 
 rAnd' ::
   (Monad m, IsZO zone ot) =>

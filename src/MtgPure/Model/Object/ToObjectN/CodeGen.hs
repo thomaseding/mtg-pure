@@ -13,7 +13,7 @@
 
 module MtgPure.Model.Object.ToObjectN.CodeGen (
   main,
-  codeGenToObjectN,
+  mainCodeGenToObjectN,
 ) where
 
 import safe Data.List (intercalate, sort, sortBy, subsequences, (\\))
@@ -23,7 +23,7 @@ import safe MtgPure.Model.Object.ObjectType (ObjectType)
 
 -- runhaskell MtgPure/Model/Object/ToObjectN/CodeGen.hs > MtgPure/Model/Object/ToObjectN/Instances.hs
 main :: IO ()
-main = codeGenToObjectN
+main = mainCodeGenToObjectN
 
 header :: String
 header =
@@ -154,8 +154,8 @@ nubOrd = go Set.empty
     | otherwise = x : go (Set.insert x s) xs
   go _ _ = []
 
-codeGenToObjectN :: IO ()
-codeGenToObjectN = do
+mainCodeGenToObjectN :: IO ()
+mainCodeGenToObjectN = do
   putStrLn header
   let results1 = nubOrd $ concatMap objectToObjectNs objectTypeDescs
   let results2 = nubOrd $ concatMap objectMsToObjectN objectTypeDescs

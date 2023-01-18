@@ -3,12 +3,12 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.HasManaSymbol (
+module MtgPure.Model.Mana.HasManaSymbol (
   HasManaSymbol (..),
 ) where
 
-import safe MtgPure.Model.ManaSymbol (ManaSymbol)
-import safe MtgPure.Model.ManaType (ManaType (..))
+import safe MtgPure.Model.Mana.ManaSymbol (ManaSymbol)
+import safe MtgPure.Model.Mana.ManaType (ManaType (..))
 
 class HasManaSymbol a where
   manaSymbol :: ManaSymbol a

@@ -16,6 +16,7 @@ import safe Control.Exception (assert)
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
 import safe Control.Monad.Trans (lift)
 import safe Control.Monad.Util (AndLike (..))
+import safe Data.Functor ((<&>))
 import safe Data.Kind (Type)
 import safe qualified Data.Map.Strict as Map
 import safe Data.Typeable (Typeable)
@@ -26,8 +27,7 @@ import safe MtgPure.Engine.Fwd.Api (
   newObjectId,
   pay,
   performElections,
-  requiresTargets,
-  resolveOneShot,
+  resolveElected,
  )
 import safe MtgPure.Engine.Legality (Legality (..), legalityToMaybe, maybeToLegality)
 import safe MtgPure.Engine.Monad (
@@ -35,36 +35,35 @@ import safe MtgPure.Engine.Monad (
   fromRO,
   get,
   gets,
-  internalFromRW,
-  local,
   modify,
  )
 import safe MtgPure.Engine.Prompt (
   ActivateAbility,
+  ActivateResult (..),
+  AnyElected (..),
   CastSpell,
-  EnactInfo (enactInfo_couldAddMana),
+  Elected (..),
+  EnactInfo,
   InternalLogicError (..),
   InvalidCastSpell (..),
-  PriorityAction (ActivateAbility, CastSpell),
-  Prompt' (..),
-  SomeActivatedAbility (..),
- )
-import safe MtgPure.Engine.Resolve (resolveManaAbility)
-import safe MtgPure.Engine.State (
-  AnyElected (..),
-  Elected (..),
-  GameState (..),
-  Magic,
   Pending,
   PendingReady (..),
+  PriorityAction (ActivateAbility, CastSpell),
+  Prompt' (..),
+  ResolveElected (..),
+  SomeActivatedAbility (..),
   electedObject_controller,
   electedObject_cost,
+ )
+import safe MtgPure.Engine.State (
+  GameState (..),
+  Magic,
   logCall,
   mkOpaqueGameState,
-  withHeadlessPrompt,
  )
 import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.IsCardList (containsCard)
+import safe MtgPure.Model.IsManaAbility (IsManaAbility (..))
 import safe MtgPure.Model.Object.IsObjectType (IsObjectType (..))
 import safe MtgPure.Model.Object.OTN (OT0, OT1, OTN)
 import safe MtgPure.Model.Object.OTNAliases (
@@ -357,7 +356,7 @@ castYourSpellCard oCaster card = logCall 'castYourSpellCard \case
 -- TODO: Generalize for TriggeredAbility as well. Prolly make an AbilityMeta type that is analogous to CastMeta.
 -- NOTE: A TriggeredAbility is basically the same as an ActivatedAbility that the game activates automatically.
 -- TODO: This needs to validate ActivateAbilityReqs
-activateAbility :: forall m. Monad m => Object 'OTPlayer -> PriorityAction ActivateAbility -> Magic 'Private 'RW m Legality
+activateAbility :: forall m. Monad m => Object 'OTPlayer -> PriorityAction ActivateAbility -> Magic 'Private 'RW m ActivateResult
 activateAbility oPlayer = logCall 'activateAbility \case
   ActivateAbility someActivated -> case someActivated of
     SomeActivatedAbility zoThis withThisActivated -> do
@@ -370,7 +369,7 @@ activateAbility oPlayer = logCall 'activateAbility \case
     (IsZO zone ot', IsZO zone ot) =>
     ZO zone ot' ->
     WithThisActivated zone ot ->
-    Magic 'Private 'RW m Legality
+    Magic 'Private 'RW m ActivateResult
   goSomeActivatedAbility zoThis' withThisActivated = logCall' "goSomeActivatedAbility" do
     zoExists' <- fromRO $ doesZoneObjectExist zoThis'
     pure () -- TODO: Check that `zoThis'` actually has the `withThisActivated` (including intrinsic abilities)
@@ -379,12 +378,12 @@ activateAbility oPlayer = logCall 'activateAbility \case
         zoThis = ZO (singZone @zone) oThis
         thisId = getObjectId zoThis
 
-        invalid :: m () -> Magic 'Private 'RW m Legality
+        invalid :: m () -> Magic 'Private 'RW m ActivateResult
         invalid complain = do
           () <- lift complain
-          pure Illegal
+          pure IllegalActivation
 
-        goWithThisActivated :: Magic 'Private 'RW m Legality
+        goWithThisActivated :: Magic 'Private 'RW m ActivateResult
         goWithThisActivated = case withThisActivated of
           This1 thisToElectActivated -> do
             goThisToElectAbility thisToElectActivated (lensedThis thisId)
@@ -394,55 +393,49 @@ activateAbility oPlayer = logCall 'activateAbility \case
         goThisToElectAbility ::
           (this -> Elect 'Pre (ActivatedAbility zone ot) ot) ->
           this ->
-          Magic 'Private 'RW m Legality
+          Magic 'Private 'RW m ActivateResult
         goThisToElectAbility thisToElectAbility this = logCall' "goThisToElectAbility" do
           abilityId <- newObjectId
           let zoAbility = toZO0 @ 'ZStack abilityId
           goElectActivated zoAbility $ thisToElectAbility this
 
-        goElectActivated :: ZO 'ZStack OT0 -> Elect 'Pre (ActivatedAbility zone ot) ot -> Magic 'Private 'RW m Legality
+        goElectActivated :: ZO 'ZStack OT0 -> Elect 'Pre (ActivatedAbility zone ot) ot -> Magic 'Private 'RW m ActivateResult
         goElectActivated zoAbility elect = logCall' "goElectedActivated" do
           seedStackEntryTargets zoAbility
-          maybeToLegality <$> performElections zoAbility (goActivated zoAbility) elect
+          performElections zoAbility (goActivated zoAbility) elect <&> \case
+            Nothing -> IllegalActivation
+            Just result -> result
 
-        goActivated :: ZO 'ZStack OT0 -> ActivatedAbility zone ot -> Magic 'Private 'RW m Legality'
+        goActivated :: ZO 'ZStack OT0 -> ActivatedAbility zone ot -> Magic 'Private 'RW m (Maybe ActivateResult)
         goActivated zoAbility activated = logCall' "goActivated" do
-          legalityToMaybe <$> do
-            let isController = True -- TODO
-                abilityExists = True -- TODO
-            prompt <- fromRO $ gets magicPrompt
-            case (zoExists', isController, abilityExists) of
-              (False, _, _) -> invalid $ exceptionZoneObjectDoesNotExist prompt zoThis'
-              (_, False, _) -> invalid undefined
-              (_, _, False) -> invalid undefined
-              (True, True, True) -> do
-                let goPay cost effect = do
-                      let elected = ElectedActivatedAbility oPlayer zoThis cost effect
-                      fmap legalityToMaybe $
-                        fromRO (isPendingManaEffect effect) >>= \case
-                          True -> payElectedManaAbilityAndResolve elected
-                          False -> payElectedAndPutOnStack @ 'Activate @ot zoAbility elected
-                let cost = activated_cost activated
-                    effect = activated_effect activated
-                maybeToLegality <$> playPendingAbility zoAbility cost effect goPay
+          goActivated' zoAbility activated <&> \case
+            IllegalActivation -> Nothing
+            result -> Just result
+
+        goActivated' :: ZO 'ZStack OT0 -> ActivatedAbility zone ot -> Magic 'Private 'RW m ActivateResult
+        goActivated' zoAbility activated = logCall' "goActivated'" do
+          let isController = True -- TODO
+              abilityExists = True -- TODO
+          prompt <- fromRO $ gets magicPrompt
+          case (zoExists', isController, abilityExists) of
+            (False, _, _) -> invalid $ exceptionZoneObjectDoesNotExist prompt zoThis'
+            (_, False, _) -> invalid undefined
+            (_, _, False) -> invalid undefined
+            (True, True, True) -> do
+              let goPay cost effect = do
+                    let elected = ElectedActivatedAbility oPlayer zoThis cost effect
+                    case isManaAbility withThisActivated of
+                      True -> Just <$> payElectedManaAbilityAndResolve elected
+                      False -> payElectedAndPutOnStack @ 'Activate @ot zoAbility elected >> pure (Just Nothing)
+              let cost = activated_cost activated
+                  effect = activated_effect activated
+              playPendingAbility zoAbility cost effect goPay <&> \case
+                Nothing -> IllegalActivation
+                Just mInfo -> case mInfo of
+                  Just info -> ActivatedManaAbility info
+                  Nothing -> ActivatedNonManaAbility
 
     goWithThisActivated
-
--- (605.1a)
-isPendingManaEffect :: Monad m => Pending (Effect 'OneShot) ot -> Magic 'Private 'RO m Bool
-isPendingManaEffect (Pending effect) = logCall 'isPendingManaEffect do
-  requiresTargets effect >>= \case
-    True -> pure False
-    False -> internalFromRW goGameResult $ local withHeadlessPrompt do
-      mEnactInfo <- resolveOneShot zoStack Nothing effect
-      pure case mEnactInfo of
-        Nothing -> False -- XXX: It could still be a mana ability despite failing to be legal at the moment.
-        Just enactInfo -> enactInfo_couldAddMana enactInfo
- where
-  zoStack :: ZO 'ZStack OT0
-  zoStack = error $ show ManaAbilitiesDontHaveTargetsSoNoZoShouldBeNeeded
-
-  goGameResult _ = pure False -- It would be really weird if this code path actually gets hit.
 
 playPendingOneShot ::
   forall m ot x.
@@ -479,7 +472,6 @@ playPendingPermanent _zoStack cost cont = logCall 'playPendingPermanent do
 
 playPendingAbility ::
   forall m ot x.
-  (AndLike x, AndLike (Maybe x)) =>
   Monad m =>
   ZO 'ZStack OT0 ->
   Cost ot ->
@@ -501,11 +493,16 @@ payElectedManaAbilityAndResolve ::
   forall ot m.
   (IsOTN ot, Monad m) =>
   Elected 'Pre ot ->
-  Magic 'Private 'RW m Legality
+  Magic 'Private 'RW m (Maybe EnactInfo)
 payElectedManaAbilityAndResolve elected = logCall 'payElectedManaAbilityAndResolve do
   payElected elected >>= \case
-    Illegal -> pure Illegal
-    Legal -> resolveManaAbility elected
+    Illegal -> pure Nothing
+    Legal -> do
+      let zoStack = error $ show ManaAbilitiesDontHaveTargetsSoNoZoShouldBeNeeded
+      resolveElected zoStack elected <&> \case
+        ResolvedEffect enactInfo -> Just enactInfo
+        Fizzled -> error $ show (undefined :: InternalLogicError) -- mana abilities don't have targets
+        PermanentResolved -> error $ show (undefined :: InternalLogicError) -- mana abilities are abilities
 
 data ActivateCast = Activate | Cast
 

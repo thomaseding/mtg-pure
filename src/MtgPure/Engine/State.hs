@@ -24,13 +24,6 @@ module MtgPure.Engine.State (
   Prompt,
   TargetId,
   AnyRequirement (..),
-  PendingReady (..),
-  Pending,
-  Ready,
-  Elected (..),
-  electedObject_controller,
-  electedObject_cost,
-  AnyElected (..),
   --
   withHeadlessPrompt,
   --
@@ -69,6 +62,7 @@ import safe MtgPure.Engine.Monad (
   runMagicRO,
  )
 import safe MtgPure.Engine.Prompt (
+  AnyElected,
   CallFrameId,
   CallFrameInfo (callFrameName),
   CardCount (..),
@@ -79,7 +73,6 @@ import safe MtgPure.Engine.Prompt (
   Prompt' (..),
  )
 import safe MtgPure.Model.Deck (Deck (..))
-import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.Mulligan (Mulligan)
 import safe MtgPure.Model.Object.OTN (OT0)
 import safe MtgPure.Model.Object.Object (Object)
@@ -93,17 +86,13 @@ import safe MtgPure.Model.Player (Player (..))
 import safe MtgPure.Model.PrePost (PrePost (..))
 import safe MtgPure.Model.Recursive (
   AnyCard,
-  CardFacet,
-  Cost,
-  Effect,
-  Elect,
   Requirement,
  )
 import safe MtgPure.Model.Recursive.Show ()
 import safe MtgPure.Model.Sideboard (Sideboard)
 import safe MtgPure.Model.Stack (Stack (..))
 import safe MtgPure.Model.Zone (Zone (..))
-import safe MtgPure.Model.ZoneObject.ZoneObject (IsOTN, IsZO, ZO)
+import safe MtgPure.Model.ZoneObject.ZoneObject (IsZO, ZO)
 
 type Fwd m = Fwd' (GameResult m) (GameState m) m
 
@@ -121,49 +110,6 @@ data AnyRequirement :: Type where
   AnyRequirement :: IsZO zone ot => Requirement zone ot -> AnyRequirement
 
 deriving instance Show AnyRequirement
-
-data PendingReady (p :: PrePost) (el :: Type) (ot :: Type) where
-  Pending :: {unPending :: Elect 'Post el ot} -> Pending el ot
-  Ready :: {unReady :: el} -> Ready el ot
-
-deriving instance Show el => Show (PendingReady p el ot)
-
-type Pending = PendingReady 'Pre
-
-type Ready = PendingReady 'Post
-
-data Elected (pEffect :: PrePost) (ot :: Type) :: Type where
-  ElectedActivatedAbility ::
-    IsZO zone ot =>
-    { electedActivatedAbility_controller :: Object 'OTPlayer
-    , electedActivatedAbility_this :: ZO zone ot
-    , electedActivatedAbility_cost :: Cost ot
-    , electedActivatedAbility_effect :: PendingReady pEffect (Effect 'OneShot) ot
-    } ->
-    Elected pEffect ot
-  ElectedSpell ::
-    { electedSpell_controller :: Object 'OTPlayer
-    , electedSpell_card :: AnyCard -- Card ot
-    , electedSpell_facet :: CardFacet ot
-    , electedSpell_cost :: Cost ot
-    , electedSpell_effect :: Maybe (PendingReady pEffect (Effect 'OneShot) ot)
-    } ->
-    Elected pEffect ot
-  deriving (Typeable)
-
-electedObject_controller :: Elected pEffect ot -> Object 'OTPlayer
-electedObject_controller elected = ($ elected) case elected of
-  ElectedActivatedAbility{} -> electedActivatedAbility_controller
-  ElectedSpell{} -> electedSpell_controller
-
-electedObject_cost :: Elected pEffect ot -> Cost ot
-electedObject_cost elected = ($ elected) case elected of
-  ElectedActivatedAbility{} -> electedActivatedAbility_cost
-  ElectedSpell{} -> electedSpell_cost
-
-data AnyElected (pEffect :: PrePost) :: Type where
-  AnyElected :: IsOTN ot => Elected pEffect ot -> AnyElected pEffect
-  deriving (Typeable)
 
 data GameState (m :: Type -> Type) where
   -- TODO: there should be a field that tracks which ObjectIds have been known to each player.

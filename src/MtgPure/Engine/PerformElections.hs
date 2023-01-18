@@ -116,7 +116,7 @@ performElections' bhv failureX zoStack goTerm = logCall 'performElections' \case
  where
   goRec = performElections' bhv failureX zoStack goTerm
   --
-  goTarget :: IsZO zone ot => ZOPlayer -> WithMaskedObject zone (Elect p el ot) -> Magic 'Private 'RW m x
+  goTarget :: IsZO zone ot => ZOPlayer -> WithMaskedObject zone (Elect p el) ot -> Magic 'Private 'RW m x
   goTarget oPlayer thisToElect = case bhv of
     PerformElections -> electA Target' zoStack failureX goRec oPlayer thisToElect
     RequiresTargets x -> pure x
@@ -220,7 +220,7 @@ electA ::
   x ->
   (Elect p el ot -> Magic 'Private 'RW m x) ->
   ZOPlayer ->
-  WithMaskedObject zone (Elect p el ot) ->
+  WithMaskedObject zone (Elect p el) ot ->
   Magic 'Private 'RW m x
 electA sel zoStack failureX goElect oPlayer = logCall 'electA \case
   Masked1 reqs zoToElect -> go reqs zoToElect

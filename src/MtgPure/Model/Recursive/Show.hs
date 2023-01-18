@@ -42,18 +42,15 @@ import safe MtgPure.Model.ArtifactType (ArtifactType)
 import safe MtgPure.Model.BasicLandType (BasicLandType)
 import safe MtgPure.Model.CardName (CardName (CardName), HasCardName (..))
 import safe MtgPure.Model.Color (Color (..))
-import safe MtgPure.Model.ColoredMana (ColoredMana (..))
-import safe MtgPure.Model.ColorlessMana (ColorlessMana (..))
 import safe MtgPure.Model.Colors (Colors (..))
 import safe MtgPure.Model.CreatureType (CreatureType)
 import safe MtgPure.Model.Damage (Damage, Damage' (..))
-import safe MtgPure.Model.GenericMana (GenericMana (..))
 import safe MtgPure.Model.LandType (LandType (..))
 import safe MtgPure.Model.Loyalty (Loyalty)
-import safe MtgPure.Model.Mana (Mana (..))
-import safe MtgPure.Model.ManaCost (ManaCost (..))
-import safe MtgPure.Model.ManaPool (CompleteManaPool (..), ManaPool (..))
-import safe MtgPure.Model.ManaSymbol (ManaSymbol (..))
+import safe MtgPure.Model.Mana.Mana (Mana (..))
+import safe MtgPure.Model.Mana.ManaCost (ManaCost (..))
+import safe MtgPure.Model.Mana.ManaPool (CompleteManaPool (..), ManaPool (..))
+import safe MtgPure.Model.Mana.ManaSymbol (ManaSymbol (..))
 import safe MtgPure.Model.Object.IsObjectType (IsObjectType (..))
 import safe MtgPure.Model.Object.OTN (
   OT1,
@@ -230,7 +227,7 @@ instance Show (Token ot) where
 instance Show (TriggeredAbility zone ot) where
   show = runEnvM defaultDepthLimit . showTriggeredAbility
 
-instance IsZO zone ot => Show (WithMaskedObject zone (Elect p e ot)) where
+instance IsZO zone ot => Show (WithMaskedObject zone (Elect p e) ot) where
   show = runEnvM defaultDepthLimit . showWithMaskedObject showElect "obj"
 
 instance IsZO zone ot => Show (WithThisActivated zone ot) where
@@ -247,33 +244,11 @@ instance IsZO zone ot => Show (WithThisTriggered zone ot) where
 class LiteralMana mana where
   literalMana :: mana -> Maybe Int
 
-instance LiteralMana (ColoredMana var mt) where
-  literalMana = \case
-    ColoredMana' _ x -> Just x
-    VariableColoredMana{} -> Nothing
-    SumColoredMana{} -> Nothing
-
-instance LiteralMana (ColorlessMana var) where
-  literalMana = \case
-    ColorlessMana' x -> Just x
-    VariableColorlessMana{} -> Nothing
-    SumColorlessMana{} -> Nothing
-
-instance LiteralMana (GenericMana var) where
-  literalMana = \case
-    GenericMana' x -> Just x
-    VariableGenericMana{} -> Nothing
-    SumGenericMana{} -> Nothing
-
 instance LiteralMana (Mana var snow mt) where
   literalMana = \case
-    WhiteMana x -> literalMana x
-    BlueMana x -> literalMana x
-    BlackMana x -> literalMana x
-    RedMana x -> literalMana x
-    GreenMana x -> literalMana x
-    ColorlessMana x -> literalMana x
-    GenericMana x -> literalMana x
+    Mana x -> Just x
+    VariableMana{} -> Nothing
+    SumMana{} -> Nothing
 
 ----------------------------------------
 
@@ -774,32 +749,6 @@ instance ShowColors Colors where
       [_] -> (pure "", pure "")
       _ -> (pure "(", pure ")")
 
-showColorlessMana :: ColorlessMana var -> EnvM ParenItems
-showColorlessMana =
-  yesParens . \case
-    x@ColorlessMana'{} -> pure $ pure $ fromString $ show x
-    VariableColorlessMana var -> do
-      let sVar = pure $ getVarName var
-      pure $ pure "VariableColorlessMana " <> sVar
-    SumColorlessMana x y -> do
-      sX <- parens <$> showColorlessMana x
-      sY <- parens <$> showColorlessMana y
-      pure $ pure "SumColorlessMana " <> sX <> pure " " <> sY
-
-showColoredMana :: ColoredMana var a -> EnvM ParenItems
-showColoredMana =
-  yesParens . \case
-    x@ColoredMana'{} -> pure $ pure $ fromString $ show x
-    VariableColoredMana sym var -> do
-      let sSym = pure $ fromString $ show sym
-          sVar = pure $ getVarName var
-      pure $ pure "VariableColoredMana " <> sSym <> pure " " <> sVar
-    SumColoredMana sym x y -> do
-      let sSym = pure $ fromString $ show sym
-      sX <- parens <$> showColoredMana x
-      sY <- parens <$> showColoredMana y
-      pure $ pure "SumColoredMana " <> sSym <> pure " " <> sX <> pure " " <> sY
-
 showCompleteManaPool :: CompleteManaPool -> EnvM ParenItems
 showCompleteManaPool complete = yesParens do
   sSnow <- parens <$> showManaPool snow
@@ -842,6 +791,9 @@ showCost = \case
   DiscardRandomCost amount -> yesParens do
     let sAmount = pure $ fromString $ show amount
     pure $ pure "DiscardRandomCost " <> sAmount
+  ExileCost reqs -> yesParens do
+    sReqs <- dollar <$> showRequirements reqs
+    pure $ pure "ExileCost" <> sReqs
   LoyaltyCost loyalty -> yesParens do
     sLoyalty <- dollar <$> showLoyalty loyalty
     pure $ pure "LoyaltyCost " <> sLoyalty
@@ -919,6 +871,8 @@ showEffect = \case
   EffectContinuous effect -> yesParens do
     sEffect <- dollar <$> showEffect effect
     pure $ pure "EffectContinuous" <> sEffect
+  EndTheTurn -> yesParens do
+    pure $ pure "EndTheTurn"
   Exile obj -> yesParens do
     sObj <- dollar <$> showZoneObject obj
     pure $ pure "Exile" <> sObj
@@ -927,6 +881,11 @@ showEffect = \case
     sObj <- parens <$> showZoneObject obj
     sAbility <- dollar <$> showAbility ability
     pure $ pure "GainAbility " <> sWAny <> pure " " <> sObj <> sAbility
+  GainControl wAny player obj -> yesParens do
+    sWAny <- parens <$> showWAny wAny
+    sPlayer <- parens <$> showZoneObject player
+    sObj <- dollar <$> showZoneObject obj
+    pure $ pure "GainControl " <> sWAny <> pure " " <> sPlayer <> sObj
   GainLife player n -> yesParens do
     sPlayer <- parens <$> showZoneObject player
     let amount = fromString $ show n
@@ -1162,18 +1121,6 @@ showEventListener' showX = \case
     sOneShot <- dollar <$> showX oneShot
     pure $ pure "TimePoint " <> sTimePoint <> sOneShot
 
-showGenericMana :: GenericMana var -> EnvM ParenItems
-showGenericMana =
-  yesParens . \case
-    x@GenericMana'{} -> pure $ pure $ fromString $ show x
-    VariableGenericMana var -> do
-      let sVar = pure $ getVarName var
-      pure $ pure "VariableGenericMana " <> sVar
-    SumGenericMana x y -> do
-      sX <- parens <$> showGenericMana x
-      sY <- parens <$> showGenericMana y
-      pure $ pure "SumGenericMana " <> sX <> pure " " <> sY
-
 showLandType :: LandType -> EnvM ParenItems
 showLandType landType = case landType of
   BasicLand basic -> yesParens do
@@ -1199,13 +1146,14 @@ showLoyalty = yesParens . pure . pure . fromString . show
 showMana :: Mana var snow a -> EnvM ParenItems
 showMana =
   yesParens . \case
-    WhiteMana m -> (pure "WhiteMana" <>) . dollar <$> showColoredMana m
-    BlueMana m -> (pure "BlueMana" <>) . dollar <$> showColoredMana m
-    BlackMana m -> (pure "BlackMana" <>) . dollar <$> showColoredMana m
-    RedMana m -> (pure "RedMana" <>) . dollar <$> showColoredMana m
-    GreenMana m -> (pure "GreenMana" <>) . dollar <$> showColoredMana m
-    ColorlessMana m -> (pure "ColorlessMana" <>) . dollar <$> showColorlessMana m
-    GenericMana m -> (pure "GenericMana" <>) . dollar <$> showGenericMana m
+    x@Mana{} -> pure $ pure $ fromString $ show x
+    VariableMana var -> do
+      let sVar = pure $ getVarName var
+      pure $ pure "VariableMana " <> sVar
+    SumMana x y -> do
+      sX <- parens <$> showMana x
+      sY <- parens <$> showMana y
+      pure $ pure "SumMana " <> sX <> pure " " <> sY
 
 showManaCost :: ManaCost var -> EnvM ParenItems
 showManaCost cost = yesParens do
@@ -1691,6 +1639,9 @@ showRequirement = \case
     sWAny <- parens <$> showWAny wAny
     sObjN <- dollar <$> showZoneObject objN
     pure $ pure "Is " <> sWAny <> sObjN
+  IsOpponentOf player -> yesParens do
+    sPlayer <- dollar <$> showZoneObject player
+    pure $ pure "IsOpponentOf" <> sPlayer
   IsTapped perm -> yesParens do
     pure $ pure $ fromString $ "IsTapped " ++ show perm
   Not req -> yesParens do
@@ -1783,6 +1734,9 @@ showStaticAbility = \case
     pure $ pure "Fuse"
   Haste -> noParens do
     pure $ pure "Haste"
+  Landwalk reqs -> yesParens do
+    sReqs <- dollar <$> showRequirements reqs
+    pure $ pure "Landwalk" <> sReqs
   StaticContinuous continuous -> yesParens do
     sContinuous <- dollar <$> showElect continuous
     pure $ pure "StaticContinuous" <> sContinuous
@@ -1831,22 +1785,22 @@ showWithLinkedObject ::
   WithLinkedObject zone x ot ->
   EnvM ParenItems
 showWithLinkedObject showM memo = \case
-  LProxy reqs -> yesParens do
+  LinkedProxy reqs -> yesParens do
     sReqs <- dollar <$> showRequirements reqs
-    pure $ pure "LProxy" <> sReqs
-  L1 nonProxy reqs cont ->
+    pure $ pure "LinkedProxy" <> sReqs
+  Linked1 nonProxy reqs cont ->
     let ty = getType reqs
      in go ty nonProxy reqs $ showO1 @zone p showM memo (cont . toZone)
-  L2 nonProxy reqs cont ->
+  Linked2 nonProxy reqs cont ->
     let ty = getType reqs
      in go ty nonProxy reqs $ showO2 @zone p showM memo (cont . toZone)
-  L3 nonProxy reqs cont ->
+  Linked3 nonProxy reqs cont ->
     let ty = getType reqs
      in go ty nonProxy reqs $ showO3 @zone p showM memo (cont . toZone)
-  L4 nonProxy reqs cont ->
+  Linked4 nonProxy reqs cont ->
     let ty = getType reqs
      in go ty nonProxy reqs $ showO4 @zone p showM memo (cont . toZone)
-  L5 nonProxy reqs cont ->
+  Linked5 nonProxy reqs cont ->
     let ty = getType reqs
      in go ty nonProxy reqs $ showO5 @zone p showM memo (cont . toZone)
  where
@@ -1885,11 +1839,11 @@ showWithList showRet = \case
     pure $ pure "SuchThat " <> sReqs <> sWithList
 
 showWithMaskedObject ::
-  forall zone z.
+  forall zone liftOT ot.
   IsZone zone =>
-  (z -> EnvM ParenItems) ->
+  (liftOT ot -> EnvM ParenItems) ->
   String ->
-  WithMaskedObject zone z ->
+  WithMaskedObject zone liftOT ot ->
   EnvM ParenItems
 showWithMaskedObject showM memo = \case
   Masked1 reqs cont ->
@@ -1907,7 +1861,7 @@ showWithMaskedObject showM memo = \case
  where
   p = Singular
 
-  getType :: [Requirement zone ot] -> Proxy ot
+  getType :: [Requirement zone ot'] -> Proxy ot'
   getType _ = Proxy
 
   go ty reqs sCont = yesParens do

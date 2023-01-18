@@ -7,6 +7,7 @@
 {-# HLINT ignore "Use const" #-}
 {-# HLINT ignore "Use if" #-}
 {-# HLINT ignore "Redundant pure" #-}
+{-# HLINT ignore "Use join" #-}
 
 module MtgPure.Engine.Priority (
   askPriorityAction,
@@ -30,6 +31,7 @@ import safe MtgPure.Engine.Fwd.Api (
   playLand,
   resolveTopOfStack,
   rewindIllegal,
+  rewindIllegalActivation,
  )
 import safe MtgPure.Engine.Monad (
   fromPublicRO,
@@ -43,7 +45,9 @@ import safe MtgPure.Engine.Monad (
  )
 import safe MtgPure.Engine.Prompt (
   ActivateAbility,
+  ActivateResult (..),
   CastSpell,
+  EnactInfo (..),
   PlayLand,
   PlayerCount (..),
   PriorityAction (..),
@@ -72,14 +76,15 @@ gainPriority oPlayer = do
 
 runPriorityQueue :: Monad m => MagicCont 'Private 'RW m () Void
 runPriorityQueue = do
-  logCall 'runPriorityQueue do
+  goVoid <- logCall 'runPriorityQueue do
     liftCont (fromRO $ gets magicPlayerOrderPriority) >>= \case
-      [] -> magicCont resolveTopOfStack -- (117.4)
+      [] -> pure resolveTopOfStack -- (117.4)
       oPlayer : oPlayers -> do
         liftCont performStateBasedActions -- (117.5)
         askPriorityAction oPlayer
         liftCont $ modify \st -> st{magicPlayerOrderPriority = oPlayers} -- (117.3d)
-  runPriorityQueue
+        pure runPriorityQueue
+  goVoid
 
 getPlayerWithPriority :: Monad m => Magic 'Public 'RO m (Maybe (Object 'OTPlayer))
 getPlayerWithPriority = logCall 'getPlayerWithPriority do
@@ -134,10 +139,14 @@ performPriorityActionCont oPlayer action = logCall 'performPriorityActionCont do
 
 activateAbilityCont :: Monad m => Object 'OTPlayer -> PriorityAction ActivateAbility -> MagicCont 'Private 'RW m () ()
 activateAbilityCont oPlayer activate = logCall 'activateAbilityCont do
-  isLegal <- liftCont $ rewindIllegal $ activateAbility oPlayer activate
-  case isLegal of
-    True -> magicCont $ gainPriority oPlayer -- (117.3c)
-    False -> pure ()
+  result <- liftCont $ rewindIllegalActivation $ activateAbility oPlayer activate
+  let goNormal = magicCont $ gainPriority oPlayer -- (117.3c)
+  case result of
+    IllegalActivation -> pure ()
+    ActivatedNonManaAbility -> goNormal
+    ActivatedManaAbility info -> case enactInfo_endTheTurn info of
+      False -> goNormal
+      True -> undefined -- TODO: end the turn
 
 castSpellCont :: Monad m => Object 'OTPlayer -> PriorityAction CastSpell -> MagicCont 'Private 'RW m () ()
 castSpellCont oPlayer cast = logCall 'castSpellCont do

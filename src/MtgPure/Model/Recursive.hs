@@ -70,9 +70,9 @@ import safe MtgPure.Model.Damage (Damage)
 import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.LandType (LandType)
 import safe MtgPure.Model.Loyalty (Loyalty)
-import safe MtgPure.Model.Mana (Snow (..))
-import safe MtgPure.Model.ManaCost (ManaCost)
-import safe MtgPure.Model.ManaPool (ManaPool)
+import safe MtgPure.Model.Mana.ManaCost (ManaCost)
+import safe MtgPure.Model.Mana.ManaPool (ManaPool)
+import safe MtgPure.Model.Mana.Snow (Snow (..))
 import safe MtgPure.Model.Object.IndexOT (IndexOT)
 import safe MtgPure.Model.Object.IsObjectType (IsObjectType)
 import safe MtgPure.Model.Object.OTN (OT1, OT2, OT3, OT4, OT5, OT6, OTN)
@@ -135,6 +135,9 @@ import safe MtgPure.Model.ZoneObject.ZoneObject (
 
 data Ability (ot :: Type) :: Type where
   Activated :: IsZO zone ot => WithThisActivated zone ot -> Ability ot
+  -- FIXME: Needs `WithThisStatic zone ot` to be able to encode things like "as long as THIS is damaged, THIS has Haste".
+  -- XXX: At which point, perhaps WithThisActivated, WithThisStatic, and WithThisTriggered can be ditched in favor of
+  --      adding `WithThisAbility ot`.
   Static :: (IsZone zone, IndexOT ot) => StaticAbility zone ot -> Ability ot
   Triggered :: IsZO zone ot => WithThisTriggered zone ot -> Ability ot
   deriving (Typeable)
@@ -464,6 +467,7 @@ data Cost (ot :: Type) :: Type where
   AndCosts :: [Cost ot] -> Cost ot
   CostCase :: Case (Cost ot) -> Cost ot
   DiscardRandomCost :: Int -> Cost ot -- TODO: PositiveInt
+  ExileCost :: IsZO zone ot' => [Requirement zone ot'] -> Cost ot -- TODO: prohibit (zone == 'ZExile)
   LoyaltyCost :: Loyalty -> Cost OTNPlaneswalker
   ManaCost :: ManaCost 'Var -> Cost ot
   OrCosts :: [Cost ot] -> Cost ot
@@ -477,12 +481,13 @@ instance ConsIndex (Cost ot) where
     AndCosts{} -> 1
     CostCase{} -> 2
     DiscardRandomCost{} -> 3
-    LoyaltyCost{} -> 4
-    ManaCost{} -> 5
-    OrCosts{} -> 6
-    PayLife{} -> 7
-    SacrificeCost{} -> 8
-    TapCost{} -> 9
+    ExileCost{} -> 4
+    LoyaltyCost{} -> 5
+    ManaCost{} -> 6
+    OrCosts{} -> 7
+    PayLife{} -> 8
+    SacrificeCost{} -> 9
+    TapCost{} -> 10
 
 ----------------------------------------
 
@@ -498,8 +503,11 @@ data Effect (ef :: EffectType) :: Type where
   DrawCards :: ZOPlayer -> Int -> Effect 'OneShot
   EffectCase :: Case (Effect ef) -> Effect ef
   EffectContinuous :: Effect 'Continuous -> Effect 'OneShot -- 611.2
-  Exile :: (IsZO zone ot, CoCard ot) => ZO zone ot -> Effect 'OneShot -- TODO: zone /= 'ZExile
+  EndTheTurn :: Effect 'OneShot
+  Exile :: (IsZO zone ot, CoCard ot) => ZO zone ot -> Effect 'OneShot -- TODO: prohibit (zone == 'ZExile)
   GainAbility :: IsOTN ot => WAny ot -> ZO 'ZBattlefield ot -> Ability ot -> Effect 'Continuous
+  -- XXX: This is Continuous to support things like "gain control until end of turn"
+  GainControl :: IsOTN ot => WAny ot -> ZOPlayer -> ZO 'ZBattlefield ot -> Effect 'Continuous -- TODO: restrict zone to 'ZBattlefield and 'ZStack
   GainLife :: ZOPlayer -> Int -> Effect 'OneShot -- TODO: PositiveInt
   LoseAbility :: IsOTN ot => WAny ot -> ZO 'ZBattlefield ot -> Ability ot -> Effect 'Continuous
   LoseLife :: ZOPlayer -> Int -> Effect 'OneShot -- TODO: PositiveInt
@@ -528,21 +536,23 @@ instance ConsIndex (Effect ef) where
     DrawCards{} -> 9
     EffectCase{} -> 10
     EffectContinuous{} -> 11
-    Exile{} -> 12
-    GainAbility{} -> 13
-    GainLife{} -> 14
-    LoseAbility{} -> 15
-    LoseLife{} -> 16
-    PutOntoBattlefield{} -> 17
-    Sacrifice{} -> 18
-    SearchLibrary{} -> 19
-    Sequence{} -> 20
-    ShuffleLibrary{} -> 21
-    StatDelta{} -> 22
-    Tap{} -> 23
-    Untap{} -> 24
-    Until{} -> 25
-    WithList{} -> 26
+    EndTheTurn{} -> 12
+    Exile{} -> 13
+    GainAbility{} -> 14
+    GainControl{} -> 15
+    GainLife{} -> 16
+    LoseAbility{} -> 17
+    LoseLife{} -> 18
+    PutOntoBattlefield{} -> 19
+    Sacrifice{} -> 20
+    SearchLibrary{} -> 21
+    Sequence{} -> 22
+    ShuffleLibrary{} -> 23
+    StatDelta{} -> 24
+    Tap{} -> 25
+    Untap{} -> 26
+    Until{} -> 27
+    WithList{} -> 28
 
 ----------------------------------------
 
@@ -554,7 +564,7 @@ data Elect (p :: PrePost) (el :: Type) (ot :: Type) :: Type where
   Choose ::
     (IsPrePost p, Typeable el, IsZO zone ot) =>
     ZOPlayer ->
-    WithMaskedObject zone (Elect p el ot) ->
+    WithMaskedObject zone (Elect p el) ot ->
     Elect p el ot
   ChooseOption :: (IsUser u, IsNat n) => ZOPlayer -> NatList u n Condition -> (Variable (Fin u n) -> Elect p el ot) -> Elect p el ot
   Condition :: Condition -> Elect p Condition ot
@@ -578,14 +588,14 @@ data Elect (p :: PrePost) (el :: Type) (ot :: Type) :: Type where
   --      (3) Say that this is OK and say that Random must come before All if want it unified. Seems good actually...
   Random ::
     IsOTN ot =>
-    WithMaskedObject 'ZBattlefield (Elect 'Post el ot) ->
+    WithMaskedObject 'ZBattlefield (Elect 'Post el) ot ->
     Elect 'Post el ot -- Interpreted as "Arbitrary" in some contexts, such as Event and EventListener
 
   -- TODO: Disallow `Target` for some types of `el` using a witness arg, in particular Event and EventListener
   Target ::
     (Typeable el, IsZO zone ot) =>
     ZOPlayer ->
-    WithMaskedObject zone (Elect 'Pre el ot) ->
+    WithMaskedObject zone (Elect 'Pre el) ot ->
     Elect 'Pre el ot
   VariableFromPower :: ZOCreature -> (Variable Int -> Elect 'Post el ot) -> Elect 'Post el ot
   VariableInt :: (Variable Int -> Elect 'Pre el ot) -> Elect 'Pre el ot
@@ -657,6 +667,7 @@ instance ConsIndex (EnchantmentType ot) where
 
 ----------------------------------------
 
+-- See `Until` constructor for a place where this is used. e.g. [Pradesh Gypsies]
 type Event = EventListener' Proxy
 
 -- XXX: This should use 'Pre/PrePost instead of 'Post? e.g. [Flametongue Kavu]
@@ -705,6 +716,7 @@ data Requirement (zone :: Zone) (ot :: Type) :: Type where
   HasAbility :: IsZO zone ot => WithThis zone Ability ot -> Requirement zone ot -- Non-unique differing representations will not be considered the same
   HasLandType :: IsZO zone OTNLand => LandType -> Requirement zone OTNLand
   Is :: IsZO zone ot => WAny ot -> ZO zone ot -> Requirement zone ot
+  IsOpponentOf :: ZOPlayer -> Requirement zone OTNPlayer
   IsTapped :: IsOTN ot => WPermanent ot -> Requirement 'ZBattlefield ot
   Not :: IsZO zone ot => Requirement zone ot -> Requirement zone ot
   OfColors :: IsZO zone ot => Colors -> Requirement zone ot -- needs `WCard a` witness
@@ -756,17 +768,18 @@ instance ConsIndex (Requirement zone ot) where
     HasAbility{} -> 3
     HasLandType{} -> 4
     Is{} -> 5
-    IsTapped{} -> 6
-    Not{} -> 7
-    OfColors{} -> 8
-    OwnedBy{} -> 9
-    PlayerPays{} -> 10
-    RAnd{} -> 11
-    ROr{} -> 12
-    R2{} -> 13
-    R3{} -> 14
-    R4{} -> 15
-    R5{} -> 16
+    IsOpponentOf{} -> 6
+    IsTapped{} -> 7
+    Not{} -> 8
+    OfColors{} -> 9
+    OwnedBy{} -> 10
+    PlayerPays{} -> 11
+    RAnd{} -> 12
+    ROr{} -> 13
+    R2{} -> 14
+    R3{} -> 15
+    R4{} -> 16
+    R5{} -> 17
 
 ----------------------------------------
 
@@ -928,6 +941,7 @@ data StaticAbility (zone :: Zone) (ot :: Type) :: Type where
   Flying :: ot ~ OTNCreature => StaticAbility 'ZBattlefield ot
   Fuse :: IsOTN ot => StaticAbility 'ZHand (ot, ot) -- TODO: Add witness or constraint for OTNInstant or OTNSorcery
   Haste :: ot ~ OTNCreature => StaticAbility 'ZBattlefield ot
+  Landwalk :: ot ~ OTNCreature => [Requirement 'ZBattlefield OTNLand] -> StaticAbility 'ZBattlefield ot
   StaticContinuous :: (ot ~ OTN x, IsOTN ot) => Elect 'Post (Effect 'Continuous) ot -> StaticAbility 'ZBattlefield ot -- 611.3
   -- XXX: SuspendPre and SuspendPost
   Suspend :: (ot ~ OTN x, IsOTN ot) => Int -> Elect 'Pre (Cost ot) ot -> StaticAbility 'ZBattlefield ot -- PositiveInt
@@ -942,9 +956,10 @@ instance ConsIndex (StaticAbility zone ot) where
     Flying{} -> 4
     Fuse{} -> 5
     Haste{} -> 6
-    StaticContinuous{} -> 7
-    Suspend{} -> 8
-    Trample{} -> 9
+    Landwalk{} -> 7
+    StaticContinuous{} -> 8
+    Suspend{} -> 9
+    Trample{} -> 10
 
 ----------------------------------------
 
@@ -974,33 +989,35 @@ instance ConsIndex (TriggeredAbility zone ot) where
 
 ----------------------------------------
 
+-- "Linked" is used to denote that the object fed into the continuation has the same `ot`
+-- as WithLinkedObject's `ot` type.
 data WithLinkedObject (zone :: Zone) (liftOT :: Type -> Type) (ot :: Type) :: Type where
-  LProxy :: [Requirement zone ot] -> WithLinkedObject zone Proxy ot
-  L1 ::
+  LinkedProxy :: [Requirement zone ot] -> WithLinkedObject zone Proxy ot
+  Linked1 ::
     (IsOTN (OT1 a), Inst1 IsObjectType a) =>
     NonProxy liftOT ->
     [Requirement zone (OT1 a)] ->
     (ZO zone (OT1 a) -> liftOT (OT1 a)) ->
     WithLinkedObject zone liftOT (OT1 a)
-  L2 ::
+  Linked2 ::
     (IsOTN (OT2 a b), Inst2 IsObjectType a b) =>
     NonProxy liftOT ->
     [Requirement zone (OT2 a b)] ->
     (ZO zone (OT2 a b) -> liftOT (OT2 a b)) ->
     WithLinkedObject zone liftOT (OT2 a b)
-  L3 ::
+  Linked3 ::
     (IsOTN (OT3 a b c), Inst3 IsObjectType a b c) =>
     NonProxy liftOT ->
     [Requirement zone (OT3 a b c)] ->
     (ZO zone (OT3 a b c) -> liftOT (OT3 a b c)) ->
     WithLinkedObject zone liftOT (OT3 a b c)
-  L4 ::
+  Linked4 ::
     (IsOTN (OT4 a b c d), Inst4 IsObjectType a b c d) =>
     NonProxy liftOT ->
     [Requirement zone (OT4 a b c d)] ->
     (ZO zone (OT4 a b c d) -> liftOT (OT4 a b c d)) ->
     WithLinkedObject zone liftOT (OT4 a b c d)
-  L5 ::
+  Linked5 ::
     (IsOTN (OT5 a b c d e), Inst5 IsObjectType a b c d e) =>
     NonProxy liftOT ->
     [Requirement zone (OT5 a b c d e)] ->
@@ -1010,12 +1027,12 @@ data WithLinkedObject (zone :: Zone) (liftOT :: Type -> Type) (ot :: Type) :: Ty
 
 instance ConsIndex (WithLinkedObject zone liftOT ot) where
   consIndex = \case
-    LProxy{} -> 1
-    L1{} -> 2
-    L2{} -> 3
-    L3{} -> 4
-    L4{} -> 5
-    L5{} -> 6
+    LinkedProxy{} -> 1
+    Linked1{} -> 2
+    Linked2{} -> 3
+    Linked3{} -> 4
+    Linked4{} -> 5
+    Linked5{} -> 6
 
 ----------------------------------------
 
@@ -1032,40 +1049,42 @@ instance ConsIndex (WithList ret zone ot) where
 
 ----------------------------------------
 
-data WithMaskedObject (zone :: Zone) (liftedOT :: Type) :: Type where
+-- "Masked" is used to denote that the object fed into the continuation has an `ot'` that
+-- is independent from WithMaskedObject's `ot` type.
+data WithMaskedObject (zone :: Zone) (liftOT :: Type -> Type) (ot :: Type) :: Type where
   Masked1 ::
-    (Typeable liftedOT, IsOTN (OT1 a), Inst1 IsObjectType a) =>
+    (Typeable (liftOT ot), IsOTN (OT1 a), Inst1 IsObjectType a) =>
     [Requirement zone (OT1 a)] ->
-    (ZO zone (OT1 a) -> liftedOT) ->
-    WithMaskedObject zone liftedOT
+    (ZO zone (OT1 a) -> liftOT ot) ->
+    WithMaskedObject zone liftOT ot
   Masked2 ::
-    (Typeable liftedOT, IsOTN (OT2 a b), Inst2 IsObjectType a b) =>
+    (Typeable (liftOT ot), IsOTN (OT2 a b), Inst2 IsObjectType a b) =>
     [Requirement zone (OT2 a b)] ->
-    (ZO zone (OT2 a b) -> liftedOT) ->
-    WithMaskedObject zone liftedOT
+    (ZO zone (OT2 a b) -> liftOT ot) ->
+    WithMaskedObject zone liftOT ot
   Masked3 ::
-    (Typeable liftedOT, IsOTN (OT3 a b c), Inst3 IsObjectType a b c) =>
+    (Typeable (liftOT ot), IsOTN (OT3 a b c), Inst3 IsObjectType a b c) =>
     [Requirement zone (OT3 a b c)] ->
-    (ZO zone (OT3 a b c) -> liftedOT) ->
-    WithMaskedObject zone liftedOT
+    (ZO zone (OT3 a b c) -> liftOT ot) ->
+    WithMaskedObject zone liftOT ot
   Masked4 ::
-    (Typeable liftedOT, IsOTN (OT4 a b c d), Inst4 IsObjectType a b c d) =>
+    (Typeable (liftOT ot), IsOTN (OT4 a b c d), Inst4 IsObjectType a b c d) =>
     [Requirement zone (OT4 a b c d)] ->
-    (ZO zone (OT4 a b c d) -> liftedOT) ->
-    WithMaskedObject zone liftedOT
+    (ZO zone (OT4 a b c d) -> liftOT ot) ->
+    WithMaskedObject zone liftOT ot
   Masked5 ::
-    (Typeable liftedOT, IsOTN (OT5 a b c d e), Inst5 IsObjectType a b c d e) =>
+    (Typeable (liftOT ot), IsOTN (OT5 a b c d e), Inst5 IsObjectType a b c d e) =>
     [Requirement zone (OT5 a b c d e)] ->
-    (ZO zone (OT5 a b c d e) -> liftedOT) ->
-    WithMaskedObject zone liftedOT
+    (ZO zone (OT5 a b c d e) -> liftOT ot) ->
+    WithMaskedObject zone liftOT ot
   Masked6 ::
-    (Typeable liftedOT, IsOTN (OT6 a b c d e f), Inst6 IsObjectType a b c d e f) =>
+    (Typeable (liftOT ot), IsOTN (OT6 a b c d e f), Inst6 IsObjectType a b c d e f) =>
     [Requirement zone (OT6 a b c d e f)] ->
-    (ZO zone (OT6 a b c d e f) -> liftedOT) ->
-    WithMaskedObject zone liftedOT
+    (ZO zone (OT6 a b c d e f) -> liftOT ot) ->
+    WithMaskedObject zone liftOT ot
   deriving (Typeable)
 
-instance ConsIndex (WithMaskedObject zone liftedOT) where
+instance ConsIndex (WithMaskedObject zone liftOT ot) where
   consIndex = \case
     Masked1{} -> 1
     Masked2{} -> 2

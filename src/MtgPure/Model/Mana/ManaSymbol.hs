@@ -3,13 +3,13 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.ManaSymbol (
+module MtgPure.Model.Mana.ManaSymbol (
   ManaSymbol (..),
 ) where
 
 import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
-import safe MtgPure.Model.ManaType (ManaType (..))
+import safe MtgPure.Model.Mana.ManaType (ManaType (..))
 
 data ManaSymbol :: ManaType -> Type where
   W :: ManaSymbol 'MTWhite
@@ -19,6 +19,7 @@ data ManaSymbol :: ManaType -> Type where
   G :: ManaSymbol 'MTGreen
   C :: ManaSymbol 'MTColorless
   S :: ManaSymbol 'MTSnow
+  BG :: ManaSymbol 'MTHybridBG
   deriving (Typeable)
 
 deriving instance Eq (ManaSymbol a)
@@ -50,3 +51,6 @@ instance Monoid (ManaSymbol 'MTColorless) where
 
 instance Monoid (ManaSymbol 'MTSnow) where
   mempty = S
+
+instance Monoid (ManaSymbol 'MTHybridBG) where
+  mempty = BG

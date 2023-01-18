@@ -23,6 +23,7 @@ data CreatureType
   | Nomad
   | Rebel
   | Satyr
+  | Shaman
   | Soldier
   | Zombie
   deriving (Eq, Ord, Show, Typeable)

@@ -8,6 +8,7 @@
 module MtgPure.Engine.Prompt (
   AbsoluteActivatedAbilityIndex (..),
   ActivateAbility,
+  ActivateResult (..),
   CallFrameId,
   CallFrameInfo (..),
   CardCount (..),
@@ -28,6 +29,14 @@ module MtgPure.Engine.Prompt (
   RelativeAbilityIndex (..),
   SomeActivatedAbility (..),
   SpecialAction (..),
+  PendingReady (..),
+  Pending,
+  Ready,
+  Elected (..),
+  electedObject_controller,
+  electedObject_cost,
+  AnyElected (..),
+  ResolveElected (..),
 ) where
 
 import safe Control.Monad.Util (Attempt)
@@ -35,19 +44,23 @@ import safe Data.Kind (Type)
 import safe Data.List.NonEmpty (NonEmpty)
 import safe Data.Typeable (Typeable, cast)
 import safe MtgPure.Engine.Orphans.ZO ()
-import safe MtgPure.Model.GenericMana (GenericMana)
-import safe MtgPure.Model.ManaPool (CompleteManaPool)
+import safe MtgPure.Model.EffectType (EffectType (..))
+import safe MtgPure.Model.Mana.Mana (Mana)
+import safe MtgPure.Model.Mana.ManaPool (CompleteManaPool)
+import safe MtgPure.Model.Mana.ManaType (ManaType (..))
+import safe MtgPure.Model.Mana.Snow (Snow (NonSnow))
 import safe MtgPure.Model.Object.OTNAliases (OTNCreature, OTNLand, OTNPermanent, OTNPlayerPlaneswalker, OTNSpell)
 import safe MtgPure.Model.Object.Object (Object)
 import safe MtgPure.Model.Object.ObjectId (GetObjectId (getUntypedObject), ObjectId)
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
-import safe MtgPure.Model.Recursive (AnyCard, WithThisActivated)
+import safe MtgPure.Model.PrePost (PrePost (..))
+import safe MtgPure.Model.Recursive (AnyCard, CardFacet, Cost, Effect, Elect, WithThisActivated)
 import safe MtgPure.Model.Recursive.Ord ()
 import safe qualified MtgPure.Model.Recursive.Ord as O
 import safe MtgPure.Model.Recursive.Show ()
 import safe MtgPure.Model.Variable (Var (..))
 import safe MtgPure.Model.Zone (IsZone, Zone (..))
-import safe MtgPure.Model.ZoneObject.ZoneObject (IsZO, ZO)
+import safe MtgPure.Model.ZoneObject.ZoneObject (IsOTN, IsZO, ZO)
 
 data InternalLogicError :: Type where
   CantHappenByConstruction :: InternalLogicError -- TODO: ditch this for informative constructors
@@ -90,20 +103,70 @@ data CallFrameInfo = CallFrameInfo
   }
   deriving (Eq, Ord, Show)
 
+data ActivateResult :: Type where
+  IllegalActivation :: ActivateResult
+  ActivatedManaAbility :: EnactInfo -> ActivateResult
+  ActivatedNonManaAbility :: ActivateResult
+
 data DeclaredAttacker = DeclaredAttacker
   { declaredAttacker_attacker :: ZO 'ZBattlefield OTNCreature
   , declaredAttacker_victim :: ZO 'ZBattlefield OTNPlayerPlaneswalker
   }
+  deriving (Eq, Ord, Show)
 
 data DeclaredBlocker = DeclaredBlocker
   { declaredBlocker_blocker :: ZO 'ZBattlefield OTNCreature
   , declaredBlocker_attackers :: NonEmpty (ZO 'ZBattlefield OTNCreature)
   }
+  deriving (Eq, Ord, Show)
+
+data PendingReady (p :: PrePost) (el :: Type) (ot :: Type) where
+  Pending :: {unPending :: Elect 'Post el ot} -> Pending el ot
+  Ready :: {unReady :: el} -> Ready el ot
+
+deriving instance Show el => Show (PendingReady p el ot)
+
+type Pending = PendingReady 'Pre
+
+type Ready = PendingReady 'Post
+
+data Elected (pEffect :: PrePost) (ot :: Type) :: Type where
+  ElectedActivatedAbility ::
+    IsZO zone ot =>
+    { electedActivatedAbility_controller :: Object 'OTPlayer
+    , electedActivatedAbility_this :: ZO zone ot
+    , electedActivatedAbility_cost :: Cost ot
+    , electedActivatedAbility_effect :: PendingReady pEffect (Effect 'OneShot) ot
+    } ->
+    Elected pEffect ot
+  ElectedSpell ::
+    { electedSpell_controller :: Object 'OTPlayer
+    , electedSpell_card :: AnyCard -- TODO: OwnedCard?
+    , electedSpell_facet :: CardFacet ot
+    , electedSpell_cost :: Cost ot
+    , electedSpell_effect :: Maybe (PendingReady pEffect (Effect 'OneShot) ot)
+    } ->
+    Elected pEffect ot
+  deriving (Typeable)
+
+electedObject_controller :: Elected pEffect ot -> Object 'OTPlayer
+electedObject_controller elected = ($ elected) case elected of
+  ElectedActivatedAbility{} -> electedActivatedAbility_controller
+  ElectedSpell{} -> electedSpell_controller
+
+electedObject_cost :: Elected pEffect ot -> Cost ot
+electedObject_cost elected = ($ elected) case elected of
+  ElectedActivatedAbility{} -> electedActivatedAbility_cost
+  ElectedSpell{} -> electedSpell_cost
+
+data AnyElected (pEffect :: PrePost) :: Type where
+  AnyElected :: IsOTN ot => Elected pEffect ot -> AnyElected pEffect
+  deriving (Typeable)
 
 data Prompt' (opaqueGameState :: (Type -> Type) -> Type) (m :: Type -> Type) = Prompt
   { exceptionCantBeginGameWithoutPlayers :: m ()
   , exceptionInvalidCastSpell :: opaqueGameState m -> Object 'OTPlayer -> InvalidCastSpell -> m ()
-  , exceptionInvalidGenericManaPayment :: GenericMana 'NoVar -> CompleteManaPool -> m ()
+  , exceptionInvalidGenericManaPayment :: Mana 'NoVar 'NonSnow 'MTGeneric -> CompleteManaPool -> m ()
   , exceptionInvalidPlayLand :: opaqueGameState m -> Object 'OTPlayer -> InvalidPlayLand -> m ()
   , exceptionInvalidShuffle :: CardCount -> [CardIndex] -> m ()
   , exceptionInvalidStartingPlayer :: PlayerCount -> PlayerIndex -> m ()
@@ -114,7 +177,7 @@ data Prompt' (opaqueGameState :: (Type -> Type) -> Type) (m :: Type -> Type) = P
   , promptGetStartingPlayer :: Attempt -> PlayerCount -> m PlayerIndex
   , promptLogCallPop :: opaqueGameState m -> CallFrameInfo -> m ()
   , promptLogCallPush :: opaqueGameState m -> CallFrameInfo -> m ()
-  , promptPayGeneric :: Attempt -> opaqueGameState m -> Object 'OTPlayer -> GenericMana 'NoVar -> m CompleteManaPool
+  , promptPayGeneric :: Attempt -> opaqueGameState m -> Object 'OTPlayer -> Mana 'NoVar 'NonSnow 'MTGeneric -> m CompleteManaPool
   , promptPerformMulligan :: Attempt -> Object 'OTPlayer -> [AnyCard] -> m Bool -- TODO: Encode limited game state about players' mulligan states and [Serum Powder].
   , promptPickZO :: forall zone ot. IsZO zone ot => Attempt -> opaqueGameState m -> Object 'OTPlayer -> NonEmpty (ZO zone ot) -> m (ZO zone ot)
   , promptPriorityAction :: Attempt -> opaqueGameState m -> Object 'OTPlayer -> m (PriorityAction ())
@@ -223,7 +286,7 @@ data EnactInfo = EnactInfo
   { enactInfo_ :: ()
   , enactInfo_becameTapped :: [ZO 'ZBattlefield OTNPermanent]
   , enactInfo_becameUntapped :: [ZO 'ZBattlefield OTNPermanent]
-  , enactInfo_couldAddMana :: Bool
+  , enactInfo_endTheTurn :: Bool
   }
   deriving (Show)
 
@@ -233,20 +296,20 @@ instance Semigroup EnactInfo where
       { enactInfo_ = ()
       , enactInfo_becameTapped = becameTapped1 <> becameTapped2
       , enactInfo_becameUntapped = becameUntapped1 <> becameUntapped2
-      , enactInfo_couldAddMana = couldAddMana1 || couldAddMana2
+      , enactInfo_endTheTurn = endTheTurn1 || endTheTurn2
       }
    where
     EnactInfo
       { enactInfo_ = ()
       , enactInfo_becameTapped = becameTapped1
       , enactInfo_becameUntapped = becameUntapped1
-      , enactInfo_couldAddMana = couldAddMana1
+      , enactInfo_endTheTurn = endTheTurn1
       } = x
     EnactInfo
       { enactInfo_ = ()
       , enactInfo_becameTapped = becameTapped2
       , enactInfo_becameUntapped = becameUntapped2
-      , enactInfo_couldAddMana = couldAddMana2
+      , enactInfo_endTheTurn = endTheTurn2
       } = y
 
 instance Monoid EnactInfo where
@@ -255,5 +318,10 @@ instance Monoid EnactInfo where
       { enactInfo_ = ()
       , enactInfo_becameTapped = []
       , enactInfo_becameUntapped = []
-      , enactInfo_couldAddMana = False
+      , enactInfo_endTheTurn = False
       }
+
+data ResolveElected :: Type where
+  Fizzled :: ResolveElected
+  ResolvedEffect :: EnactInfo -> ResolveElected
+  PermanentResolved :: ResolveElected

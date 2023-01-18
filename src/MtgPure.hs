@@ -6,12 +6,13 @@ module MtgPure (
   module MtgPure.Client.Console,
   module MtgPure.Engine,
   module MtgPure.Model,
-  module MtgPure.ModelCombinators,
   NatList (..),
-  codeGenToObjectN,
+  mainCodeGenToObjectN,
+  mainManaAbility,
   mainMountainRagingGoblin,
   mainMountainShock,
   mainMountainStoneRain,
+  mainUnitMagicCont,
 ) where
 
 import safe Data.Nat (NatList (..))
@@ -26,12 +27,12 @@ import safe MtgPure.Engine hiding (
   satisfies,
  )
 import safe MtgPure.Model
-import safe MtgPure.Model.Object.ToObjectN.CodeGen (codeGenToObjectN)
-import safe MtgPure.ModelCombinators
-import safe MtgPure.Test.Direct ()
-import safe MtgPure.Test.MagicContUnit ()
-import safe MtgPure.Test.MountainRagingGoblin (mainMountainRagingGoblin)
-import safe MtgPure.Test.MountainShock (mainMountainShock)
-import safe MtgPure.Test.MountainStoneRain (mainMountainStoneRain)
-import safe MtgPure.Test.Variabled ()
-import safe MtgPure.Test.VariabledMonad ()
+import safe MtgPure.Model.Object.ToObjectN.CodeGen (mainCodeGenToObjectN)
+import safe MtgPure.Test.Engine.Unit.MagicCont (mainUnitMagicCont)
+import safe MtgPure.Test.Game.ManaAbility (mainManaAbility)
+import safe MtgPure.Test.Game.MountainRagingGoblin (mainMountainRagingGoblin)
+import safe MtgPure.Test.Game.MountainShock (mainMountainShock)
+import safe MtgPure.Test.Game.MountainStoneRain (mainMountainStoneRain)
+import safe MtgPure.Test.SerializableMonadApi.ProofOfConcept ()
+import safe MtgPure.Test.SerializableMonadApi.Variabled ()
+import safe MtgPure.Test.SerializableMonadApi.VariabledMonad ()
