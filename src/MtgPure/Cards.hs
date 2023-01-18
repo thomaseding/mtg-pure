@@ -246,7 +246,7 @@ mkFetchLand name ty1 ty2 = Card name $
                             , sacrificeCost [is this]
                             ]
                       , activated_effect = effect $
-                          searchLibrary you $
+                          searchLibrary you you $
                             linked
                               [ROr [HasLandType $ BasicLand ty1, HasLandType $ BasicLand ty2]]
                               \card -> effect $ putOntoBattlefield you card

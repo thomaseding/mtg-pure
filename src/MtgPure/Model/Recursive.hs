@@ -513,7 +513,7 @@ data Effect (ef :: EffectType) :: Type where
   LoseLife :: ZOPlayer -> Int -> Effect 'OneShot -- TODO: PositiveInt
   PutOntoBattlefield :: IsZO zone ot => WPermanent ot -> ZOPlayer -> ZO zone ot -> Effect 'OneShot -- TODO: zone /= 'ZBattlefield
   Sacrifice :: IsOTN ot => WPermanent ot -> ZOPlayer -> [Requirement 'ZBattlefield ot] -> Effect 'OneShot
-  SearchLibrary :: IsOTN ot => WCard ot -> ZOPlayer -> WithLinkedObject 'ZLibrary (Elect 'Post (Effect 'OneShot)) ot -> Effect 'OneShot
+  SearchLibrary :: IsOTN ot => WCard ot -> ZOPlayer {-searcher-} -> ZOPlayer {-searchee-} -> WithLinkedObject 'ZLibrary (Elect 'Post (Effect 'OneShot)) ot -> Effect 'OneShot
   Sequence :: [Effect ef] -> Effect ef
   ShuffleLibrary :: ZOPlayer -> Effect 'OneShot
   StatDelta :: ZOCreature -> Power -> Toughness -> Effect 'Continuous

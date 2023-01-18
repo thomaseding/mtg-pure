@@ -958,8 +958,8 @@ ordEffect x = case x of
                 ]
        in go reqs1 reqs2
     y -> compareIndexM x y
-  SearchLibrary wCard1 player1 card1 -> \case
-    SearchLibrary wCard2 player2 card2 ->
+  SearchLibrary wCard1 searcher1 searchee1 withCard1 -> \case
+    SearchLibrary wCard2 searcher2 searchee2 withCard2 ->
       let go ::
             forall ot1 ot2.
             IsOTN ot1 =>
@@ -967,13 +967,14 @@ ordEffect x = case x of
             WCard ot1 ->
             WCard ot2 ->
             EnvM Ordering
-          go _ _ = case cast (wCard2, card2) of
+          go _ _ = case cast (wCard2, withCard2) of
             Nothing -> compareOT @ot1 @ot2
-            Just (wCard2, card2) ->
+            Just (wCard2, withCard2) ->
               seqM
                 [ ordWCard wCard1 wCard2
-                , ordZoneObject player1 player2
-                , ordWithLinkedObject ordElectEl card1 card2
+                , ordZoneObject searcher1 searcher2
+                , ordZoneObject searchee1 searchee2
+                , ordWithLinkedObject ordElectEl withCard1 withCard2
                 ]
        in go wCard1 wCard2
     y -> compareIndexM x y

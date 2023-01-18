@@ -909,11 +909,12 @@ showEffect = \case
     sPlayer <- parens <$> showZoneObject player
     sReqs <- dollar <$> showRequirements reqs
     pure $ pure "Sacrifice " <> sPerm <> pure " " <> sPlayer <> sReqs
-  SearchLibrary wCard player withCard -> yesParens do
+  SearchLibrary wCard searcher searchee withCard -> yesParens do
     sWCard <- parens <$> showWCard wCard
-    sPlayer <- parens <$> showZoneObject player
+    sSearcher <- parens <$> showZoneObject searcher
+    sSearchee <- parens <$> showZoneObject searchee
     sWithCard <- dollar <$> showWithLinkedObject showElect "card" withCard
-    pure $ pure "SearchLibrary " <> sWCard <> pure " " <> sPlayer <> sWithCard
+    pure $ pure "SearchLibrary " <> sWCard <> pure " " <> sSearcher <> pure " " <> sSearchee <> sWithCard
   Sequence effects -> yesParens do
     sEffects <- dollar <$> showEffects effects
     pure $ pure "Sequence" <> sEffects

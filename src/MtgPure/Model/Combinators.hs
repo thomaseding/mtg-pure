@@ -529,6 +529,7 @@ putOntoBattlefield = PutOntoBattlefield coPermanent
 searchLibrary ::
   CoCard ot =>
   ZOPlayer ->
+  ZOPlayer ->
   WithLinkedObject 'ZLibrary (Elect 'Post (Effect 'OneShot)) ot ->
   Effect 'OneShot
 searchLibrary = SearchLibrary coCard
