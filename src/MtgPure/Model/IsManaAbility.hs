@@ -207,7 +207,7 @@ instance IsZone zone => IsManaAbilityImpl (WithMaskedObject zone (Elect p el) ot
     Masked5 _reqs cont -> isManaAbilityImpl $ cont dummyZO
     Masked6 _reqs cont -> isManaAbilityImpl $ cont dummyZO
 
-instance IsManaAbilityImpl (WithMaskedObjects zone (Elect p el ot)) where
+instance IsManaAbilityImpl (WithMaskedObjects zone (Elect p el) ot) where
   isManaAbilityImpl = \case
     Maskeds1 _reqs cont -> isManaAbilityImpl $ cont $ List []
     Maskeds2 _reqs cont -> isManaAbilityImpl $ cont $ List []

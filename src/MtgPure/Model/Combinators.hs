@@ -234,7 +234,7 @@ instance Inst6 IsObjectType a b c d e f => AsWithMaskedObject (OT6 a b c d e f) 
   masked = Masked6
 
 class AsWithMaskedObjects ot where
-  maskeds :: forall zone z. Typeable z => [Requirement zone ot] -> (List (ZO zone ot) -> z) -> WithMaskedObjects zone z
+  maskeds :: forall zone liftOT ot'. Typeable (liftOT ot') => [Requirement zone ot] -> (List (ZO zone ot) -> liftOT ot') -> WithMaskedObjects zone liftOT ot'
 
 instance Inst1 IsObjectType a => AsWithMaskedObjects (OT1 a) where
   maskeds = Maskeds1

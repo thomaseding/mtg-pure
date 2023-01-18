@@ -1868,11 +1868,11 @@ showWithMaskedObject showM memo = \case
     pure $ pure "masked @" <> sTy <> pure " " <> sReqs <> sCont'
 
 showWithMaskedObjects ::
-  forall zone z.
+  forall zone liftOT ot.
   IsZone zone =>
-  (z -> EnvM ParenItems) ->
+  (liftOT ot -> EnvM ParenItems) ->
   String ->
-  WithMaskedObjects zone z ->
+  WithMaskedObjects zone liftOT ot ->
   EnvM ParenItems
 showWithMaskedObjects showM memo = \case
   Maskeds1 reqs cont ->
@@ -1890,7 +1890,7 @@ showWithMaskedObjects showM memo = \case
  where
   p = Plural
 
-  getType :: [Requirement zone ot] -> Proxy ot
+  getType :: [Requirement zone ot'] -> Proxy ot'
   getType _ = Proxy
 
   go ty reqs sCont = yesParens do

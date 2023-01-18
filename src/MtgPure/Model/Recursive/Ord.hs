@@ -1914,8 +1914,8 @@ ordWithMaskedObjectsElectEl ::
   Typeable p =>
   Typeable el =>
   IsZO zone ot =>
-  WithMaskedObjects zone (Elect p el ot) ->
-  WithMaskedObjects zone (Elect p el ot) ->
+  WithMaskedObjects zone (Elect p el) ot ->
+  WithMaskedObjects zone (Elect p el) ot ->
   EnvM Ordering
 ordWithMaskedObjectsElectEl x = case x of
   Maskeds1 reqs1 cont1 -> \case

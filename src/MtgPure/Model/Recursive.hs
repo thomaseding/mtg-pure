@@ -559,7 +559,7 @@ instance ConsIndex (Effect ef) where
 data Elect (p :: PrePost) (el :: Type) (ot :: Type) :: Type where
   ActivePlayer :: (ZOPlayer -> Elect p el ot) -> Elect p el ot
   -- TODO: Add `IsZO zone ot` witness and change `'ZBattlefield` to `zone`.
-  All :: IsOTN ot => WithMaskedObjects 'ZBattlefield (Elect p el ot) -> Elect p el ot
+  All :: IsOTN ot => WithMaskedObjects 'ZBattlefield (Elect p el) ot -> Elect p el ot
   -- TODO: Disallow `Choose` for some types of `el` using a witness arg, in particular Event and EventListener
   Choose ::
     (IsPrePost p, Typeable el, IsZO zone ot) =>
@@ -993,35 +993,35 @@ instance ConsIndex (TriggeredAbility zone ot) where
 -- as WithLinkedObject's `ot` type.
 data WithLinkedObject (zone :: Zone) (liftOT :: Type -> Type) (ot :: Type) :: Type where
   Linked1 ::
-    (IsOTN (OT1 a), Inst1 IsObjectType a) =>
+    (ot ~ OT1 a, IsOTN ot, Inst1 IsObjectType a) =>
     NonProxy liftOT ->
-    [Requirement zone (OT1 a)] ->
-    (ZO zone (OT1 a) -> liftOT (OT1 a)) ->
-    WithLinkedObject zone liftOT (OT1 a)
+    [Requirement zone ot] ->
+    (ZO zone ot -> liftOT ot) ->
+    WithLinkedObject zone liftOT ot
   Linked2 ::
-    (IsOTN (OT2 a b), Inst2 IsObjectType a b) =>
+    (ot ~ OT2 a b, IsOTN ot, Inst2 IsObjectType a b) =>
     NonProxy liftOT ->
-    [Requirement zone (OT2 a b)] ->
-    (ZO zone (OT2 a b) -> liftOT (OT2 a b)) ->
-    WithLinkedObject zone liftOT (OT2 a b)
+    [Requirement zone ot] ->
+    (ZO zone ot -> liftOT ot) ->
+    WithLinkedObject zone liftOT ot
   Linked3 ::
-    (IsOTN (OT3 a b c), Inst3 IsObjectType a b c) =>
+    (ot ~ OT3 a b c, IsOTN ot, Inst3 IsObjectType a b c) =>
     NonProxy liftOT ->
-    [Requirement zone (OT3 a b c)] ->
-    (ZO zone (OT3 a b c) -> liftOT (OT3 a b c)) ->
-    WithLinkedObject zone liftOT (OT3 a b c)
+    [Requirement zone ot] ->
+    (ZO zone ot -> liftOT ot) ->
+    WithLinkedObject zone liftOT ot
   Linked4 ::
-    (IsOTN (OT4 a b c d), Inst4 IsObjectType a b c d) =>
+    (ot ~ OT4 a b c d, IsOTN ot, Inst4 IsObjectType a b c d) =>
     NonProxy liftOT ->
-    [Requirement zone (OT4 a b c d)] ->
-    (ZO zone (OT4 a b c d) -> liftOT (OT4 a b c d)) ->
-    WithLinkedObject zone liftOT (OT4 a b c d)
+    [Requirement zone ot] ->
+    (ZO zone ot -> liftOT ot) ->
+    WithLinkedObject zone liftOT ot
   Linked5 ::
-    (IsOTN (OT5 a b c d e), Inst5 IsObjectType a b c d e) =>
+    (ot ~ OT5 a b c d e, IsOTN ot, Inst5 IsObjectType a b c d e) =>
     NonProxy liftOT ->
-    [Requirement zone (OT5 a b c d e)] ->
-    (ZO zone (OT5 a b c d e) -> liftOT (OT5 a b c d e)) ->
-    WithLinkedObject zone liftOT (OT5 a b c d e)
+    [Requirement zone ot] ->
+    (ZO zone ot -> liftOT ot) ->
+    WithLinkedObject zone liftOT ot
   deriving (Typeable)
 
 instance ConsIndex (WithLinkedObject zone liftOT ot) where
@@ -1048,37 +1048,37 @@ instance ConsIndex (WithList ret zone ot) where
 ----------------------------------------
 
 -- "Masked" is used to denote that the object fed into the continuation has an `ot'` that
--- is independent from WithMaskedObject's `ot` type.
+-- is independent from WithMaskedObject's `ot` type (aka the `ot` in the continuation result).
 data WithMaskedObject (zone :: Zone) (liftOT :: Type -> Type) (ot :: Type) :: Type where
   Masked1 ::
-    (Typeable (liftOT ot), IsOTN (OT1 a), Inst1 IsObjectType a) =>
-    [Requirement zone (OT1 a)] ->
-    (ZO zone (OT1 a) -> liftOT ot) ->
+    (Typeable (liftOT ot), ot' ~ OT1 a, IsOTN ot', Inst1 IsObjectType a) =>
+    [Requirement zone ot'] ->
+    (ZO zone ot' -> liftOT ot) ->
     WithMaskedObject zone liftOT ot
   Masked2 ::
-    (Typeable (liftOT ot), IsOTN (OT2 a b), Inst2 IsObjectType a b) =>
-    [Requirement zone (OT2 a b)] ->
-    (ZO zone (OT2 a b) -> liftOT ot) ->
+    (Typeable (liftOT ot), ot' ~ OT2 a b, IsOTN ot', Inst2 IsObjectType a b) =>
+    [Requirement zone ot'] ->
+    (ZO zone ot' -> liftOT ot) ->
     WithMaskedObject zone liftOT ot
   Masked3 ::
-    (Typeable (liftOT ot), IsOTN (OT3 a b c), Inst3 IsObjectType a b c) =>
-    [Requirement zone (OT3 a b c)] ->
-    (ZO zone (OT3 a b c) -> liftOT ot) ->
+    (Typeable (liftOT ot), ot' ~ OT3 a b c, IsOTN ot', Inst3 IsObjectType a b c) =>
+    [Requirement zone ot'] ->
+    (ZO zone ot' -> liftOT ot) ->
     WithMaskedObject zone liftOT ot
   Masked4 ::
-    (Typeable (liftOT ot), IsOTN (OT4 a b c d), Inst4 IsObjectType a b c d) =>
-    [Requirement zone (OT4 a b c d)] ->
-    (ZO zone (OT4 a b c d) -> liftOT ot) ->
+    (Typeable (liftOT ot), ot' ~ OT4 a b c d, IsOTN ot', Inst4 IsObjectType a b c d) =>
+    [Requirement zone ot'] ->
+    (ZO zone ot' -> liftOT ot) ->
     WithMaskedObject zone liftOT ot
   Masked5 ::
-    (Typeable (liftOT ot), IsOTN (OT5 a b c d e), Inst5 IsObjectType a b c d e) =>
-    [Requirement zone (OT5 a b c d e)] ->
-    (ZO zone (OT5 a b c d e) -> liftOT ot) ->
+    (Typeable (liftOT ot), ot' ~ OT5 a b c d e, IsOTN ot', Inst5 IsObjectType a b c d e) =>
+    [Requirement zone ot'] ->
+    (ZO zone ot' -> liftOT ot) ->
     WithMaskedObject zone liftOT ot
   Masked6 ::
-    (Typeable (liftOT ot), IsOTN (OT6 a b c d e f), Inst6 IsObjectType a b c d e f) =>
-    [Requirement zone (OT6 a b c d e f)] ->
-    (ZO zone (OT6 a b c d e f) -> liftOT ot) ->
+    (Typeable (liftOT ot), ot' ~ OT6 a b c d e f, IsOTN ot', Inst6 IsObjectType a b c d e f) =>
+    [Requirement zone ot'] ->
+    (ZO zone ot' -> liftOT ot) ->
     WithMaskedObject zone liftOT ot
   deriving (Typeable)
 
@@ -1093,40 +1093,40 @@ instance ConsIndex (WithMaskedObject zone liftOT ot) where
 
 ----------------------------------------
 
-data WithMaskedObjects (zone :: Zone) (liftedOT :: Type) :: Type where
+data WithMaskedObjects (zone :: Zone) (liftOT :: Type -> Type) (ot :: Type) :: Type where
   Maskeds1 ::
-    (Typeable liftedOT, IsOTN (OT1 a), Inst1 IsObjectType a) =>
-    [Requirement zone (OT1 a)] ->
-    (List (ZO zone (OT1 a)) -> liftedOT) ->
-    WithMaskedObjects zone liftedOT
+    (Typeable (liftOT ot), ot' ~ OT1 a, IsOTN ot', Inst1 IsObjectType a) =>
+    [Requirement zone ot'] ->
+    (List (ZO zone ot') -> liftOT ot) ->
+    WithMaskedObjects zone liftOT ot
   Maskeds2 ::
-    (Typeable liftedOT, IsOTN (OT2 a b), Inst2 IsObjectType a b) =>
-    [Requirement zone (OT2 a b)] ->
-    (List (ZO zone (OT2 a b)) -> liftedOT) ->
-    WithMaskedObjects zone liftedOT
+    (Typeable (liftOT ot), ot' ~ OT2 a b, IsOTN ot', Inst2 IsObjectType a b) =>
+    [Requirement zone ot'] ->
+    (List (ZO zone ot') -> liftOT ot) ->
+    WithMaskedObjects zone liftOT ot
   Maskeds3 ::
-    (Typeable liftedOT, IsOTN (OT3 a b c), Inst3 IsObjectType a b c) =>
-    [Requirement zone (OT3 a b c)] ->
-    (List (ZO zone (OT3 a b c)) -> liftedOT) ->
-    WithMaskedObjects zone liftedOT
+    (Typeable (liftOT ot), ot' ~ OT3 a b c, IsOTN ot', Inst3 IsObjectType a b c) =>
+    [Requirement zone ot'] ->
+    (List (ZO zone ot') -> liftOT ot) ->
+    WithMaskedObjects zone liftOT ot
   Maskeds4 ::
-    (Typeable liftedOT, IsOTN (OT4 a b c d), Inst4 IsObjectType a b c d) =>
-    [Requirement zone (OT4 a b c d)] ->
-    (List (ZO zone (OT4 a b c d)) -> liftedOT) ->
-    WithMaskedObjects zone liftedOT
+    (Typeable (liftOT ot), ot' ~ OT4 a b c d, IsOTN ot', Inst4 IsObjectType a b c d) =>
+    [Requirement zone ot'] ->
+    (List (ZO zone ot') -> liftOT ot) ->
+    WithMaskedObjects zone liftOT ot
   Maskeds5 ::
-    (Typeable liftedOT, IsOTN (OT5 a b c d e), Inst5 IsObjectType a b c d e) =>
-    [Requirement zone (OT5 a b c d e)] ->
-    (List (ZO zone (OT5 a b c d e)) -> liftedOT) ->
-    WithMaskedObjects zone liftedOT
+    (Typeable (liftOT ot), ot' ~ OT5 a b c d e, IsOTN ot', Inst5 IsObjectType a b c d e) =>
+    [Requirement zone ot'] ->
+    (List (ZO zone ot') -> liftOT ot) ->
+    WithMaskedObjects zone liftOT ot
   Maskeds6 ::
-    (Typeable liftedOT, IsOTN (OT6 a b c d e f), Inst6 IsObjectType a b c d e f) =>
-    [Requirement zone (OT6 a b c d e f)] ->
-    (List (ZO zone (OT6 a b c d e f)) -> liftedOT) ->
-    WithMaskedObjects zone liftedOT
+    (Typeable (liftOT ot), ot' ~ OT6 a b c d e f, IsOTN ot', Inst6 IsObjectType a b c d e f) =>
+    [Requirement zone ot'] ->
+    (List (ZO zone ot') -> liftOT ot) ->
+    WithMaskedObjects zone liftOT ot
   deriving (Typeable)
 
-instance ConsIndex (WithMaskedObjects zone liftedOT) where
+instance ConsIndex (WithMaskedObjects zone liftOT ot) where
   consIndex = \case
     Maskeds1{} -> 1
     Maskeds2{} -> 2

@@ -256,7 +256,7 @@ electAll ::
   forall zone m p el ot x.
   (IsZO zone ot, Monad m) =>
   (Elect p el ot -> Magic 'Private 'RW m x) ->
-  WithMaskedObjects zone (Elect p el ot) ->
+  WithMaskedObjects zone (Elect p el) ot ->
   Magic 'Private 'RW m x
 electAll goElect = logCall 'electAll \case
   Maskeds1 reqs zosToElect -> go reqs zosToElect
