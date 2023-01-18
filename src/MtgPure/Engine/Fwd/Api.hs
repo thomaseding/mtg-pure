@@ -62,7 +62,6 @@ module MtgPure.Engine.Fwd.Api (
   removeGraveyardCard,
   removeHandCard,
   removeLibraryCard,
-  requiresTargets,
   resolveTopOfStack,
   resolveElected,
   satisfies,
@@ -415,9 +414,6 @@ removeHandCard = fwd2 fwd_removeHandCard
 
 removeLibraryCard :: Monad m => Object 'OTPlayer -> ZO 'ZLibrary OTNCard -> Magic 'Private 'RW m (Maybe AnyCard)
 removeLibraryCard = fwd2 fwd_removeLibraryCard
-
-requiresTargets :: Monad m => Elect p el ot -> Magic 'Private 'RO m Bool
-requiresTargets = fwd1 fwd_requiresTargets
 
 resolveElected :: (Monad m, IsOTN ot) => ZO 'ZStack OT0 -> Elected 'Pre ot -> Magic 'Private 'RW m ResolveElected
 resolveElected = fwd2 fwd_resolveElected

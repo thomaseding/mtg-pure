@@ -10,7 +10,6 @@
 
 module MtgPure.Engine.PerformElections (
   performElections,
-  requiresTargets,
   controllerOf,
   ownerOf,
 ) where
@@ -26,7 +25,7 @@ import safe MtgPure.Engine.Fwd.Api (
   getPermanent,
   zosSatisfying,
  )
-import safe MtgPure.Engine.Monad (fromRO, gets, internalFromRW, local, modify)
+import safe MtgPure.Engine.Monad (fromRO, gets, modify)
 import safe MtgPure.Engine.Orphans ()
 import safe MtgPure.Engine.Prompt (
   InternalLogicError (..),
@@ -38,7 +37,6 @@ import safe MtgPure.Engine.State (
   Magic,
   logCall,
   mkOpaqueGameState,
-  withHeadlessPrompt,
  )
 import safe MtgPure.Model.Object.MapObjectN (mapObjectN)
 import safe MtgPure.Model.Object.OTN (OT0)
@@ -77,22 +75,17 @@ performElections ::
   (el -> Magic 'Private 'RW m (Maybe x)) ->
   Elect p el ot ->
   Magic 'Private 'RW m (Maybe x)
-performElections = logCall 'performElections $ performElections' PerformElections Nothing
-
-data Behavior x
-  = PerformElections
-  | RequiresTargets x
+performElections = logCall 'performElections $ performElections' Nothing
 
 performElections' ::
   forall ot m p el x.
   Monad m =>
-  Behavior x ->
   x ->
   ZO 'ZStack OT0 ->
   (el -> Magic 'Private 'RW m x) ->
   Elect p el ot ->
   Magic 'Private 'RW m x
-performElections' bhv failureX zoStack goTerm = logCall 'performElections' \case
+performElections' failureX zoStack goTerm = logCall 'performElections' \case
   ActivePlayer{} -> undefined
   All masked -> electAll goRec masked
   Choose oPlayer thisToElect -> electA Choose' zoStack failureX goRec oPlayer thisToElect
@@ -114,12 +107,10 @@ performElections' bhv failureX zoStack goTerm = logCall 'performElections' \case
   VariableFromPower{} -> undefined
   VariableInt cont -> electVariableInt goRec cont
  where
-  goRec = performElections' bhv failureX zoStack goTerm
+  goRec = performElections' failureX zoStack goTerm
   --
   goTarget :: IsZO zone ot => ZOPlayer -> WithMaskedObject zone (Elect p el) ot -> Magic 'Private 'RW m x
-  goTarget oPlayer thisToElect = case bhv of
-    PerformElections -> electA Target' zoStack failureX goRec oPlayer thisToElect
-    RequiresTargets x -> pure x
+  goTarget = electA Target' zoStack failureX goRec
 
 electVariableInt ::
   Monad m =>
@@ -206,7 +197,7 @@ newTarget zoStack zoTargetBase req = logCall 'newTarget do
         targetsMap = magicStackEntryTargetsMap st
         targetsMap' = Map.insert zoStack targetIds' targetsMap
      in st
-          { magicNextObjectDiscriminant = (+ 1) <$> discr
+          { magicNextObjectDiscriminant = (1 +) <$> discr
           , magicStackEntryTargetsMap = targetsMap'
           , magicTargetProperties = propMap'
           }
@@ -274,16 +265,3 @@ electAll goElect = logCall 'electAll \case
   go reqs zosToElect = do
     zos <- fromRO $ zosSatisfying $ RAnd reqs
     goElect $ zosToElect $ List zos
-
--- (115.6)
-requiresTargets :: Monad m => Elect p el ot -> Magic 'Private 'RO m Bool
-requiresTargets elect = logCall 'requiresTargets do
-  internalFromRW goGameResult $ local withHeadlessPrompt do
-    performElections' (RequiresTargets True) False zoStack goTerm elect
- where
-  zoStack :: ZO 'ZStack OT0
-  zoStack = error $ show ManaAbilitiesDontHaveTargetsSoNoZoShouldBeNeeded
-  --
-  goTerm _ = pure False
-  --
-  goGameResult _ = pure False -- It would be really weird if this code path actually gets hit.

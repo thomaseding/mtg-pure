@@ -56,7 +56,7 @@ import safe MtgPure.Engine.Core (
 import safe MtgPure.Engine.Enact (enact)
 import safe MtgPure.Engine.Fwd.Type (Fwd' (..))
 import safe MtgPure.Engine.Pay (pay)
-import safe MtgPure.Engine.PerformElections (controllerOf, ownerOf, performElections, requiresTargets)
+import safe MtgPure.Engine.PerformElections (controllerOf, ownerOf, performElections)
 import safe MtgPure.Engine.PlayLand (playLand)
 import safe MtgPure.Engine.Priority (
   askPriorityAction,
@@ -116,7 +116,6 @@ fwdImpl =
     , fwd_removeGraveyardCard = removeGraveyardCard
     , fwd_removeHandCard = removeHandCard
     , fwd_removeLibraryCard = removeLibraryCard
-    , fwd_requiresTargets = requiresTargets
     , fwd_resolveElected = resolveElected
     , fwd_resolveTopOfStack = resolveTopOfStack
     , fwd_rewindIllegal = rewindIllegal

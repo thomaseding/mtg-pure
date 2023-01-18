@@ -97,7 +97,6 @@ data Fwd' ex st m where
     , fwd_removeGraveyardCard :: Object 'OTPlayer -> ZO 'ZGraveyard OTNCard -> Magic' ex st 'Private 'RW m (Maybe AnyCard)
     , fwd_removeHandCard :: Object 'OTPlayer -> ZO 'ZHand OTNCard -> Magic' ex st 'Private 'RW m (Maybe AnyCard)
     , fwd_removeLibraryCard :: Object 'OTPlayer -> ZO 'ZLibrary OTNCard -> Magic' ex st 'Private 'RW m (Maybe AnyCard)
-    , fwd_requiresTargets :: forall p el ot. Elect p el ot -> Magic' ex st 'Private 'RO m Bool
     , fwd_resolveElected :: forall ot. IsOTN ot => ZO 'ZStack OT0 -> Elected 'Pre ot -> Magic' ex st 'Private 'RW m ResolveElected
     , fwd_resolveTopOfStack :: MagicCont' ex st 'Private 'RW m () Void
     , fwd_rewindIllegal :: Magic' ex st 'Private 'RW m Legality -> Magic' ex st 'Private 'RW m Bool
