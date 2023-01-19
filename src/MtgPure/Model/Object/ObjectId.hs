@@ -18,7 +18,7 @@ module MtgPure.Model.Object.ObjectId (
 import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
 
-newtype ObjectId = ObjectId Int
+newtype ObjectId = ObjectId {unObjectId :: Int}
   deriving (Show, Eq, Ord, Typeable)
 
 newtype ObjectDiscriminant' a = ObjectDiscriminant a

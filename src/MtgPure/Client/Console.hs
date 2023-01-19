@@ -25,11 +25,11 @@ import safe qualified Control.Monad.Trans as M
 import safe qualified Control.Monad.Trans.State.Strict as State
 import safe Control.Monad.Util (Attempt, Attempt' (..))
 import safe qualified Data.Char as Char
-import safe Data.Functor ((<&>))
-import safe Data.List (stripPrefix)
+import safe Data.Kind (Type)
 import safe Data.List.NonEmpty (NonEmpty (..))
 import safe qualified Data.List.NonEmpty as NonEmpty
 import safe qualified Data.Map.Strict as Map
+import safe Data.ReadHelper (ReadSymbol2, ReadTup (..), ReadTupList (..))
 import safe qualified Data.Set as Set
 import safe qualified Data.Traversable as T
 import safe MtgPure.Engine.Fwd.Api (
@@ -82,7 +82,7 @@ import safe MtgPure.Model.Object.OTNAliases (
   OTNLand,
  )
 import safe MtgPure.Model.Object.Object (Object (..))
-import safe MtgPure.Model.Object.ObjectId (ObjectId (ObjectId), getObjectId)
+import safe MtgPure.Model.Object.ObjectId (ObjectId (..), getObjectId)
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Object.ToObjectN.Instances ()
 import safe MtgPure.Model.PhaseStep (prettyPhaseStep)
@@ -205,90 +205,101 @@ consolePickZo _attempt _opaque _p zos = case zos of
     liftIO $ print ("picked", zo, "from", NonEmpty.toList zos)
     pure zo
 
-mapFst :: (a -> c) -> (a, b) -> (c, b)
-mapFst f (a, b) = (f a, b)
+data CommandAbilityIndex :: Type where
+  CIAbilityIndex :: Int -> CommandAbilityIndex
 
-newtype EncodedInt = EncodedInt Int
-
-instance Read EncodedInt where
-  readsPrec prec s = case s of
-    "" -> []
-    c : cs -> case c of
-      (go (-1) 'W' cs -> result@[_]) -> result
-      (go (-2) 'U' cs -> result@[_]) -> result
-      (go (-3) 'B' cs -> result@[_]) -> result
-      (go (-4) 'R' cs -> result@[_]) -> result
-      (go (-5) 'G' cs -> result@[_]) -> result
-      (go (-6) 'I' cs -> result@[_]) -> result -- "I" for "Infer"
-      _ -> map (mapFst EncodedInt) $ readsPrec prec s
+instance Show CommandAbilityIndex where
+  show = \case
+    CIAbilityIndex n -> show' n
    where
-    go enc sym cs c = case sym == Char.toUpper c of
-      False -> []
-      True -> case cs of
-        "" -> [(EncodedInt enc, "")]
-        ' ' : _ -> [(EncodedInt enc, cs)]
-        _ -> []
-
-newtype CommandInput = CommandInput [Int]
-
-instance Show CommandInput where
-  show (CommandInput raw) = case raw of
-    [0] -> "Pass"
-    1 : xs -> "ActivateAbility " ++ go xs
-    2 : xs -> "CastSpell " ++ go xs
-    3 : xs -> "PlayLand " ++ go xs
-    xs -> go xs
-   where
-    go = unwords . map show'
     show' = \case
       -1 -> "W"
       -2 -> "U"
       -3 -> "B"
       -4 -> "R"
       -5 -> "G"
-      -6 -> "I"
-      x -> show x
+      -6 -> "*"
+      n -> show n
+
+instance Read CommandAbilityIndex where
+  readsPrec p s = case s of
+    'W' : rest -> [i | isBoundary rest, i <- [(CIAbilityIndex (-1), rest)]]
+    'U' : rest -> [i | isBoundary rest, i <- [(CIAbilityIndex (-2), rest)]]
+    'B' : rest -> [i | isBoundary rest, i <- [(CIAbilityIndex (-3), rest)]]
+    'R' : rest -> [i | isBoundary rest, i <- [(CIAbilityIndex (-4), rest)]]
+    'G' : rest -> [i | isBoundary rest, i <- [(CIAbilityIndex (-5), rest)]]
+    '*' : rest -> [i | isBoundary rest, i <- [(CIAbilityIndex (-6), rest)]]
+    _ -> [(CIAbilityIndex n, rest) | (n, rest) <- readsPrec p s, n >= -6]
+   where
+    isBoundary = \case
+      "" -> True
+      ' ' : _ -> True
+      _ -> False
+
+data CommandInput :: Type where
+  CIAskAgain :: CommandInput
+  CIHelp :: Maybe Int -> CommandInput
+  CIPass :: CommandInput
+  CIActivateAbility :: ObjectId -> CommandAbilityIndex -> [ObjectId] -> CommandInput
+  CICastSpell :: ObjectId -> [ObjectId] -> CommandInput
+  CIPlayLand :: ObjectId -> [ObjectId] -> CommandInput
+
+instance Show CommandInput where
+  show = \case
+    CIAskAgain -> "AskAgain"
+    CIHelp Nothing -> "Help"
+    CIHelp (Just n) -> "Help " ++ show n
+    CIPass -> "Pass"
+    CIActivateAbility objectId abilityIndex extras -> "ActivateAbility " ++ showId objectId ++ " " ++ show abilityIndex ++ showExtras extras
+    CICastSpell spellId extras -> "CastSpell " ++ showId spellId ++ showExtras extras
+    CIPlayLand landId extras -> "PlayLand " ++ showId landId ++ showExtras extras
+   where
+    showId = show . unObjectId
+    showExtras = \case
+      [] -> ""
+      xs -> " " ++ unwords (map showId xs)
+
+type AsHelp0 = ReadTup (ReadSymbol2 "help" "?", ())
+
+type AsHelp1 = ReadTup (ReadSymbol2 "help" "?", Int, ())
+
+type AsPass = ReadTup (ReadSymbol2 "pass" "0", ())
+
+type AsActivatedAbility = ReadTupList (ReadSymbol2 "activatedability" "1", Int, CommandAbilityIndex, ()) Int
+
+type AsCastSpell = ReadTupList (ReadSymbol2 "castspell" "2", Int, ()) Int
+
+type AsPlayLand = ReadTupList (ReadSymbol2 "playland" "3", Int, ()) Int
 
 instance Read CommandInput where
-  readsPrec _ = readsCommandInput
-
-readsCommandInput :: String -> [(CommandInput, String)]
-readsCommandInput = readsCommandInput' True . map dotToSpace . takeWhile (not . isComment)
- where
-  dotToSpace = \case
-    '.' -> ' '
-    c -> c
-  isComment = \case
-    ';' -> True
-    _ -> False
-
-readsCommandInput' :: Bool -> String -> [(CommandInput, String)]
-readsCommandInput' isHead s0 = case reads' s0 of
-  [(EncodedInt x, s1)] -> case span Char.isSpace s1 of
-    (_, "") -> [(CommandInput [x], "")]
-    ("", _) -> []
-    (_, s2) -> prepend x $ readsCommandInput' False s2
-  _ -> []
- where
-  prepend x res = res <&> \(CommandInput xs, s) -> (CommandInput $ x : xs, s)
-  reads' s = case isHead of
-    False -> reads s
-    True -> case dropWhile Char.isSpace s of
-      (stripPrefix "Pass" -> Just s') -> namedRead 0 s'
-      (stripPrefix "ActivateAbility " -> Just s') -> namedRead 1 s'
-      (stripPrefix "CastSpell " -> Just s') -> namedRead 2 s'
-      (stripPrefix "PlayLand " -> Just s') -> namedRead 3 s'
-      _ -> reads s
-  namedRead n s = [(EncodedInt n, ' ' : s)]
+  readsPrec _ str = case massageString str of
+    (reads @AsHelp0 -> [(Read1 _, rest)]) -> [(CIHelp Nothing, rest)]
+    (reads @AsHelp1 -> [(Read2 _ n, rest)]) -> [(CIHelp $ Just n, rest)]
+    (reads @AsPass -> [(Read1 _, rest)]) -> [(CIPass, rest)]
+    (reads @AsActivatedAbility -> [(Read3s _ objectId abilityIndex extras, rest)]) ->
+      [(CIActivateAbility (ObjectId objectId) abilityIndex $ map ObjectId extras, rest)]
+    (reads @AsCastSpell -> [(Read2s _ spellId extras, rest)]) ->
+      [(CICastSpell (ObjectId spellId) $ map ObjectId extras, rest)]
+    (reads @AsPlayLand -> [(Read2s _ landId extras, rest)]) ->
+      [(CIPlayLand (ObjectId landId) $ map ObjectId extras, rest)]
+    _ -> []
+   where
+    massageString = map massageChar . takeWhile (not . isComment)
+    massageChar = \case
+      '.' -> ' '
+      c -> Char.toLower c
+    isComment = \case
+      ';' -> True
+      _ -> False
 
 parseCommandInput :: Monad m => CommandInput -> Magic 'Public 'RO m (PriorityAction ())
-parseCommandInput (CommandInput raw) = case raw of
-  [0] -> pure PassPriority
-  [1, objId, abilityIndex] -> do
-    let index = AbsoluteActivatedAbilityIndex (ObjectId objId) $ RelativeAbilityIndex abilityIndex
+parseCommandInput = \case
+  CIPass -> pure PassPriority
+  CIActivateAbility objId (CIAbilityIndex abilityIndex) _extraIds -> do
+    let index = AbsoluteActivatedAbilityIndex objId $ RelativeAbilityIndex abilityIndex
     -- XXX: This can be generalized by scanning across various zones.(with OTAny each time).
     mAbility <- internalFromPrivate $ indexToActivated index
-    mZo <- internalFromPrivate $ toZO $ ObjectId objId
+    mZo <- internalFromPrivate $ toZO objId
     let goIntrinsic zo ty = PriorityAction $ ActivateAbility $ SomeActivatedAbility zo $ basicManaAbility ty
     case mAbility of
       Nothing -> case mZo of
@@ -306,12 +317,12 @@ parseCommandInput (CommandInput raw) = case raw of
           _ -> pure AskPriorityActionAgain
         Nothing -> pure AskPriorityActionAgain
       Just ability -> pure $ PriorityAction $ ActivateAbility (ability :: SomeActivatedAbility 'ZBattlefield OTNAny)
-  [2, spellId] -> do
-    let zo0 = toZO0 @ 'ZHand $ ObjectId spellId -- XXX: Use `getZoneOf` + `singZone` to generalize.
+  CICastSpell spellId _extraIds -> do
+    let zo0 = toZO0 @ 'ZHand spellId -- XXX: Use `getZoneOf` + `singZone` to generalize.
         zo = zo0ToSpell zo0
     pure $ PriorityAction $ CastSpell zo
-  [3, landId] -> do
-    let zo0 = toZO0 @ 'ZHand $ ObjectId landId -- XXX: Use `getZoneOf` + `singZone` to generalize.
+  CIPlayLand landId _extraIds -> do
+    let zo0 = toZO0 @ 'ZHand landId -- XXX: Use `getZoneOf` + `singZone` to generalize.
         zo = toZO1 zo0
     pure $ PriorityAction $ SpecialAction $ PlayLand zo
   _ -> pure AskPriorityActionAgain
@@ -324,9 +335,23 @@ consolePriorityAction attempt opaque oPlayer = do
     liftIO case attempt of
       Attempt 0 -> pure ()
       Attempt n -> putStrLn $ "Retrying[" ++ show n ++ "]..."
+    M.liftIO do
+      putStrLn ""
+      putStrLn "---- LEGEND ----"
+      putStrLn ""
+      putStrLn "<abilityIndex> is the 0-based index of the ability in the list of abilities of an object."
+      putStrLn "The <abilityIndex> of implicit mana abilities are -1 to -6, respectively: W, U, B, R, G, *"
+      putStrLn "  where * infers the mana ability when it is unambiguous."
+      putStrLn ""
+      putStrLn "Help: ? (TODO)"
+      putStrLn "PassPriority: 0"
+      putStrLn "ActivateAbility: 1 <objectId> <abilityIndex>"
+      putStrLn "CastSpell: 2 <spellId>"
+      putStrLn "PlayLand: 3 <landId>"
+      putStrLn ""
     text <- M.lift $ prompt $ "PriorityAction: " ++ show oPlayer ++ ": "
     let commandInput = case readMaybe text of
-          Nothing -> CommandInput []
+          Nothing -> CIAskAgain
           Just x -> x
     action <- parseCommandInput commandInput
     pure (action, commandInput)
