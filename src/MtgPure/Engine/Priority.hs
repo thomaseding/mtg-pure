@@ -17,7 +17,6 @@ module MtgPure.Engine.Priority (
 ) where
 
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
-import safe qualified Control.Monad.Trans as M
 import safe Control.Monad.Util (Attempt, Attempt' (..))
 import safe Data.Functor ((<&>))
 import safe qualified Data.Stream as Stream
@@ -34,6 +33,7 @@ import safe MtgPure.Engine.Fwd.Api (
   rewindIllegalActivation,
  )
 import safe MtgPure.Engine.Monad (
+  fromPublic,
   fromPublicRO,
   fromRO,
   get,
@@ -107,7 +107,9 @@ askPriorityAction' attempt oPlayer = logCallRec 'askPriorityAction' do
   st <- liftCont $ fromRO get
   let opaque = mkOpaqueGameState st
       prompt = magicPrompt st
-  action <- liftCont $ M.lift $ promptPriorityAction prompt attempt opaque oPlayer
+  action <- liftCont $
+    fromPublic $ fromRO do
+      promptPriorityAction prompt attempt opaque oPlayer
   performPriorityActionCont oPlayer action >>= \case
     Pass -> pure ()
     TryAgain mAttempt ->
@@ -139,6 +141,7 @@ performPriorityActionCont oPlayer action = logCall 'performPriorityActionCont do
         ActivateAbility{} -> f $ activateAbilityCont oPlayer x -- (117.1b) (117.1d)
         AskPriorityActionAgain mAttempt -> pure $ TryAgain mAttempt
         CastSpell{} -> f $ castSpellCont oPlayer x -- (117.1a)
+        Concede{} -> undefined -- TODO: concede
         PassPriority -> pure Pass
         SpecialAction y -> f $ specialActionCont oPlayer y -- (117.1c)
         PriorityAction y -> go y

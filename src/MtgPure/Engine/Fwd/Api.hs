@@ -32,6 +32,7 @@ module MtgPure.Engine.Fwd.Api (
   controllerOf,
   doesZoneObjectExist,
   enact,
+  endTheGame,
   findGraveyardCard,
   findHandCard,
   findLibraryCard,
@@ -103,6 +104,7 @@ import safe MtgPure.Engine.Prompt (
  )
 import safe MtgPure.Engine.State (
   Fwd,
+  GameResult,
   GameState (..),
   Magic,
   MagicCont,
@@ -308,6 +310,9 @@ activateAbility = fwd2 fwd_activateAbility
 castSpell :: forall m. Monad m => Object 'OTPlayer -> PriorityAction CastSpell -> Magic 'Private 'RW m Legality
 castSpell = fwd2 fwd_castSpell
 
+endTheGame :: Monad m => GameResult m -> Magic 'Public 'RO m Void
+endTheGame = fwd1 fwd_endTheGame
+
 controllerOf :: (IsZO zone ot, Monad m) => ZO zone ot -> Magic 'Private 'RO m (Object 'OTPlayer)
 controllerOf = fwd1 fwd_controllerOf
 
@@ -391,7 +396,7 @@ performElections = fwd3 fwd_performElections
 performStateBasedActions :: Monad m => Magic 'Private 'RW m ()
 performStateBasedActions = fwd0 fwd_performStateBasedActions
 
-pickOneZO :: (IsZO zone ot, Monad m) => Object 'OTPlayer -> [ZO zone ot] -> Magic 'Private 'RO m (Maybe (ZO zone ot))
+pickOneZO :: (IsZO zone ot, Monad m) => Object 'OTPlayer -> [ZO zone ot] -> Magic 'Public 'RW m (Maybe (ZO zone ot))
 pickOneZO = fwd2 fwd_pickOneZO
 
 playLand :: Monad m => Object 'OTPlayer -> SpecialAction PlayLand -> Magic 'Private 'RW m Legality

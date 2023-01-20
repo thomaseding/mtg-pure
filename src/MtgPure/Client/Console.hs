@@ -206,12 +206,12 @@ prompt msg = do
       pure s
 
 consolePickZo ::
-  (IsZO zone ot, Monad m) =>
+  IsZO zone ot =>
   Attempt ->
-  OpaqueGameState m ->
+  OpaqueGameState Console ->
   Object 'OTPlayer ->
   NonEmpty (ZO zone ot) ->
-  Console (ZO zone ot)
+  Magic 'Public 'RO Console (ZO zone ot)
 consolePickZo _attempt _opaque _p zos = case zos of
   zo :| _ -> do
     liftIO $ print ("picked", zo, "from", NonEmpty.toList zos)
@@ -261,6 +261,7 @@ instance Read CommandAbilityIndex where
 
 data CommandInput :: Type where
   CIQuit :: CommandInput
+  CIConcede :: CommandInput
   CIAskAgain :: CommandInput
   CIHelp :: Maybe Int -> CommandInput
   CIPass :: CommandInput
@@ -271,6 +272,7 @@ data CommandInput :: Type where
 instance Show CommandInput where
   show = \case
     CIQuit -> "Quit"
+    CIConcede -> "Concede"
     CIAskAgain -> "AskAgain"
     CIHelp Nothing -> "Help"
     CIHelp (Just n) -> "Help " ++ show n
@@ -288,6 +290,8 @@ type Sep = Many1 (CS " ")
 
 type AsQuit = Tuple Sep (CI "quit", ())
 
+type AsConcede = Tuple Sep (CI "concede", ())
+
 type AsHelp0 = Tuple Sep (Or (CI "help") (CS "?"), ())
 
 type AsHelp1 = Tuple Sep (Or (CI "help") (CS "?"), Int, ())
@@ -303,6 +307,7 @@ type AsPlayLand = TupleList Sep (Or (CI "playLand") (CS "3"), Int, ()) Int
 instance Read CommandInput where
   readsPrec _ str = case massageString str of
     (reads @AsQuit -> [(Tuple1 _, rest)]) -> [(CIQuit, rest)]
+    (reads @AsConcede -> [(Tuple1 _, rest)]) -> [(CIConcede, rest)]
     (reads @AsHelp0 -> [(Tuple1 _, rest)]) -> [(CIHelp Nothing, rest)]
     (reads @AsHelp1 -> [(Tuple2 _ n, rest)]) -> [(CIHelp $ Just n, rest)]
     (reads @AsPass -> [(Tuple1 _, rest)]) -> [(CIPass, rest)]
@@ -325,6 +330,7 @@ instance Read CommandInput where
 parseCommandInput :: CommandInput -> Magic 'Public 'RO Console (PriorityAction ())
 parseCommandInput = \case
   CIQuit -> quit
+  CIConcede -> concede
   CIPass -> passPriority
   CIActivateAbility objId abilityIndex extraIds -> activateAbility objId abilityIndex extraIds
   CICastSpell spellId extraIds -> castSpell spellId extraIds
@@ -341,10 +347,13 @@ help = error "Help is not implemented yet"
 quit :: Magic 'Public 'RO Console (PriorityAction ())
 quit = M.lift $ Console $ throwE Quit
 
-passPriority :: Monad m => Magic 'Public 'RO m (PriorityAction ())
+concede :: Magic 'Public 'RO Console (PriorityAction ())
+concede = pure Concede
+
+passPriority :: Magic 'Public 'RO Console (PriorityAction ())
 passPriority = pure PassPriority
 
-activateAbility :: forall m. Monad m => ObjectId -> CommandAbilityIndex -> [ObjectId] -> Magic 'Public 'RO m (PriorityAction ())
+activateAbility :: ObjectId -> CommandAbilityIndex -> [ObjectId] -> Magic 'Public 'RO Console (PriorityAction ())
 activateAbility objId abilityIndex _extraIds = do
   mZo <- internalFromPrivate $ toZO @ 'ZBattlefield @OTNAny objId
   case mZo of
@@ -373,31 +382,35 @@ activateAbility objId abilityIndex _extraIds = do
           [ty] -> pure $ PriorityAction $ ActivateAbility $ SomeActivatedAbility zo $ basicManaAbility ty
           _ -> tryAgain
  where
-  tryAgain :: Magic 'Public 'RO m (PriorityAction ())
+  tryAgain :: Magic 'Public 'RO Console (PriorityAction ())
   tryAgain = pure $ AskPriorityActionAgain Nothing
 
-  goIndex :: forall zone. IsZone zone => AbsoluteActivatedAbilityIndex -> Magic 'Public 'RO m (Maybe (PriorityAction ()))
+  goIndex :: forall zone. IsZone zone => AbsoluteActivatedAbilityIndex -> Magic 'Public 'RO Console (Maybe (PriorityAction ()))
   goIndex index = do
     mAbility <- internalFromPrivate $ indexToActivated index
     case mAbility of
       Just ability -> pure $ Just $ PriorityAction $ ActivateAbility (ability :: SomeActivatedAbility zone OTNAny)
       Nothing -> pure Nothing
 
-castSpell :: Monad m => ObjectId -> [ObjectId] -> Magic 'Public 'RO m (PriorityAction ())
+castSpell :: ObjectId -> [ObjectId] -> Magic 'Public 'RO Console (PriorityAction ())
 castSpell spellId _extraIds = do
   let zo0 = toZO0 @ 'ZHand spellId
       zo = zo0ToSpell zo0
   pure $ PriorityAction $ CastSpell zo
 
-playLand :: Monad m => ObjectId -> [ObjectId] -> Magic 'Public 'RO m (PriorityAction ())
+playLand :: ObjectId -> [ObjectId] -> Magic 'Public 'RO Console (PriorityAction ())
 playLand landId _extraIds = do
   let zo0 = toZO0 @ 'ZHand landId
       zo = toZO1 zo0
   pure $ PriorityAction $ SpecialAction $ PlayLand zo
 
 -- TODO: Expose sufficient Public API to avoid need for `internalFromPrivate`
-consolePriorityAction :: Attempt -> OpaqueGameState Console -> Object 'OTPlayer -> Console (PriorityAction ())
-consolePriorityAction attempt opaque oPlayer = do
+consolePriorityAction ::
+  Attempt ->
+  OpaqueGameState Console ->
+  Object 'OTPlayer ->
+  Magic 'Public 'RO Console (PriorityAction ())
+consolePriorityAction attempt opaque oPlayer = M.lift do
   (action, commandInput) <- queryMagic opaque do
     M.lift $ printGameState opaque
     liftIO case attempt of
@@ -442,8 +455,8 @@ consolePromptPayGeneric ::
   OpaqueGameState Console ->
   Object 'OTPlayer ->
   Mana 'NoVar 'NonSnow 'MTGeneric ->
-  Console CompleteManaPool
-consolePromptPayGeneric attempt opaque oPlayer generic = do
+  Magic 'Public 'RO Console CompleteManaPool
+consolePromptPayGeneric attempt opaque oPlayer generic = M.lift do
   (pool, text) <- queryMagic opaque do
     let Mana x = generic
     liftIO case attempt of

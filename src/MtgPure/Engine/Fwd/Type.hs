@@ -68,6 +68,7 @@ data Fwd' ex st m where
     , fwd_controllerOf :: forall zone ot. IsZO zone ot => ZO zone ot -> Magic' ex st 'Private 'RO m (Object 'OTPlayer)
     , fwd_doesZoneObjectExist :: forall zone ot. IsZO zone ot => ZO zone ot -> Magic' ex st 'Private 'RO m Bool
     , fwd_enact :: Effect 'OneShot -> Magic' ex st 'Private 'RW m EnactInfo
+    , fwd_endTheGame :: ex -> Magic' ex st 'Public 'RO m Void
     , fwd_findGraveyardCard :: Object 'OTPlayer -> ZO 'ZGraveyard OTNCard -> Magic' ex st 'Private 'RO m (Maybe AnyCard)
     , fwd_findHandCard :: Object 'OTPlayer -> ZO 'ZHand OTNCard -> Magic' ex st 'Private 'RO m (Maybe AnyCard)
     , fwd_findLibraryCard :: Object 'OTPlayer -> ZO 'ZLibrary OTNCard -> Magic' ex st 'Private 'RO m (Maybe AnyCard)
@@ -89,7 +90,7 @@ data Fwd' ex st m where
     , fwd_pay :: forall ot. Object 'OTPlayer -> Cost ot -> Magic' ex st 'Private 'RW m Legality
     , fwd_performElections :: forall ot p el x. ZO 'ZStack OT0 -> (el -> Magic' ex st 'Private 'RW m (Maybe x)) -> Elect p el ot -> Magic' ex st 'Private 'RW m (Maybe x)
     , fwd_performStateBasedActions :: Magic' ex st 'Private 'RW m ()
-    , fwd_pickOneZO :: forall zone ot. IsZO zone ot => Object 'OTPlayer -> [ZO zone ot] -> Magic' ex st 'Private 'RO m (Maybe (ZO zone ot))
+    , fwd_pickOneZO :: forall zone ot. IsZO zone ot => Object 'OTPlayer -> [ZO zone ot] -> Magic' ex st 'Public 'RW m (Maybe (ZO zone ot))
     , fwd_playLand :: Object 'OTPlayer -> SpecialAction PlayLand -> Magic' ex st 'Private 'RW m Legality
     , fwd_pushGraveyardCard :: Object 'OTPlayer -> AnyCard -> Magic' ex st 'Private 'RW m (ZO 'ZGraveyard OTNCard)
     , fwd_pushHandCard :: Object 'OTPlayer -> AnyCard -> Magic' ex st 'Private 'RW m (ZO 'ZHand OTNCard)

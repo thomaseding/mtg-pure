@@ -29,7 +29,7 @@ import safe MtgPure.Engine.Fwd.Api (
   setPermanent,
   setPlayer,
  )
-import safe MtgPure.Engine.Monad (fromPublicRO, fromRO, gets)
+import safe MtgPure.Engine.Monad (fromPublic, fromPublicRO, fromRO, gets)
 import safe MtgPure.Engine.Orphans ()
 import safe MtgPure.Engine.Prompt (
   CardCount (..),
@@ -142,8 +142,8 @@ shuffleLibrary' oPlayer = logCall 'shuffleLibrary' do
   let library = fromCardList $ playerLibrary player
       count = length library
       ordered = [0 .. count - 1]
-  ordering <- untilJust \attempt -> do
-    ordering <- M.lift $ promptShuffle prompt attempt (CardCount count) oPlayer
+  ordering <- untilJust \attempt -> fromPublic $ fromRO do
+    ordering <- promptShuffle prompt attempt (CardCount count) oPlayer
     case List.sort (map unCardIndex ordering) == ordered of
       True -> pure $ Just ordering
       False -> do

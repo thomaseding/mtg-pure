@@ -154,7 +154,7 @@ data AnyElected (pEffect :: PrePost) :: Type where
   AnyElected :: IsOTN ot => Elected pEffect ot -> AnyElected pEffect
   deriving (Typeable)
 
-data Prompt' (opaqueGameState :: (Type -> Type) -> Type) (m :: Type -> Type) = Prompt
+data Prompt' (opaqueGameState :: (Type -> Type) -> Type) (m :: Type -> Type) (magic :: Type -> Type) = Prompt
   { exceptionCantBeginGameWithoutPlayers :: m ()
   , exceptionInvalidCastSpell :: opaqueGameState m -> Object 'OTPlayer -> InvalidCastSpell -> m ()
   , exceptionInvalidGenericManaPayment :: Mana 'NoVar 'NonSnow 'MTGeneric -> CompleteManaPool -> m ()
@@ -162,17 +162,17 @@ data Prompt' (opaqueGameState :: (Type -> Type) -> Type) (m :: Type -> Type) = P
   , exceptionInvalidShuffle :: CardCount -> [CardIndex] -> m ()
   , exceptionInvalidStartingPlayer :: PlayerCount -> PlayerIndex -> m ()
   , exceptionZoneObjectDoesNotExist :: forall zone ot. IsZO zone ot => ZO zone ot -> m ()
-  , promptChooseAttackers :: Attempt -> opaqueGameState m -> Object 'OTPlayer -> m [DeclaredAttacker]
-  , promptChooseBlockers :: Attempt -> opaqueGameState m -> Object 'OTPlayer -> NonEmpty DeclaredAttacker -> m [DeclaredBlocker]
+  , promptChooseAttackers :: Attempt -> opaqueGameState m -> Object 'OTPlayer -> magic [DeclaredAttacker]
+  , promptChooseBlockers :: Attempt -> opaqueGameState m -> Object 'OTPlayer -> NonEmpty DeclaredAttacker -> magic [DeclaredBlocker]
   , promptDebugMessage :: String -> m ()
-  , promptGetStartingPlayer :: Attempt -> PlayerCount -> m PlayerIndex
+  , promptGetStartingPlayer :: Attempt -> PlayerCount -> magic PlayerIndex
   , promptLogCallPop :: opaqueGameState m -> CallFrameInfo -> m ()
   , promptLogCallPush :: opaqueGameState m -> CallFrameInfo -> m ()
-  , promptPayGeneric :: Attempt -> opaqueGameState m -> Object 'OTPlayer -> Mana 'NoVar 'NonSnow 'MTGeneric -> m CompleteManaPool
-  , promptPerformMulligan :: Attempt -> Object 'OTPlayer -> [AnyCard] -> m Bool -- TODO: Encode limited game state about players' mulligan states and [Serum Powder].
-  , promptPickZO :: forall zone ot. IsZO zone ot => Attempt -> opaqueGameState m -> Object 'OTPlayer -> NonEmpty (ZO zone ot) -> m (ZO zone ot)
-  , promptPriorityAction :: Attempt -> opaqueGameState m -> Object 'OTPlayer -> m (PriorityAction ())
-  , promptShuffle :: Attempt -> CardCount -> Object 'OTPlayer -> m [CardIndex]
+  , promptPayGeneric :: Attempt -> opaqueGameState m -> Object 'OTPlayer -> Mana 'NoVar 'NonSnow 'MTGeneric -> magic CompleteManaPool
+  , promptPerformMulligan :: Attempt -> Object 'OTPlayer -> [AnyCard] -> magic Bool -- TODO: Encode limited game state about players' mulligan states and [Serum Powder].
+  , promptPickZO :: forall zone ot. IsZO zone ot => Attempt -> opaqueGameState m -> Object 'OTPlayer -> NonEmpty (ZO zone ot) -> magic (ZO zone ot)
+  , promptPriorityAction :: Attempt -> opaqueGameState m -> Object 'OTPlayer -> magic (PriorityAction ())
+  , promptShuffle :: Attempt -> CardCount -> Object 'OTPlayer -> magic [CardIndex]
   }
 
 data AbsoluteActivatedAbilityIndex :: Type where
@@ -240,6 +240,9 @@ data PriorityAction (a :: Type) :: Type where
   -- Prolly don't want to model `SomeButNot allowed disallowed`? Maybe `SomeButNot` is okay for Runtime,
   -- though it's probably unnecessary for Authoring (thankfully).
   CastSpell :: IsZO zone OTNSpell => ZO zone OTNSpell -> PriorityAction CastSpell
+  -- | In genuine MTG, this can be done at any time, but we're going to restrict its use to here.
+  -- See doc notes on `endTheGame` for more details on why.
+  Concede :: PriorityAction ()
   PassPriority :: PriorityAction ()
   PriorityAction :: PriorityAction a -> PriorityAction ()
   SpecialAction :: SpecialAction a -> PriorityAction a

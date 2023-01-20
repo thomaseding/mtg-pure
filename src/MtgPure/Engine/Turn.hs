@@ -90,12 +90,12 @@ determineStartingPlayer = logCall 'determineStartingPlayer do
       playerCount = Map.size $ magicPlayers st
   M.when (playerCount == 0) do
     undefined -- TODO: complain and abort
-  logicalStartingIndex <- M.lift $
+  logicalStartingIndex <- fromPublic $ fromRO do
     untilJust \attempt -> do
       PlayerIndex playerIndex <- promptGetStartingPlayer prompt attempt $ PlayerCount playerCount
       case playerIndex < playerCount of
         True -> pure $ Just playerIndex
-        False -> do
+        False -> M.lift do
           exceptionInvalidStartingPlayer prompt (PlayerCount playerCount) $ PlayerIndex playerIndex
           pure Nothing
   let startingIndex = logicalStartingIndex + playerCount - 1 -- This compensates for initial `advanceTurnState`
@@ -223,7 +223,7 @@ mainPhaseCommon = logCall 'mainPhaseCommon do
   pure () -- (505.1) Rule just states nomenclature. Nothing special to do
   pure () -- (505.2) Rule just states this phase has no steps
   pure () -- (505.3) TODO: Archenemy
-  pure () -- (505.4) TOOD: Sage lore counters
+  pure () -- (505.4) TODO: Sage lore counters
   oActive <- fromPublicRO getActivePlayer
   gainPriority oActive
 
@@ -242,15 +242,16 @@ declareAttackersStep = do
   attackers <- logCall 'declareAttackersStep do
     setPhaseStep $ PSCombatPhase DeclareAttackersStep
     pure () -- TODO
-    liftCont do
+    liftCont $ do
       prompt <- fromRO $ gets magicPrompt
       opaque <- fromRO $ gets mkOpaqueGameState
-      oActive <- fromPublicRO getActivePlayer
-      attackers <- fromRO $ untilJust \attempt -> do
-        attackers <- M.lift $ promptChooseAttackers prompt attempt opaque oActive
-        pure () -- TODO: validate attackers
-        pure () -- TODO: store attackers in game state for Elects and Effects
-        pure $ Just attackers
+      oActive <- fromPublic $ fromRO getActivePlayer
+      attackers <- fromPublic $ fromRO do
+        untilJust \attempt -> do
+          attackers <- promptChooseAttackers prompt attempt opaque oActive
+          pure () -- TODO: validate attackers
+          pure () -- TODO: store attackers in game state for Elects and Effects
+          pure $ Just attackers
       gainPriority oActive
       pure attackers
   case NonEmpty.nonEmpty attackers of
@@ -313,11 +314,12 @@ declareBlockersStep attackers = do
       prompt <- fromRO $ gets magicPrompt
       opaque <- fromRO $ gets mkOpaqueGameState
       oDefender <- fromRO getDefendingPlayer
-      blockers <- fromRO $ untilJust \attempt -> do
-        blockers <- M.lift $ promptChooseBlockers prompt attempt opaque oDefender attackers
-        pure () -- TODO: validate blockers
-        pure () -- TODO: store blockers in game state for Elects and Effects
-        pure $ Just blockers
+      blockers <- fromPublic $ fromRO do
+        untilJust \attempt -> do
+          blockers <- promptChooseBlockers prompt attempt opaque oDefender attackers
+          pure () -- TODO: validate blockers
+          pure () -- TODO: store blockers in game state for Elects and Effects
+          pure $ Just blockers
       oActive <- fromPublicRO getActivePlayer
       ordering <- assignCombatDamageOrder attackers blockers
       gainPriority oActive

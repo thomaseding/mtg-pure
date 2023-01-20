@@ -24,6 +24,7 @@ import safe MtgPure.Engine.Core (
   allZOActivatedAbilities,
   allZOs,
   doesZoneObjectExist,
+  endTheGame,
   findGraveyardCard,
   findHandCard,
   findLibraryCard,
@@ -87,6 +88,7 @@ fwdImpl =
     , fwd_controllerOf = controllerOf
     , fwd_doesZoneObjectExist = doesZoneObjectExist
     , fwd_enact = enact
+    , fwd_endTheGame = endTheGame
     , fwd_findGraveyardCard = findGraveyardCard
     , fwd_findHandCard = findHandCard
     , fwd_findLibraryCard = findLibraryCard

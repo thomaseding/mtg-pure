@@ -16,7 +16,6 @@ module MtgPure.Engine.PerformElections (
 
 import safe Control.Exception (assert)
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
-import safe qualified Control.Monad.Trans as M
 import safe Control.Monad.Util (untilJust)
 import safe Data.List.NonEmpty (NonEmpty (..))
 import safe qualified Data.Map.Strict as Map
@@ -25,7 +24,7 @@ import safe MtgPure.Engine.Fwd.Api (
   getPermanent,
   zosSatisfying,
  )
-import safe MtgPure.Engine.Monad (fromRO, gets, modify)
+import safe MtgPure.Engine.Monad (fromPublic, fromRO, gets, modify)
 import safe MtgPure.Engine.Orphans ()
 import safe MtgPure.Engine.Prompt (
   InternalLogicError (..),
@@ -232,11 +231,12 @@ electA sel zoStack failureX goElect oPlayer = logCall 'electA \case
       [] -> pure failureX
       zos@(zosHead : zosTail) -> do
         opaque <- fromRO $ gets mkOpaqueGameState
-        zo <- untilJust \attempt -> do
-          zo <- M.lift $ promptPickZO prompt attempt opaque (zo1ToO oPlayer) $ zosHead :| zosTail
-          pure case zo `elem` zos of
-            False -> Nothing
-            True -> Just zo
+        zo <- fromPublic $ fromRO do
+          untilJust \attempt -> do
+            zo <- promptPickZO prompt attempt opaque (zo1ToO oPlayer) $ zosHead :| zosTail
+            pure case zo `elem` zos of
+              False -> Nothing
+              True -> Just zo
         zo' <- case sel of
           Choose' -> pure zo
           Target' -> newTarget zoStack zo $ RAnd reqs

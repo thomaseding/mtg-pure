@@ -17,6 +17,7 @@ module MtgPure.Engine.Core (
   doesObjectIdExist,
   doesObjectNExist,
   doesZoneObjectExist,
+  endTheGame,
   findGraveyardCard,
   findHandCard,
   findLibraryCard,
@@ -50,7 +51,6 @@ module MtgPure.Engine.Core (
 import safe Control.Exception (assert)
 import safe qualified Control.Monad as M
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
-import safe qualified Control.Monad.Trans as M
 import safe Control.Monad.Util (untilJust)
 import safe qualified Data.DList as DList
 import safe Data.Functor ((<&>))
@@ -61,6 +61,7 @@ import safe Data.Maybe (catMaybes, isJust, mapMaybe)
 import safe qualified Data.Stream as Stream
 import safe qualified Data.Traversable as T
 import safe Data.Typeable (cast)
+import safe Data.Void (Void)
 import safe MtgPure.Engine.Fwd.Api (eachLogged)
 import safe MtgPure.Engine.Legality (Legality (..))
 import safe MtgPure.Engine.Monad (
@@ -209,18 +210,42 @@ rewindIllegalActivation m = logCall 'rewindIllegalActivation do
         ActivatedNonManaAbility{} -> Right x
   pure $ either id id result
 
+-- XXX: Conceding will be really annoying to implement in multiplayer in the general case.
+-- Conceding is rather doable in the following cases:
+--  * everyone concedes
+--  * everyone concedes except one player
+--  * everyone except for those within a single team
+--  * any case where the final game state is determined immediately
+-- Probably never worth bothering to implement the general case. A compromise would be to
+-- implement the simple cases above and handle individual concedes as priority actions.
+-- (Anything outside of these would just throw an error.)
+-- Reasons why the general case is annoying:
+--  * This is not MagicCont. Don't want to litter the code with tons of state checks and cleanups.
+--  * Even as MagicCont, it is error-prone and maintenance-heavy to do this properly.
+--  * Cleaning up game state within something like a resolving elect or effect is non-trivial.
+--  * Not obvious what to do when utilizing purity to shell out AI decision trees when one of
+--    them has a concede and the others don't. Probably not that hard to fixup, but still...
+--  * The general case is not read-only, and want the types to not lie.
+endTheGame :: Monad m => GameResult m -> Magic 'Public 'RO m Void
+endTheGame _players = logCall 'endTheGame do
+  -- Throw runtime error if the game result yields winners and losers that are incompatible with
+  -- the current game state. (e.g. non-existent players and players that have already lost cannot
+  -- be set as winners; likewise for losers)
+  -- Otherwise, throw the game result.
+  undefined
+
 pickOneZO ::
   (IsZO zone ot, Monad m) =>
   Object 'OTPlayer ->
   [ZO zone ot] ->
-  Magic 'Private 'RO m (Maybe (ZO zone ot))
+  Magic 'Public 'RW m (Maybe (ZO zone ot))
 pickOneZO oPlayer = \case
   [] -> pure Nothing
   zos@(zosHead : zosTail) -> do
-    prompt <- gets magicPrompt
-    opaque <- gets mkOpaqueGameState
-    Just <$> untilJust \attempt -> do
-      zo <- M.lift $ promptPickZO prompt attempt opaque oPlayer $ zosHead :| zosTail
+    prompt <- internalFromPrivate $ fromRO $ gets magicPrompt
+    opaque <- internalFromPrivate $ fromRO $ gets mkOpaqueGameState
+    Just <$> untilJust \attempt -> fromRO do
+      zo <- promptPickZO prompt attempt opaque oPlayer $ zosHead :| zosTail
       pure case zo `elem` zos of
         False -> Nothing
         True -> Just zo

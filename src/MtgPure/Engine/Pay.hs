@@ -30,7 +30,7 @@ import safe MtgPure.Engine.Fwd.Api (
   zosSatisfying,
  )
 import safe MtgPure.Engine.Legality (Legality (..), toLegality)
-import safe MtgPure.Engine.Monad (fromRO, gets)
+import safe MtgPure.Engine.Monad (fromPublic, fromRO, gets)
 import safe MtgPure.Engine.Orphans ()
 import safe MtgPure.Engine.Prompt (Prompt' (..))
 import safe MtgPure.Engine.State (GameState (..), Magic, logCall, mkOpaqueGameState)
@@ -127,13 +127,13 @@ payManaCost oPlayer (forceVars -> cost) = logCall 'payManaCost do
                 _ -> do
                   prompt <- fromRO $ gets magicPrompt
                   opaque <- fromRO $ gets mkOpaqueGameState
-                  untilJust \attempt -> do
-                    fullPayment <- M.lift $ promptPayGeneric prompt attempt opaque oPlayer generic'
+                  untilJust \attempt -> fromPublic $ fromRO do
+                    fullPayment <- promptPayGeneric prompt attempt opaque oPlayer generic'
                     let payment = poolNonSnow fullPayment
                     case countMana payment == generic of
                       True -> pure $ Just payment
-                      False -> do
-                        M.lift $ exceptionInvalidGenericManaPayment prompt generic' fullPayment
+                      False -> M.lift do
+                        exceptionInvalidGenericManaPayment prompt generic' fullPayment
                         pure Nothing
               let pool'' = pool' - payment
               setPlayer oPlayer player{playerMana = (playerMana player){poolNonSnow = pool''}}
@@ -145,7 +145,7 @@ paySacrificeCost ::
   Requirement 'ZBattlefield ot ->
   Magic 'Private 'RW m Legality
 paySacrificeCost oPlayer req = logCall 'paySacrificeCost do
-  fromRO (zosSatisfying req' >>= pickOneZO oPlayer) >>= \case
+  fromRO (zosSatisfying req') >>= (\zos -> fromPublic $ pickOneZO oPlayer zos) >>= \case
     Nothing -> pure Illegal
     Just zo -> do
       let zoPerm = zo0ToPermanent $ toZO0 zo
@@ -168,7 +168,7 @@ payTapCost ::
   Requirement 'ZBattlefield ot ->
   Magic 'Private 'RW m Legality
 payTapCost oPlayer req = logCall 'payTapCost do
-  fromRO (zosSatisfying req' >>= pickOneZO oPlayer) >>= \case
+  fromRO (zosSatisfying req') >>= (\zos -> fromPublic $ pickOneZO oPlayer zos) >>= \case
     Nothing -> pure Illegal
     Just zo -> do
       let zoPerm = zo0ToPermanent $ toZO0 zo
