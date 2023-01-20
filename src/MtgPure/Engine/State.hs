@@ -36,7 +36,7 @@ module MtgPure.Engine.State (
 
 import safe qualified Control.Monad as M
 import safe Control.Monad.Access (IsReadWrite, ReadWrite (..), Visibility (..))
-import safe Control.Monad.Trans (lift)
+import safe qualified Control.Monad.Trans as M
 import safe Data.Functor ((<&>))
 import safe Data.Kind (Type)
 import safe qualified Data.List as List
@@ -47,6 +47,8 @@ import safe Data.Typeable (Typeable)
 import safe Language.Haskell.TH.Syntax (Name)
 import safe MtgPure.Engine.Fwd.Type (Fwd')
 import safe MtgPure.Engine.Monad (
+  CallFrameId,
+  CallFrameInfo (callFrameName),
   EnvLogCall (..),
   Magic',
   MagicCont',
@@ -63,8 +65,6 @@ import safe MtgPure.Engine.Monad (
  )
 import safe MtgPure.Engine.Prompt (
   AnyElected,
-  CallFrameId,
-  CallFrameInfo (callFrameName),
   CardCount (..),
   CardIndex (..),
   InternalLogicError (..),
@@ -230,11 +230,11 @@ envLogCall =
     , envLogCallPromptPush = \frame -> do
         st <- internalFromPrivate $ fromRO get
         let prompt = magicPrompt st
-        lift $ promptLogCallPush prompt (OpaqueGameState st) frame
+        M.lift $ promptLogCallPush prompt (OpaqueGameState st) frame
     , envLogCallPromptPop = \frame -> do
         st <- internalFromPrivate $ fromRO get
         let prompt = magicPrompt st
-        lift $ promptLogCallPop prompt (OpaqueGameState st) frame
+        M.lift $ promptLogCallPop prompt (OpaqueGameState st) frame
     }
 
 logCallUnwind :: (IsReadWrite rw, Monad m) => Maybe CallFrameId -> Magic v rw m ()

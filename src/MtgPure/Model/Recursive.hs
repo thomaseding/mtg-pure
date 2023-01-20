@@ -460,7 +460,7 @@ pattern CTrue = CAnd []
 -- know which costs were paid. (e.g. "If black mana was spend to pay this card's cost then ..."). Then a
 -- continuation constructor needs to be provided. Then constructors of other types that use costs and something
 -- else need to be updated accordingly. Ponder a less intrusive and less annoying solution... Perhaps Effect
--- (or whatever types) gets a constructor that can obtain an abtract runtime Cost which can be queried by
+-- (or whatever types) gets a constructor that can obtain an abstract runtime Cost which can be queried by
 -- the API. This would likely require the model to encode more contingencies to handle dynamic issues, but this
 -- is likely overwhelmingly worth it to avoid the continuation approach.
 data Cost (ot :: Type) :: Type where
@@ -581,10 +581,10 @@ data Elect (p :: PrePost) (el :: Type) (ot :: Type) :: Type where
   OwnerOf :: IsZO zone OTNAny => ZO zone OTNAny -> (ZOPlayer -> Elect p el ot) -> Elect p el ot
   -- TODO: Add `IsZO zone ot` witness and change `'ZBattlefield` to `zone`.
   -- TODO: Prolly allow both 'Pre and 'Post
-  -- XXX: `Random` is potentially problematic when done within an aggrogate Elect such as `All`...
+  -- XXX: `Random` is potentially problematic when done within an aggregate Elect such as `All`...
   --    Solutions:
   --      (1) Use 'Pre instead of 'Post, but I think 'Post effects will need this
-  --      (2) Introduce 'Mid for between 'Pre and 'Post to enforce it happens before aggrogates
+  --      (2) Introduce 'Mid for between 'Pre and 'Post to enforce it happens before aggregates
   --      (3) Say that this is OK and say that Random must come before All if want it unified. Seems good actually...
   Random ::
     IsOTN ot =>

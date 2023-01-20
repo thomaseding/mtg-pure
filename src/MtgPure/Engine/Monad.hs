@@ -7,6 +7,8 @@
 module MtgPure.Engine.Monad (
   Magic',
   MagicCont',
+  CallFrameId,
+  CallFrameInfo (..),
   EnvLogCall (..),
   runMagicRO,
   runMagicRW,
@@ -50,11 +52,14 @@ import safe Data.Function (on)
 import safe Data.Kind (Type)
 import safe Data.Maybe (listToMaybe)
 import safe Data.Typeable (Typeable)
-import safe MtgPure.Engine.Prompt (
-  CallFrameId,
-  CallFrameInfo (..),
-  InternalLogicError (CorruptCallStackLogging),
- )
+
+type CallFrameId = Int
+
+data CallFrameInfo = CallFrameInfo
+  { callFrameId :: CallFrameId
+  , callFrameName :: String
+  }
+  deriving (Eq, Ord, Show)
 
 data EnvLogCall ex st v rw m = EnvLogCall
   { envLogCallCorruptCallStackLogging :: Magic' ex st v rw m ()
@@ -154,7 +159,7 @@ magicCatch ::
 magicCatch (MagicRW m) f = MagicRW $ catchE m $ unMagicRW . f
 
 -- | NOTE: This hijacks the current continuation.
--- Use `liftCont` instead of this if you need to preseve the current continuation.
+-- Use `liftCont` instead of this if you need to preserve the current continuation.
 magicCont :: Monad m => Magic' ex st 'Private 'RW m a -> MagicCont' ex st 'Private 'RW m a b
 magicCont = MagicCont' . throwE
 
@@ -327,7 +332,7 @@ logCallUnwind' env top =
       False -> do
         success <- logCallPop' env
         case success of
-          Nothing -> error $ show CorruptCallStackLogging
+          Nothing -> error $ show "CorruptCallStackLogging"
           Just _ -> pure Nothing
 
 logCallPush' :: (IsReadWrite rw, Monad m) => EnvLogCall ex st v rw m -> String -> Magic' ex st v rw m CallFrameInfo
@@ -362,7 +367,7 @@ logCallPop' env = do
       n <- internalLiftCallStackState $ State.gets logCallDepth
       case n == callFrameId frame of
         True -> pure ()
-        False -> error $ show CorruptCallStackLogging
+        False -> error "CorruptCallStackLogging"
       envLogCallPromptPop env frame
       pure $ Just frame
 

@@ -9,6 +9,7 @@
 {-# HLINT ignore "Use if" #-}
 {-# HLINT ignore "Redundant pure" #-}
 {-# HLINT ignore "Redundant fmap" #-}
+{-# HLINT ignore "Use fromRight" #-}
 
 module MtgPure.Client.Console (
   ConsoleInput (..),
@@ -20,16 +21,19 @@ module MtgPure.Client.Console (
 import safe Control.Exception (assert)
 import safe qualified Control.Monad as M
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
+import safe qualified Control.Monad.State.Strict as State
 import safe Control.Monad.Trans (MonadIO (..))
 import safe qualified Control.Monad.Trans as M
-import safe qualified Control.Monad.Trans.State.Strict as State
+import safe Control.Monad.Trans.Except (ExceptT, runExceptT, throwE)
 import safe Control.Monad.Util (Attempt, Attempt' (..))
 import safe qualified Data.Char as Char
 import safe Data.Kind (Type)
 import safe Data.List.NonEmpty (NonEmpty (..))
 import safe qualified Data.List.NonEmpty as NonEmpty
 import safe qualified Data.Map.Strict as Map
-import safe Data.ReadHelper (ReadSymbol2, ReadTup (..), ReadTupList (..))
+import Data.Monoid (First (..))
+import safe Data.Read.Sep (Tuple (..), TupleList (..))
+import safe Data.Read.Symbol (CI, CS, Many1, Or)
 import safe qualified Data.Set as Set
 import safe qualified Data.Traversable as T
 import safe MtgPure.Engine.Fwd.Api (
@@ -40,11 +44,10 @@ import safe MtgPure.Engine.Fwd.Api (
   indexToActivated,
   toZO,
  )
-import safe MtgPure.Engine.Monad (get, gets, internalFromPrivate)
+import safe MtgPure.Engine.Monad (CallFrameInfo (..), get, gets, internalFromPrivate)
 import safe MtgPure.Engine.PlayGame (playGame)
 import safe MtgPure.Engine.Prompt (
   AbsoluteActivatedAbilityIndex (AbsoluteActivatedAbilityIndex),
-  CallFrameInfo (..),
   CardCount (..),
   CardIndex (..),
   InternalLogicError (CorruptCallStackLogging),
@@ -79,7 +82,6 @@ import safe MtgPure.Model.Mulligan (Mulligan (..))
 import safe MtgPure.Model.Object.OTNAliases (
   OTNAny,
   OTNCard,
-  OTNLand,
  )
 import safe MtgPure.Model.Object.Object (Object (..))
 import safe MtgPure.Model.Object.ObjectId (ObjectId (..), getObjectId)
@@ -89,11 +91,13 @@ import safe MtgPure.Model.PhaseStep (prettyPhaseStep)
 import safe MtgPure.Model.Player (Player (..))
 import safe MtgPure.Model.Sideboard (Sideboard (..))
 import safe MtgPure.Model.Variable (Var (..))
-import safe MtgPure.Model.Zone (Zone (..))
+import safe MtgPure.Model.Zone (IsZone, Zone (..))
 import safe MtgPure.Model.ZoneObject.Convert (toZO0, toZO1, zo0ToSpell)
 import safe MtgPure.Model.ZoneObject.ZoneObject (IsZO, ZO)
 import safe qualified System.IO as IO
 import safe Text.Read (readMaybe)
+
+data Quit = Quit
 
 data ConsoleInput = ConsoleInput
   { consoleInput_ :: ()
@@ -109,7 +113,7 @@ data ConsoleState = ConsoleState
   }
 
 newtype Console a = Console
-  { unConsole :: State.StateT ConsoleState IO a
+  { unConsole :: ExceptT Quit (State.StateT ConsoleState IO) a
   }
   deriving (Functor)
 
@@ -123,12 +127,20 @@ instance Monad Console where
 instance MonadIO Console where
   liftIO = Console . liftIO
 
-runConsole :: ConsoleInput -> Console a -> IO a
-runConsole input action = do
-  (result, st') <- State.runStateT (unConsole action) st
-  case console_logDisabled st' of
-    0 -> pure result
-    _ -> error $ show CorruptCallStackLogging
+instance State.MonadState ConsoleState Console where
+  get = Console State.get
+  put = Console . State.put
+
+runConsole :: ConsoleInput -> Console () -> IO ()
+runConsole input m = either (const ()) id <$> runConsole' input m
+
+runConsole' :: ConsoleInput -> Console a -> IO (Either Quit a)
+runConsole' input action = do
+  State.runStateT (runExceptT (unConsole action)) st >>= \case
+    (Left Quit, _) -> pure $ Left Quit
+    (Right result, st') -> case console_logDisabled st' of
+      0 -> pure $ Right result
+      _ -> error $ show CorruptCallStackLogging
  where
   st =
     ConsoleState
@@ -207,36 +219,48 @@ consolePickZo _attempt _opaque _p zos = case zos of
 
 data CommandAbilityIndex :: Type where
   CIAbilityIndex :: Int -> CommandAbilityIndex
+  CIImplicitAbility :: BasicLandType -> CommandAbilityIndex
+  CIInferImplicitAbility :: CommandAbilityIndex
 
 instance Show CommandAbilityIndex where
   show = \case
-    CIAbilityIndex n -> show' n
-   where
-    show' = \case
-      -1 -> "W"
-      -2 -> "U"
-      -3 -> "B"
-      -4 -> "R"
-      -5 -> "G"
-      -6 -> "*"
-      n -> show n
+    CIAbilityIndex n -> show n
+    CIImplicitAbility landType -> case landType of
+      Plains -> "W"
+      Island -> "U"
+      Swamp -> "B"
+      Mountain -> "R"
+      Forest -> "G"
+    CIInferImplicitAbility -> "*"
+
+type AsW = Tuple Sep (Or (CI "W") (CS "-1"), ())
+
+type AsU = Tuple Sep (Or (CI "U") (CS "-2"), ())
+
+type AsB = Tuple Sep (Or (CI "B") (CS "-3"), ())
+
+type AsR = Tuple Sep (Or (CI "R") (CS "-4"), ())
+
+type AsG = Tuple Sep (Or (CI "G") (CS "-5"), ())
+
+type AsI = Tuple Sep (Or (CI "*") (CS "-6"), ())
 
 instance Read CommandAbilityIndex where
-  readsPrec p s = case s of
-    'W' : rest -> [i | isBoundary rest, i <- [(CIAbilityIndex (-1), rest)]]
-    'U' : rest -> [i | isBoundary rest, i <- [(CIAbilityIndex (-2), rest)]]
-    'B' : rest -> [i | isBoundary rest, i <- [(CIAbilityIndex (-3), rest)]]
-    'R' : rest -> [i | isBoundary rest, i <- [(CIAbilityIndex (-4), rest)]]
-    'G' : rest -> [i | isBoundary rest, i <- [(CIAbilityIndex (-5), rest)]]
-    '*' : rest -> [i | isBoundary rest, i <- [(CIAbilityIndex (-6), rest)]]
-    _ -> [(CIAbilityIndex n, rest) | (n, rest) <- readsPrec p s, n >= -6]
-   where
-    isBoundary = \case
-      "" -> True
-      ' ' : _ -> True
-      _ -> False
+  readsPrec _ s = case s of
+    (reads @AsW -> [(Tuple1 _, rest)]) -> [(CIImplicitAbility Plains, rest)]
+    (reads @AsU -> [(Tuple1 _, rest)]) -> [(CIImplicitAbility Island, rest)]
+    (reads @AsB -> [(Tuple1 _, rest)]) -> [(CIImplicitAbility Swamp, rest)]
+    (reads @AsR -> [(Tuple1 _, rest)]) -> [(CIImplicitAbility Mountain, rest)]
+    (reads @AsG -> [(Tuple1 _, rest)]) -> [(CIImplicitAbility Forest, rest)]
+    (reads @AsI -> [(Tuple1 _, rest)]) -> [(CIInferImplicitAbility, rest)]
+    _ -> case reads s of
+      [(n, rest)] -> case n >= 0 of
+        True -> [(CIAbilityIndex n, rest)]
+        False -> []
+      _ -> []
 
 data CommandInput :: Type where
+  CIQuit :: CommandInput
   CIAskAgain :: CommandInput
   CIHelp :: Maybe Int -> CommandInput
   CIPass :: CommandInput
@@ -246,6 +270,7 @@ data CommandInput :: Type where
 
 instance Show CommandInput where
   show = \case
+    CIQuit -> "Quit"
     CIAskAgain -> "AskAgain"
     CIHelp Nothing -> "Help"
     CIHelp (Just n) -> "Help " ++ show n
@@ -259,28 +284,33 @@ instance Show CommandInput where
       [] -> ""
       xs -> " " ++ unwords (map showId xs)
 
-type AsHelp0 = ReadTup (ReadSymbol2 "help" "?", ())
+type Sep = Many1 (CS " ")
 
-type AsHelp1 = ReadTup (ReadSymbol2 "help" "?", Int, ())
+type AsQuit = Tuple Sep (CI "quit", ())
 
-type AsPass = ReadTup (ReadSymbol2 "pass" "0", ())
+type AsHelp0 = Tuple Sep (Or (CI "help") (CS "?"), ())
 
-type AsActivatedAbility = ReadTupList (ReadSymbol2 "activatedability" "1", Int, CommandAbilityIndex, ()) Int
+type AsHelp1 = Tuple Sep (Or (CI "help") (CS "?"), Int, ())
 
-type AsCastSpell = ReadTupList (ReadSymbol2 "castspell" "2", Int, ()) Int
+type AsPass = Tuple Sep (Or (CI "pass") (CS "0"), ())
 
-type AsPlayLand = ReadTupList (ReadSymbol2 "playland" "3", Int, ()) Int
+type AsActivateAbility = TupleList Sep (Or (CI "activateAbility") (CS "1"), Int, CommandAbilityIndex, ()) Int
+
+type AsCastSpell = TupleList Sep (Or (CI "castSpell") (CS "2"), Int, ()) Int
+
+type AsPlayLand = TupleList Sep (Or (CI "playLand") (CS "3"), Int, ()) Int
 
 instance Read CommandInput where
   readsPrec _ str = case massageString str of
-    (reads @AsHelp0 -> [(Read1 _, rest)]) -> [(CIHelp Nothing, rest)]
-    (reads @AsHelp1 -> [(Read2 _ n, rest)]) -> [(CIHelp $ Just n, rest)]
-    (reads @AsPass -> [(Read1 _, rest)]) -> [(CIPass, rest)]
-    (reads @AsActivatedAbility -> [(Read3s _ objectId abilityIndex extras, rest)]) ->
+    (reads @AsQuit -> [(Tuple1 _, rest)]) -> [(CIQuit, rest)]
+    (reads @AsHelp0 -> [(Tuple1 _, rest)]) -> [(CIHelp Nothing, rest)]
+    (reads @AsHelp1 -> [(Tuple2 _ n, rest)]) -> [(CIHelp $ Just n, rest)]
+    (reads @AsPass -> [(Tuple1 _, rest)]) -> [(CIPass, rest)]
+    (reads @AsActivateAbility -> [(TupleList3 _ objectId abilityIndex extras, rest)]) ->
       [(CIActivateAbility (ObjectId objectId) abilityIndex $ map ObjectId extras, rest)]
-    (reads @AsCastSpell -> [(Read2s _ spellId extras, rest)]) ->
+    (reads @AsCastSpell -> [(TupleList2 _ spellId extras, rest)]) ->
       [(CICastSpell (ObjectId spellId) $ map ObjectId extras, rest)]
-    (reads @AsPlayLand -> [(Read2s _ landId extras, rest)]) ->
+    (reads @AsPlayLand -> [(TupleList2 _ landId extras, rest)]) ->
       [(CIPlayLand (ObjectId landId) $ map ObjectId extras, rest)]
     _ -> []
    where
@@ -292,40 +322,78 @@ instance Read CommandInput where
       ';' -> True
       _ -> False
 
-parseCommandInput :: Monad m => CommandInput -> Magic 'Public 'RO m (PriorityAction ())
+parseCommandInput :: CommandInput -> Magic 'Public 'RO Console (PriorityAction ())
 parseCommandInput = \case
-  CIPass -> pure PassPriority
-  CIActivateAbility objId (CIAbilityIndex abilityIndex) _extraIds -> do
-    let index = AbsoluteActivatedAbilityIndex objId $ RelativeAbilityIndex abilityIndex
-    -- XXX: This can be generalized by scanning across various zones.(with OTAny each time).
+  CIQuit -> quit
+  CIPass -> passPriority
+  CIActivateAbility objId abilityIndex extraIds -> activateAbility objId abilityIndex extraIds
+  CICastSpell spellId extraIds -> castSpell spellId extraIds
+  CIPlayLand landId extraIds -> playLand landId extraIds
+  CIAskAgain -> askAgain
+  CIHelp _ -> help
+
+askAgain :: Magic 'Public 'RO Console (PriorityAction ())
+askAgain = pure $ AskPriorityActionAgain Nothing
+
+help :: Magic 'Public 'RO Console (PriorityAction ())
+help = error "Help is not implemented yet"
+
+quit :: Magic 'Public 'RO Console (PriorityAction ())
+quit = M.lift $ Console $ throwE Quit
+
+passPriority :: Monad m => Magic 'Public 'RO m (PriorityAction ())
+passPriority = pure PassPriority
+
+activateAbility :: forall m. Monad m => ObjectId -> CommandAbilityIndex -> [ObjectId] -> Magic 'Public 'RO m (PriorityAction ())
+activateAbility objId abilityIndex _extraIds = do
+  mZo <- internalFromPrivate $ toZO @ 'ZBattlefield @OTNAny objId
+  case mZo of
+    Nothing -> tryAgain
+    Just zo -> case abilityIndex of
+      CIAbilityIndex relIndex -> do
+        let index = AbsoluteActivatedAbilityIndex objId $ RelativeAbilityIndex relIndex
+        mAction <-
+          mconcat . map First
+            <$> sequence
+              [ goIndex @ 'ZBattlefield index
+              -- , goIndex @ 'ZExile index
+              -- , goIndex @ 'ZGraveyard index
+              -- , goIndex @ 'ZHand index
+              -- , goIndex @ 'ZLibrary index
+              -- , goIndex @ 'ZStack index
+              ]
+        case getFirst mAction of
+          Just action -> pure action
+          Nothing -> tryAgain
+      CIImplicitAbility ty -> do
+        pure $ PriorityAction $ ActivateAbility $ SomeActivatedAbility zo $ basicManaAbility ty
+      CIInferImplicitAbility -> do
+        tys <- internalFromPrivate $ getBasicLandTypes zo
+        case tys of
+          [ty] -> pure $ PriorityAction $ ActivateAbility $ SomeActivatedAbility zo $ basicManaAbility ty
+          _ -> tryAgain
+ where
+  tryAgain :: Magic 'Public 'RO m (PriorityAction ())
+  tryAgain = pure $ AskPriorityActionAgain Nothing
+
+  goIndex :: forall zone. IsZone zone => AbsoluteActivatedAbilityIndex -> Magic 'Public 'RO m (Maybe (PriorityAction ()))
+  goIndex index = do
     mAbility <- internalFromPrivate $ indexToActivated index
-    mZo <- internalFromPrivate $ toZO objId
-    let goIntrinsic zo ty = PriorityAction $ ActivateAbility $ SomeActivatedAbility zo $ basicManaAbility ty
     case mAbility of
-      Nothing -> case mZo of
-        Just (zo :: ZO 'ZBattlefield OTNLand) -> case abilityIndex of
-          -1 -> pure $ goIntrinsic zo Plains
-          -2 -> pure $ goIntrinsic zo Island
-          -3 -> pure $ goIntrinsic zo Swamp
-          -4 -> pure $ goIntrinsic zo Mountain
-          -5 -> pure $ goIntrinsic zo Forest
-          -6 -> do
-            tys <- internalFromPrivate $ getBasicLandTypes zo
-            case tys of
-              [ty] -> pure $ goIntrinsic zo ty
-              _ -> pure AskPriorityActionAgain
-          _ -> pure AskPriorityActionAgain
-        Nothing -> pure AskPriorityActionAgain
-      Just ability -> pure $ PriorityAction $ ActivateAbility (ability :: SomeActivatedAbility 'ZBattlefield OTNAny)
-  CICastSpell spellId _extraIds -> do
-    let zo0 = toZO0 @ 'ZHand spellId -- XXX: Use `getZoneOf` + `singZone` to generalize.
-        zo = zo0ToSpell zo0
-    pure $ PriorityAction $ CastSpell zo
-  CIPlayLand landId _extraIds -> do
-    let zo0 = toZO0 @ 'ZHand landId -- XXX: Use `getZoneOf` + `singZone` to generalize.
-        zo = toZO1 zo0
-    pure $ PriorityAction $ SpecialAction $ PlayLand zo
-  _ -> pure AskPriorityActionAgain
+      Just ability -> pure $ Just $ PriorityAction $ ActivateAbility (ability :: SomeActivatedAbility zone OTNAny)
+      Nothing -> pure Nothing
+
+castSpell :: Monad m => ObjectId -> [ObjectId] -> Magic 'Public 'RO m (PriorityAction ())
+castSpell spellId _extraIds = do
+  let zo0 = toZO0 @ 'ZHand spellId
+      zo = zo0ToSpell zo0
+  pure $ PriorityAction $ CastSpell zo
+
+playLand :: Monad m => ObjectId -> [ObjectId] -> Magic 'Public 'RO m (PriorityAction ())
+playLand landId _extraIds = do
+  let zo0 = toZO0 @ 'ZHand landId
+      zo = toZO1 zo0
+  pure $ PriorityAction $ SpecialAction $ PlayLand zo
 
 -- TODO: Expose sufficient Public API to avoid need for `internalFromPrivate`
 consolePriorityAction :: Attempt -> OpaqueGameState Console -> Object 'OTPlayer -> Console (PriorityAction ())
@@ -343,11 +411,12 @@ consolePriorityAction attempt opaque oPlayer = do
       putStrLn "The <abilityIndex> of implicit mana abilities are -1 to -6, respectively: W, U, B, R, G, *"
       putStrLn "  where * infers the mana ability when it is unambiguous."
       putStrLn ""
-      putStrLn "Help: ? (TODO)"
-      putStrLn "PassPriority: 0"
-      putStrLn "ActivateAbility: 1 <objectId> <abilityIndex>"
-      putStrLn "CastSpell: 2 <spellId>"
-      putStrLn "PlayLand: 3 <landId>"
+      putStrLn " quit"
+      putStrLn " help"
+      putStrLn " pass"
+      putStrLn " activateAbility <objectId> <abilityIndex>"
+      putStrLn " castSpell <spellId>"
+      putStrLn " playLand <landId>"
       putStrLn ""
     text <- M.lift $ prompt $ "PriorityAction: " ++ show oPlayer ++ ": "
     let commandInput = case readMaybe text of
@@ -380,7 +449,8 @@ consolePromptPayGeneric attempt opaque oPlayer generic = do
     liftIO case attempt of
       Attempt 0 -> pure ()
       Attempt n -> putStrLn $ "Retrying[" ++ show n ++ "]..."
-    text <- M.lift $ prompt $ "PayGeneric X=" ++ show x ++ " " ++ show oPlayer ++ ": "
+    let sPlayer = "player=" ++ show (unObjectId $ getObjectId oPlayer)
+    text <- M.lift $ prompt $ "PayGeneric " ++ sPlayer ++ " generic=" ++ show x ++ ": "
     let pool = case parseManaPool text of
           Nothing -> mempty
           Just p -> p
@@ -443,8 +513,8 @@ getPlayerName o = case getObjectId o of
     2 -> "Bob"
     _ -> "UnknownPlayer" ++ show i
 
-horizLine :: IO ()
-horizLine = do
+horizontalLine :: IO ()
+horizontalLine = do
   putStrLn $ replicate 20 '-'
 
 -- TODO: Expose sufficient Public API to avoid need for `internalFromPrivate`
@@ -455,13 +525,13 @@ printGameState opaque = queryMagic opaque case dumpEverything of
     liftIO $ print st
   False -> do
     liftIO do
-      horizLine
+      horizontalLine
       print "GAME STATE BEGIN"
     oPlayers <- getAlivePlayers
     eachLogged_ oPlayers \oPlayer -> do
       let name = getPlayerName oPlayer
       liftIO do
-        horizLine
+        horizontalLine
         putStrLn $ name ++ ":"
       player <- internalFromPrivate $ getPlayer oPlayer
       liftIO do
@@ -473,7 +543,7 @@ printGameState opaque = queryMagic opaque case dumpEverything of
     pure () -- print stack
     liftIO do
       print "GAME STATE END"
-      horizLine
+      horizontalLine
       pause
  where
   dumpEverything = True

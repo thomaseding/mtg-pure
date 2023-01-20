@@ -100,7 +100,7 @@ dealDamage' _oSource oVictim (forceVars -> Damage damage) = logCall 'dealDamage'
   fromRO (findPermanent $ zo0ToPermanent $ toZO0 oVictim) >>= \case
     Nothing -> pure ()
     Just perm -> do
-      pure () -- TODO: indestructable
+      pure () -- TODO: indestructible
       -- XXX: What happens if damage is dealt to a permanent that is both a creature and a planeswalker?
       case permanentCreature perm of
         Nothing -> pure ()
@@ -131,7 +131,7 @@ destroy' oPerm = logCall 'destroy' do
   fromRO (findPermanent oPerm) >>= \case
     Nothing -> pure ()
     Just _perm -> do
-      pure () -- TODO: indestructable
+      pure () -- TODO: indestructible
       setPermanent oPerm Nothing
   pure mempty
 

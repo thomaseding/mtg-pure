@@ -9,8 +9,6 @@ module MtgPure.Engine.Prompt (
   AbsoluteActivatedAbilityIndex (..),
   ActivateAbility,
   ActivateResult (..),
-  CallFrameId,
-  CallFrameInfo (..),
   CardCount (..),
   CardIndex (..),
   CastSpell,
@@ -43,6 +41,7 @@ import safe Control.Monad.Util (Attempt)
 import safe Data.Kind (Type)
 import safe Data.List.NonEmpty (NonEmpty)
 import safe Data.Typeable (Typeable, cast)
+import safe MtgPure.Engine.Monad (CallFrameInfo)
 import safe MtgPure.Engine.Orphans.ZO ()
 import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.Mana.Mana (Mana)
@@ -94,14 +93,6 @@ newtype RelativeAbilityIndex = RelativeAbilityIndex {unRelativeAbilityIndex :: I
   deriving (Eq, Ord, Show, Typeable)
 
 data OwnedCard = OwnedCard (Object 'OTPlayer) AnyCard
-
-type CallFrameId = Int
-
-data CallFrameInfo = CallFrameInfo
-  { callFrameId :: CallFrameId
-  , callFrameName :: String
-  }
-  deriving (Eq, Ord, Show)
 
 data ActivateResult :: Type where
   IllegalActivation :: ActivateResult
@@ -243,9 +234,9 @@ data PlayLand
 
 data PriorityAction (a :: Type) :: Type where
   ActivateAbility :: IsZO zone ot => SomeActivatedAbility zone ot -> PriorityAction ActivateAbility
-  AskPriorityActionAgain :: PriorityAction () -- NOTE: This is handy for client code.
+  AskPriorityActionAgain :: Maybe Attempt -> PriorityAction () -- NOTE: This is handy for client code.
   -- NOTE (305.9): Lands + other types can never be cast
-  -- Unfortuantely OTNSpell intersects OTArtifactLand. Such is life.
+  -- Unfortunately OTNSpell intersects OTArtifactLand. Such is life.
   -- Prolly don't want to model `SomeButNot allowed disallowed`? Maybe `SomeButNot` is okay for Runtime,
   -- though it's probably unnecessary for Authoring (thankfully).
   CastSpell :: IsZO zone OTNSpell => ZO zone OTNSpell -> PriorityAction CastSpell

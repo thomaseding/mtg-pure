@@ -110,12 +110,19 @@ askPriorityAction' attempt oPlayer = logCallRec 'askPriorityAction' do
   action <- liftCont $ M.lift $ promptPriorityAction prompt attempt opaque oPlayer
   performPriorityActionCont oPlayer action >>= \case
     Pass -> pure ()
-    TryAgain -> askPriorityAction' ((1 +) <$> attempt) oPlayer
+    TryAgain mAttempt ->
+      let succAttempt = (1 +) <$> attempt
+          attempt' = case mAttempt of
+            Nothing -> succAttempt
+            Just a@(Attempt n) -> case n >= 0 of
+              False -> succAttempt
+              True -> a
+       in askPriorityAction' attempt' oPlayer
 
 -- No need to encode success results, since the continuation is hijacked in such a case.
-data PriorityActionResult
-  = Pass
-  | TryAgain
+data PriorityActionResult where
+  Pass :: PriorityActionResult
+  TryAgain :: Maybe Attempt -> PriorityActionResult
 
 performPriorityActionCont ::
   forall m.
@@ -125,12 +132,12 @@ performPriorityActionCont ::
   MagicCont 'Private 'RW m () PriorityActionResult
 performPriorityActionCont oPlayer action = logCall 'performPriorityActionCont do
   let f :: MagicCont 'Private 'RW m () () -> MagicCont 'Private 'RW m () PriorityActionResult
-      f m = m >> pure TryAgain
+      f m = m >> pure (TryAgain Nothing)
 
       go :: PriorityAction a -> MagicCont 'Private 'RW m () PriorityActionResult
       go x = case x of
         ActivateAbility{} -> f $ activateAbilityCont oPlayer x -- (117.1b) (117.1d)
-        AskPriorityActionAgain -> pure TryAgain
+        AskPriorityActionAgain mAttempt -> pure $ TryAgain mAttempt
         CastSpell{} -> f $ castSpellCont oPlayer x -- (117.1a)
         PassPriority -> pure Pass
         SpecialAction y -> f $ specialActionCont oPlayer y -- (117.1c)
