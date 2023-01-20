@@ -1,0 +1,14 @@
+-Wno-unrecognised-pragmas
+assocs
+elems
+fmap
+forall
+HLINT
+mconcat
+mempty
+newtype
+precombat
+readsPrec
+showsPrec
+succ
+unwords

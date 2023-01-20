@@ -1,5 +1,43 @@
 {
     "haskell.toolchain": {
         "hls": "1.7.0.0"
-    }
+    },
+    "cSpell.customDictionaries": {
+        "english-us": {
+            "name": "english-us",
+            "path": "${workspaceFolder:mtg-pure}/.cspell/english-us.dict",
+            "addWords": true,
+            "scope": "workspace"
+        },
+        "haskell": {
+            "name": "haskell",
+            "path": "${workspaceFolder:mtg-pure}/.cspell/haskell.dict",
+            "addWords": true,
+            "scope": "workspace"
+        },
+        "math": {
+            "name": "math",
+            "path": "${workspaceFolder:mtg-pure}/.cspell/math.dict",
+            "addWords": true,
+            "scope": "workspace"
+        },
+        "mtg": {
+            "name": "mtg",
+            "path": "${workspaceFolder:mtg-pure}/.cspell/mtg.dict",
+            "addWords": true,
+            "scope": "workspace"
+        },
+        "software": {
+            "name": "software",
+            "path": "${workspaceFolder:mtg-pure}/.cspell/software.dict",
+            "addWords": true,
+            "scope": "workspace"
+        },
+        "vernacular": {
+            "name": "vernacular",
+            "path": "${workspaceFolder:mtg-pure}/.cspell/vernacular.dict",
+            "addWords": true,
+            "scope": "workspace"
+        }
+    },
 }
