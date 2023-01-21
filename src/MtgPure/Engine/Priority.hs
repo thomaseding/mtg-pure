@@ -20,10 +20,11 @@ import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
 import safe Control.Monad.Util (Attempt, Attempt' (..))
 import safe Data.Functor ((<&>))
 import safe qualified Data.Stream as Stream
-import safe Data.Void (Void, absurd)
+import safe Data.Void (Void, absurd, vacuous)
 import safe MtgPure.Engine.Fwd.Api (
   activateAbility,
   castSpell,
+  endTheTurn,
   getAPNAP,
   getAlivePlayerCount,
   performStateBasedActions,
@@ -47,7 +48,7 @@ import safe MtgPure.Engine.Prompt (
   ActivateAbility,
   ActivateResult (..),
   CastSpell,
-  EnactInfo (..),
+  Ev (EvEndTheTurn),
   PlayLand,
   PlayerCount (..),
   PriorityAction (..),
@@ -150,13 +151,18 @@ performPriorityActionCont oPlayer action = logCall 'performPriorityActionCont do
 activateAbilityCont :: Monad m => Object 'OTPlayer -> PriorityAction ActivateAbility -> MagicCont 'Private 'RW m () ()
 activateAbilityCont oPlayer activate = logCall 'activateAbilityCont do
   result <- liftCont $ rewindIllegalActivation $ activateAbility oPlayer activate
-  let goNormal = magicCont $ gainPriority oPlayer -- (117.3c)
   case result of
     IllegalActivation -> pure ()
     ActivatedNonManaAbility -> goNormal
-    ActivatedManaAbility info -> case enactInfo_endTheTurn info of
-      False -> goNormal
-      True -> undefined -- TODO: end the turn
+    ActivatedManaAbility evs -> do
+      case any isEndTheTurn evs of
+        True -> vacuous endTheTurn
+        False -> goNormal
+ where
+  goNormal = magicCont $ gainPriority oPlayer -- (117.3c)
+  isEndTheTurn = \case
+    EvEndTheTurn{} -> True
+    _ -> False
 
 castSpellCont :: Monad m => Object 'OTPlayer -> PriorityAction CastSpell -> MagicCont 'Private 'RW m () ()
 castSpellCont oPlayer cast = logCall 'castSpellCont do

@@ -14,7 +14,6 @@ module MtgPure.Engine.Prompt (
   CastSpell,
   DeclaredAttacker (..),
   DeclaredBlocker (..),
-  EnactInfo (..),
   InternalLogicError (..),
   InvalidCastSpell (..),
   InvalidPlayLand (..),
@@ -35,6 +34,9 @@ module MtgPure.Engine.Prompt (
   electedObject_cost,
   AnyElected (..),
   ResolveElected (..),
+  SourceZO (..),
+  Ev (..),
+  TriggerTime (..),
 ) where
 
 import safe Control.Monad.Util (Attempt)
@@ -96,7 +98,7 @@ data OwnedCard = OwnedCard (Object 'OTPlayer) AnyCard
 
 data ActivateResult :: Type where
   IllegalActivation :: ActivateResult
-  ActivatedManaAbility :: EnactInfo -> ActivateResult
+  ActivatedManaAbility :: [Ev] -> ActivateResult
   ActivatedNonManaAbility :: ActivateResult
 
 data DeclaredAttacker = DeclaredAttacker
@@ -276,46 +278,24 @@ data InvalidCastSpell :: Type where
 
 deriving instance Show InvalidCastSpell
 
-data EnactInfo = EnactInfo
-  { enactInfo_ :: ()
-  , enactInfo_becameTapped :: [ZO 'ZBattlefield OTNPermanent]
-  , enactInfo_becameUntapped :: [ZO 'ZBattlefield OTNPermanent]
-  , enactInfo_endTheTurn :: Bool
-  }
-  deriving (Show)
-
-instance Semigroup EnactInfo where
-  x <> y =
-    EnactInfo
-      { enactInfo_ = ()
-      , enactInfo_becameTapped = becameTapped1 <> becameTapped2
-      , enactInfo_becameUntapped = becameUntapped1 <> becameUntapped2
-      , enactInfo_endTheTurn = endTheTurn1 || endTheTurn2
-      }
-   where
-    EnactInfo
-      { enactInfo_ = ()
-      , enactInfo_becameTapped = becameTapped1
-      , enactInfo_becameUntapped = becameUntapped1
-      , enactInfo_endTheTurn = endTheTurn1
-      } = x
-    EnactInfo
-      { enactInfo_ = ()
-      , enactInfo_becameTapped = becameTapped2
-      , enactInfo_becameUntapped = becameUntapped2
-      , enactInfo_endTheTurn = endTheTurn2
-      } = y
-
-instance Monoid EnactInfo where
-  mempty =
-    EnactInfo
-      { enactInfo_ = ()
-      , enactInfo_becameTapped = []
-      , enactInfo_becameUntapped = []
-      , enactInfo_endTheTurn = False
-      }
-
 data ResolveElected :: Type where
   Fizzled :: ResolveElected
-  ResolvedEffect :: EnactInfo -> ResolveElected
+  ResolvedEffect :: [Ev] -> ResolveElected
   PermanentResolved :: ResolveElected
+
+data SourceZO :: Type where
+  SourceZO :: IsZO zone ot => ZO zone ot -> SourceZO
+
+data TriggerTime :: Type where
+  DuringResolution :: TriggerTime
+  AfterResolution :: TriggerTime
+
+-- | "Ev" is short for "Event". (Avoids name conflict with Model.Event)
+data Ev :: Type where
+  -- | `Just source` is the spell or effect that caused the tapping to happen.
+  -- It's `Nothing` when the game state does it on its own, such as untap step.
+  EvTapped :: Maybe SourceZO -> ZO 'ZBattlefield OTNPermanent -> Ev
+  -- | `Just source` is the spell or effect that caused the untapping to happen.
+  -- It's `Nothing` when the game state does it on its own, such as untap step.
+  EvUntapped :: Maybe SourceZO -> ZO 'ZBattlefield OTNPermanent -> Ev
+  EvEndTheTurn :: Maybe SourceZO -> Ev

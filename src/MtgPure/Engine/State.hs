@@ -32,6 +32,9 @@ module MtgPure.Engine.State (
   logCallPop,
   logCallPush,
   logCallUnwind,
+  --
+  EvListener,
+  EvListenerId (..),
 ) where
 
 import safe qualified Control.Monad as M
@@ -52,14 +55,17 @@ import safe MtgPure.Engine.Monad (
   EnvLogCall (..),
   Magic',
   MagicCont',
+  fromPublic,
   fromRO,
   get,
+  gets,
   internalFromPrivate,
   liftCont,
   logCallPop',
   logCallPush',
   logCallTop,
   logCallUnwind',
+  modify,
   runMagicCont',
   runMagicRO,
  )
@@ -67,10 +73,12 @@ import safe MtgPure.Engine.Prompt (
   AnyElected,
   CardCount (..),
   CardIndex (..),
+  Ev,
   InternalLogicError (..),
   PlayerIndex (..),
   PriorityAction (..),
   Prompt' (..),
+  TriggerTime,
  )
 import safe MtgPure.Model.Deck (Deck (..))
 import safe MtgPure.Model.Mulligan (Mulligan)
@@ -111,6 +119,11 @@ data AnyRequirement :: Type where
 
 deriving instance Show AnyRequirement
 
+type EvListener v rw m = TriggerTime -> Ev -> Magic v rw m ()
+
+newtype EvListenerId = EvListenerId Int
+  deriving (Eq, Ord, Show)
+
 data GameState (m :: Type -> Type) where
   -- TODO: there should be a field that tracks which ObjectIds have been known to each player.
   -- This would allow the Public API to query game state a given player knows about without leaking hidden information.
@@ -122,6 +135,8 @@ data GameState (m :: Type -> Type) where
     , magicGraveyardCards :: Map.Map (ZO 'ZGraveyard OT0) AnyCard
     , magicHandCards :: Map.Map (ZO 'ZHand OT0) AnyCard
     , magicLibraryCards :: Map.Map (ZO 'ZLibrary OT0) AnyCard
+    , magicListenerNextId :: EvListenerId
+    , magicListeners :: Map.Map EvListenerId (EvListener 'Private 'RW m)
     , magicManaBurn :: Bool
     , magicNextObjectDiscriminant :: ObjectDiscriminant
     , magicNextObjectId :: ObjectId
@@ -147,6 +162,34 @@ newtype OpaqueGameState m = OpaqueGameState (GameState m)
 
 instance Show (OpaqueGameState m) where
   show _ = show ''OpaqueGameState
+
+class RegisterEventListener (v :: Visibility) (rw :: ReadWrite) where
+  registerListener :: Monad m => EvListener v rw m -> Magic 'Private 'RW m EvListenerId
+  listenLocally :: Monad m => [EvListener v rw m] -> Magic 'Private 'RW m a -> Magic 'Private 'RW m a
+
+instance RegisterEventListener 'Private 'RW where
+  registerListener listener = do
+    evId@(EvListenerId i) <- fromRO $ gets magicListenerNextId
+    modify \st ->
+      st
+        { magicListenerNextId = EvListenerId $ i + 1
+        , magicListeners = Map.insert evId listener $ magicListeners st
+        }
+    pure evId
+  listenLocally listeners action = do
+    listenerIds <- mapM registerListener listeners
+    result <- action
+    mapM_ unregisterListener listenerIds
+    pure result
+   where
+    unregisterListener (EvListenerId i) = modify \st ->
+      st{magicListeners = Map.delete (EvListenerId i) $ magicListeners st}
+
+instance RegisterEventListener 'Public 'RO where
+  registerListener listener = registerListener @ 'Private @ 'RW $ \time -> fromPublic . fromRO . listener time
+  listenLocally listeners = listenLocally @ 'Private @ 'RW $ map f listeners
+   where
+    f listener time = fromPublic . fromRO . listener time
 
 data GameFormat
   = Vintage

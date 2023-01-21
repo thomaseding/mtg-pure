@@ -67,10 +67,13 @@ import safe MtgPure.Model.ZoneObject.Convert (
  )
 import safe MtgPure.Model.ZoneObject.ZoneObject (IsZO, ZO, ZOPlayer, ZoneObject (ZO))
 
+-- Returns Nothing when the elections cannot be completed (e.g. no valid targets).
+-- This may also return Nothing when the `goTerm` continuation returns Nothing.
 performElections ::
   forall ot m p el x.
   Monad m =>
   ZO 'ZStack OT0 ->
+  -- | `goTerm` continuation
   (el -> Magic 'Private 'RW m (Maybe x)) ->
   Elect p el ot ->
   Magic 'Private 'RW m (Maybe x)

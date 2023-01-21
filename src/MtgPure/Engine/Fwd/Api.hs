@@ -33,6 +33,7 @@ module MtgPure.Engine.Fwd.Api (
   doesZoneObjectExist,
   enact,
   endTheGame,
+  endTheTurn,
   findGraveyardCard,
   findHandCard,
   findLibraryCard,
@@ -94,12 +95,13 @@ import safe MtgPure.Engine.Prompt (
   ActivateResult,
   CastSpell,
   Elected,
-  EnactInfo,
+  Ev,
   PlayLand,
   PlayerCount (..),
   PriorityAction,
   ResolveElected,
   SomeActivatedAbility,
+  SourceZO,
   SpecialAction,
  )
 import safe MtgPure.Engine.State (
@@ -171,7 +173,7 @@ data Api (m :: Type -> Type) (v :: Visibility) (rw :: ReadWrite) (ret :: Type) :
   CaseOf :: (x -> Api m 'Private 'RW a) -> Case x -> Api m 'Private 'RW a
   ControllerOf :: IsZO zone ot => ZO zone ot -> Api m 'Private 'RO (Object 'OTPlayer)
   DoesZoneObjectExist :: IsZO zone ot => ZO zone ot -> Api m 'Private 'RO Bool
-  Enact :: Effect 'OneShot -> Api m 'Private 'RW EnactInfo
+  Enact :: Maybe SourceZO -> Effect 'OneShot -> Api m 'Private 'RW [Ev]
   FindHandCard :: Object 'OTPlayer -> ZO 'ZHand OTNCard -> Api m 'Private 'RO (Maybe AnyCard)
   FindLibraryCard :: Object 'OTPlayer -> ZO 'ZLibrary OTNCard -> Api m 'Private 'RO (Maybe AnyCard)
   FindPermanent :: ZO 'ZBattlefield OTNPermanent -> Api m 'Private 'RO (Maybe Permanent)
@@ -217,7 +219,7 @@ run = \case
   CaseOf a b -> caseOf (run . a) b
   ControllerOf a -> controllerOf a
   DoesZoneObjectExist a -> doesZoneObjectExist a
-  Enact a -> enact a
+  Enact a b -> enact a b
   FindHandCard a b -> findHandCard a b
   FindLibraryCard a b -> findLibraryCard a b
   FindPermanent a -> findPermanent a
@@ -278,6 +280,11 @@ resolveTopOfStack = do
   fwd <- liftCont getFwd
   fwd_resolveTopOfStack fwd
 
+endTheTurn :: Monad m => MagicCont 'Private 'RW m () Void
+endTheTurn = do
+  fwd <- liftCont getFwd
+  fwd_endTheTurn fwd
+
 ----------------------------------------
 
 activatedToIndex :: (IsZO zone ot, Monad m) => SomeActivatedAbility zone ot -> Magic 'Private 'RO m AbsoluteActivatedAbilityIndex
@@ -310,17 +317,17 @@ activateAbility = fwd2 fwd_activateAbility
 castSpell :: forall m. Monad m => Object 'OTPlayer -> PriorityAction CastSpell -> Magic 'Private 'RW m Legality
 castSpell = fwd2 fwd_castSpell
 
-endTheGame :: Monad m => GameResult m -> Magic 'Public 'RO m Void
-endTheGame = fwd1 fwd_endTheGame
-
 controllerOf :: (IsZO zone ot, Monad m) => ZO zone ot -> Magic 'Private 'RO m (Object 'OTPlayer)
 controllerOf = fwd1 fwd_controllerOf
 
 doesZoneObjectExist :: (IsZO zone ot, Monad m) => ZO zone ot -> Magic 'Private 'RO m Bool
 doesZoneObjectExist = fwd1 fwd_doesZoneObjectExist
 
-enact :: Monad m => Effect 'OneShot -> Magic 'Private 'RW m EnactInfo
-enact = fwd1 fwd_enact
+enact :: Monad m => Maybe SourceZO -> Effect 'OneShot -> Magic 'Private 'RW m [Ev]
+enact = fwd2 fwd_enact
+
+endTheGame :: Monad m => GameResult m -> Magic 'Public 'RO m Void
+endTheGame = fwd1 fwd_endTheGame
 
 findGraveyardCard :: Monad m => Object 'OTPlayer -> ZO 'ZGraveyard OTNCard -> Magic 'Private 'RO m (Maybe AnyCard)
 findGraveyardCard = fwd2 fwd_findGraveyardCard

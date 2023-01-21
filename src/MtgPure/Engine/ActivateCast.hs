@@ -43,7 +43,7 @@ import safe MtgPure.Engine.Prompt (
   AnyElected (..),
   CastSpell,
   Elected (..),
-  EnactInfo,
+  Ev,
   InternalLogicError (..),
   InvalidCastSpell (..),
   Pending,
@@ -424,16 +424,21 @@ activateAbility oPlayer = logCall 'activateAbility \case
             (True, True, True) -> do
               let goPay cost effect = do
                     let elected = ElectedActivatedAbility oPlayer zoThis cost effect
-                    case isManaAbility withThisActivated of
-                      True -> Just <$> payElectedManaAbilityAndResolve elected
-                      False -> payElectedAndPutOnStack @ 'Activate @ot zoAbility elected >> pure (Just Nothing)
+                        isManaAbility' = isManaAbility withThisActivated
+                    case isManaAbility' of
+                      True -> do
+                        legality <- payElectedManaAbilityAndResolve elected
+                        pure case legality of
+                          ResolvedManaAbility evs -> ActivatedManaAbility evs
+                          CantPay -> IllegalActivation
+                      False -> do
+                        legality <- payElectedAndPutOnStack @ 'Activate @ot zoAbility elected
+                        pure case legality of
+                          Legal -> ActivatedNonManaAbility
+                          Illegal -> IllegalActivation
               let cost = activated_cost activated
                   effect = activated_effect activated
-              playPendingAbility zoAbility cost effect goPay <&> \case
-                Nothing -> IllegalActivation
-                Just mInfo -> case mInfo of
-                  Just info -> ActivatedManaAbility info
-                  Nothing -> ActivatedNonManaAbility
+              playPendingAbility zoAbility cost effect goPay
 
     goWithThisActivated
 
@@ -476,9 +481,10 @@ playPendingAbility ::
   ZO 'ZStack OT0 ->
   Cost ot ->
   Elect 'Post (Effect 'OneShot) ot ->
-  (Cost ot -> Pending (Effect 'OneShot) ot -> Magic 'Private 'RW m (Maybe x)) ->
-  Magic 'Private 'RW m (Maybe x)
+  (Cost ot -> Pending (Effect 'OneShot) ot -> Magic 'Private 'RW m x) ->
+  Magic 'Private 'RW m x
 playPendingAbility _zoStack cost electEffect cont = logCall 'playPendingAbility do
+  pure () -- TODO: other stuff?
   cont cost $ Pending electEffect
 
 payElected ::
@@ -489,18 +495,22 @@ payElected ::
 payElected elected = logCall 'payElected do
   pay (electedObject_controller elected) $ electedObject_cost elected
 
+data ResolvedManaAbility :: Type where
+  CantPay :: ResolvedManaAbility
+  ResolvedManaAbility :: [Ev] -> ResolvedManaAbility
+
 payElectedManaAbilityAndResolve ::
   forall ot m.
   (IsOTN ot, Monad m) =>
   Elected 'Pre ot ->
-  Magic 'Private 'RW m (Maybe EnactInfo)
+  Magic 'Private 'RW m ResolvedManaAbility
 payElectedManaAbilityAndResolve elected = logCall 'payElectedManaAbilityAndResolve do
   payElected elected >>= \case
-    Illegal -> pure Nothing
+    Illegal -> pure CantPay
     Legal -> do
       let zoStack = error $ show ManaAbilitiesDontHaveTargetsSoNoZoShouldBeNeeded
       resolveElected zoStack elected <&> \case
-        ResolvedEffect enactInfo -> Just enactInfo
+        ResolvedEffect evs -> ResolvedManaAbility evs
         Fizzled -> error $ show (undefined :: InternalLogicError) -- mana abilities don't have targets
         PermanentResolved -> error $ show (undefined :: InternalLogicError) -- mana abilities are abilities
 

@@ -11,11 +11,11 @@
 module MtgPure.Engine.Resolve (
   resolveTopOfStack,
   resolveElected,
+  endTheTurn,
 ) where
 
 import safe qualified Control.Monad as M
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
-import safe Data.Functor ((<&>))
 import safe Data.Kind (Type)
 import safe qualified Data.Map.Strict as Map
 import safe Data.Typeable (Typeable)
@@ -35,11 +35,11 @@ import safe MtgPure.Engine.Orphans ()
 import safe MtgPure.Engine.Prompt (
   AnyElected (..),
   Elected (..),
-  EnactInfo (..),
   InternalLogicError (..),
   OwnedCard (..),
   PendingReady (..),
   ResolveElected (..),
+  SourceZO (..),
  )
 import safe MtgPure.Engine.State (
   GameState (..),
@@ -68,18 +68,15 @@ resolveTopOfStack = logCall 'resolveTopOfStack do
     item : items -> do
       let zoStack = stackObjectToZo0 item
       liftCont $ modify \st -> st{magicStack = Stack items}
-      result <- liftCont $ resolveStackObject zoStack
+      _result <- liftCont $ resolveStackObject zoStack
       liftCont $ modify \st ->
         st
           { magicStackEntryTargetsMap = Map.delete zoStack $ magicStackEntryTargetsMap st
           , magicStackEntryElectedMap = Map.delete zoStack $ magicStackEntryElectedMap st
           , magicOwnershipMap = Map.delete (getObjectId zoStack) $ magicOwnershipMap st
           }
-      case result of
-        ResolvedEffect (enactInfo_endTheTurn -> True) -> endTheTurn
-        _ -> do
-          oActive <- liftCont $ fromPublicRO getActivePlayer
-          magicCont $ gainPriority oActive
+      oActive <- liftCont $ fromPublicRO getActivePlayer
+      magicCont $ gainPriority oActive
 
 endTheTurn :: Monad m => MagicCont 'Private 'RW m () Void
 endTheTurn = logCall 'endTheTurn do
@@ -97,18 +94,14 @@ resolveElected :: forall ot m. (IsOTN ot, Monad m) => ZO 'ZStack OT0 -> Elected 
 resolveElected zoStack elected = logCall 'resolveElected do
   case elected of
     ElectedActivatedAbility{} -> do
-      resolveOneShot zoStack Nothing (unPending $ electedActivatedAbility_effect elected) <&> \case
-        Nothing -> Fizzled
-        Just enactInfo -> ResolvedEffect enactInfo
+      resolveOneShot zoStack Nothing (unPending $ electedActivatedAbility_effect elected)
     ElectedSpell{} -> do
       owner <- fromRO $ ownerOf zoStack
       let card = electedSpell_card elected
           ownedCard = Just $ OwnedCard owner card
       case electedSpell_effect elected of
-        Just effect ->
-          resolveOneShot zoStack ownedCard (unPending effect) <&> \case
-            Nothing -> Fizzled
-            Just enactInfo -> ResolvedEffect enactInfo
+        Just effect -> do
+          resolveOneShot zoStack ownedCard (unPending effect)
         Nothing -> do
           let electedPerm =
                 ElectedPermanent
@@ -119,22 +112,26 @@ resolveElected zoStack elected = logCall 'resolveElected do
           resolvePermanent electedPerm
           pure PermanentResolved
 
--- | Returns `Nothing` iff fizzled.
 resolveOneShot ::
   Monad m =>
   ZO 'ZStack OT0 ->
+  -- | `Nothing` is for tokens
   Maybe OwnedCard ->
   Elect 'Post (Effect 'OneShot) ot ->
-  Magic 'Private 'RW m (Maybe EnactInfo)
+  Magic 'Private 'RW m ResolveElected
 resolveOneShot zoStack mCard elect = logCall 'resolveOneShot do
-  result <- performElections zoStack goEffect elect
+  mResult <- performElections zoStack goEffect elect
   case mCard of
     Nothing -> pure ()
     Just (OwnedCard oPlayer card) -> M.void $ pushGraveyardCard oPlayer card
-  pure result
+  pure case mResult of
+    Just result -> result
+    Nothing -> undefined -- Impossible? If so, may want the return type of performElections be parametrized by the result Pre/Post
  where
-  goEffect :: Monad m => Effect 'OneShot -> Magic 'Private 'RW m (Maybe EnactInfo)
-  goEffect = fmap Just . enact
+  goEffect :: Monad m => Effect 'OneShot -> Magic 'Private 'RW m (Maybe ResolveElected)
+  goEffect effect = do
+    evs <- enact (Just $ SourceZO zoStack) effect
+    pure $ Just $ ResolvedEffect evs
 
 data ElectedPermanent (ot :: Type) :: Type where
   ElectedPermanent ::

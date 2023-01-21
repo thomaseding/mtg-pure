@@ -73,7 +73,7 @@ startGame :: Monad m => Magic 'Private 'RW m Void
 startGame = logCall 'startGame do
   determineStartingPlayer -- (103.1)
   ps <- fromPublicRO getAlivePlayers
-  eachLogged_ ps $ M.void . enact . ShuffleLibrary . oToZO1 -- (103.2)
+  eachLogged_ ps $ M.void . enact Nothing . ShuffleLibrary . oToZO1 -- (103.2)
   pure () -- (103.3) See `mkPlayer`
   drawStartingHands -- (103.4)
   pure () -- (103.5) TODO: leylines and such
@@ -116,7 +116,7 @@ drawStartingHands = logCall 'drawStartingHands do
 drawStartingHand :: Monad m => Object 'OTPlayer -> Magic 'Private 'RW m ()
 drawStartingHand oPlayer = logCall 'drawStartingHand do
   player <- fromRO $ getPlayer oPlayer
-  M.void $ enact $ DrawCards (oToZO1 oPlayer) $ playerStartingHandSize player
+  M.void $ enact Nothing $ DrawCards (oToZO1 oPlayer) $ playerStartingHandSize player
 
 setPhaseStep :: PhaseStep -> Monad m => MagicCont 'Private 'RW m Void ()
 setPhaseStep phaseStep = logCall 'setPhaseStep do
@@ -164,7 +164,7 @@ untapStep = do
       pure () -- (502.2) TODO: day/night
       do
         zos <- fromPublicRO $ allControlledPermanentsOf oPlayer
-        eachLogged_ zos $ M.void . enact . Untap -- (502.3) TODO: fine-grained untapping
+        eachLogged_ zos $ M.void . enact Nothing . Untap -- (502.3) TODO: fine-grained untapping
       pure () -- (502.4) Rule states that players can't get priority, so nothing to do here.
   upkeepStep
 
@@ -199,7 +199,7 @@ drawStep = do
       oActive <- fromPublicRO getActivePlayer
       case magicCurrentTurn st of
         1 -> pure () -- (103.7.*) TODO: this needs to account for game format
-        _ -> M.void $ enact $ DrawCards (oToZO1 oActive) 1
+        _ -> M.void $ enact Nothing $ DrawCards (oToZO1 oActive) 1
       gainPriority oActive
   precombatMainPhase
 

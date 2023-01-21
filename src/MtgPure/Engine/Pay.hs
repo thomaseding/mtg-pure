@@ -32,7 +32,7 @@ import safe MtgPure.Engine.Fwd.Api (
 import safe MtgPure.Engine.Legality (Legality (..), toLegality)
 import safe MtgPure.Engine.Monad (fromPublic, fromRO, gets)
 import safe MtgPure.Engine.Orphans ()
-import safe MtgPure.Engine.Prompt (Prompt' (..))
+import safe MtgPure.Engine.Prompt (Prompt' (..), SourceZO (..))
 import safe MtgPure.Engine.State (GameState (..), Magic, logCall, mkOpaqueGameState)
 import safe MtgPure.Model.Combinators (isTapped)
 import safe MtgPure.Model.Life (Life (..))
@@ -50,7 +50,7 @@ import safe MtgPure.Model.Player (Player (..))
 import safe MtgPure.Model.Recursive (Cost (..), Effect (..), Requirement (..))
 import safe MtgPure.Model.Variable (ForceVars (forceVars), Var (..))
 import safe MtgPure.Model.Zone (SZone (..), Zone (..))
-import safe MtgPure.Model.ZoneObject.Convert (toZO0, zo0ToPermanent)
+import safe MtgPure.Model.ZoneObject.Convert (oToZO1, toZO0, zo0ToPermanent)
 import safe MtgPure.Model.ZoneObject.ZoneObject (IsZO, ZoneObject (..))
 
 pay :: Monad m => Object 'OTPlayer -> Cost ot -> Magic 'Private 'RW m Legality
@@ -172,7 +172,8 @@ payTapCost oPlayer req = logCall 'payTapCost do
     Nothing -> pure Illegal
     Just zo -> do
       let zoPerm = zo0ToPermanent $ toZO0 zo
-      M.void $ enact $ Tap zoPerm
+          zoPlayer = oToZO1 @ 'ZBattlefield oPlayer
+      M.void $ enact (Just $ SourceZO zoPlayer) $ Tap zoPerm
       fromRO $ satisfies zoPerm isTapped <&> toLegality
  where
   req' =

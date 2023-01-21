@@ -25,6 +25,7 @@ import safe MtgPure.Engine.Fwd.Impl (fwdImpl)
 import safe MtgPure.Engine.Monad (fromPublicRO, fromRO, runMagicRW)
 import safe MtgPure.Engine.Prompt (Prompt' (..))
 import safe MtgPure.Engine.State (
+  EvListenerId (..),
   Fwd,
   GameFormat (..),
   GameInput (..),
@@ -107,6 +108,8 @@ mkGameState fwd input = case playerObjects of
         , magicGraveyardCards = mempty
         , magicHandCards = mempty
         , magicLibraryCards = mempty
+        , magicListenerNextId = EvListenerId 1
+        , magicListeners = mempty
         , magicManaBurn = False
         , magicNextObjectDiscriminant = (1 +) <$> DefaultObjectDiscriminant
         , magicNextObjectId = ObjectId $ 1 + playerCount

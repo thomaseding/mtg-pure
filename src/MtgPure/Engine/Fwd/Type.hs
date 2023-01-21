@@ -23,12 +23,13 @@ import safe MtgPure.Engine.Prompt (
   ActivateResult,
   CastSpell,
   Elected,
-  EnactInfo,
+  Ev,
   PlayLand,
   PlayerCount (..),
   PriorityAction,
   ResolveElected,
   SomeActivatedAbility,
+  SourceZO,
   SpecialAction,
  )
 import safe MtgPure.Model.BasicLandType (BasicLandType)
@@ -67,8 +68,11 @@ data Fwd' ex st m where
     , fwd_castSpell :: Object 'OTPlayer -> PriorityAction CastSpell -> Magic' ex st 'Private 'RW m Legality
     , fwd_controllerOf :: forall zone ot. IsZO zone ot => ZO zone ot -> Magic' ex st 'Private 'RO m (Object 'OTPlayer)
     , fwd_doesZoneObjectExist :: forall zone ot. IsZO zone ot => ZO zone ot -> Magic' ex st 'Private 'RO m Bool
-    , fwd_enact :: Effect 'OneShot -> Magic' ex st 'Private 'RW m EnactInfo
-    , fwd_endTheGame :: ex -> Magic' ex st 'Public 'RO m Void
+    , fwd_enact :: Maybe SourceZO -> Effect 'OneShot -> Magic' ex st 'Private 'RW m [Ev]
+    , -- | RO is ok-ish here because the return type is Void and the game just ends.
+      --  It's still a bit of a hack, but it's better than hacking in some Public RW user API.
+      fwd_endTheGame :: ex -> Magic' ex st 'Public 'RO m Void
+    , fwd_endTheTurn :: MagicCont' ex st 'Private 'RW m () Void
     , fwd_findGraveyardCard :: Object 'OTPlayer -> ZO 'ZGraveyard OTNCard -> Magic' ex st 'Private 'RO m (Maybe AnyCard)
     , fwd_findHandCard :: Object 'OTPlayer -> ZO 'ZHand OTNCard -> Magic' ex st 'Private 'RO m (Maybe AnyCard)
     , fwd_findLibraryCard :: Object 'OTPlayer -> ZO 'ZLibrary OTNCard -> Magic' ex st 'Private 'RO m (Maybe AnyCard)

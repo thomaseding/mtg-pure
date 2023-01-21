@@ -16,7 +16,9 @@ import safe qualified Control.Monad as M
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
 import safe qualified Control.Monad.Trans as M
 import safe Control.Monad.Util (untilJust)
+import safe qualified Data.Foldable as F
 import safe qualified Data.List as List
+import safe qualified Data.Map.Strict as Map
 import safe MtgPure.Engine.Fwd.Api (
   caseOf,
   findPermanent,
@@ -34,9 +36,11 @@ import safe MtgPure.Engine.Orphans ()
 import safe MtgPure.Engine.Prompt (
   CardCount (..),
   CardIndex (..),
-  EnactInfo (..),
+  Ev (..),
   InternalLogicError (..),
   Prompt' (..),
+  SourceZO (..),
+  TriggerTime (..),
  )
 import safe MtgPure.Engine.State (GameState (..), Magic, logCall)
 import safe MtgPure.Model.Damage (Damage, Damage' (..))
@@ -57,16 +61,35 @@ import safe MtgPure.Model.Zone (Zone (..))
 import safe MtgPure.Model.ZoneObject.Convert (toZO0, zo0ToPermanent, zo1ToO)
 import safe MtgPure.Model.ZoneObject.ZoneObject (ZO, ZOCreaturePlayerPlaneswalker, ZOPermanent, ZOPlayer)
 
-enact :: Monad m => Effect 'OneShot -> Magic 'Private 'RW m EnactInfo
-enact = logCall 'enact \case
-  AddMana oPlayer mana -> addMana' oPlayer mana
+-- XXX: Is it appropriate to trigger these at the end of resolution instead of as they occur?
+-- Replacement effects need to be done immediately... but will they be encoded as `EvListener`?
+-- Maybe this is solved by triggering in both cases and have the `EvListener` decide whether to act.
+-- XXX: Replacement effects don't just listen... they also modify the event, so perhaps a different
+-- mechanism is needed.
+-- XXX: A replacement effect prolly is an `EvListener` that returns a `Maybe (SourceZO, Effect)`.
+triggerEvListeners :: Monad m => TriggerTime -> [Ev] -> Magic 'Private 'RW m ()
+triggerEvListeners time evs = logCall 'triggerEvListeners do
+  listeners <- fromRO $ gets magicListeners
+  F.for_ evs \ev -> do
+    F.for_ (Map.elems listeners) \listener -> do
+      listener time ev
+
+enact :: Monad m => Maybe SourceZO -> Effect 'OneShot -> Magic 'Private 'RW m [Ev]
+enact mSource effect = logCall 'enact do
+  evs <- enact' mSource effect
+  triggerEvListeners AfterResolution evs
+  pure evs
+
+enact' :: Monad m => Maybe SourceZO -> Effect 'OneShot -> Magic 'Private 'RW m [Ev]
+enact' mSource = logCall 'enact' \case
+  AddMana oPlayer mana -> addMana' mSource oPlayer mana
   AddToBattlefield{} -> undefined
   CounterAbility{} -> undefined
   CounterSpell{} -> undefined
   DealDamage oSource oVictim damage -> dealDamage' oSource oVictim damage
-  Destroy oPerm -> destroy' oPerm
-  DrawCards oPlayer amount -> drawCards' amount $ zo1ToO oPlayer
-  EffectCase case_ -> caseOf enact case_
+  Destroy oPerm -> destroy' mSource oPerm
+  DrawCards oPlayer amount -> drawCards' mSource amount $ zo1ToO oPlayer
+  EffectCase case_ -> caseOf (enact' mSource) case_
   EffectContinuous{} -> undefined
   EndTheTurn -> undefined
   Exile{} -> undefined
@@ -75,16 +98,16 @@ enact = logCall 'enact \case
   PutOntoBattlefield{} -> undefined
   Sacrifice{} -> undefined
   SearchLibrary{} -> undefined
-  Sequence effects -> mconcat <$> mapM enact effects
-  ShuffleLibrary oPlayer -> shuffleLibrary' $ zo1ToO oPlayer
-  Tap oPerm -> tap' oPerm
-  Untap oPerm -> untap' oPerm
+  Sequence effects -> mconcat <$> mapM (enact' mSource) effects
+  ShuffleLibrary oPlayer -> shuffleLibrary' mSource $ zo1ToO oPlayer
+  Tap oPerm -> tap' mSource oPerm
+  Untap oPerm -> untap' mSource oPerm
   WithList{} -> undefined
 
-addMana' :: Monad m => ZOPlayer -> ManaPool 'NonSnow -> Magic 'Private 'RW m EnactInfo
-addMana' oPlayer mana = logCall 'addMana' do
+addMana' :: Monad m => Maybe SourceZO -> ZOPlayer -> ManaPool 'NonSnow -> Magic 'Private 'RW m [Ev]
+addMana' _mSource oPlayer mana = logCall 'addMana' do
   fromRO (findPlayer $ zo1ToO oPlayer) >>= \case
-    Nothing -> pure () -- Don't complain. This can naturally happen if a player loses before `enact` resolves.
+    Nothing -> pure () -- Don't complain. This can naturally happen if a player loses before `enact'` resolves.
     Just player -> do
       let mana' = playerMana player + mempty{poolNonSnow = mana}
       setPlayer (zo1ToO oPlayer) player{playerMana = mana'}
@@ -95,7 +118,7 @@ dealDamage' ::
   ZO zone OTNDamageSource ->
   ZOCreaturePlayerPlaneswalker ->
   Damage var ->
-  Magic 'Private 'RW m EnactInfo
+  Magic 'Private 'RW m [Ev]
 dealDamage' _oSource oVictim (forceVars -> Damage damage) = logCall 'dealDamage' do
   fromRO (findPermanent $ zo0ToPermanent $ toZO0 oVictim) >>= \case
     Nothing -> pure ()
@@ -125,9 +148,10 @@ dealDamage' _oSource oVictim (forceVars -> Damage damage) = logCall 'dealDamage'
 
 destroy' ::
   Monad m =>
+  Maybe SourceZO ->
   ZOPermanent ->
-  Magic 'Private 'RW m EnactInfo
-destroy' oPerm = logCall 'destroy' do
+  Magic 'Private 'RW m [Ev]
+destroy' _mSource oPerm = logCall 'destroy' do
   fromRO (findPermanent oPerm) >>= \case
     Nothing -> pure ()
     Just _perm -> do
@@ -135,8 +159,8 @@ destroy' oPerm = logCall 'destroy' do
       setPermanent oPerm Nothing
   pure mempty
 
-shuffleLibrary' :: Monad m => Object 'OTPlayer -> Magic 'Private 'RW m EnactInfo
-shuffleLibrary' oPlayer = logCall 'shuffleLibrary' do
+shuffleLibrary' :: Monad m => Maybe SourceZO -> Object 'OTPlayer -> Magic 'Private 'RW m [Ev]
+shuffleLibrary' _mSource oPlayer = logCall 'shuffleLibrary' do
   prompt <- fromRO $ gets magicPrompt
   player <- fromRO $ getPlayer oPlayer
   let library = fromCardList $ playerLibrary player
@@ -153,8 +177,8 @@ shuffleLibrary' oPlayer = logCall 'shuffleLibrary' do
   setPlayer oPlayer $ player{playerLibrary = toCardList library'}
   pure mempty
 
-drawCard' :: Monad m => Object 'OTPlayer -> Magic 'Private 'RW m EnactInfo
-drawCard' oPlayer = logCall 'drawCard' do
+drawCard' :: Monad m => Maybe SourceZO -> Object 'OTPlayer -> Magic 'Private 'RW m [Ev]
+drawCard' _mSource oPlayer = logCall 'drawCard' do
   player <- fromRO $ getPlayer oPlayer
   let library = playerLibrary player
   case popCard library of
@@ -167,22 +191,22 @@ drawCard' oPlayer = logCall 'drawCard' do
       M.void $ pushHandCard oPlayer card
   pure mempty
 
-drawCards' :: Monad m => Int -> Object 'OTPlayer -> Magic 'Private 'RW m EnactInfo
-drawCards' n oPlayer = logCall 'drawCards' do
-  fmap mconcat $ M.replicateM n $ drawCard' oPlayer
+drawCards' :: Monad m => Maybe SourceZO -> Int -> Object 'OTPlayer -> Magic 'Private 'RW m [Ev]
+drawCards' mSource n oPlayer = logCall 'drawCards' do
+  fmap mconcat $ M.replicateM n $ drawCard' mSource oPlayer
 
-untap' :: Monad m => ZO 'ZBattlefield OTNPermanent -> Magic 'Private 'RW m EnactInfo
-untap' oPerm = logCall 'untap' do
+untap' :: Monad m => Maybe SourceZO -> ZO 'ZBattlefield OTNPermanent -> Magic 'Private 'RW m [Ev]
+untap' mSource oPerm = logCall 'untap' do
   perm <- fromRO $ getPermanent oPerm
   setPermanent oPerm $ Just perm{permanentTapped = Untapped}
-  pure case permanentTapped perm /= Untapped of
-    False -> mempty
-    True -> mempty{enactInfo_becameUntapped = pure oPerm}
+  case permanentTapped perm of
+    Untapped -> pure []
+    Tapped -> pure [EvUntapped mSource oPerm]
 
-tap' :: Monad m => ZO 'ZBattlefield OTNPermanent -> Magic 'Private 'RW m EnactInfo
-tap' oPerm = logCall 'tap' do
+tap' :: Monad m => Maybe SourceZO -> ZO 'ZBattlefield OTNPermanent -> Magic 'Private 'RW m [Ev]
+tap' mSource oPerm = logCall 'tap' do
   perm <- fromRO $ getPermanent oPerm
   setPermanent oPerm $ Just perm{permanentTapped = Tapped}
-  pure case permanentTapped perm /= Tapped of
-    False -> mempty
-    True -> mempty{enactInfo_becameTapped = pure oPerm}
+  case permanentTapped perm of
+    Tapped -> pure []
+    Untapped -> pure [EvTapped mSource oPerm]

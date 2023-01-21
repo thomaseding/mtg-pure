@@ -65,7 +65,7 @@ import safe MtgPure.Engine.Priority (
   getHasPriority,
   getPlayerWithPriority,
  )
-import safe MtgPure.Engine.Resolve (resolveElected, resolveTopOfStack)
+import safe MtgPure.Engine.Resolve (endTheTurn, resolveElected, resolveTopOfStack)
 import safe MtgPure.Engine.Satisfies (satisfies, zosSatisfying)
 import safe MtgPure.Engine.State (Fwd)
 import safe MtgPure.Engine.StateBasedActions (performStateBasedActions)
@@ -89,6 +89,7 @@ fwdImpl =
     , fwd_doesZoneObjectExist = doesZoneObjectExist
     , fwd_enact = enact
     , fwd_endTheGame = endTheGame
+    , fwd_endTheTurn = endTheTurn
     , fwd_findGraveyardCard = findGraveyardCard
     , fwd_findHandCard = findHandCard
     , fwd_findLibraryCard = findLibraryCard
