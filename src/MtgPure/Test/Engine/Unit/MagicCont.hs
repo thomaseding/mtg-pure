@@ -15,9 +15,10 @@ import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
 import safe Control.Monad.Trans (MonadIO (liftIO))
 import safe MtgPure.Engine.Monad (
   EnvLogCall (..),
+  HasEnvLogCall (..),
   MagicCont',
   liftCont,
-  magicCont,
+  magicContBail,
   magicThrow,
   runMagicCont',
   runMagicRW,
@@ -36,18 +37,21 @@ data St = St
   }
   deriving (Show)
 
-type UnitCont m a = MagicCont' Ex St 'Private 'RW m a
+type UnitCont = MagicCont' Ex St 'Private 'RW
 
-envLogCall :: Monad m => EnvLogCall Ex St 'Private 'RW m
+instance Monad m => HasEnvLogCall Ex St 'RW m where
+  theEnvLogCall = envLogCall
+
+envLogCall :: Monad m => EnvLogCall Ex St v 'RW m
 envLogCall =
   EnvLogCall
-    { envLogCallCorruptCallStackLogging = pure ()
+    { envLogCallCorruptCallStackLogging = error "envLogCallCorruptCallStackLogging"
     , envLogCallPromptPush = \_ -> pure ()
     , envLogCallPromptPop = \_ -> pure ()
     }
 
-runUnitCont :: Monad m => (Either a b -> c) -> UnitCont m a b -> m (Either Ex c)
-runUnitCont f action = runMagicRW st $ runMagicCont' envLogCall f action
+runUnitCont :: Monad m => (Either a b -> c) -> UnitCont a m b -> m (Either Ex c)
+runUnitCont f action = runMagicRW st $ f <$> runMagicCont' envLogCall action
  where
   st =
     St
@@ -58,14 +62,18 @@ runUnitCont f action = runMagicRW st $ runMagicCont' envLogCall f action
 
 mainUnitMagicCont :: IO ()
 mainUnitMagicCont = do
+  putStrLn "\nunitCont1"
   unitCont1
+  putStrLn "\nunitCont2"
   unitCont2
+  putStrLn "\nunitCont3"
   unitCont3
+  putStrLn ""
 
 unitCont1 :: IO ()
 unitCont1 = do
   result <- runUnitCont id do
-    _ <- magicCont $ pure 666
+    _ <- magicContBail $ pure 666
     liftIO $ putStrLn "if this prints, then the test failed"
     pure "failure"
   print (result :: Either Ex (Either Int String))

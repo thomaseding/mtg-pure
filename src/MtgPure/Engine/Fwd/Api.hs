@@ -84,6 +84,7 @@ import safe Data.Void (Void)
 import safe MtgPure.Engine.Fwd.Type (Fwd' (..))
 import safe MtgPure.Engine.Legality (Legality)
 import safe MtgPure.Engine.Monad (
+  PriorityEnd,
   fromRO,
   gets,
   internalFromPrivate,
@@ -178,7 +179,6 @@ data Api (m :: Type -> Type) (v :: Visibility) (rw :: ReadWrite) (ret :: Type) :
   FindLibraryCard :: Object 'OTPlayer -> ZO 'ZLibrary OTNCard -> Api m 'Private 'RO (Maybe AnyCard)
   FindPermanent :: ZO 'ZBattlefield OTNPermanent -> Api m 'Private 'RO (Maybe Permanent)
   FindPlayer :: Object 'OTPlayer -> Api m 'Private 'RO (Maybe Player)
-  GainPriority :: Object 'OTPlayer -> Api m 'Private 'RW ()
   GetAPNAP :: Api m v 'RO (Stream.Stream (Object 'OTPlayer))
   GetZoneOf :: ObjectId -> Api m 'Private 'RO Zone
   GetPermanent :: ZO 'ZBattlefield OTNPermanent -> Api m 'Private 'RO Permanent
@@ -202,9 +202,10 @@ data Api (m :: Type -> Type) (v :: Visibility) (rw :: ReadWrite) (ret :: Type) :
   ToZO :: IsZO zone ot => ObjectId -> Api m 'Private 'RO (Maybe (ZO zone ot))
   ZOsSatisfying :: IsZO zone ot => Requirement zone ot -> Api m 'Private 'RO [ZO zone ot]
 
-data ApiCont (m :: Type -> Type) (v :: Visibility) (rw :: ReadWrite) (y :: Type) (z :: Type) :: Type where
-  AskPriorityAction :: Object 'OTPlayer -> ApiCont m 'Private 'RW () ()
-  ResolveTopOfStack :: ApiCont m 'Private 'RW () Void
+data ApiCont (m :: Type -> Type) (v :: Visibility) (rw :: ReadWrite) (bail :: Type) (a :: Type) :: Type where
+  AskPriorityAction :: Object 'OTPlayer -> ApiCont m 'Private 'RW PriorityEnd ()
+  GainPriority :: Object 'OTPlayer -> ApiCont m 'Private 'RW Void ()
+  ResolveTopOfStack :: ApiCont m 'Private 'RW Void ()
 
 run :: Monad m => Api m v rw z -> Magic v rw m z
 run = \case
@@ -224,7 +225,6 @@ run = \case
   FindLibraryCard a b -> findLibraryCard a b
   FindPermanent a -> findPermanent a
   FindPlayer a -> findPlayer a
-  GainPriority a -> gainPriority a
   GetAPNAP -> getAPNAP
   GetPermanent a -> getPermanent a
   GetPlayer a -> getPlayer a
@@ -248,9 +248,10 @@ run = \case
   ToZO a -> toZO a
   ZOsSatisfying a -> zosSatisfying a
 
-runCont :: Monad m => ApiCont m v rw y z -> MagicCont v rw m y z
+runCont :: Monad m => ApiCont m v rw bail a -> MagicCont v rw bail m a
 runCont = \case
   AskPriorityAction a -> askPriorityAction a
+  GainPriority a -> gainPriority a
   ResolveTopOfStack -> resolveTopOfStack
 
 rewindIllegal :: Monad m => Magic 'Private 'RW m Legality -> Magic 'Private 'RW m Bool
@@ -270,20 +271,25 @@ eachLogged_ f = logCall 'eachLogged_ . F.for_ f
 
 ----------------------------------------
 
-askPriorityAction :: Monad m => Object 'OTPlayer -> MagicCont 'Private 'RW m () ()
+askPriorityAction :: Monad m => Object 'OTPlayer -> MagicCont 'Private 'RW PriorityEnd m ()
 askPriorityAction a = do
   fwd <- liftCont getFwd
   fwd_askPriorityAction fwd a
 
-resolveTopOfStack :: Monad m => MagicCont 'Private 'RW m () Void
+resolveTopOfStack :: Monad m => MagicCont 'Private 'RW Void m ()
 resolveTopOfStack = do
   fwd <- liftCont getFwd
   fwd_resolveTopOfStack fwd
 
-endTheTurn :: Monad m => MagicCont 'Private 'RW m () Void
+endTheTurn :: Monad m => MagicCont 'Private 'RW Void m Void
 endTheTurn = do
   fwd <- liftCont getFwd
   fwd_endTheTurn fwd
+
+gainPriority :: Monad m => Object 'OTPlayer -> MagicCont 'Private 'RW Void m ()
+gainPriority a = do
+  fwd <- liftCont getFwd
+  fwd_gainPriority fwd a
 
 ----------------------------------------
 
@@ -343,9 +349,6 @@ findPermanent = fwd1 fwd_findPermanent
 
 findPlayer :: Monad m => Object 'OTPlayer -> Magic 'Private 'RO m (Maybe Player)
 findPlayer = fwd1 fwd_findPlayer
-
-gainPriority :: Monad m => Object 'OTPlayer -> Magic 'Private 'RW m ()
-gainPriority = fwd1 fwd_gainPriority
 
 getAlivePlayers :: Monad m => Magic 'Public 'RO m [Object 'OTPlayer]
 getAlivePlayers = fwd0 fwd_getAlivePlayers

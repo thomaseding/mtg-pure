@@ -16,7 +16,7 @@ import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
 import safe qualified Data.Stream as Stream
 import safe Data.Void (Void)
 import safe MtgPure.Engine.Legality (Legality)
-import safe MtgPure.Engine.Monad (Magic', MagicCont')
+import safe MtgPure.Engine.Monad (Magic', MagicCont', PriorityEnd)
 import safe MtgPure.Engine.Prompt (
   AbsoluteActivatedAbilityIndex,
   ActivateAbility,
@@ -63,7 +63,7 @@ data Fwd' ex st m where
     , fwd_allPermanents :: Magic' ex st 'Public 'RO m [ZO 'ZBattlefield OTNPermanent]
     , fwd_allZOActivatedAbilities :: forall zone ot. IsZO zone ot => Magic' ex st 'Private 'RO m [SomeActivatedAbility zone ot]
     , fwd_allZOs :: forall zone ot. IsZO zone ot => Magic' ex st 'Private 'RO m [ZO zone ot]
-    , fwd_askPriorityAction :: Object 'OTPlayer -> MagicCont' ex st 'Private 'RW m () ()
+    , fwd_askPriorityAction :: Object 'OTPlayer -> MagicCont' ex st 'Private 'RW PriorityEnd m ()
     , fwd_caseOf :: forall x a. (x -> Magic' ex st 'Private 'RW m a) -> Case x -> Magic' ex st 'Private 'RW m a
     , fwd_castSpell :: Object 'OTPlayer -> PriorityAction CastSpell -> Magic' ex st 'Private 'RW m Legality
     , fwd_controllerOf :: forall zone ot. IsZO zone ot => ZO zone ot -> Magic' ex st 'Private 'RO m (Object 'OTPlayer)
@@ -72,13 +72,13 @@ data Fwd' ex st m where
     , -- | RO is ok-ish here because the return type is Void and the game just ends.
       --  It's still a bit of a hack, but it's better than hacking in some Public RW user API.
       fwd_endTheGame :: ex -> Magic' ex st 'Public 'RO m Void
-    , fwd_endTheTurn :: MagicCont' ex st 'Private 'RW m () Void
+    , fwd_endTheTurn :: MagicCont' ex st 'Private 'RW Void m Void
     , fwd_findGraveyardCard :: Object 'OTPlayer -> ZO 'ZGraveyard OTNCard -> Magic' ex st 'Private 'RO m (Maybe AnyCard)
     , fwd_findHandCard :: Object 'OTPlayer -> ZO 'ZHand OTNCard -> Magic' ex st 'Private 'RO m (Maybe AnyCard)
     , fwd_findLibraryCard :: Object 'OTPlayer -> ZO 'ZLibrary OTNCard -> Magic' ex st 'Private 'RO m (Maybe AnyCard)
     , fwd_findPermanent :: ZO 'ZBattlefield OTNPermanent -> Magic' ex st 'Private 'RO m (Maybe Permanent)
     , fwd_findPlayer :: Object 'OTPlayer -> Magic' ex st 'Private 'RO m (Maybe Player)
-    , fwd_gainPriority :: Object 'OTPlayer -> Magic' ex st 'Private 'RW m ()
+    , fwd_gainPriority :: Object 'OTPlayer -> MagicCont' ex st 'Private 'RW Void m ()
     , fwd_getActivePlayer :: Magic' ex st 'Public 'RO m (Object 'OTPlayer)
     , fwd_getAlivePlayers :: Magic' ex st 'Public 'RO m [Object 'OTPlayer]
     , fwd_getAlivePlayerCount :: Magic' ex st 'Public 'RO m PlayerCount
@@ -103,7 +103,7 @@ data Fwd' ex st m where
     , fwd_removeHandCard :: Object 'OTPlayer -> ZO 'ZHand OTNCard -> Magic' ex st 'Private 'RW m (Maybe AnyCard)
     , fwd_removeLibraryCard :: Object 'OTPlayer -> ZO 'ZLibrary OTNCard -> Magic' ex st 'Private 'RW m (Maybe AnyCard)
     , fwd_resolveElected :: forall ot. IsOTN ot => ZO 'ZStack OT0 -> Elected 'Pre ot -> Magic' ex st 'Private 'RW m ResolveElected
-    , fwd_resolveTopOfStack :: MagicCont' ex st 'Private 'RW m () Void
+    , fwd_resolveTopOfStack :: MagicCont' ex st 'Private 'RW Void m ()
     , fwd_rewindIllegal :: Magic' ex st 'Private 'RW m Legality -> Magic' ex st 'Private 'RW m Bool
     , fwd_rewindIllegalActivation :: Magic' ex st 'Private 'RW m ActivateResult -> Magic' ex st 'Private 'RW m ActivateResult
     , fwd_rewindNothing :: forall a. Magic' ex st 'Private 'RW m (Maybe a) -> Magic' ex st 'Private 'RW m (Maybe a)

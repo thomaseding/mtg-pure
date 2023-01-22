@@ -7,15 +7,19 @@
 module MtgPure.Engine.Monad (
   Magic',
   MagicCont',
+  Continuation',
+  PriorityEnd,
   CallFrameId,
   CallFrameInfo (..),
+  HasEnvLogCall (..),
   EnvLogCall (..),
   runMagicRO,
   runMagicRW,
   runMagicCont',
   magicThrow,
   magicCatch,
-  magicCont,
+  magicContBail,
+  magicMapBail,
   modify,
   put,
   get,
@@ -35,7 +39,6 @@ module MtgPure.Engine.Monad (
   logCallUnwind',
 ) where
 
-import safe qualified Control.Monad as M
 import safe Control.Monad.Access (
   AccessM (runAccessM),
   IsReadWrite (..),
@@ -46,12 +49,13 @@ import safe Control.Monad.Access (
 import safe qualified Control.Monad.Access as Access
 import safe qualified Control.Monad.State.Strict as State
 import safe Control.Monad.Trans (MonadIO (..), MonadTrans (..))
-import safe Control.Monad.Trans.Except (ExceptT (ExceptT), catchE, runExceptT, throwE)
+import safe Control.Monad.Trans.Except (ExceptT (ExceptT), catchE, runExceptT, throwE, withExceptT)
 import safe Control.Monad.Util (untilJust)
 import safe Data.Function (on)
 import safe Data.Kind (Type)
 import safe Data.Maybe (listToMaybe)
 import safe Data.Typeable (Typeable)
+import safe Data.Void (Void)
 
 type CallFrameId = Int
 
@@ -131,21 +135,32 @@ instance (IsReadWrite rw, MonadIO m) => MonadIO (Magic' ex st v rw m) where
     SRO -> MagicRO . liftIO
     SRW -> MagicRW . liftIO
 
-type MagicEx' ex st ex' v rw m = ExceptT ex' (Magic' ex st v rw m)
+type MagicEsc ex st esc v rw m = ExceptT esc (Magic' ex st v rw m)
 
-newtype MagicCont' ex st v rw m a b = MagicCont'
-  { unMagicCont' :: MagicEx' ex st (Magic' ex st v rw m a) v rw m b
+type PriorityEnd = Either Void ()
+
+type Continuation' ex st v rw bail m = MagicCont' ex st v rw bail m bail
+
+type MagicContInner ex st v rw bail m a = MagicEsc ex st (Continuation' ex st v rw bail m) v rw m a
+
+newtype MagicCont' ex st v rw bail m a = MagicCont
+  { unMagicCont :: MagicContInner ex st v rw bail m a
   }
-  deriving (Functor)
 
-instance (IsReadWrite rw, Monad m) => Applicative (MagicCont' ex st v rw m a) where
-  pure = MagicCont' . pure
-  MagicCont' f <*> MagicCont' a = MagicCont' $ f <*> a
+class (IsReadWrite rw, Monad m) => HasEnvLogCall ex st rw m where
+  theEnvLogCall :: EnvLogCall ex st v rw m
 
-instance (IsReadWrite rw, Monad m) => Monad (MagicCont' ex st v rw m a) where
-  MagicCont' a >>= f = MagicCont' $ a >>= unMagicCont' . f
+instance HasEnvLogCall ex st rw m => Functor (MagicCont' ex st v rw bail m) where
+  fmap f = MagicCont . fmap f . unMagicCont
 
-instance (IsReadWrite rw, MonadIO m) => MonadIO (MagicCont' ex st v rw m a) where
+instance HasEnvLogCall ex st rw m => Applicative (MagicCont' ex st v rw bail m) where
+  pure = MagicCont . pure
+  MagicCont f <*> MagicCont a = MagicCont $ f <*> a
+
+instance HasEnvLogCall ex st rw m => Monad (MagicCont' ex st v rw bail m) where
+  MagicCont a >>= f = MagicCont $ a >>= unMagicCont . f
+
+instance (HasEnvLogCall ex st rw m, MonadIO m) => MonadIO (MagicCont' ex st v rw bail m) where
   liftIO = liftCont . liftIO
 
 magicThrow :: Monad m => ex -> Magic' ex st 'Private 'RW m b
@@ -160,8 +175,15 @@ magicCatch (MagicRW m) f = MagicRW $ catchE m $ unMagicRW . f
 
 -- | NOTE: This hijacks the current continuation.
 -- Use `liftCont` instead of this if you need to preserve the current continuation.
-magicCont :: Monad m => Magic' ex st 'Private 'RW m a -> MagicCont' ex st 'Private 'RW m a b
-magicCont = MagicCont' . throwE
+magicContBail :: HasEnvLogCall ex st rw m => MagicCont' ex st v rw bail m bail -> MagicCont' ex st v rw bail m a
+magicContBail = MagicCont . throwE
+
+magicMapBail ::
+  Monad m =>
+  (Continuation' ex st v rw bail m -> Continuation' ex st v rw bail' m) ->
+  MagicCont' ex st v rw bail m a ->
+  MagicCont' ex st v rw bail' m a
+magicMapBail f (MagicCont m) = MagicCont $ withExceptT f m
 
 runMagicRO :: Monad m => st -> Magic' ex st v 'RO m a -> m a
 runMagicRO st (MagicRO accessM) =
@@ -183,38 +205,46 @@ sanityCheckCallStackState (a, st) = case st == emptyLogCallState of
   True -> a
   False -> error "corrupt call stack"
 
-runMagicEx' ::
+runMagicEsc ::
   (IsReadWrite rw, Monad m) =>
   EnvLogCall ex st v rw m ->
-  (Either ex' a -> b) ->
-  MagicEx' ex st ex' v rw m a ->
+  (Either esc a -> b) ->
+  MagicEsc ex st esc v rw m a ->
   Magic' ex st v rw m b
-runMagicEx' env f action = do
-  top <- logCallTop
-  eitherR <- runExceptT action
-  case eitherR of
-    Left{} -> logCallUnwind' env $ fmap callFrameId top
-    Right{} -> do
-      top' <- logCallTop
-      case on (==) (fmap callFrameId) top top' of
-        True -> pure ()
-        False -> envLogCallCorruptCallStackLogging env
-  pure $ f eitherR
+runMagicEsc _env f action = do
+  f <$> runExceptT action
+
+runMagicContBail ::
+  (IsReadWrite rw, Monad m) =>
+  Maybe CallFrameInfo ->
+  EnvLogCall ex st v rw m ->
+  MagicCont' ex st v rw bail m bail ->
+  Magic' ex st v rw m bail
+runMagicContBail top env (MagicCont m) = do
+  logCallUnwind' env $ callFrameId <$> top
+  runMagicEsc env id m >>= \case
+    Left m' -> runMagicContBail top env m'
+    Right x -> pure x
 
 runMagicCont' ::
   (IsReadWrite rw, Monad m) =>
   EnvLogCall ex st v rw m ->
-  (Either a b -> c) ->
-  MagicCont' ex st v rw m a b ->
-  Magic' ex st v rw m c
-runMagicCont' env f = M.join . runMagicEx' env g . unMagicCont'
- where
-  g = \case
-    Left cont -> f . Left <$> cont
-    Right b -> pure $ f $ Right b
+  MagicCont' ex st v rw bail m a ->
+  Magic' ex st v rw m (Either bail a)
+runMagicCont' env (MagicCont m) = do
+  top <- logCallTop
+  result <-
+    runMagicEsc env id m >>= \case
+      Left m' -> Left <$> runMagicContBail top env m'
+      Right x -> pure $ Right x
+  top' <- logCallTop
+  case on (==) (fmap callFrameId) top top' of
+    True -> pure ()
+    False -> envLogCallCorruptCallStackLogging env
+  pure result
 
-liftCont :: (IsReadWrite rw, Monad m) => Magic' ex st v rw m b -> MagicCont' ex st v rw m a b
-liftCont = MagicCont' . lift
+liftCont :: (IsReadWrite rw, Monad m) => Magic' ex st v rw m a -> MagicCont' ex st v rw bail m a
+liftCont = MagicCont . lift
 
 internalLiftCallStackState ::
   forall ex st v rw m a.
@@ -332,8 +362,9 @@ logCallUnwind' env top =
       False -> do
         success <- logCallPop' env
         case success of
-          Nothing -> error $ show "CorruptCallStackLogging"
-          Just _ -> pure Nothing
+          Nothing -> envLogCallCorruptCallStackLogging env
+          Just _ -> pure ()
+        pure Nothing
 
 logCallPush' :: (IsReadWrite rw, Monad m) => EnvLogCall ex st v rw m -> String -> Magic' ex st v rw m CallFrameInfo
 logCallPush' env name = do

@@ -80,7 +80,7 @@ startGame = logCall 'startGame do
   pure () -- (103.6) TODO: planechase stuff
 
   -- NOTE: MagicCont is appropriate in order to nicely support cards like [Stasis] and [Time Stop]
-  runMagicCont (either id id) untapStep
+  either id id <$> runMagicCont untapStep
 
 -- (103.1)
 determineStartingPlayer :: Monad m => Magic 'Private 'RW m ()
@@ -118,9 +118,9 @@ drawStartingHand oPlayer = logCall 'drawStartingHand do
   player <- fromRO $ getPlayer oPlayer
   M.void $ enact Nothing $ DrawCards (oToZO1 oPlayer) $ playerStartingHandSize player
 
-setPhaseStep :: PhaseStep -> Monad m => MagicCont 'Private 'RW m Void ()
+setPhaseStep :: PhaseStep -> Monad m => Magic 'Private 'RW m ()
 setPhaseStep phaseStep = logCall 'setPhaseStep do
-  liftCont $ modify \st -> st{magicPhaseStep = phaseStep}
+  modify \st -> st{magicPhaseStep = phaseStep}
 
 -- NOTE: This hangs if there are not enough unique items.
 takeUnique :: Eq a => Int -> Stream.Stream a -> [a]
@@ -134,8 +134,8 @@ takeUnique n s = case n <= 0 of
 mkAPNAP :: PlayerCount -> Stream.Stream (Object 'OTPlayer) -> Stream.Stream (Object 'OTPlayer)
 mkAPNAP (PlayerCount n) = Stream.cycle . takeUnique n
 
-advanceTurnState :: Monad m => Magic 'Private 'RW m ()
-advanceTurnState = logCall 'advanceTurnState do
+advanceStateForNewTurn :: Monad m => Magic 'Private 'RW m ()
+advanceStateForNewTurn = logCall 'advanceStateForNewTurn do
   n <- fromPublicRO getAlivePlayerCount
   ps <- fromRO $ gets $ Stream.tail . magicPlayerOrderTurn
   modify \st ->
@@ -148,25 +148,24 @@ advanceTurnState = logCall 'advanceTurnState do
         }
 
 -- (502)
-untapStep :: Monad m => MagicCont 'Private 'RW m Void Void
-untapStep = do
-  logCall 'untapStep do
+untapStep :: Monad m => MagicCont 'Private 'RW Void m Void
+untapStep = M.join $ logCall 'untapStep do
+  liftCont do
     setPhaseStep $ PSBeginningPhase UntapStep
-    liftCont do
-      advanceTurnState
-      oPlayer <- fromPublicRO getActivePlayer
-      do
-        player <- fromRO $ getPlayer oPlayer
-        setPlayer oPlayer player{playerLandsPlayedThisTurn = 0}
-      do
-        zos <- fromPublicRO $ allControlledPermanentsOf oPlayer
-        eachLogged_ zos togglePermanentPhase -- (502.1)
-      pure () -- (502.2) TODO: day/night
-      do
-        zos <- fromPublicRO $ allControlledPermanentsOf oPlayer
-        eachLogged_ zos $ M.void . enact Nothing . Untap -- (502.3) TODO: fine-grained untapping
-      pure () -- (502.4) Rule states that players can't get priority, so nothing to do here.
-  upkeepStep
+    advanceStateForNewTurn
+    oPlayer <- fromPublicRO getActivePlayer
+    do
+      player <- fromRO $ getPlayer oPlayer
+      setPlayer oPlayer player{playerLandsPlayedThisTurn = 0}
+    do
+      zos <- fromPublicRO $ allControlledPermanentsOf oPlayer
+      eachLogged_ zos togglePermanentPhase -- (502.1)
+    pure () -- (502.2) TODO: day/night
+    do
+      zos <- fromPublicRO $ allControlledPermanentsOf oPlayer
+      eachLogged_ zos $ M.void . enact Nothing . Untap -- (502.3) TODO: fine-grained untapping
+    pure () -- (502.4) Rule states that players can't get priority, so nothing to do here.
+  pure upkeepStep
 
 -- TODO: Make this an Effect constructor
 togglePermanentPhase :: Monad m => ZO 'ZBattlefield OTNPermanent -> Magic 'Private 'RW m ()
@@ -181,80 +180,73 @@ togglePermanentPhase oPerm = do
             PhasedOut -> PhasedIn
         }
 
-upkeepStep :: Monad m => MagicCont 'Private 'RW m Void Void
-upkeepStep = do
-  logCall 'upkeepStep do
+upkeepStep :: Monad m => MagicCont 'Private 'RW Void m Void
+upkeepStep = M.join $ logCall 'upkeepStep do
+  liftCont do
     setPhaseStep $ PSBeginningPhase UpkeepStep
-    liftCont do
-      oActive <- fromPublicRO getActivePlayer
-      gainPriority oActive
-  drawStep
+  oActive <- liftCont $ fromPublicRO getActivePlayer
+  gainPriority oActive
+  pure drawStep
 
-drawStep :: Monad m => MagicCont 'Private 'RW m Void Void
-drawStep = do
-  logCall 'drawStep do
+drawStep :: Monad m => MagicCont 'Private 'RW Void m Void
+drawStep = M.join $ logCall 'drawStep do
+  oActive <- liftCont $ fromPublicRO getActivePlayer
+  liftCont do
     setPhaseStep $ PSBeginningPhase DrawStep
-    liftCont do
-      st <- fromRO get
-      oActive <- fromPublicRO getActivePlayer
-      case magicCurrentTurn st of
-        1 -> pure () -- (103.7.*) TODO: this needs to account for game format
-        _ -> M.void $ enact Nothing $ DrawCards (oToZO1 oActive) 1
-      gainPriority oActive
-  precombatMainPhase
+    st <- fromRO get
+    case magicCurrentTurn st of
+      1 -> pure () -- (103.7.*) TODO: this needs to account for game format
+      _ -> M.void $ enact Nothing $ DrawCards (oToZO1 oActive) 1
+  gainPriority oActive
+  pure precombatMainPhase
 
-precombatMainPhase :: Monad m => MagicCont 'Private 'RW m Void Void
-precombatMainPhase = do
-  logCall 'precombatMainPhase do
+precombatMainPhase :: Monad m => MagicCont 'Private 'RW Void m Void
+precombatMainPhase = M.join $ logCall 'precombatMainPhase do
+  liftCont do
     setPhaseStep PSPreCombatMainPhase
-    liftCont mainPhaseCommon
-  beginningOfCombatStep
+  mainPhaseCommon
+  pure beginningOfCombatStep
 
-postcombatMainPhase :: Monad m => MagicCont 'Private 'RW m Void Void
-postcombatMainPhase = do
-  logCall 'postcombatMainPhase do
+postcombatMainPhase :: Monad m => MagicCont 'Private 'RW Void m Void
+postcombatMainPhase = M.join $ logCall 'postcombatMainPhase do
+  liftCont do
     setPhaseStep PSPostCombatMainPhase
-    liftCont mainPhaseCommon
-  endStep
+  mainPhaseCommon
+  pure endStep
 
 -- (505)
-mainPhaseCommon :: Monad m => Magic 'Private 'RW m ()
+mainPhaseCommon :: Monad m => MagicCont 'Private 'RW Void m ()
 mainPhaseCommon = logCall 'mainPhaseCommon do
   pure () -- (505.1) Rule just states nomenclature. Nothing special to do
   pure () -- (505.2) Rule just states this phase has no steps
   pure () -- (505.3) TODO: Archenemy
   pure () -- (505.4) TODO: Sage lore counters
-  oActive <- fromPublicRO getActivePlayer
+  oActive <- liftCont $ fromPublicRO getActivePlayer
   gainPriority oActive
 
-beginningOfCombatStep :: Monad m => MagicCont 'Private 'RW m Void Void
-beginningOfCombatStep = do
-  logCall 'beginningOfCombatStep do
-    setPhaseStep $ PSCombatPhase BeginningOfCombatStep
-    pure () -- TODO: in multiplayer, choose defending player
-    liftCont do
-      oActive <- fromPublicRO getActivePlayer
-      gainPriority oActive
-  declareAttackersStep
+beginningOfCombatStep :: Monad m => MagicCont 'Private 'RW Void m Void
+beginningOfCombatStep = M.join $ logCall 'beginningOfCombatStep do
+  liftCont $ setPhaseStep $ PSCombatPhase BeginningOfCombatStep
+  pure () -- TODO: in multiplayer, choose defending player
+  oActive <- liftCont $ fromPublicRO getActivePlayer
+  gainPriority oActive
+  pure declareAttackersStep
 
-declareAttackersStep :: Monad m => MagicCont 'Private 'RW m Void Void
-declareAttackersStep = do
-  attackers <- logCall 'declareAttackersStep do
+declareAttackersStep :: Monad m => MagicCont 'Private 'RW Void m Void
+declareAttackersStep = M.join $ logCall 'declareAttackersStep do
+  oActive <- liftCont $ fromPublic $ fromRO getActivePlayer
+  attackers <- liftCont $ do
     setPhaseStep $ PSCombatPhase DeclareAttackersStep
-    pure () -- TODO
-    liftCont $ do
-      prompt <- fromRO $ gets magicPrompt
-      opaque <- fromRO $ gets mkOpaqueGameState
-      oActive <- fromPublic $ fromRO getActivePlayer
-      attackers <- fromPublic $ fromRO do
-        untilJust \attempt -> do
-          attackers <- promptChooseAttackers prompt attempt opaque oActive
-          pure () -- TODO: validate attackers
-          pure () -- TODO: store attackers in game state for Elects and Effects
-          pure $ Just attackers
-      gainPriority oActive
-      pure attackers
-  case NonEmpty.nonEmpty attackers of
+    prompt <- fromRO $ gets magicPrompt
+    opaque <- fromRO $ gets mkOpaqueGameState
+    fromPublic $ fromRO do
+      untilJust \attempt -> do
+        attackers <- promptChooseAttackers prompt attempt opaque oActive
+        pure () -- TODO: validate attackers
+        pure () -- TODO: store attackers in game state for Elects and Effects
+        pure $ Just attackers
+  gainPriority oActive
+  pure case NonEmpty.nonEmpty attackers of
     Just attackers' -> declareBlockersStep attackers'
     Nothing -> endOfCombatStep
 
@@ -272,7 +264,11 @@ getDefendingPlayer = do
 
 type AssignedCombatOrdering = Map.Map (ZO 'ZBattlefield OTNCreature) [ZO 'ZBattlefield OTNCreature]
 
-assignCombatDamageOrder :: Monad m => NonEmpty DeclaredAttacker -> [DeclaredBlocker] -> Magic 'Private 'RW m AssignedCombatOrdering
+assignCombatDamageOrder ::
+  Monad m =>
+  NonEmpty DeclaredAttacker ->
+  [DeclaredBlocker] ->
+  Magic 'Private 'RW m AssignedCombatOrdering
 assignCombatDamageOrder attackers blockers = do
   let attackerToBlockers = mkAttackerToBlockers attackers blockers
   attackerOrderings <- T.for (NonEmpty.toList attackers) \attacker -> do
@@ -306,57 +302,50 @@ attackerToBlockers' blockers = Map.fromListWith (++) $ do
   attacker <- NonEmpty.toList $ declaredBlocker_attackers blocker
   pure (attacker, [declaredBlocker_blocker blocker])
 
-declareBlockersStep :: Monad m => NonEmpty DeclaredAttacker -> MagicCont 'Private 'RW m Void Void
-declareBlockersStep attackers = do
-  ordering <- logCall 'declareBlockersStep do
+declareBlockersStep :: Monad m => NonEmpty DeclaredAttacker -> MagicCont 'Private 'RW Void m Void
+declareBlockersStep attackers = M.join $ logCall 'declareBlockersStep do
+  oActive <- liftCont $ fromPublicRO getActivePlayer
+  ordering <- liftCont do
     setPhaseStep $ PSCombatPhase DeclareBlockersStep
-    liftCont do
-      prompt <- fromRO $ gets magicPrompt
-      opaque <- fromRO $ gets mkOpaqueGameState
-      oDefender <- fromRO getDefendingPlayer
-      blockers <- fromPublic $ fromRO do
-        untilJust \attempt -> do
-          blockers <- promptChooseBlockers prompt attempt opaque oDefender attackers
-          pure () -- TODO: validate blockers
-          pure () -- TODO: store blockers in game state for Elects and Effects
-          pure $ Just blockers
-      oActive <- fromPublicRO getActivePlayer
-      ordering <- assignCombatDamageOrder attackers blockers
-      gainPriority oActive
-      pure ordering
-  combatDamageStep ordering
+    prompt <- fromRO $ gets magicPrompt
+    opaque <- fromRO $ gets mkOpaqueGameState
+    oDefender <- fromRO getDefendingPlayer
+    blockers <- fromPublic $ fromRO do
+      untilJust \attempt -> do
+        blockers <- promptChooseBlockers prompt attempt opaque oDefender attackers
+        pure () -- TODO: validate blockers
+        pure () -- TODO: store blockers in game state for Elects and Effects
+        pure $ Just blockers
+    assignCombatDamageOrder attackers blockers
+  gainPriority oActive
+  pure $ combatDamageStep ordering
 
-combatDamageStep :: Monad m => AssignedCombatOrdering -> MagicCont 'Private 'RW m Void Void
-combatDamageStep ordering = do
-  logCall 'combatDamageStep do
-    setPhaseStep $ PSCombatPhase CombatDamageStep
-    _ <- undefined ordering -- TODO
-    liftCont do
-      oActive <- fromPublicRO getActivePlayer
-      gainPriority oActive
-  endOfCombatStep
+combatDamageStep :: Monad m => AssignedCombatOrdering -> MagicCont 'Private 'RW Void m Void
+combatDamageStep ordering = M.join $ logCall 'combatDamageStep do
+  liftCont $ setPhaseStep $ PSCombatPhase CombatDamageStep
+  _ <- undefined ordering -- TODO
+  oActive <- liftCont $ fromPublicRO getActivePlayer
+  gainPriority oActive
+  pure endOfCombatStep
 
-endOfCombatStep :: Monad m => MagicCont 'Private 'RW m Void Void
-endOfCombatStep = do
-  logCall 'endOfCombatStep do
+endOfCombatStep :: Monad m => MagicCont 'Private 'RW Void m Void
+endOfCombatStep = M.join $ logCall 'endOfCombatStep do
+  liftCont do
     setPhaseStep $ PSCombatPhase EndOfCombatStep
-    liftCont do
-      oActive <- fromPublicRO getActivePlayer
-      gainPriority oActive
-  postcombatMainPhase
+  oActive <- liftCont $ fromPublicRO getActivePlayer
+  gainPriority oActive
+  pure postcombatMainPhase
 
-endStep :: Monad m => MagicCont 'Private 'RW m Void Void
-endStep = do
-  logCall 'endStep do
+endStep :: Monad m => MagicCont 'Private 'RW Void m Void
+endStep = M.join $ logCall 'endStep do
+  liftCont do
     setPhaseStep $ PSEndingPhase EndStep
-    liftCont do
-      oActive <- fromPublicRO getActivePlayer
-      gainPriority oActive
-  cleanupStep
+  oActive <- liftCont $ fromPublicRO getActivePlayer
+  gainPriority oActive
+  pure cleanupStep
 
-cleanupStep :: Monad m => MagicCont 'Private 'RW m Void Void
-cleanupStep = do
-  logCall 'cleanupStep do
-    setPhaseStep $ PSEndingPhase CleanupStep
+cleanupStep :: Monad m => MagicCont 'Private 'RW Void m Void
+cleanupStep = M.join $ logCall 'cleanupStep do
+  liftCont $ setPhaseStep $ PSEndingPhase CleanupStep
   --_ <- undefined
-  untapStep
+  pure untapStep

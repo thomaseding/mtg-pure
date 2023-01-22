@@ -12,6 +12,7 @@ module MtgPure.Engine.State (
   Fwd,
   Magic,
   MagicCont,
+  Continuation,
   queryMagic,
   runMagicCont,
   --
@@ -53,6 +54,7 @@ import safe MtgPure.Engine.Monad (
   CallFrameId,
   CallFrameInfo (callFrameName),
   EnvLogCall (..),
+  HasEnvLogCall (..),
   Magic',
   MagicCont',
   fromPublic,
@@ -211,7 +213,7 @@ data GameResult m = GameResult
 
 type Magic v rw m = Magic' (GameResult m) (GameState m) v rw m
 
-type MagicCont v rw m a = MagicCont' (GameResult m) (GameState m) v rw m a
+type MagicCont v rw bail m a = MagicCont' (GameResult m) (GameState m) v rw bail m a
 
 mkOpaqueGameState :: GameState m -> OpaqueGameState m
 mkOpaqueGameState = OpaqueGameState
@@ -224,10 +226,11 @@ queryMagic opaque = queryMagic' opaque . logCall 'queryMagic
 
 runMagicCont ::
   (IsReadWrite rw, Monad m) =>
-  (Either a b -> c) ->
-  MagicCont v rw m a b ->
-  Magic v rw m c
+  MagicCont v rw bail m a ->
+  Magic v rw m (Either bail a)
 runMagicCont = runMagicCont' envLogCall
+
+type Continuation v rw bail m = MagicCont v rw bail m bail
 
 headlessPrompt :: Monad m => Prompt m
 headlessPrompt =
@@ -264,11 +267,14 @@ withHeadlessPrompt st =
               }
         }
 
+instance (IsReadWrite rw, Monad m) => HasEnvLogCall (GameResult m) (GameState m) rw m where
+  theEnvLogCall = envLogCall
+
 envLogCall :: (IsReadWrite rw, Monad m) => EnvLogCall (GameResult m) (GameState m) v rw m
 envLogCall =
   EnvLogCall
     { envLogCallCorruptCallStackLogging = do
-        pure () -- this introduces enough laziness to not crash strict data field
+        pure () -- this introduces enough laziness to not immediately crash strict data field
         error $ show CorruptCallStackLogging
     , envLogCallPromptPush = \frame -> do
         st <- internalFromPrivate $ fromRO get
@@ -352,23 +358,23 @@ logCallImpl' lift' isRec name action = do
 instance (IsReadWrite rw, Monad m) => LogCall (Magic p rw m z) where
   logCallImpl = logCallImpl' id
 
-instance (IsReadWrite rw, Monad m) => LogCall (MagicCont p rw m y z) where
+instance (IsReadWrite rw, Monad m) => LogCall (MagicCont p rw bail m z) where
   logCallImpl = logCallImpl' liftCont
 
 instance (IsReadWrite rw, Monad m) => LogCall (a -> Magic p rw m z) where
   logCallImpl isRec name action a = logCallImpl isRec name $ action a
 
-instance (IsReadWrite rw, Monad m) => LogCall (a -> MagicCont p rw m y z) where
+instance (IsReadWrite rw, Monad m) => LogCall (a -> MagicCont p rw bail m z) where
   logCallImpl isRec name action a = logCallImpl isRec name $ action a
 
 instance (IsReadWrite rw, Monad m) => LogCall (a -> b -> Magic p rw m z) where
   logCallImpl isRec name action a b = logCallImpl isRec name $ action a b
 
-instance (IsReadWrite rw, Monad m) => LogCall (a -> b -> MagicCont p rw m y z) where
+instance (IsReadWrite rw, Monad m) => LogCall (a -> b -> MagicCont p rw bail m z) where
   logCallImpl isRec name action a b = logCallImpl isRec name $ action a b
 
 instance (IsReadWrite rw, Monad m) => LogCall (a -> b -> c -> Magic p rw m z) where
   logCallImpl isRec name action a b c = logCallImpl isRec name $ action a b c
 
-instance (IsReadWrite rw, Monad m) => LogCall (a -> b -> c -> MagicCont p rw m y z) where
+instance (IsReadWrite rw, Monad m) => LogCall (a -> b -> c -> MagicCont p rw bail m z) where
   logCallImpl isRec name action a b c = logCallImpl isRec name $ action a b c
