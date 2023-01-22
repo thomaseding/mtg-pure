@@ -31,7 +31,7 @@ import safe Data.Kind (Type)
 import safe Data.List.NonEmpty (NonEmpty (..))
 import safe qualified Data.List.NonEmpty as NonEmpty
 import safe qualified Data.Map.Strict as Map
-import Data.Monoid (First (..))
+import safe Data.Monoid (First (..))
 import safe Data.Read.Sep (Tuple (..), TupleList (..))
 import safe Data.Read.Symbol (CI, CS, Many1, Or)
 import safe qualified Data.Set as Set
@@ -73,10 +73,9 @@ import safe MtgPure.Model.Deck (Deck (..))
 import safe MtgPure.Model.Hand (Hand (..))
 import safe MtgPure.Model.Library (Library (..))
 import safe MtgPure.Model.Mana.Mana (Mana (..))
+import safe MtgPure.Model.Mana.ManaCost (DynamicManaCost (..))
 import safe MtgPure.Model.Mana.ManaPool (CompleteManaPool)
 import safe MtgPure.Model.Mana.ManaSymbol (ManaSymbol (..))
-import safe MtgPure.Model.Mana.ManaType (ManaType (..))
-import safe MtgPure.Model.Mana.Snow (Snow (..))
 import safe MtgPure.Model.Mana.ToManaPool (toCompleteManaPool)
 import safe MtgPure.Model.Mulligan (Mulligan (..))
 import safe MtgPure.Model.Object.OTNAliases (
@@ -179,7 +178,7 @@ gameInput decks =
           , promptGetStartingPlayer = \_attempt _count -> pure $ PlayerIndex 0
           , promptLogCallPop = consoleLogCallPop
           , promptLogCallPush = consoleLogCallPush
-          , promptPayGeneric = consolePromptPayGeneric
+          , promptPayDynamicMana = consolePromptPayDynamicMana
           , promptPerformMulligan = \_attempt _p _hand -> pure False
           , promptPickZO = consolePickZo
           , promptPriorityAction = consolePriorityAction
@@ -450,15 +449,20 @@ getPriorityInfo opaque oPlayer = queryMagic opaque do
   turnNumber <- internalFromPrivate $ gets magicCurrentTurn
   pure $ show oPlayer ++ " " ++ prettyPhaseStep phaseStep ++ " Turn" ++ show turnNumber
 
-consolePromptPayGeneric ::
+consolePromptPayDynamicMana ::
   Attempt ->
   OpaqueGameState Console ->
   Object 'OTPlayer ->
-  Mana 'NoVar 'NonSnow 'MTGeneric ->
+  DynamicManaCost 'NoVar ->
   Magic 'Public 'RO Console CompleteManaPool
-consolePromptPayGeneric attempt opaque oPlayer generic = M.lift do
+consolePromptPayDynamicMana attempt opaque oPlayer dyn = M.lift do
   (pool, text) <- queryMagic opaque do
-    let Mana x = generic
+    let DynamicManaCost
+          { costGeneric = generic
+          , costSnow = _snow
+          , costHybridBG = _bg
+          } = dyn
+        Mana x = generic
     liftIO case attempt of
       Attempt 0 -> pure ()
       Attempt n -> putStrLn $ "Retrying[" ++ show n ++ "]..."

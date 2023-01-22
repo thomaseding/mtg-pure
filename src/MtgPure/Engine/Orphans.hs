@@ -11,6 +11,7 @@
 
 module MtgPure.Engine.Orphans (
   mapManaCost,
+  mapManaPool,
 ) where
 
 import safe Control.Monad.Writer.Strict (Writer, execWriter, tell)
@@ -38,7 +39,7 @@ import safe MtgPure.Model.Land (Land (..))
 import safe MtgPure.Model.Library (Library (..))
 import safe MtgPure.Model.Life (Life (..))
 import safe MtgPure.Model.Mana.Mana (IsManaNoVar, Mana (..))
-import safe MtgPure.Model.Mana.ManaCost (ManaCost (ManaCost'))
+import safe MtgPure.Model.Mana.ManaCost (DynamicManaCost (..), ManaCost (ManaCost'))
 import safe MtgPure.Model.Mana.ManaPool (CompleteManaPool (..), ManaPool (..))
 import safe MtgPure.Model.Mana.Snow (IsSnow)
 import safe MtgPure.Model.Permanent (Permanent (..))
@@ -89,8 +90,8 @@ mapManaCost ::
   ) ->
   ManaCost var ->
   ManaCost var'
-mapManaCost f (ManaCost' w u b r g c x s bg) =
-  ManaCost' (f w) (f u) (f b) (f r) (f g) (f c) (f x) (f s) (f bg)
+mapManaCost f (ManaCost' w u b r g c (DynamicManaCost x s bg)) =
+  ManaCost' (f w) (f u) (f b) (f r) (f g) (f c) $ DynamicManaCost (f x) (f s) (f bg)
 
 mapManaCost2 ::
   ( forall snow color.
@@ -104,8 +105,8 @@ mapManaCost2 ::
   ManaCost var'
 mapManaCost2
   f
-  (ManaCost' w1 u1 b1 r1 g1 c1 x1 s1 bg1)
-  (ManaCost' w2 u2 b2 r2 g2 c2 x2 s2 bg2) =
+  (ManaCost' w1 u1 b1 r1 g1 c1 (DynamicManaCost x1 s1 bg1))
+  (ManaCost' w2 u2 b2 r2 g2 c2 (DynamicManaCost x2 s2 bg2)) =
     ManaCost'
       (f w1 w2)
       (f u1 u2)
@@ -113,33 +114,34 @@ mapManaCost2
       (f r1 r2)
       (f g1 g2)
       (f c1 c2)
-      (f x1 x2)
-      (f s1 s2)
-      (f bg1 bg2)
+      $ DynamicManaCost
+        (f x1 x2)
+        (f s1 s2)
+        (f bg1 bg2)
 
 mapManaPool ::
-  IsSnow snow =>
+  (IsSnow snow, IsSnow snow') =>
   ( forall color.
     IsManaNoVar snow color =>
     Mana 'NoVar snow color ->
-    Mana 'NoVar snow color
+    Mana 'NoVar snow' color
   ) ->
   ManaPool snow ->
-  ManaPool snow
+  ManaPool snow'
 mapManaPool f (ManaPool w u b r g c) =
   ManaPool (f w) (f u) (f b) (f r) (f g) (f c)
 
 mapManaPool2 ::
-  IsSnow snow =>
+  (IsSnow snow, IsSnow snow') =>
   ( forall color.
     IsManaNoVar snow color =>
     Mana 'NoVar snow color ->
     Mana 'NoVar snow color ->
-    Mana 'NoVar snow color
+    Mana 'NoVar snow' color
   ) ->
   ManaPool snow ->
   ManaPool snow ->
-  ManaPool snow
+  ManaPool snow'
 mapManaPool2
   f
   (ManaPool w1 u1 b1 r1 g1 c1)
@@ -237,7 +239,7 @@ instance Num (ManaCost 'NoVar) where
   abs = mapManaCost abs
   signum = mapManaCost signum
   negate = mapManaCost negate
-  fromInteger x = ManaCost' 0 0 0 0 0 0 (fromInteger x) 0 0
+  fromInteger x = ManaCost' 0 0 0 0 0 0 $ DynamicManaCost (fromInteger x) 0 0
 
 instance ForceVars (ManaCost var) (ManaCost 'NoVar) where
   forceVars = mapManaCost forceVars

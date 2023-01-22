@@ -30,17 +30,22 @@ import safe MtgPure.Engine.Fwd.Api (
  )
 import safe MtgPure.Engine.Legality (Legality (..), toLegality)
 import safe MtgPure.Engine.Monad (fromPublic, fromRO, gets)
-import safe MtgPure.Engine.Orphans (mapManaCost)
+import safe MtgPure.Engine.Orphans (mapManaPool)
 import safe MtgPure.Engine.Prompt (Prompt' (..), SourceZO (..))
-import safe MtgPure.Engine.State (GameState (..), Magic, logCall, mkOpaqueGameState)
+import safe MtgPure.Engine.State (
+  GameState (..),
+  Magic,
+  logCall,
+  mkOpaqueGameState,
+ )
 import safe MtgPure.Model.Combinators (isTapped)
 import safe MtgPure.Model.Life (Life (..))
 import safe MtgPure.Model.Mana.CountMana (countMana)
-import safe MtgPure.Model.Mana.Mana (IsManaNoVar, Mana (..), litMana)
-import safe MtgPure.Model.Mana.ManaCost (ManaCost (..))
+import safe MtgPure.Model.Mana.Mana (IsManaNoVar, Mana (..), thawMana)
+import safe MtgPure.Model.Mana.ManaCost (DynamicManaCost (..), ManaCost (..))
 import safe MtgPure.Model.Mana.ManaPool (CompleteManaPool (..), ManaPool (..))
-import safe MtgPure.Model.Mana.Snow (IsSnow)
-import safe MtgPure.Model.Mana.ToManaCost (toManaCost)
+import safe MtgPure.Model.Mana.Snow (IsSnow, Snow (..))
+import safe MtgPure.Model.Mana.ToManaPool (toCompleteManaPool)
 import safe MtgPure.Model.Object.Object (Object)
 import safe MtgPure.Model.Object.ObjectN_ (ObjectN' (..))
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
@@ -54,7 +59,15 @@ import safe MtgPure.Model.ZoneObject.Convert (oToZO1, toZO0, zo0ToPermanent)
 import safe MtgPure.Model.ZoneObject.ZoneObject (IsZO, ZoneObject (..))
 
 pay :: Monad m => Object 'OTPlayer -> Cost ot -> Magic 'Private 'RW m Legality
-pay oPlayer = logCall 'pay \case
+pay oPlayer = logCall 'pay do
+  -- TODO: allow player to activate mana abilities iff the payment requires a mana cost.
+  -- Prolly actually should be done on each mana payment attempt instead of ahead of time,
+  -- since it might require user elections that have not yet been determined, including branching choices.
+  pure ()
+  payRec oPlayer
+
+payRec :: Monad m => Object 'OTPlayer -> Cost ot -> Magic 'Private 'RW m Legality
+payRec oPlayer = logCall 'payRec \case
   AndCosts costs -> payAndCosts oPlayer costs
   CostCase{} -> undefined
   DiscardRandomCost{} -> undefined
@@ -76,6 +89,25 @@ class FindMana manas var | manas -> var where
     ) ->
     Maybe x
 
+instance FindMana (ManaCost 'NoVar) 'NoVar where
+  findMana cost f =
+    getFirst $
+      mconcat $
+        map
+          First
+          [ f $ costWhite cost
+          , f $ costBlue cost
+          , f $ costBlack cost
+          , f $ costRed cost
+          , f $ costGreen cost
+          , f $ costColorless cost
+          , f $ costGeneric dyn
+          , f $ costSnow dyn
+          , f $ costHybridBG dyn
+          ]
+   where
+    dyn = costDynamic cost
+
 instance IsSnow snow => FindMana (ManaPool snow) 'NoVar where
   findMana (ManaPool w u b r g c) f =
     getFirst $ mconcat $ map First [f w, f u, f b, f r, f g, f c]
@@ -96,49 +128,83 @@ payLife oPlayer life = logCall 'payLife do
           setPlayer oPlayer $ player{playerLife = life'}
           pure Legal
 
--- TODO: snow costs and snow payments
+hasEnoughFixedMana :: CompleteManaPool -> ManaCost 'NoVar -> Bool
+hasEnoughFixedMana completePool cost = isManaNonNegative pool
+ where
+  nonSnow = poolNonSnow completePool
+  snow = poolSnow completePool
+  pool = (nonSnow <> mapManaPool thawMana snow) - extractFixedPayment' cost
+
+isManaNonNegative :: FindMana manas 'NoVar => manas -> Bool
+isManaNonNegative pool = case findMana pool isBad of
+  Nothing -> True
+  Just () -> False
+ where
+  isBad mana = case mana < 0 of
+    True -> Just ()
+    False -> Nothing
+
+extractFixedPayment :: ManaCost 'NoVar -> CompleteManaPool
+extractFixedPayment = toCompleteManaPool . extractFixedPayment'
+
+extractFixedPayment' :: ManaCost 'NoVar -> ManaPool 'NonSnow
+extractFixedPayment' cost = ManaPool w u b r g c
+ where
+  w = costWhite cost
+  u = costBlue cost
+  b = costBlack cost
+  r = costRed cost
+  g = costGreen cost
+  c = costColorless cost
+
+-- TODO: Auto pay generic costs when there is only one solution.
+-- TODO: Auto pay snow costs when there is only one solution.
+-- TODO: Auto pay hybrid costs when there is only one solution.
+-- TODO: Auto pay phyrexian costs when there is only one solution.
+promptPayForDynamic ::
+  Monad m =>
+  Object 'OTPlayer ->
+  CompleteManaPool ->
+  DynamicManaCost 'NoVar ->
+  Magic 'Private 'RW m CompleteManaPool
+promptPayForDynamic oPlayer avail dyn = do
+  prompt <- fromRO $ gets magicPrompt
+  opaque <- fromRO $ gets mkOpaqueGameState
+  untilJust \attempt -> do
+    payment <- fromPublic $ fromRO $ promptPayDynamicMana prompt attempt opaque oPlayer dyn
+    case isPaymentCompatible payment dyn of
+      False -> pure Nothing
+      True -> case isManaNonNegative $ avail - payment of
+        False -> pure Nothing
+        True -> pure $ Just payment
+
+-- TODO: Handle snow costs
+-- TODO: Handle colored hybrid costs
+-- TODO: Handle X2 hybrid costs
+-- TODO: Handle phyrexian costs
+isPaymentCompatible :: CompleteManaPool -> DynamicManaCost 'NoVar -> Bool
+isPaymentCompatible payment dyn = countMana payment == countMana dyn
+
 payManaCost :: Monad m => Object 'OTPlayer -> ManaCost 'Var -> Magic 'Private 'RW m Legality
 payManaCost oPlayer (forceVars -> cost) = logCall 'payManaCost do
   fromRO (findPlayer oPlayer) >>= \case
     Nothing -> pure Illegal
     Just player -> do
-      let pool = poolNonSnow $ playerMana player
-          w = poolWhite pool - costWhite cost
-          u = poolBlue pool - costBlue cost
-          b = poolBlack pool - costBlack cost
-          r = poolRed pool - costRed cost
-          g = poolGreen pool - costGreen cost
-          c = poolColorless pool - costColorless cost
-          pool' = ManaPool w u b r g c
-          isBad mana = case mana < 0 of
-            True -> Just ()
-            False -> Nothing
-      case findMana pool' isBad of
-        Just () -> pure Illegal
-        Nothing -> do
-          let avail = countMana pool'
-              generic = countMana $ costGeneric cost
-              generic' = Mana generic
-          case generic > avail of
+      let pool = playerMana player
+      case hasEnoughFixedMana pool cost of
+        False -> pure Illegal
+        True -> do
+          let fixedPayment = extractFixedPayment cost
+              avail = pool - fixedPayment
+              dyn = costDynamic cost
+          case countMana dyn > countMana avail of
             True -> pure Illegal
             False -> do
-              payment <- case generic of
+              dynPayment <- case countMana dyn of
                 0 -> pure mempty
-                _ -> do
-                  prompt <- fromRO $ gets magicPrompt
-                  opaque <- fromRO $ gets mkOpaqueGameState
-                  untilJust \attempt -> do
-                    fullPayment <- fromPublic $ fromRO $ promptPayGeneric prompt attempt opaque oPlayer generic'
-                    case countMana fullPayment == generic of
-                      False -> pure Nothing
-                      True -> do
-                        let cost' = cost{costGeneric = mempty} <> forceVars (toManaCost fullPayment)
-                        legality <- payManaCost oPlayer $ mapManaCost litMana cost'
-                        case legality of
-                          Illegal -> pure Nothing
-                          Legal -> pure $ Just fullPayment
-              let pool'' = pool' - poolNonSnow payment
-              setPlayer oPlayer player{playerMana = (playerMana player){poolNonSnow = pool''}}
+                _ -> promptPayForDynamic oPlayer avail dyn
+              let pool' = pool - fixedPayment - dynPayment
+              setPlayer oPlayer player{playerMana = pool'}
               pure Legal
 
 paySacrificeCost ::
@@ -189,7 +255,7 @@ payAndCosts :: Monad m => Object 'OTPlayer -> [Cost ot] -> Magic 'Private 'RW m 
 payAndCosts oPlayer = logCall 'payAndCosts \case
   [] -> pure Legal
   cost : costs ->
-    pay oPlayer cost >>= \case
+    payRec oPlayer cost >>= \case
       Illegal -> pure Illegal
       Legal -> payAndCosts oPlayer costs
 
@@ -197,6 +263,6 @@ payOrCosts :: Monad m => Object 'OTPlayer -> [Cost ot] -> Magic 'Private 'RW m L
 payOrCosts oPlayer = logCall 'payOrCosts \case
   [] -> pure Illegal
   cost : _costs ->
-    pay oPlayer cost >>= \case
+    payRec oPlayer cost >>= \case
       Legal -> pure Legal -- TODO: Offer other choices
       Illegal -> undefined

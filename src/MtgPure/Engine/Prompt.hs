@@ -47,9 +47,10 @@ import safe MtgPure.Engine.Monad (CallFrameInfo)
 import safe MtgPure.Engine.Orphans.ZO ()
 import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.Mana.Mana (Mana)
+import safe MtgPure.Model.Mana.ManaCost (DynamicManaCost)
 import safe MtgPure.Model.Mana.ManaPool (CompleteManaPool)
 import safe MtgPure.Model.Mana.ManaType (ManaType (..))
-import safe MtgPure.Model.Mana.Snow (Snow (NonSnow))
+import safe MtgPure.Model.Mana.Snow (Snow (..))
 import safe MtgPure.Model.Object.OTNAliases (OTNCreature, OTNLand, OTNPermanent, OTNPlayerPlaneswalker, OTNSpell)
 import safe MtgPure.Model.Object.Object (Object)
 import safe MtgPure.Model.Object.ObjectId (GetObjectId (getUntypedObject), ObjectId)
@@ -170,7 +171,7 @@ data Prompt' (opaqueGameState :: (Type -> Type) -> Type) (m :: Type -> Type) (ma
   , promptGetStartingPlayer :: Attempt -> PlayerCount -> magic PlayerIndex
   , promptLogCallPop :: opaqueGameState m -> CallFrameInfo -> m ()
   , promptLogCallPush :: opaqueGameState m -> CallFrameInfo -> m ()
-  , promptPayGeneric :: Attempt -> opaqueGameState m -> Object 'OTPlayer -> Mana 'NoVar 'NonSnow 'MTGeneric -> magic CompleteManaPool
+  , promptPayDynamicMana :: Attempt -> opaqueGameState m -> Object 'OTPlayer -> DynamicManaCost 'NoVar -> magic CompleteManaPool
   , promptPerformMulligan :: Attempt -> Object 'OTPlayer -> [AnyCard] -> magic Bool -- TODO: Encode limited game state about players' mulligan states and [Serum Powder].
   , promptPickZO :: forall zone ot. IsZO zone ot => Attempt -> opaqueGameState m -> Object 'OTPlayer -> NonEmpty (ZO zone ot) -> magic (ZO zone ot)
   , promptPriorityAction :: Attempt -> opaqueGameState m -> Object 'OTPlayer -> magic (PriorityAction ())

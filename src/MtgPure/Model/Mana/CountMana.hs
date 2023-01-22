@@ -8,10 +8,12 @@ module MtgPure.Model.Mana.CountMana (
 ) where
 
 import safe MtgPure.Model.Mana.Mana (Mana (..))
+import safe MtgPure.Model.Mana.ManaCost (DynamicManaCost (..))
 import safe MtgPure.Model.Mana.ManaPool (CompleteManaPool (..), ManaPool (..))
 import safe MtgPure.Model.Variable (Var (NoVar))
 
 class CountMana a where
+  -- Returns the minimum amount. So for X2 style hybrid costs, that returns 1
   countMana :: a -> Int
 
 instance CountMana CompleteManaPool where
@@ -35,3 +37,11 @@ instance CountMana (ManaPool snow) where
 instance CountMana (Mana 'NoVar snow mt) where
   countMana = \case
     Mana mana -> mana
+
+instance CountMana (DynamicManaCost 'NoVar) where
+  countMana
+    DynamicManaCost
+      { costGeneric = g
+      , costSnow = s
+      , costHybridBG = bg
+      } = countMana g + countMana s + countMana bg

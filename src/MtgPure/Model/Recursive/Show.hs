@@ -48,7 +48,7 @@ import safe MtgPure.Model.Damage (Damage, Damage' (..))
 import safe MtgPure.Model.LandType (LandType (..))
 import safe MtgPure.Model.Loyalty (Loyalty)
 import safe MtgPure.Model.Mana.Mana (Mana (..))
-import safe MtgPure.Model.Mana.ManaCost (ManaCost (..))
+import safe MtgPure.Model.Mana.ManaCost (DynamicManaCost (..), ManaCost (..))
 import safe MtgPure.Model.Mana.ManaPool (CompleteManaPool (..), ManaPool (..))
 import safe MtgPure.Model.Mana.ManaSymbol (ManaSymbol (..))
 import safe MtgPure.Model.Object.IsObjectType (IsObjectType (..))
@@ -1165,9 +1165,13 @@ showManaCost cost = yesParens do
         , costRed = r
         , costGreen = g
         , costColorless = c
-        , costGeneric = x
-        , costSnow = s
+        , costDynamic = dyn
         } = cost
+      DynamicManaCost
+        { costGeneric = x
+        , costSnow = s
+        , costHybridBG = bg
+        } = dyn
       lits =
         sequence
           [ literalMana w
@@ -1178,17 +1182,19 @@ showManaCost cost = yesParens do
           , literalMana c
           , literalMana x
           , literalMana s
+          , literalMana bg
           ]
   case lits of
-    Just [litW, litU, litB, litR, litG, litC, litX, litS] -> do
-      let numW = (W, litW)
+    Just [litW, litU, litB, litR, litG, litC, litX, litS, litBG] -> do
+      let numX = litX
+          numW = (W, litW)
           numU = (U, litU)
           numB = (B, litB)
           numR = (R, litR)
           numG = (G, litG)
           numC = (C, litC)
           numS = (S, litS)
-          numX = litX
+          numBG = (BG, litBG)
           go (sym, num) = case num of
             0 -> Nothing
             1 -> Just $ show sym
@@ -1197,7 +1203,7 @@ showManaCost cost = yesParens do
             0 -> Nothing
             _ -> Just $ show num
           manas' =
-            [go' numX, go numW, go numU, go numB, go numR, go numG, go numC, go numS]
+            [go' numX, go numW, go numU, go numB, go numR, go numG, go numC, go numS, go numBG]
           manas = catMaybes manas'
           sManas = case manas of
             [] -> "0"
@@ -1213,6 +1219,7 @@ showManaCost cost = yesParens do
       sC <- parens <$> showMana c
       sX <- parens <$> showMana x
       sS <- parens <$> showMana s
+      sBG <- parens <$> showMana bg
       pure $
         pure (fromString "ManaCost' ")
           <> sW
@@ -1230,6 +1237,8 @@ showManaCost cost = yesParens do
           <> sX
           <> pure " "
           <> sS
+          <> pure " "
+          <> sBG
 
 showManaPool :: ManaPool snow -> EnvM ParenItems
 showManaPool pool = yesParens do

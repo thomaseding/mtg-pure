@@ -6,10 +6,10 @@
 module MtgPure.Model.Mana.Mana (
   Mana (..),
   IsManaNoVar,
-  castManaSnow,
   castManaType,
   litMana,
   thawMana,
+  freezeMana,
 ) where
 
 import safe Data.Kind (Type)
@@ -65,9 +65,6 @@ instance Num (Mana 'NoVar snow mt) => ForceVars (Mana v snow mt) (Mana 'NoVar sn
     VariableMana (ReifiedVariable _ n) -> Mana n
     SumMana x y -> forceVars x + forceVars y
 
-castManaSnow :: forall snow' snow mt v. Mana v snow mt -> Mana v snow' mt
-castManaSnow = castManaImpl
-
 castManaType :: forall mt' mt snow v. Mana v snow mt -> Mana v snow mt'
 castManaType = castManaImpl
 
@@ -81,4 +78,7 @@ litMana :: Mana 'NoVar snow color -> Mana 'Var snow color
 litMana (Mana x) = Mana x
 
 thawMana :: Mana 'NoVar 'Snow color -> Mana 'NoVar 'NonSnow color
-thawMana (Mana x) = Mana x
+thawMana = castManaImpl
+
+freezeMana :: Mana 'NoVar 'NonSnow color -> Mana 'NoVar 'Snow color
+freezeMana = castManaImpl

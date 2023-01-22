@@ -165,6 +165,12 @@ class ToCompleteManaPool (mana :: Type) where
 instance ToCompleteManaPool CompleteManaPool where
   toCompleteManaPool = id
 
+instance ToCompleteManaPool (ManaPool 'Snow) where
+  toCompleteManaPool pool = mempty{poolSnow = pool}
+
+instance ToCompleteManaPool (ManaPool 'NonSnow) where
+  toCompleteManaPool pool = mempty{poolNonSnow = pool}
+
 instance {-# OVERLAPPABLE #-} (Inst2 ToCompleteManaPool a b) => ToCompleteManaPool (a, b) where
   toCompleteManaPool (a, b) = toCompleteManaPool a <> toCompleteManaPool b
 

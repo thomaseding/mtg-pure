@@ -10,7 +10,11 @@ module MtgPure.Model.Mana.ToManaCost (
 import safe Data.Inst (Inst2, Inst3, Inst4, Inst5, Inst6, Inst7)
 import safe Data.Kind (Type)
 import safe MtgPure.Model.Mana.Mana (Mana (..), castManaType, litMana, thawMana)
-import safe MtgPure.Model.Mana.ManaCost (ManaCost (..), emptyManaCost)
+import safe MtgPure.Model.Mana.ManaCost (
+  DynamicManaCost (..),
+  ManaCost (..),
+  emptyManaCost,
+ )
 import safe MtgPure.Model.Mana.ManaPool (CompleteManaPool (..), ManaPool (..))
 import safe MtgPure.Model.Mana.ManaSymbol (ManaSymbol (..))
 import safe MtgPure.Model.Mana.ManaType (IsManaType (..), ManaType (..), SManaType (..))
@@ -72,9 +76,9 @@ instance IsManaType snow mt => ToManaCost (Mana 'Var snow mt) where
     SMTRed -> emptyManaCost{costRed = x}
     SMTGreen -> emptyManaCost{costGreen = x}
     SMTColorless -> emptyManaCost{costColorless = x}
-    SMTGeneric -> emptyManaCost{costGeneric = x}
-    SMTSnow -> emptyManaCost{costSnow = castManaType x}
-    SMTHybridBG -> emptyManaCost{costHybridBG = x}
+    SMTGeneric -> emptyManaCost{costDynamic = mempty{costGeneric = x}}
+    SMTSnow -> emptyManaCost{costDynamic = mempty{costSnow = castManaType x}}
+    SMTHybridBG -> emptyManaCost{costDynamic = mempty{costHybridBG = x}}
 
 instance ToManaCost (ManaSymbol a, Int) where
   toManaCost = \case
@@ -84,8 +88,8 @@ instance ToManaCost (ManaSymbol a, Int) where
     x@(R, _) -> emptyManaCost{costRed = toMana x}
     x@(G, _) -> emptyManaCost{costGreen = toMana x}
     x@(C, _) -> emptyManaCost{costColorless = toMana x}
-    x@(S, _) -> emptyManaCost{costSnow = toMana x}
-    x@(BG, _) -> emptyManaCost{costHybridBG = toMana x}
+    x@(S, _) -> emptyManaCost{costDynamic = mempty{costSnow = toMana x}}
+    x@(BG, _) -> emptyManaCost{costDynamic = mempty{costHybridBG = toMana x}}
 
 instance ToManaCost (ManaSymbol a) where
   toManaCost = \case
