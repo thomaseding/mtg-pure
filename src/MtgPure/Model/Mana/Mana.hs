@@ -8,6 +8,8 @@ module MtgPure.Model.Mana.Mana (
   IsManaNoVar,
   castManaSnow,
   castManaType,
+  litMana,
+  thawMana,
 ) where
 
 import safe Data.Kind (Type)
@@ -74,3 +76,9 @@ castManaImpl = \case
   Mana n -> Mana n
   VariableMana v -> VariableMana v
   SumMana x y -> SumMana (castManaImpl x) (castManaImpl y)
+
+litMana :: Mana 'NoVar snow color -> Mana 'Var snow color
+litMana (Mana x) = Mana x
+
+thawMana :: Mana 'NoVar 'Snow color -> Mana 'NoVar 'NonSnow color
+thawMana (Mana x) = Mana x

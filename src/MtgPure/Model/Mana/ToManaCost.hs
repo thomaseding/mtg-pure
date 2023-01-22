@@ -9,8 +9,9 @@ module MtgPure.Model.Mana.ToManaCost (
 
 import safe Data.Inst (Inst2, Inst3, Inst4, Inst5, Inst6, Inst7)
 import safe Data.Kind (Type)
-import safe MtgPure.Model.Mana.Mana (Mana (..), castManaType)
+import safe MtgPure.Model.Mana.Mana (Mana (..), castManaType, litMana, thawMana)
 import safe MtgPure.Model.Mana.ManaCost (ManaCost (..), emptyManaCost)
+import safe MtgPure.Model.Mana.ManaPool (CompleteManaPool (..), ManaPool (..))
 import safe MtgPure.Model.Mana.ManaSymbol (ManaSymbol (..))
 import safe MtgPure.Model.Mana.ManaType (IsManaType (..), ManaType (..), SManaType (..))
 import safe MtgPure.Model.Mana.Snow (Snow (..))
@@ -96,3 +97,30 @@ instance ToManaCost (ManaSymbol a) where
     C -> toManaCost (C, 1 :: Int)
     S -> toManaCost (S, 1 :: Int)
     BG -> toManaCost (BG, 1 :: Int)
+
+instance ToManaCost (ManaPool 'NonSnow) where
+  toManaCost (ManaPool w u b r g c) =
+    emptyManaCost
+      { costWhite = litMana w
+      , costBlue = litMana u
+      , costBlack = litMana b
+      , costRed = litMana r
+      , costGreen = litMana g
+      , costColorless = litMana c
+      }
+
+instance ToManaCost (ManaPool 'Snow) where
+  toManaCost (ManaPool w u b r g c) =
+    emptyManaCost
+      { costWhite = go w
+      , costBlue = go u
+      , costBlack = go b
+      , costRed = go r
+      , costGreen = go g
+      , costColorless = go c
+      }
+   where
+    go = litMana . thawMana
+
+instance ToManaCost CompleteManaPool where
+  toManaCost (CompleteManaPool a b) = toManaCost a <> toManaCost b

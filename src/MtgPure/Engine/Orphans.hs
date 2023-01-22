@@ -10,7 +10,8 @@
 {-# HLINT ignore "Redundant pure" #-}
 
 module MtgPure.Engine.Orphans (
-  ) where
+  mapManaCost,
+) where
 
 import safe Control.Monad.Writer.Strict (Writer, execWriter, tell)
 import safe qualified Data.DList as DList

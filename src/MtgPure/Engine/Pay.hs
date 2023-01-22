@@ -14,7 +14,6 @@ module MtgPure.Engine.Pay (
 
 import safe qualified Control.Monad as M
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
-import safe qualified Control.Monad.Trans as M
 import safe Control.Monad.Util (untilJust)
 import safe Data.Functor ((<&>))
 import safe Data.Monoid (First (..))
@@ -31,16 +30,17 @@ import safe MtgPure.Engine.Fwd.Api (
  )
 import safe MtgPure.Engine.Legality (Legality (..), toLegality)
 import safe MtgPure.Engine.Monad (fromPublic, fromRO, gets)
-import safe MtgPure.Engine.Orphans ()
+import safe MtgPure.Engine.Orphans (mapManaCost)
 import safe MtgPure.Engine.Prompt (Prompt' (..), SourceZO (..))
 import safe MtgPure.Engine.State (GameState (..), Magic, logCall, mkOpaqueGameState)
 import safe MtgPure.Model.Combinators (isTapped)
 import safe MtgPure.Model.Life (Life (..))
 import safe MtgPure.Model.Mana.CountMana (countMana)
-import safe MtgPure.Model.Mana.Mana (IsManaNoVar, Mana (..))
+import safe MtgPure.Model.Mana.Mana (IsManaNoVar, Mana (..), litMana)
 import safe MtgPure.Model.Mana.ManaCost (ManaCost (..))
 import safe MtgPure.Model.Mana.ManaPool (CompleteManaPool (..), ManaPool (..))
 import safe MtgPure.Model.Mana.Snow (IsSnow)
+import safe MtgPure.Model.Mana.ToManaCost (toManaCost)
 import safe MtgPure.Model.Object.Object (Object)
 import safe MtgPure.Model.Object.ObjectN_ (ObjectN' (..))
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
@@ -127,15 +127,17 @@ payManaCost oPlayer (forceVars -> cost) = logCall 'payManaCost do
                 _ -> do
                   prompt <- fromRO $ gets magicPrompt
                   opaque <- fromRO $ gets mkOpaqueGameState
-                  untilJust \attempt -> fromPublic $ fromRO do
-                    fullPayment <- promptPayGeneric prompt attempt opaque oPlayer generic'
-                    let payment = poolNonSnow fullPayment
-                    case countMana payment == generic of
-                      True -> pure $ Just payment
-                      False -> M.lift do
-                        exceptionInvalidGenericManaPayment prompt generic' fullPayment
-                        pure Nothing
-              let pool'' = pool' - payment
+                  untilJust \attempt -> do
+                    fullPayment <- fromPublic $ fromRO $ promptPayGeneric prompt attempt opaque oPlayer generic'
+                    case countMana fullPayment == generic of
+                      False -> pure Nothing
+                      True -> do
+                        let cost' = cost{costGeneric = mempty} <> forceVars (toManaCost fullPayment)
+                        legality <- payManaCost oPlayer $ mapManaCost litMana cost'
+                        case legality of
+                          Illegal -> pure Nothing
+                          Legal -> pure $ Just fullPayment
+              let pool'' = pool' - poolNonSnow payment
               setPlayer oPlayer player{playerMana = (playerMana player){poolNonSnow = pool''}}
               pure Legal
 
