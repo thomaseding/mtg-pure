@@ -42,7 +42,7 @@ Purely functional Haskell "Magic: The Gathering" card model and game engine.
 - [`src/MtgPure/Engine/Fwd/Api.hs`](src/MtgPure/Engine/Fwd/Api.hs)
 - [`src/MtgPure/Engine/Fwd/Impl.hs`](src/MtgPure/Engine/Fwd/Impl.hs)
 - [`src/MtgPure/Engine/State.hs`](src/MtgPure/Engine/State.hs)
-- [`src/MtgPure/Test/MountainShock.hs`](src/MtgPure/Test/MountainShock.hs)
+- [`src/MtgPure/Test/Game/MountainShock.hs`](src/MtgPure/Test/Game/MountainShock.hs)
 
 ---
 

@@ -482,12 +482,13 @@ cityOfBrass = Card "City of Brass" $
           , Activated @ 'ZBattlefield $
               thisObject \this ->
                 controllerOf this \you ->
-                  chooseAnyColor you \color ->
-                    ElectActivated $
-                      Ability
-                        { activated_cost = tapCost [is this]
-                        , activated_effect = effect $ addManaAnyColor color you 1
-                        }
+                  ElectActivated $
+                    Ability
+                      { activated_cost = tapCost [is this]
+                      , activated_effect =
+                          chooseAnyColor you \color ->
+                            effect $ addManaAnyColor color you 1
+                      }
           ]
       }
 
@@ -586,16 +587,17 @@ deathriteShaman = Card "Deathrite Shaman" $
               thisObject \this ->
                 controllerOf this \you ->
                   Target you $ masked @OTNLand @ 'ZGraveyard [] \land ->
-                    chooseAnyColor you \color ->
-                      ElectActivated $
-                        Ability
-                          { activated_cost =
-                              AndCosts
-                                [ tapCost [is this]
-                                , ExileCost [is land]
-                                ]
-                          , activated_effect = effect $ addManaAnyColor color you 1
-                          }
+                    ElectActivated $
+                      Ability
+                        { activated_cost =
+                            AndCosts
+                              [ tapCost [is this]
+                              , ExileCost [is land]
+                              ]
+                        , activated_effect =
+                            chooseAnyColor you \color ->
+                              effect $ addManaAnyColor color you 1
+                        }
           , Activated @ 'ZBattlefield $
               thisObject \this ->
                 controllerOf this \you ->
