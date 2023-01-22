@@ -384,16 +384,17 @@ blackLotus = Card "Black Lotus" $
           [ Activated @ 'ZBattlefield $
               thisObject \this ->
                 controllerOf this \you ->
-                  chooseAnyColor you \color ->
-                    ElectActivated $
-                      Ability
-                        { activated_cost =
-                            AndCosts
-                              [ tapCost [is this]
-                              , sacrificeCost [is this]
-                              ]
-                        , activated_effect = effect $ addManaAnyColor color you 3
-                        }
+                  ElectActivated $
+                    Ability
+                      { activated_cost =
+                          AndCosts
+                            [ tapCost [is this]
+                            , sacrificeCost [is this]
+                            ]
+                      , activated_effect =
+                          chooseAnyColor you \color ->
+                            effect $ addManaAnyColor color you 3
+                      }
           ]
       }
 
