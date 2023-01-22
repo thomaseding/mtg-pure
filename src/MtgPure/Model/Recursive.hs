@@ -94,10 +94,10 @@ import safe MtgPure.Model.Object.OTNAliases (
   OTNSorcery,
   OTNSpell,
  )
-import safe MtgPure.Model.Object.Singleton.Any (WAny)
-import safe MtgPure.Model.Object.Singleton.Card (CoCard, WCard)
-import safe MtgPure.Model.Object.Singleton.Permanent (CoPermanent, WPermanent)
-import safe MtgPure.Model.Object.Singleton.Spell (WSpell (..))
+import safe MtgPure.Model.Object.Singleton.Any (CoAny)
+import safe MtgPure.Model.Object.Singleton.Card (CoCard)
+import safe MtgPure.Model.Object.Singleton.Permanent (CoPermanent)
+import safe MtgPure.Model.Object.Singleton.Spell (CoSpell)
 import safe MtgPure.Model.Power (Power)
 import safe MtgPure.Model.PrePost (IsPrePost, PrePost (..))
 import safe MtgPure.Model.Rarity (Rarity)
@@ -438,7 +438,7 @@ data Condition :: Type where
   CAnd :: [Condition] -> Condition
   CNot :: Condition -> Condition
   COr :: [Condition] -> Condition
-  Satisfies :: IsZO zone ot => WAny ot -> ZO zone ot -> [Requirement zone ot] -> Condition
+  Satisfies :: (CoAny ot, IsZO zone ot) => ZO zone ot -> [Requirement zone ot] -> Condition
   deriving (Typeable)
 
 instance ConsIndex Condition where
@@ -493,9 +493,9 @@ instance ConsIndex (Cost ot) where
 
 data Effect (ef :: EffectType) :: Type where
   AddMana :: ZOPlayer -> ManaPool 'NonSnow -> Effect 'OneShot -- NOTE: Engine will reinterpret as Snow when source is Snow.
-  AddToBattlefield :: IsOTN ot => WPermanent ot -> ZOPlayer -> Token ot -> Effect 'OneShot
+  AddToBattlefield :: (CoPermanent ot, IsOTN ot) => ZOPlayer -> Token ot -> Effect 'OneShot
   CantBeRegenerated :: ZOCreature -> Effect 'Continuous
-  ChangeTo :: (ot ~ OTN x, IsOTN ot) => WPermanent ot -> ZOPermanent -> Card ot -> Effect 'Continuous
+  ChangeTo :: (ot ~ OTN x, CoPermanent ot, IsOTN ot) => ZOPermanent -> Card ot -> Effect 'Continuous
   CounterAbility :: ZO 'ZStack OTNActivatedOrTriggeredAbility -> Effect 'OneShot
   CounterSpell :: ZO 'ZStack OTNSpell -> Effect 'OneShot
   DealDamage :: IsZO zone OTNDamageSource => ZO zone OTNDamageSource -> ZOCreaturePlayerPlaneswalker -> Damage 'Var -> Effect 'OneShot
@@ -505,15 +505,15 @@ data Effect (ef :: EffectType) :: Type where
   EffectContinuous :: Effect 'Continuous -> Effect 'OneShot -- 611.2
   EndTheTurn :: Effect 'OneShot
   Exile :: (IsZO zone ot, CoCard ot) => ZO zone ot -> Effect 'OneShot -- TODO: prohibit (zone == 'ZExile)
-  GainAbility :: IsOTN ot => WAny ot -> ZO 'ZBattlefield ot -> Ability ot -> Effect 'Continuous
+  GainAbility :: (CoAny ot, IsOTN ot) => ZO 'ZBattlefield ot -> Ability ot -> Effect 'Continuous
   -- XXX: This is Continuous to support things like "gain control until end of turn"
-  GainControl :: IsOTN ot => WAny ot -> ZOPlayer -> ZO 'ZBattlefield ot -> Effect 'Continuous -- TODO: restrict zone to 'ZBattlefield and 'ZStack
+  GainControl :: (CoAny ot, IsOTN ot) => ZOPlayer -> ZO 'ZBattlefield ot -> Effect 'Continuous -- TODO: restrict zone to 'ZBattlefield and 'ZStack
   GainLife :: ZOPlayer -> Int -> Effect 'OneShot -- TODO: PositiveInt
-  LoseAbility :: IsOTN ot => WAny ot -> ZO 'ZBattlefield ot -> Ability ot -> Effect 'Continuous
+  LoseAbility :: (CoAny ot, IsOTN ot) => ZO 'ZBattlefield ot -> Ability ot -> Effect 'Continuous
   LoseLife :: ZOPlayer -> Int -> Effect 'OneShot -- TODO: PositiveInt
-  PutOntoBattlefield :: IsZO zone ot => WPermanent ot -> ZOPlayer -> ZO zone ot -> Effect 'OneShot -- TODO: zone /= 'ZBattlefield
-  Sacrifice :: IsOTN ot => WPermanent ot -> ZOPlayer -> [Requirement 'ZBattlefield ot] -> Effect 'OneShot
-  SearchLibrary :: IsOTN ot => WCard ot -> ZOPlayer {-searcher-} -> ZOPlayer {-searchee-} -> WithLinkedObject 'ZLibrary (Elect 'Post (Effect 'OneShot)) ot -> Effect 'OneShot
+  PutOntoBattlefield :: (CoPermanent ot, IsZO zone ot) => ZOPlayer -> ZO zone ot -> Effect 'OneShot -- TODO: zone /= 'ZBattlefield
+  Sacrifice :: (CoPermanent ot, IsOTN ot) => ZOPlayer -> [Requirement 'ZBattlefield ot] -> Effect 'OneShot
+  SearchLibrary :: (CoCard ot, IsOTN ot) => ZOPlayer {-searcher-} -> ZOPlayer {-searchee-} -> WithLinkedObject 'ZLibrary (Elect 'Post (Effect 'OneShot)) ot -> Effect 'OneShot
   Sequence :: [Effect ef] -> Effect ef
   ShuffleLibrary :: ZOPlayer -> Effect 'OneShot
   StatDelta :: ZOCreature -> Power -> Toughness -> Effect 'Continuous
@@ -674,9 +674,9 @@ type Event = EventListener' Proxy
 type EventListener = EventListener' (Elect 'Post (Effect 'OneShot))
 
 data EventListener' (liftOT :: Type -> Type) :: Type where
-  BecomesTapped :: (IsOTN ot, Typeable liftOT) => WPermanent ot -> WithLinkedObject 'ZBattlefield liftOT ot -> EventListener' liftOT
+  BecomesTapped :: (CoPermanent ot, IsOTN ot, Typeable liftOT) => WithLinkedObject 'ZBattlefield liftOT ot -> EventListener' liftOT
   Events :: [EventListener' liftOT] -> EventListener' liftOT
-  SpellIsCast :: IsOTN ot => WSpell ot -> WithLinkedObject 'ZBattlefield liftOT ot -> EventListener' liftOT
+  SpellIsCast :: (CoSpell ot, IsOTN ot) => WithLinkedObject 'ZBattlefield liftOT ot -> EventListener' liftOT
   TimePoint :: Typeable p => TimePoint p -> liftOT OTNPlayer -> EventListener' liftOT
   deriving (Typeable)
 
@@ -715,9 +715,9 @@ data Requirement (zone :: Zone) (ot :: Type) :: Type where
   ControlsA :: IsOTN ot => Requirement 'ZBattlefield ot -> Requirement zone OTNPlayer
   HasAbility :: IsZO zone ot => WithThis zone Ability ot -> Requirement zone ot -- Non-unique differing representations will not be considered the same
   HasLandType :: IsZO zone OTNLand => LandType -> Requirement zone OTNLand
-  Is :: IsZO zone ot => WAny ot -> ZO zone ot -> Requirement zone ot
+  Is :: (CoAny ot, IsZO zone ot) => ZO zone ot -> Requirement zone ot
   IsOpponentOf :: ZOPlayer -> Requirement zone OTNPlayer
-  IsTapped :: IsOTN ot => WPermanent ot -> Requirement 'ZBattlefield ot
+  IsTapped :: (CoPermanent ot, IsOTN ot) => Requirement 'ZBattlefield ot
   Not :: IsZO zone ot => Requirement zone ot -> Requirement zone ot
   OfColors :: IsZO zone ot => Colors -> Requirement zone ot -- needs `WCard a` witness
   OwnedBy :: IsZO zone ot => ZOPlayer -> Requirement zone ot
@@ -964,7 +964,7 @@ instance ConsIndex (StaticAbility zone ot) where
 ----------------------------------------
 
 data Token (ot :: Type) :: Type where
-  Token :: (ot ~ OTN x, IsSpecificCard ot) => WPermanent ot -> Card ot -> Token ot
+  Token :: (ot ~ OTN x, CoPermanent ot, IsSpecificCard ot) => Card ot -> Token ot
   deriving (Typeable)
 
 instance ConsIndex (Token ot) where
@@ -973,7 +973,7 @@ instance ConsIndex (Token ot) where
 
 instance HasCardName (Token ot) where
   getCardName = \case
-    Token _ card -> getCardName card
+    Token card -> getCardName card
 
 ----------------------------------------
 

@@ -77,7 +77,6 @@ import safe MtgPure.Model.Combinators (
   AsWithMaskedObject (masked),
   AsWithMaskedObjects (..),
   AsWithThis (..),
-  CoPermanent (..),
   ElectEffect (effect),
   HasLandType (hasLandType),
   addManaAnyColor,
@@ -361,7 +360,7 @@ bayou :: Card OTNLand
 bayou = mkDualLand "Bayou" Forest Swamp
 
 birdToken :: Token OTNCreature
-birdToken = Token coPermanent $
+birdToken = Token $
   Card "Bird Token" $
     YourCreature \_you ->
       CreatureFacet
@@ -956,7 +955,7 @@ snuffOut = Card "Snuff Out" $
               }
 
 soldierToken :: Token OTNCreature
-soldierToken = Token coPermanent $
+soldierToken = Token $
   Card "Soldier Token" $
     YourCreature \_you ->
       CreatureFacet

@@ -19,12 +19,9 @@ module MtgPure.Model.Combinators (
   becomesTapped,
   changeTo,
   chooseAnyColor,
-  CoAny (..),
   colored,
   colorless,
-  CoNonProxy (..),
   controllerOf,
-  CoPermanent (..),
   counterAbility,
   counterSpell,
   dealDamage,
@@ -183,7 +180,7 @@ instance ToToken AnyToken where
   toToken = id
 
 instance CoPermanent ot => ToToken (Token ot) where
-  toToken (Token _ x) = AnyToken $ Token coPermanent x
+  toToken (Token x) = AnyToken $ Token x
 
 class Typeable x => CoNonProxy x where
   coNonProxy :: NonProxy x
@@ -309,14 +306,14 @@ sacrifice ::
   ZOPlayer ->
   [Requirement 'ZBattlefield ot] ->
   Effect 'OneShot
-sacrifice = Sacrifice coPermanent
+sacrifice = Sacrifice
 
 changeTo ::
   (AsPermanent ot, CoPermanent ot, ot ~ OTN x) =>
   ZO 'ZBattlefield ot ->
   Card ot ->
   Effect 'Continuous
-changeTo = ChangeTo coPermanent . asPermanent
+changeTo = ChangeTo . asPermanent
 
 destroy :: AsPermanent ot => ZO 'ZBattlefield ot -> Effect 'OneShot
 destroy = Destroy . asPermanent
@@ -329,11 +326,11 @@ counterSpell :: AsSpell ot => ZO 'ZStack ot -> Effect 'OneShot
 counterSpell = CounterSpell . asSpell
 
 is :: (IsZone zone, CoAny ot) => ZO zone ot -> Requirement zone ot
-is = Is coAny
+is = Is
 
 satisfies ::
   (IsZone zone, CoAny ot) => ZO zone ot -> [Requirement zone ot] -> Condition
-satisfies = Satisfies coAny
+satisfies = Satisfies
 
 sacrificeCost :: CoPermanent ot' => [Requirement 'ZBattlefield ot'] -> Cost ot
 sacrificeCost = SacrificeCost
@@ -342,10 +339,10 @@ tapCost :: CoPermanent ot' => [Requirement 'ZBattlefield ot'] -> Cost ot
 tapCost = TapCost
 
 isTapped :: CoPermanent ot => Requirement 'ZBattlefield ot
-isTapped = IsTapped coPermanent
+isTapped = IsTapped
 
 addToBattlefield :: CoPermanent ot => ZOPlayer -> Token ot -> Effect 'OneShot
-addToBattlefield = AddToBattlefield coPermanent
+addToBattlefield = AddToBattlefield
 
 ofColors :: (IsZO zone ot, ColorsLike c) => c -> Requirement zone ot
 ofColors = OfColors . toColors
@@ -498,20 +495,20 @@ becomesTapped ::
   CoPermanent ot =>
   WithLinkedObject 'ZBattlefield (Elect 'Post (Effect 'OneShot)) ot ->
   EventListener
-becomesTapped = BecomesTapped coPermanent
+becomesTapped = BecomesTapped
 
 untilEndOfTurn :: Effect 'Continuous -> Effect 'OneShot
 untilEndOfTurn =
   EffectContinuous . Until (event $ TimePoint (StepBegin CleanupStep) Proxy)
 
 gainAbility :: CoAny ot => ZO 'ZBattlefield ot -> Ability ot -> Effect 'Continuous
-gainAbility = GainAbility coAny
+gainAbility = GainAbility
 
 loseAbility :: CoAny ot => ZO 'ZBattlefield ot -> Ability ot -> Effect 'Continuous
-loseAbility = LoseAbility coAny
+loseAbility = LoseAbility
 
 gainControl :: CoAny ot => ZOPlayer -> ZO 'ZBattlefield ot -> Effect 'Continuous
-gainControl = GainControl coAny
+gainControl = GainControl
 
 class HasLandType a where
   hasLandType :: IsZone zone => a -> Requirement zone OTNLand
@@ -524,7 +521,7 @@ instance HasLandType LandType where
 
 putOntoBattlefield ::
   (IsZone zone, CoPermanent ot) => ZOPlayer -> ZO zone ot -> Effect 'OneShot
-putOntoBattlefield = PutOntoBattlefield coPermanent
+putOntoBattlefield = PutOntoBattlefield
 
 searchLibrary ::
   CoCard ot =>
@@ -532,7 +529,7 @@ searchLibrary ::
   ZOPlayer ->
   WithLinkedObject 'ZLibrary (Elect 'Post (Effect 'OneShot)) ot ->
   Effect 'OneShot
-searchLibrary = SearchLibrary coCard
+searchLibrary = SearchLibrary
 
 mkBasicManaAbility :: BasicLandType -> WithThisActivated 'ZBattlefield OTNLand
 mkBasicManaAbility ty = thisObject \this ->

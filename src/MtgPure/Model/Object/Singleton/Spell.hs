@@ -7,6 +7,7 @@ module MtgPure.Model.Object.Singleton.Spell (
   WSpell (..),
   SpellType (..),
   IsSpellType (..),
+  CoSpell (..),
   SpellVisitor (..),
   visitSpell',
 ) where
@@ -32,7 +33,7 @@ import safe MtgPure.Model.Object.OTNAliases (
   OTNSpell,
  )
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
-import safe MtgPure.Model.ZoneObject.ZoneObject (ZO)
+import safe MtgPure.Model.ZoneObject.ZoneObject (IsOTN, ZO)
 
 data SpellType
   = STArtifact
@@ -111,3 +112,36 @@ instance IsSpellType 'OTSorcery where
   singSpellType _ = STSorcery
   singSpell _ = WSpellSorcery
   visitSpell v _ = visitSSorcery v
+
+class IsOTN ot => CoSpell ot where
+  coSpell :: WSpell ot
+
+instance CoSpell OTNArtifact where
+  coSpell = WSpellArtifact
+
+instance CoSpell OTNCreature where
+  coSpell = WSpellCreature
+
+instance CoSpell OTNEnchantment where
+  coSpell = WSpellEnchantment
+
+instance CoSpell OTNInstant where
+  coSpell = WSpellInstant
+
+instance CoSpell OTNPlaneswalker where
+  coSpell = WSpellPlaneswalker
+
+instance CoSpell OTNSorcery where
+  coSpell = WSpellSorcery
+
+instance CoSpell OTNSpell where
+  coSpell = WSpell
+
+instance Inst2 IsSpellType a b => CoSpell (OT2 a b) where
+  coSpell = WSpell2 :: WSpell (OT2 a b)
+
+instance Inst3 IsSpellType a b c => CoSpell (OT3 a b c) where
+  coSpell = WSpell3 :: WSpell (OT3 a b c)
+
+instance Inst4 IsSpellType a b c d => CoSpell (OT4 a b c d) where
+  coSpell = WSpell4 :: WSpell (OT4 a b c d)

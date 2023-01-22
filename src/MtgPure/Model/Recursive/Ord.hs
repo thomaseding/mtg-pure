@@ -30,6 +30,7 @@ import safe Data.Typeable (Typeable, cast, typeRep)
 import safe MtgPure.Model.Color (Color (..))
 import safe MtgPure.Model.Colors (Colors)
 import safe MtgPure.Model.Damage (Damage)
+import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.Mana.ManaCost (ManaCost)
 import safe MtgPure.Model.Mana.ManaPool (ManaPool)
 import safe MtgPure.Model.Object.IndexOT (IndexOT (indexOT))
@@ -54,11 +55,6 @@ import safe MtgPure.Model.Object.ObjectId (
 import safe MtgPure.Model.Object.ObjectN (ObjectN)
 import safe MtgPure.Model.Object.ObjectN_ (ObjectN' (..))
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
-import safe MtgPure.Model.Object.Singleton.Any (WAny (..))
-import safe MtgPure.Model.Object.Singleton.Card (WCard (..))
-import safe MtgPure.Model.Object.Singleton.NonCreatureCard (WNonCreatureCard (..))
-import safe MtgPure.Model.Object.Singleton.Permanent (WPermanent (..))
-import safe MtgPure.Model.Object.Singleton.Spell (WSpell (..))
 import safe MtgPure.Model.Object.ToObjectN.Classes (ToObject1' (toObject1'))
 import safe MtgPure.Model.Object.ToObjectN.Instances ()
 import safe MtgPure.Model.Object.VisitObjectN (visitObjectN')
@@ -176,15 +172,6 @@ instance IsZO zone ot => Eq (WithThisActivated zone ot) where
 instance IsZO zone ot => Eq (WithThisTriggered zone ot) where
   (==) x y = runEnvM (ordWithThisTriggered x y) == EQ
 
-instance Eq (WAny ot) where
-  (==) x y = runEnvM (ordWAny x y) == EQ
-
-instance Eq (WNonCreatureCard ot) where
-  (==) x y = runEnvM (ordWNonCreatureCard x y) == EQ
-
-instance Eq (WPermanent ot) where
-  (==) x y = runEnvM (ordWPermanent x y) == EQ
-
 instance Eq (ZoneObject zone ot) where
   (==) x y = runEnvM (ordZoneObject x y) == EQ
 
@@ -255,15 +242,6 @@ instance IsZO zone ot => Ord (WithThisActivated zone ot) where
 
 instance IsZO zone ot => Ord (WithThisTriggered zone ot) where
   compare x y = runEnvM (ordWithThisTriggered x y)
-
-instance Ord (WAny ot) where
-  compare x y = runEnvM (ordWAny x y)
-
-instance Ord (WNonCreatureCard ot) where
-  compare x y = runEnvM (ordWNonCreatureCard x y)
-
-instance Ord (WPermanent ot) where
-  compare x y = runEnvM (ordWPermanent x y)
 
 instance Ord (ZoneObject zone ot) where
   compare x y = runEnvM (ordZoneObject x y)
@@ -652,8 +630,8 @@ ordCondition x = case x of
   COr conds1 -> \case
     COr conds2 -> ordConditions conds1 conds2
     y -> compareIndexM x y
-  Satisfies any1 obj1 reqs1 -> \case
-    Satisfies any2 obj2 reqs2 ->
+  Satisfies obj1 reqs1 -> \case
+    Satisfies obj2 reqs2 ->
       let go ::
             forall zone1 zone2 ot1 ot2.
             IsZO zone1 ot1 =>
@@ -661,12 +639,11 @@ ordCondition x = case x of
             ZO zone1 ot1 ->
             ZO zone2 ot2 ->
             EnvM Ordering
-          go _ _ = case cast (any2, obj2, reqs2) of
+          go _ _ = case cast (obj2, reqs2) of
             Nothing -> compareZoneOT @zone1 @zone2 @ot1 @ot2
-            Just (any2, obj2, reqs2) ->
+            Just (obj2, reqs2) ->
               seqM
-                [ ordWAny any1 any2
-                , ordZoneObject obj1 obj2
+                [ ordZoneObject obj1 obj2
                 , ordRequirements reqs1 reqs2
                 ]
        in go obj1 obj2
@@ -753,29 +730,28 @@ ordEffect x = case x of
     AddMana player2 mana2 ->
       seqM [ordZoneObject player1 player2, ordManaPool mana1 mana2]
     y -> compareIndexM x y
-  AddToBattlefield perm1 player1 token1 -> \case
-    AddToBattlefield perm2 player2 token2 ->
+  AddToBattlefield player1 token1 -> \case
+    AddToBattlefield player2 token2 ->
       let go ::
             forall ot1 ot2.
             (IsOTN ot1, IsOTN ot2) =>
-            WPermanent ot1 ->
-            WPermanent ot2 ->
+            Token ot1 ->
+            Token ot2 ->
             EnvM Ordering
-          go _ _ = case cast (perm2, token2) of
+          go _ _ = case cast token2 of
             Nothing -> compareOT @ot1 @ot2
-            Just (perm2, token2) ->
+            Just token2 ->
               seqM
-                [ ordWPermanent perm1 perm2
-                , ordZoneObject player1 player2
+                [ ordZoneObject player1 player2
                 , ordToken token1 token2
                 ]
-       in go perm1 perm2
+       in go token1 token2
     y -> compareIndexM x y
   CantBeRegenerated creature1 -> \case
     CantBeRegenerated creature2 -> ordZoneObject creature1 creature2
     y -> compareIndexM x y
-  ChangeTo perm1 obj1 card1 -> \case
-    ChangeTo perm2 obj2 card2 ->
+  ChangeTo obj1 card1 -> \case
+    ChangeTo obj2 card2 ->
       let go ::
             forall zone1 zone2 ot1 ot2.
             IsZO zone1 ot1 =>
@@ -783,12 +759,11 @@ ordEffect x = case x of
             ZO zone1 ot1 ->
             ZO zone2 ot2 ->
             EnvM Ordering
-          go _ _ = case cast (perm2, card2) of
+          go _ _ = case cast card2 of
             Nothing -> compareZoneOT @zone1 @zone2 @ot1 @ot2
-            Just (perm2, card2) ->
+            Just card2 ->
               seqM
-                [ ordWPermanent perm1 perm2
-                , ordZoneObject obj1 obj2
+                [ ordZoneObject obj1 obj2
                 , ordCard card1 card2
                 ]
        in go obj1 obj2
@@ -849,8 +824,8 @@ ordEffect x = case x of
             Just obj2 -> ordZoneObject obj1 obj2
        in go obj1 obj2
     y -> compareIndexM x y
-  GainAbility any1 obj1 ability1 -> \case
-    GainAbility any2 obj2 ability2 ->
+  GainAbility obj1 ability1 -> \case
+    GainAbility obj2 ability2 ->
       let go ::
             forall zone1 zone2 ot1 ot2.
             zone1 ~ 'ZBattlefield =>
@@ -860,18 +835,17 @@ ordEffect x = case x of
             ZO zone1 ot1 ->
             ZO zone2 ot2 ->
             EnvM Ordering
-          go _ _ = case cast (any2, obj2, ability2) of
+          go _ _ = case cast (obj2, ability2) of
             Nothing -> compareZoneOT @zone1 @zone2 @ot1 @ot2
-            Just (any2, obj2, ability2) ->
+            Just (obj2, ability2) ->
               seqM
-                [ ordWAny any1 any2
-                , ordZoneObject obj1 obj2
+                [ ordZoneObject obj1 obj2
                 , ordAbility ability1 ability2
                 ]
        in go obj1 obj2
     y -> compareIndexM x y
-  GainControl any1 player1 obj1 -> \case
-    GainControl any2 player2 obj2 ->
+  GainControl player1 obj1 -> \case
+    GainControl player2 obj2 ->
       let go ::
             forall zone1 zone2 ot1 ot2.
             IsZO zone1 ot1 =>
@@ -879,12 +853,11 @@ ordEffect x = case x of
             ZO zone1 ot1 ->
             ZO zone2 ot2 ->
             EnvM Ordering
-          go _ _ = case cast (any2, player2, obj2) of
+          go _ _ = case cast (player2, obj2) of
             Nothing -> compareZoneOT @zone1 @zone2 @ot1 @ot2
-            Just (any2, player2, obj2) ->
+            Just (player2, obj2) ->
               seqM
-                [ ordWAny any1 any2
-                , ordZoneObject player1 player2
+                [ ordZoneObject player1 player2
                 , ordZoneObject obj1 obj2
                 ]
        in go obj1 obj2
@@ -893,8 +866,8 @@ ordEffect x = case x of
     GainLife player2 amount2 ->
       seqM [pure $ compare amount1 amount2, ordZoneObject player1 player2]
     y -> compareIndexM x y
-  LoseAbility any1 obj1 ability1 -> \case
-    LoseAbility any2 obj2 ability2 ->
+  LoseAbility obj1 ability1 -> \case
+    LoseAbility obj2 ability2 ->
       let go ::
             forall zone1 zone2 ot1 ot2.
             zone1 ~ 'ZBattlefield =>
@@ -904,12 +877,11 @@ ordEffect x = case x of
             ZO zone1 ot1 ->
             ZO zone2 ot2 ->
             EnvM Ordering
-          go _ _ = case cast (any2, obj2, ability2) of
+          go _ _ = case cast (obj2, ability2) of
             Nothing -> compareZoneOT @zone1 @zone2 @ot1 @ot2
-            Just (any2, obj2, ability2) ->
+            Just (obj2, ability2) ->
               seqM
-                [ ordWAny any1 any2
-                , ordZoneObject obj1 obj2
+                [ ordZoneObject obj1 obj2
                 , ordAbility ability1 ability2
                 ]
        in go obj1 obj2
@@ -918,8 +890,8 @@ ordEffect x = case x of
     LoseLife player2 amount2 ->
       seqM [pure $ compare amount1 amount2, ordZoneObject player1 player2]
     y -> compareIndexM x y
-  PutOntoBattlefield wPerm1 player1 card1 -> \case
-    PutOntoBattlefield wPerm2 player2 card2 ->
+  PutOntoBattlefield player1 card1 -> \case
+    PutOntoBattlefield player2 card2 ->
       let go ::
             forall zone1 zone2 ot1 ot2.
             IsZO zone1 ot1 =>
@@ -927,18 +899,17 @@ ordEffect x = case x of
             ZO zone1 ot1 ->
             ZO zone2 ot2 ->
             EnvM Ordering
-          go _ _ = case cast (wPerm2, card2) of
+          go _ _ = case cast card2 of
             Nothing -> compareZoneOT @zone1 @zone2 @ot1 @ot2
-            Just (wPerm2, card2) ->
+            Just card2 ->
               seqM
-                [ ordWPermanent wPerm1 wPerm2
-                , ordZoneObject player1 player2
+                [ ordZoneObject player1 player2
                 , ordZoneObject card1 card2
                 ]
        in go card1 card2
     y -> compareIndexM x y
-  Sacrifice perm1 player1 reqs1 -> \case
-    Sacrifice perm2 player2 reqs2 ->
+  Sacrifice player1 reqs1 -> \case
+    Sacrifice player2 reqs2 ->
       let go ::
             forall zone1 zone2 ot1 ot2.
             zone1 ~ 'ZBattlefield =>
@@ -948,35 +919,33 @@ ordEffect x = case x of
             [Requirement zone1 ot1] ->
             [Requirement zone2 ot2] ->
             EnvM Ordering
-          go _ _ = case cast (perm2, reqs2) of
+          go _ _ = case cast reqs2 of
             Nothing -> compareZoneOT @zone1 @zone2 @ot1 @ot2
-            Just (perm2, reqs2) ->
+            Just reqs2 ->
               seqM
-                [ ordWPermanent perm1 perm2
-                , ordZoneObject player1 player2
+                [ ordZoneObject player1 player2
                 , ordRequirements reqs1 reqs2
                 ]
        in go reqs1 reqs2
     y -> compareIndexM x y
-  SearchLibrary wCard1 searcher1 searchee1 withCard1 -> \case
-    SearchLibrary wCard2 searcher2 searchee2 withCard2 ->
+  SearchLibrary searcher1 searchee1 withCard1 -> \case
+    SearchLibrary searcher2 searchee2 withCard2 ->
       let go ::
             forall ot1 ot2.
             IsOTN ot1 =>
             IsOTN ot2 =>
-            WCard ot1 ->
-            WCard ot2 ->
+            WithLinkedObject 'ZLibrary (Elect 'Post (Effect 'OneShot)) ot1 ->
+            WithLinkedObject 'ZLibrary (Elect 'Post (Effect 'OneShot)) ot2 ->
             EnvM Ordering
-          go _ _ = case cast (wCard2, withCard2) of
+          go _ _ = case cast withCard2 of
             Nothing -> compareOT @ot1 @ot2
-            Just (wCard2, withCard2) ->
+            Just withCard2 ->
               seqM
-                [ ordWCard wCard1 wCard2
-                , ordZoneObject searcher1 searcher2
+                [ ordZoneObject searcher1 searcher2
                 , ordZoneObject searchee1 searchee2
                 , ordWithLinkedObject ordElectEl withCard1 withCard2
                 ]
-       in go wCard1 wCard2
+       in go withCard1 withCard2
     y -> compareIndexM x y
   Sequence effects1 -> \case
     Sequence effects2 -> listM ordEffect effects1 effects2
@@ -1250,8 +1219,8 @@ ordEventListener' ::
   EventListener' liftOT ->
   EnvM Ordering
 ordEventListener' ordM x = case x of
-  BecomesTapped perm1 with1 -> \case
-    BecomesTapped perm2 with2 ->
+  BecomesTapped with1 -> \case
+    BecomesTapped with2 ->
       let go ::
             forall zone1 zone2 ot1 ot2.
             zone1 ~ 'ZBattlefield =>
@@ -1261,18 +1230,16 @@ ordEventListener' ordM x = case x of
             WithLinkedObject zone1 liftOT ot1 ->
             WithLinkedObject zone2 liftOT ot2 ->
             EnvM Ordering
-          go _ _ = case cast (perm2, with2) of
+          go _ _ = case cast with2 of
             Nothing -> compareZoneOT @zone1 @zone2 @ot1 @ot2
-            Just (perm2, with2) ->
-              seqM
-                [ordWPermanent perm1 perm2, ordWithLinkedObject ordM with1 with2]
+            Just with2 -> ordWithLinkedObject ordM with1 with2
        in go with1 with2
     y -> compareIndexM x y
   Events listeners1 -> \case
     Events listeners2 -> listM (ordEventListener' ordM) listeners1 listeners2
     y -> compareIndexM x y
-  SpellIsCast spell1 with1 -> \case
-    SpellIsCast spell2 with2 ->
+  SpellIsCast with1 -> \case
+    SpellIsCast with2 ->
       let go ::
             forall zone1 zone2 ot1 ot2.
             zone1 ~ 'ZBattlefield =>
@@ -1282,10 +1249,9 @@ ordEventListener' ordM x = case x of
             WithLinkedObject zone1 liftOT ot1 ->
             WithLinkedObject zone2 liftOT ot2 ->
             EnvM Ordering
-          go _ _ = case cast (spell2, with2) of
+          go _ _ = case cast with2 of
             Nothing -> compareZoneOT @zone1 @zone2 @ot1 @ot2
-            Just (spell2, with2) ->
-              seqM [ordWSpell spell1 spell2, ordWithLinkedObject ordM with1 with2]
+            Just with2 -> ordWithLinkedObject ordM with1 with2
        in go with1 with2
     y -> compareIndexM x y
   TimePoint time1 elect1 -> \case
@@ -1666,14 +1632,14 @@ ordRequirement x = case x of
   HasLandType type1 -> \case
     HasLandType type2 -> pure $ compare type1 type2
     y -> compareIndexM x y
-  Is any1 obj1 -> \case
-    Is any2 obj2 -> seqM [ordWAny any1 any2, ordZoneObject obj1 obj2]
+  Is obj1 -> \case
+    Is obj2 -> ordZoneObject obj1 obj2
     y -> compareIndexM x y
   IsOpponentOf player1 -> \case
     IsOpponentOf player2 -> ordZoneObject player1 player2
     y -> compareIndexM x y
-  IsTapped perm1 -> \case
-    IsTapped perm2 -> ordWPermanent perm1 perm2
+  IsTapped -> \case
+    IsTapped -> pure EQ
     y -> compareIndexM x y
   Not req1 -> \case
     Not req2 -> ordRequirement req1 req2
@@ -1798,9 +1764,8 @@ ordTimePoint x = case x of
 
 ordToken :: Token ot -> Token ot -> EnvM Ordering
 ordToken x = case x of
-  Token wPerm1 card1 -> \case
-    Token wPerm2 card2 ->
-      seqM [ordWPermanent wPerm1 wPerm2, ordCard card1 card2]
+  Token card1 -> \case
+    Token card2 -> ordCard card1 card2
 
 ordTriggeredAbility ::
   forall zone ot.
@@ -1979,211 +1944,6 @@ ordWithThisActivated = ordWithThis ordElectEl
 
 ordWithThisTriggered :: IsZO zone ot => WithThisTriggered zone ot -> WithThisTriggered zone ot -> EnvM Ordering
 ordWithThisTriggered = ordWithThis ordTriggeredAbility
-
-ordW2 ::
-  forall witness ot1 a1 b1 ot2 a2 b2.
-  ( Typeable witness
-  , ot1 ~ OT2 a1 b1
-  , ot2 ~ OT2 a2 b2
-  , IsOTN ot1
-  , IsOTN ot2
-  , Inst2 IsObjectType a1 b1
-  , Inst2 IsObjectType a2 b2
-  ) =>
-  witness ot1 ->
-  witness ot2 ->
-  EnvM Ordering
-ordW2 _wit1 wit2 = case (cast wit2 :: Maybe (witness ot1)) of
-  Nothing -> compareOT @ot1 @ot2
-  Just{} -> pure EQ
-
-ordW3 ::
-  forall witness ot1 a1 b1 c1 ot2 a2 b2 c2.
-  ( Typeable witness
-  , ot1 ~ OT3 a1 b1 c1
-  , ot2 ~ OT3 a2 b2 c2
-  , IsOTN ot1
-  , IsOTN ot2
-  , Inst3 IsObjectType a1 b1 c1
-  , Inst3 IsObjectType a2 b2 c2
-  ) =>
-  witness ot1 ->
-  witness ot2 ->
-  EnvM Ordering
-ordW3 _wit1 wit2 = case (cast wit2 :: Maybe (witness ot1)) of
-  Nothing -> compareOT @ot1 @ot2
-  Just{} -> pure EQ
-
-ordW4 ::
-  forall witness ot1 a1 b1 c1 d1 ot2 a2 b2 c2 d2.
-  ( Typeable witness
-  , ot1 ~ OT4 a1 b1 c1 d1
-  , ot2 ~ OT4 a2 b2 c2 d2
-  , IsOTN ot1
-  , IsOTN ot2
-  , Inst4 IsObjectType a1 b1 c1 d1
-  , Inst4 IsObjectType a2 b2 c2 d2
-  ) =>
-  witness ot1 ->
-  witness ot2 ->
-  EnvM Ordering
-ordW4 _wit1 wit2 = case (cast wit2 :: Maybe (witness ot1)) of
-  Nothing -> compareOT @ot1 @ot2
-  Just{} -> pure EQ
-
-ordW5 ::
-  forall witness ot1 a1 b1 c1 d1 e1 ot2 a2 b2 c2 d2 e2.
-  ( Typeable witness
-  , ot1 ~ OT5 a1 b1 c1 d1 e1
-  , ot2 ~ OT5 a2 b2 c2 d2 e2
-  , IsOTN ot1
-  , IsOTN ot2
-  , Inst5 IsObjectType a1 b1 c1 d1 e1
-  , Inst5 IsObjectType a2 b2 c2 d2 e2
-  ) =>
-  witness ot1 ->
-  witness ot2 ->
-  EnvM Ordering
-ordW5 _wit1 wit2 = case (cast wit2 :: Maybe (witness ot1)) of
-  Nothing -> compareOT @ot1 @ot2
-  Just{} -> pure EQ
-
-ordW6 ::
-  forall witness ot1 a1 b1 c1 d1 e1 f1 ot2 a2 b2 c2 d2 e2 f2.
-  ( Typeable witness
-  , ot1 ~ OT6 a1 b1 c1 d1 e1 f1
-  , ot2 ~ OT6 a2 b2 c2 d2 e2 f2
-  , IsOTN ot1
-  , IsOTN ot2
-  , Inst6 IsObjectType a1 b1 c1 d1 e1 f1
-  , Inst6 IsObjectType a2 b2 c2 d2 e2 f2
-  ) =>
-  witness ot1 ->
-  witness ot2 ->
-  EnvM Ordering
-ordW6 _wit1 wit2 = case (cast wit2 :: Maybe (witness ot1)) of
-  Nothing -> compareOT @ot1 @ot2
-  Just{} -> pure EQ
-
-ordWAny :: WAny ot -> WAny ot -> EnvM Ordering
-ordWAny = \case
-  WAnyArtifact -> \case
-    WAnyArtifact -> pure EQ
-  WAnyCreature -> \case
-    WAnyCreature -> pure EQ
-  WAnyEnchantment -> \case
-    WAnyEnchantment -> pure EQ
-  WAnyInstant -> \case
-    WAnyInstant -> pure EQ
-  WAnyLand -> \case
-    WAnyLand -> pure EQ
-  WAnyPlaneswalker -> \case
-    WAnyPlaneswalker -> pure EQ
-  WAnyPlayer -> \case
-    WAnyPlayer -> pure EQ
-  WAnySorcery -> \case
-    WAnySorcery -> pure EQ
-  WAny -> \case
-    WAny -> pure EQ
-  x@WAny2 -> \case
-    y@WAny2 -> ordW2 x y
-  x@WAny3 -> \case
-    y@WAny3 -> ordW3 x y
-  x@WAny4 -> \case
-    y@WAny4 -> ordW4 x y
-  x@WAny5 -> \case
-    y@WAny5 -> ordW5 x y
-  x@WAny6 -> \case
-    y@WAny6 -> ordW6 x y
-
-ordWCard :: WCard ot -> WCard ot -> EnvM Ordering
-ordWCard = \case
-  WCardArtifact -> \case
-    WCardArtifact -> pure EQ
-  WCardCreature -> \case
-    WCardCreature -> pure EQ
-  WCardEnchantment -> \case
-    WCardEnchantment -> pure EQ
-  WCardInstant -> \case
-    WCardInstant -> pure EQ
-  WCardLand -> \case
-    WCardLand -> pure EQ
-  WCardPlaneswalker -> \case
-    WCardPlaneswalker -> pure EQ
-  WCardSorcery -> \case
-    WCardSorcery -> pure EQ
-  WCard -> \case
-    WCard -> pure EQ
-  x@WCard2 -> \case
-    y@WCard2 -> ordW2 x y
-  x@WCard3 -> \case
-    y@WCard3 -> ordW3 x y
-
-ordWNonCreatureCard ::
-  WNonCreatureCard ot -> WNonCreatureCard ot -> EnvM Ordering
-ordWNonCreatureCard = \case
-  WNonCreatureArtifact -> \case
-    WNonCreatureArtifact -> pure EQ
-  WNonCreatureEnchantment -> \case
-    WNonCreatureEnchantment -> pure EQ
-  WNonCreatureInstant -> \case
-    WNonCreatureInstant -> pure EQ
-  WNonCreatureLand -> \case
-    WNonCreatureLand -> pure EQ
-  WNonCreaturePlaneswalker -> \case
-    WNonCreaturePlaneswalker -> pure EQ
-  WNonCreatureSorcery -> \case
-    WNonCreatureSorcery -> pure EQ
-  WNonCreatureCard -> \case
-    WNonCreatureCard -> pure EQ
-  x@WNonCreatureCard2 -> \case
-    y@WNonCreatureCard2 -> ordW2 x y
-  x@WNonCreatureCard3 -> \case
-    y@WNonCreatureCard3 -> ordW3 x y
-
-ordWPermanent :: WPermanent ot -> WPermanent ot -> EnvM Ordering
-ordWPermanent = \case
-  WPermanentArtifact -> \case
-    WPermanentArtifact -> pure EQ
-  WPermanentCreature -> \case
-    WPermanentCreature -> pure EQ
-  WPermanentEnchantment -> \case
-    WPermanentEnchantment -> pure EQ
-  WPermanentLand -> \case
-    WPermanentLand -> pure EQ
-  WPermanentPlaneswalker -> \case
-    WPermanentPlaneswalker -> pure EQ
-  WPermanent -> \case
-    WPermanent -> pure EQ
-  x@WPermanent2 -> \case
-    y@WPermanent2 -> ordW2 x y
-  x@WPermanent3 -> \case
-    y@WPermanent3 -> ordW3 x y
-  x@WPermanent4 -> \case
-    y@WPermanent4 -> ordW4 x y
-
-ordWSpell :: WSpell ot -> WSpell ot -> EnvM Ordering
-ordWSpell = \case
-  WSpellArtifact -> \case
-    WSpellArtifact -> pure EQ
-  WSpellCreature -> \case
-    WSpellCreature -> pure EQ
-  WSpellEnchantment -> \case
-    WSpellEnchantment -> pure EQ
-  WSpellInstant -> \case
-    WSpellInstant -> pure EQ
-  WSpellPlaneswalker -> \case
-    WSpellPlaneswalker -> pure EQ
-  WSpellSorcery -> \case
-    WSpellSorcery -> pure EQ
-  WSpell -> \case
-    WSpell -> pure EQ
-  x@WSpell2 -> \case
-    y@WSpell2 -> ordW2 x y
-  x@WSpell3 -> \case
-    y@WSpell3 -> ordW3 x y
-  x@WSpell4 -> \case
-    y@WSpell4 -> ordW4 x y
 
 ordYourCard :: YourCardFacet ot -> YourCardFacet ot -> EnvM Ordering
 ordYourCard = \case

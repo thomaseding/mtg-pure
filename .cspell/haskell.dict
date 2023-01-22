@@ -11,4 +11,5 @@ precombat
 readsPrec
 showsPrec
 succ
+unlifted
 unwords

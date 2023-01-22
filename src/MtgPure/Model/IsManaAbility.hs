@@ -176,9 +176,9 @@ instance IsManaAbilityImpl Event where
 
 instance IsManaAbilityImpl EventListener where
   isManaAbilityImpl = \case
-    BecomesTapped _wit wlo -> isManaAbilityImpl wlo
+    BecomesTapped wlo -> isManaAbilityImpl wlo
     Events listeners -> mconcat $ map isManaAbilityImpl listeners
-    SpellIsCast _wit wlo -> isManaAbilityImpl wlo
+    SpellIsCast wlo -> isManaAbilityImpl wlo
     TimePoint _timePoint elect -> isManaAbilityImpl elect
 
 instance IsManaAbilityImpl x => IsManaAbilityImpl (NatList user n x) where

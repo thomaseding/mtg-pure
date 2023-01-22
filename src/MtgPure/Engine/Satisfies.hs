@@ -47,9 +47,9 @@ satisfies zo = logCall 'satisfies \case
   ControlsA{} -> undefined
   HasAbility{} -> undefined
   HasLandType landType -> hasLandType' zo landType
-  Is _wAny zo' -> is' zo zo'
+  Is zo' -> is' zo zo'
   IsOpponentOf zoPlayer -> isOpponentOf' zo zoPlayer
-  IsTapped _wPerm -> isTapped' zo
+  IsTapped -> isTapped' zo
   Not req -> not' zo req
   OfColors{} -> undefined
   OwnedBy{} -> undefined
