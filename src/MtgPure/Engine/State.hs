@@ -15,6 +15,7 @@ module MtgPure.Engine.State (
   Continuation,
   queryMagic,
   runMagicCont,
+  ToPriorityEnd (..),
   --
   mkOpaqueGameState,
   OpaqueGameState,
@@ -48,6 +49,7 @@ import safe qualified Data.List.NonEmpty as NonEmpty
 import safe qualified Data.Map.Strict as Map
 import safe qualified Data.Stream as Stream
 import safe Data.Typeable (Typeable)
+import safe Data.Void (Void)
 import safe Language.Haskell.TH.Syntax (Name)
 import safe MtgPure.Engine.Fwd.Type (Fwd')
 import safe MtgPure.Engine.Monad (
@@ -57,6 +59,7 @@ import safe MtgPure.Engine.Monad (
   HasEnvLogCall (..),
   Magic',
   MagicCont',
+  PriorityEnd,
   fromPublic,
   fromRO,
   get,
@@ -67,6 +70,7 @@ import safe MtgPure.Engine.Monad (
   logCallPush',
   logCallTop,
   logCallUnwind',
+  magicMapBail,
   modify,
   runMagicCont',
   runMagicRO,
@@ -378,3 +382,37 @@ instance (IsReadWrite rw, Monad m) => LogCall (a -> b -> c -> Magic p rw m z) wh
 
 instance (IsReadWrite rw, Monad m) => LogCall (a -> b -> c -> MagicCont p rw bail m z) where
   logCallImpl isRec name action a b c = logCallImpl isRec name $ action a b c
+
+class ToPriorityEnd a b where
+  toPriorityEnd :: Monad m => MagicCont 'Private 'RW a m b -> MagicCont 'Private 'RW PriorityEnd m PriorityEnd
+
+instance ToPriorityEnd Void Void where
+  toPriorityEnd = mapVoidToEnd . fmap Left
+
+instance ToPriorityEnd Void () where
+  toPriorityEnd = mapVoidToEnd . fmap Right
+
+instance ToPriorityEnd Void PriorityEnd where
+  toPriorityEnd = mapVoidToEnd
+
+instance ToPriorityEnd () () where
+  toPriorityEnd = mapUnitToEnd . fmap Right
+
+instance ToPriorityEnd () Void where
+  toPriorityEnd = mapUnitToEnd . fmap Left
+
+instance ToPriorityEnd () PriorityEnd where
+  toPriorityEnd = mapUnitToEnd
+
+mapVoidToEnd :: Monad m => MagicCont 'Private 'RW Void m PriorityEnd -> MagicCont 'Private 'RW PriorityEnd m PriorityEnd
+mapVoidToEnd = mapToEndImpl Left
+
+mapUnitToEnd :: Monad m => MagicCont 'Private 'RW () m PriorityEnd -> MagicCont 'Private 'RW PriorityEnd m PriorityEnd
+mapUnitToEnd = mapToEndImpl Right
+
+mapToEndImpl :: Monad m => (a -> PriorityEnd) -> MagicCont 'Private 'RW a m PriorityEnd -> MagicCont 'Private 'RW PriorityEnd m PriorityEnd
+mapToEndImpl f = magicMapBail $ mapBail . mapRet
+ where
+  mapRet = fmap f
+  mapBail = magicMapBail \m -> liftCont do
+    either f f <$> runMagicCont m

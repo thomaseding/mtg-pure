@@ -12,6 +12,7 @@
 module MtgPure.Engine.Priority (
   askPriorityAction,
   gainPriority,
+  bailGainPriority,
   getHasPriority,
   getPlayerWithPriority,
 ) where
@@ -44,7 +45,6 @@ import safe MtgPure.Engine.Monad (
   internalFromPrivate,
   liftCont,
   magicContBail,
-  magicMapBail,
   modify,
  )
 import safe MtgPure.Engine.Prompt (
@@ -62,6 +62,7 @@ import safe MtgPure.Engine.State (
   GameState (..),
   Magic,
   MagicCont,
+  ToPriorityEnd (toPriorityEnd),
   logCall,
   mkOpaqueGameState,
   runMagicCont,
@@ -83,26 +84,14 @@ gainPriority oPlayer = do
       Left v -> absurd v
       Right () -> pure ()
 
-bailVoidToEnd :: Monad m => MagicCont 'Private 'RW Void m a -> MagicCont 'Private 'RW PriorityEnd m b
-bailVoidToEnd = magicContBail . mapVoidToEnd
-
-bailGainPriority :: Monad m => Object 'OTPlayer -> MagicCont 'Private 'RW PriorityEnd m ()
-bailGainPriority = bailVoidToEnd . gainPriority
+bailGainPriority :: Monad m => Object 'OTPlayer -> MagicCont 'Private 'RW PriorityEnd m a
+bailGainPriority = magicContBail . toPriorityEnd . gainPriority
 
 bailEndTheTurn :: Monad m => MagicCont 'Private 'RW PriorityEnd m ()
-bailEndTheTurn = bailVoidToEnd endTheTurn
+bailEndTheTurn = magicContBail $ toPriorityEnd endTheTurn
 
 bailResolveTopOfStack :: Monad m => MagicCont 'Private 'RW PriorityEnd m Void
-bailResolveTopOfStack = bailVoidToEnd resolveTopOfStack
-
-mapVoidToEnd :: Monad m => MagicCont 'Private 'RW Void m a -> MagicCont 'Private 'RW PriorityEnd m PriorityEnd
-mapVoidToEnd action = magicMapBail (mapBail . mapRet) do
-  M.void action
-  pure $ Right ()
- where
-  mapRet = fmap Left
-  mapBail = magicMapBail \m -> liftCont do
-    either Left Left <$> runMagicCont m
+bailResolveTopOfStack = magicContBail $ fmap Left resolveTopOfStack
 
 runPriorityQueue :: Monad m => MagicCont 'Private 'RW PriorityEnd m Void
 runPriorityQueue = M.join $ logCall 'runPriorityQueue do

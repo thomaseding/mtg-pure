@@ -27,6 +27,7 @@ module MtgPure.Engine.Fwd.Api (
   allZOActivatedAbilities,
   allZOs,
   askPriorityAction,
+  bailGainPriority,
   caseOf,
   castSpell,
   controllerOf,
@@ -205,7 +206,7 @@ data Api (m :: Type -> Type) (v :: Visibility) (rw :: ReadWrite) (ret :: Type) :
 data ApiCont (m :: Type -> Type) (v :: Visibility) (rw :: ReadWrite) (bail :: Type) (a :: Type) :: Type where
   AskPriorityAction :: Object 'OTPlayer -> ApiCont m 'Private 'RW PriorityEnd ()
   GainPriority :: Object 'OTPlayer -> ApiCont m 'Private 'RW Void ()
-  ResolveTopOfStack :: ApiCont m 'Private 'RW Void ()
+  ResolveTopOfStack :: ApiCont m 'Private 'RW PriorityEnd Void
 
 run :: Monad m => Api m v rw z -> Magic v rw m z
 run = \case
@@ -276,10 +277,10 @@ askPriorityAction a = do
   fwd <- liftCont getFwd
   fwd_askPriorityAction fwd a
 
-resolveTopOfStack :: Monad m => MagicCont 'Private 'RW Void m ()
-resolveTopOfStack = do
+bailGainPriority :: Monad m => Object 'OTPlayer -> MagicCont 'Private 'RW PriorityEnd m a
+bailGainPriority a = do
   fwd <- liftCont getFwd
-  fwd_resolveTopOfStack fwd
+  fwd_bailGainPriority fwd a
 
 endTheTurn :: Monad m => MagicCont 'Private 'RW Void m Void
 endTheTurn = do
@@ -290,6 +291,11 @@ gainPriority :: Monad m => Object 'OTPlayer -> MagicCont 'Private 'RW Void m ()
 gainPriority a = do
   fwd <- liftCont getFwd
   fwd_gainPriority fwd a
+
+resolveTopOfStack :: Monad m => MagicCont 'Private 'RW PriorityEnd m Void
+resolveTopOfStack = do
+  fwd <- liftCont getFwd
+  fwd_resolveTopOfStack fwd
 
 ----------------------------------------
 

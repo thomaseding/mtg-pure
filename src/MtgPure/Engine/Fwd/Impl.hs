@@ -61,6 +61,7 @@ import safe MtgPure.Engine.PerformElections (controllerOf, ownerOf, performElect
 import safe MtgPure.Engine.PlayLand (playLand)
 import safe MtgPure.Engine.Priority (
   askPriorityAction,
+  bailGainPriority,
   gainPriority,
   getHasPriority,
   getPlayerWithPriority,
@@ -83,6 +84,7 @@ fwdImpl =
     , fwd_allZOActivatedAbilities = allZOActivatedAbilities
     , fwd_allZOs = allZOs
     , fwd_askPriorityAction = askPriorityAction
+    , fwd_bailGainPriority = bailGainPriority
     , fwd_caseOf = caseOf
     , fwd_castSpell = castSpell
     , fwd_controllerOf = controllerOf

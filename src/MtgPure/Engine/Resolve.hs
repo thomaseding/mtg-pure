@@ -21,8 +21,8 @@ import safe qualified Data.Map.Strict as Map
 import safe Data.Typeable (Typeable)
 import safe Data.Void (Void)
 import safe MtgPure.Engine.Fwd.Api (
+  bailGainPriority,
   enact,
-  gainPriority,
   getActivePlayer,
   newObjectId,
   ownerOf,
@@ -30,7 +30,16 @@ import safe MtgPure.Engine.Fwd.Api (
   pushGraveyardCard,
   setPermanent,
  )
-import safe MtgPure.Engine.Monad (fromPublicRO, fromRO, get, gets, liftCont, magicContBail, modify)
+import safe MtgPure.Engine.Monad (
+  PriorityEnd,
+  fromPublicRO,
+  fromRO,
+  get,
+  gets,
+  liftCont,
+  magicContBail,
+  modify,
+ )
 import safe MtgPure.Engine.Orphans ()
 import safe MtgPure.Engine.Prompt (
   AnyElected (..),
@@ -60,11 +69,11 @@ import safe MtgPure.Model.Zone (Zone (..))
 import safe MtgPure.Model.ZoneObject.Convert (toZO0, zo0ToPermanent)
 import safe MtgPure.Model.ZoneObject.ZoneObject (IsOTN, ZO)
 
-resolveTopOfStack :: Monad m => MagicCont 'Private 'RW Void m ()
+resolveTopOfStack :: Monad m => MagicCont 'Private 'RW PriorityEnd m Void
 resolveTopOfStack = M.join $ logCall 'resolveTopOfStack do
   Stack stack <- liftCont $ fromRO $ gets magicStack
   case stack of -- (117.4) (405.5)
-    [] -> pure $ pure () -- "if the stack is empty, the phase or step ends"
+    [] -> magicContBail $ pure $ Right () -- "if the stack is empty, the phase or step ends"
     item : items -> do
       let zoStack = stackObjectToZo0 item
       liftCont $ modify \st -> st{magicStack = Stack items}
@@ -76,7 +85,7 @@ resolveTopOfStack = M.join $ logCall 'resolveTopOfStack do
           , magicOwnershipMap = Map.delete (getObjectId zoStack) $ magicOwnershipMap st
           }
       oActive <- liftCont $ fromPublicRO getActivePlayer
-      pure $ gainPriority oActive
+      bailGainPriority oActive
 
 endTheTurn :: Monad m => MagicCont 'Private 'RW Void m Void
 endTheTurn = logCall 'endTheTurn do
