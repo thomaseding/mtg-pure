@@ -127,14 +127,20 @@ type Ready = PendingReady 'Post
 data Elected (pEffect :: PrePost) (ot :: Type) :: Type where
   ElectedActivatedAbility ::
     IsZO zone ot =>
-    { electedActivatedAbility_controller :: Object 'OTPlayer
+    { electedActivatedAbility_ability :: SomeActivatedAbility zone ot
+    , electedActivatedAbility_controller :: Object 'OTPlayer
     , electedActivatedAbility_this :: ZO zone ot
     , electedActivatedAbility_cost :: Cost ot
     , electedActivatedAbility_effect :: PendingReady pEffect (Effect 'OneShot) ot
     } ->
     Elected pEffect ot
   ElectedSpell ::
-    { electedSpell_controller :: Object 'OTPlayer
+    IsZO zone OTNSpell =>
+    { -- | NOTE: This is the card that was cast, so its lifetime is short and the object it points to is often dead.
+      -- For example this is the hand card that was cast, but once it is put on the stack it is no longer in the hand
+      -- and the object it points to is then dead.
+      electedSpell_originalSource :: ZO zone OTNSpell
+    , electedSpell_controller :: Object 'OTPlayer
     , electedSpell_card :: AnyCard -- TODO: OwnedCard?
     , electedSpell_facet :: CardFacet ot
     , electedSpell_cost :: Cost ot

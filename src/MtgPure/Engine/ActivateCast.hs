@@ -27,6 +27,7 @@ import safe MtgPure.Engine.Fwd.Api (
   newObjectId,
   pay,
   performElections,
+  removeHandCard,
   resolveElected,
  )
 import safe MtgPure.Engine.Legality (Legality (..), legalityToMaybe, maybeToLegality)
@@ -107,7 +108,7 @@ import safe MtgPure.Model.Recursive (
  )
 import safe MtgPure.Model.Stack (Stack (..), StackObject (..))
 import safe MtgPure.Model.Zone (IsZone (..), SZone (..), Zone (..))
-import safe MtgPure.Model.ZoneObject.Convert (AsSpell', asCard, oToZO1, toZO0)
+import safe MtgPure.Model.ZoneObject.Convert (AsSpell', asCard, oToZO1, toZO0, zo0ToCard)
 import safe MtgPure.Model.ZoneObject.ZoneObject (IsOTN, IsZO, ZO, ZOPlayer, ZoneObject (..))
 
 type Legality' = Maybe ()
@@ -256,17 +257,18 @@ castSpell oCaster = logCall 'castSpell \case
                   False -> invalid CastSpell_NotOwned
                   True -> case anyCard of
                     AnyCard1 card -> case card of
-                      Card _name yourCard -> castYourSpellCard oCaster card yourCard
+                      Card _name yourCard -> castYourSpellCard zoSpell oCaster card yourCard
                     AnyCard2{} -> undefined
 
 castYourSpellCard ::
-  forall ot m x.
-  (ot ~ OTN x, Monad m) =>
+  forall zone ot m x.
+  (ot ~ OTN x, IsZO zone OTNSpell, Monad m) =>
+  ZO zone OTNSpell ->
   Object 'OTPlayer ->
   Card ot ->
   YourCardFacet ot ->
   Magic 'Private 'RW m Legality
-castYourSpellCard oCaster card = logCall 'castYourSpellCard \case
+castYourSpellCard zoSpell oCaster card = logCall 'castYourSpellCard \case
   YourLand{} -> goInvalid
   YourArtifactLand{} -> goInvalid
   --
@@ -291,13 +293,13 @@ castYourSpellCard oCaster card = logCall 'castYourSpellCard \case
     Magic 'Private 'RW m Legality
   goSpell casterToElectFacet = do
     let electFacet = casterToElectFacet $ oToZO1 oCaster
-    spellId <- newObjectId
-    let zoSpell = toZO0 @ 'ZStack spellId
+    stackId <- newObjectId
+    let zoStack = toZO0 @ 'ZStack stackId
 
         goElectFacet :: Elect 'Pre (CardFacet ot) ot -> Magic 'Private 'RW m Legality
         goElectFacet elect = do
-          seedStackEntryTargets zoSpell
-          maybeToLegality <$> performElections zoSpell goFacet elect
+          seedStackEntryTargets zoStack
+          maybeToLegality <$> performElections zoStack goFacet elect
 
         goFacet :: CardFacet ot -> Magic 'Private 'RW m Legality'
         goFacet facet = case facet of
@@ -322,34 +324,34 @@ castYourSpellCard oCaster card = logCall 'castYourSpellCard \case
                   LandCard{} -> error $ show CantHappenByConstruction
                   --
                   ArtifactCard{} ->
-                    payElectedAndPutOnStack @ 'Cast @ot zoSpell $
-                      ElectedSpell oCaster anyCard facet cost mEffect
+                    payElectedAndPutOnStack @ 'Cast @ot zoStack $
+                      ElectedSpell zoSpell oCaster anyCard facet cost mEffect
                   ArtifactCreatureCard{} -> do
-                    payElectedAndPutOnStack @ 'Cast @ot zoSpell $
-                      ElectedSpell oCaster anyCard facet cost mEffect
+                    payElectedAndPutOnStack @ 'Cast @ot zoStack $
+                      ElectedSpell zoSpell oCaster anyCard facet cost mEffect
                   CreatureCard{} -> do
-                    payElectedAndPutOnStack @ 'Cast @ot zoSpell $
-                      ElectedSpell oCaster anyCard facet cost mEffect
+                    payElectedAndPutOnStack @ 'Cast @ot zoStack $
+                      ElectedSpell zoSpell oCaster anyCard facet cost mEffect
                   EnchantmentCard{} -> do
-                    payElectedAndPutOnStack @ 'Cast @ot zoSpell $
-                      ElectedSpell oCaster anyCard facet cost mEffect
+                    payElectedAndPutOnStack @ 'Cast @ot zoStack $
+                      ElectedSpell zoSpell oCaster anyCard facet cost mEffect
                   EnchantmentCreatureCard{} -> do
-                    payElectedAndPutOnStack @ 'Cast @ot zoSpell $
-                      ElectedSpell oCaster anyCard facet cost mEffect
+                    payElectedAndPutOnStack @ 'Cast @ot zoStack $
+                      ElectedSpell zoSpell oCaster anyCard facet cost mEffect
                   InstantCard -> do
-                    payElectedAndPutOnStack @ 'Cast @ot zoSpell $
-                      ElectedSpell oCaster anyCard facet cost mEffect
+                    payElectedAndPutOnStack @ 'Cast @ot zoStack $
+                      ElectedSpell zoSpell oCaster anyCard facet cost mEffect
                   PlaneswalkerCard{} -> do
-                    payElectedAndPutOnStack @ 'Cast @ot zoSpell $
-                      ElectedSpell oCaster anyCard facet cost mEffect
+                    payElectedAndPutOnStack @ 'Cast @ot zoStack $
+                      ElectedSpell zoSpell oCaster anyCard facet cost mEffect
                   SorceryCard -> do
-                    payElectedAndPutOnStack @ 'Cast @ot zoSpell $
-                      ElectedSpell oCaster anyCard facet cost mEffect
+                    payElectedAndPutOnStack @ 'Cast @ot zoStack $
+                      ElectedSpell zoSpell oCaster anyCard facet cost mEffect
           case castMeta_effect meta of
             Just facetToEffect -> do
-              playPendingOneShot zoSpell (castMeta_cost meta facet) (facetToEffect facet) goPay
+              playPendingOneShot zoStack (castMeta_cost meta facet) (facetToEffect facet) goPay
             Nothing -> do
-              playPendingPermanent zoSpell (castMeta_cost meta facet) goPay
+              playPendingPermanent zoStack (castMeta_cost meta facet) goPay
 
     goElectFacet electFacet
 
@@ -376,6 +378,7 @@ activateAbility oPlayer = logCall 'activateAbility \case
     _reqs <- fromRO $ getActivateAbilityReqs oPlayer -- TODO: validate reqs
     let oThis = promoteIdToObjectN @ot $ getObjectId zoThis'
         zoThis = ZO (singZone @zone) oThis
+        some = SomeActivatedAbility zoThis withThisActivated
         thisId = getObjectId zoThis
 
         invalid :: m () -> Magic 'Private 'RW m ActivateResult
@@ -423,7 +426,7 @@ activateAbility oPlayer = logCall 'activateAbility \case
             (_, _, False) -> invalid undefined
             (True, True, True) -> do
               let goPay cost effect = do
-                    let elected = ElectedActivatedAbility oPlayer zoThis cost effect
+                    let elected = ElectedActivatedAbility some oPlayer zoThis cost effect
                         isManaAbility' = isManaAbility withThisActivated
                     case isManaAbility' of
                       True -> do
@@ -586,11 +589,12 @@ payElectedAndPutOnStackImpl ::
   Elected 'Pre ot ->
   Magic 'Private 'RW m Legality
 payElectedAndPutOnStackImpl zoStack idToStackObject elected = do
+  pure () -- Assume the caller uses rewindIllegal, so no need to manually clean up game state here when illegal.
   let stackId = getObjectId zoStack
       stackItem = idToStackObject stackId
   case stackItem of
     StackAbility{} -> pure ()
-    StackSpell{} -> pure () -- TODO: Remove original zoSpell (if not an ability) from its original zone (e.g. remove from hand).
+    StackSpell{} -> removeFromSourceZone
   modify \st ->
     st
       { magicStack = Stack $ stackItem : unStack (magicStack st)
@@ -598,6 +602,20 @@ payElectedAndPutOnStackImpl zoStack idToStackObject elected = do
       , magicOwnershipMap = Map.insert stackId (electedObject_controller elected) $ magicOwnershipMap st
       }
   payElected elected
+ where
+  removeFromSourceZone =
+    case elected of
+      ElectedActivatedAbility{} -> undefined -- should not be possible
+      ElectedSpell zoSource _ _ _ _ _ -> do
+        let go :: forall zone. IsZone zone => ZO zone OTNSpell -> ZO zone OT0 -> Magic 'Private 'RW m ()
+            go _ zoSource0 = case singZone @zone of
+              SZHand -> do
+                removedCard <- removeHandCard (electedObject_controller elected) $ zo0ToCard zoSource0
+                case removedCard of
+                  Nothing -> undefined -- cant happen? ... if it can legitly happen, return Illegal instead
+                  Just _ -> pure ()
+              _ -> undefined -- TODO: singZone
+        go zoSource $ toZO0 zoSource
 
 seedStackEntryTargets :: Monad m => ZO 'ZStack OT0 -> Magic 'Private 'RW m ()
 seedStackEntryTargets zoStack = logCall 'seedStackEntryTargets do
