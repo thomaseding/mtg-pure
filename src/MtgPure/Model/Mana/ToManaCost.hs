@@ -12,7 +12,9 @@ import safe Data.Kind (Type)
 import safe MtgPure.Model.Mana.Mana (Mana (..), castManaType, litMana, thawMana)
 import safe MtgPure.Model.Mana.ManaCost (
   DynamicManaCost (..),
+  HybridManaCost (hybridBG),
   ManaCost (..),
+  PhyrexianManaCost (..),
   emptyManaCost,
  )
 import safe MtgPure.Model.Mana.ManaPool (CompleteManaPool (..), ManaPool (..))
@@ -78,7 +80,13 @@ instance IsManaType snow mt => ToManaCost (Mana 'Var snow mt) where
     SMTColorless -> emptyManaCost{costColorless = x}
     SMTGeneric -> emptyManaCost{costDynamic = mempty{costGeneric = x}}
     SMTSnow -> emptyManaCost{costDynamic = mempty{costSnow = castManaType x}}
-    SMTHybridBG -> emptyManaCost{costDynamic = mempty{costHybridBG = x}}
+    SMTHybridBG -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridBG = x}}}
+    SMTPhyrexianWhite -> emptyManaCost{costDynamic = mempty{costPhyrexian = mempty{phyrexianWhite = x}}}
+    SMTPhyrexianBlue -> emptyManaCost{costDynamic = mempty{costPhyrexian = mempty{phyrexianBlue = x}}}
+    SMTPhyrexianBlack -> emptyManaCost{costDynamic = mempty{costPhyrexian = mempty{phyrexianBlack = x}}}
+    SMTPhyrexianRed -> emptyManaCost{costDynamic = mempty{costPhyrexian = mempty{phyrexianRed = x}}}
+    SMTPhyrexianGreen -> emptyManaCost{costDynamic = mempty{costPhyrexian = mempty{phyrexianGreen = x}}}
+    SMTPhyrexianColorless -> emptyManaCost{costDynamic = mempty{costPhyrexian = mempty{phyrexianColorless = x}}}
 
 instance ToManaCost (ManaSymbol a, Int) where
   toManaCost = \case
@@ -89,7 +97,7 @@ instance ToManaCost (ManaSymbol a, Int) where
     x@(G, _) -> emptyManaCost{costGreen = toMana x}
     x@(C, _) -> emptyManaCost{costColorless = toMana x}
     x@(S, _) -> emptyManaCost{costDynamic = mempty{costSnow = toMana x}}
-    x@(BG, _) -> emptyManaCost{costDynamic = mempty{costHybridBG = toMana x}}
+    x@(BG, _) -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridBG = toMana x}}}
 
 instance ToManaCost (ManaSymbol a) where
   toManaCost = \case

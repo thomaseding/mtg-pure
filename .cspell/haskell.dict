@@ -7,6 +7,7 @@ HLINT
 mconcat
 mempty
 newtype
+OVERLAPPABLE
 precombat
 readsPrec
 showsPrec

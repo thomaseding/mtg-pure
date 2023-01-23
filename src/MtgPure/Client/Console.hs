@@ -74,7 +74,7 @@ import safe MtgPure.Model.Hand (Hand (..))
 import safe MtgPure.Model.Library (Library (..))
 import safe MtgPure.Model.Mana.Mana (Mana (..))
 import safe MtgPure.Model.Mana.ManaCost (DynamicManaCost (..))
-import safe MtgPure.Model.Mana.ManaPool (CompleteManaPool)
+import safe MtgPure.Model.Mana.ManaPool (CompleteManaPool, ManaPayment (..))
 import safe MtgPure.Model.Mana.ManaSymbol (ManaSymbol (..))
 import safe MtgPure.Model.Mana.ToManaPool (toCompleteManaPool)
 import safe MtgPure.Model.Mulligan (Mulligan (..))
@@ -454,13 +454,14 @@ consolePromptPayDynamicMana ::
   OpaqueGameState Console ->
   Object 'OTPlayer ->
   DynamicManaCost 'NoVar ->
-  Magic 'Public 'RO Console CompleteManaPool
+  Magic 'Public 'RO Console ManaPayment
 consolePromptPayDynamicMana attempt opaque oPlayer dyn = M.lift do
   (pool, text) <- queryMagic opaque do
     let DynamicManaCost
           { costGeneric = generic
-          , costSnow = _snow
-          , costHybridBG = _bg
+          , costSnow = _snow -- TODO
+          , costHybrid = _hybrid -- TODO
+          , costPhyrexian = _phyrexian -- TODO
           } = dyn
         Mana x = generic
     liftIO case attempt of
@@ -473,7 +474,7 @@ consolePromptPayDynamicMana attempt opaque oPlayer dyn = M.lift do
           Just p -> p
     pure (pool, text)
   let _ = text -- TODO: log the choice
-  pure pool
+  pure mempty{paymentMana = pool}
 
 parseManaPool :: String -> Maybe CompleteManaPool
 parseManaPool = parseManaPool' . map Char.toUpper

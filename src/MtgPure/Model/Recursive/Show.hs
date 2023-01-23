@@ -48,7 +48,7 @@ import safe MtgPure.Model.Damage (Damage, Damage' (..))
 import safe MtgPure.Model.LandType (LandType (..))
 import safe MtgPure.Model.Loyalty (Loyalty)
 import safe MtgPure.Model.Mana.Mana (Mana (..))
-import safe MtgPure.Model.Mana.ManaCost (DynamicManaCost (..), ManaCost (..))
+import safe MtgPure.Model.Mana.ManaCost (DynamicManaCost (..), HybridManaCost (..), ManaCost (..), PhyrexianManaCost (..))
 import safe MtgPure.Model.Mana.ManaPool (CompleteManaPool (..), ManaPool (..))
 import safe MtgPure.Model.Mana.ManaSymbol (ManaSymbol (..))
 import safe MtgPure.Model.Object.IsObjectType (IsObjectType (..))
@@ -1137,6 +1137,7 @@ showMana =
       sY <- parens <$> showMana y
       pure $ pure "SumMana " <> sX <> pure " " <> sY
 
+-- FIXME
 showManaCost :: ManaCost var -> EnvM ParenItems
 showManaCost cost = yesParens do
   let ManaCost'
@@ -1151,8 +1152,20 @@ showManaCost cost = yesParens do
       DynamicManaCost
         { costGeneric = x
         , costSnow = s
-        , costHybridBG = bg
+        , costHybrid = hybrid
+        , costPhyrexian = phyrexian
         } = dyn
+      HybridManaCost
+        { hybridBG = bg
+        } = hybrid
+      PhyrexianManaCost
+        { phyrexianWhite = _pw
+        , phyrexianBlue = _pu
+        , phyrexianBlack = _pb
+        , phyrexianRed = _pr
+        , phyrexianGreen = _pg
+        , phyrexianColorless = _pc
+        } = phyrexian
       lits =
         sequence
           [ literalMana w

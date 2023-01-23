@@ -22,6 +22,12 @@ data ManaType
   | MTGeneric
   | MTSnow
   | MTHybridBG
+  | MTPhyrexianWhite
+  | MTPhyrexianBlue
+  | MTPhyrexianBlack
+  | MTPhyrexianRed
+  | MTPhyrexianGreen
+  | MTPhyrexianColorless
   deriving (Eq, Ord, Typeable)
 
 data SManaType (snow :: Snow) (mt :: ManaType) where
@@ -34,6 +40,12 @@ data SManaType (snow :: Snow) (mt :: ManaType) where
   SMTGeneric :: SManaType 'NonSnow 'MTGeneric
   SMTSnow :: SManaType 'Snow 'MTSnow
   SMTHybridBG :: SManaType 'NonSnow 'MTHybridBG
+  SMTPhyrexianWhite :: SManaType 'NonSnow 'MTPhyrexianWhite
+  SMTPhyrexianBlue :: SManaType 'NonSnow 'MTPhyrexianBlue
+  SMTPhyrexianBlack :: SManaType 'NonSnow 'MTPhyrexianBlack
+  SMTPhyrexianRed :: SManaType 'NonSnow 'MTPhyrexianRed
+  SMTPhyrexianGreen :: SManaType 'NonSnow 'MTPhyrexianGreen
+  SMTPhyrexianColorless :: SManaType 'NonSnow 'MTPhyrexianColorless
 
 class IsManaType (snow :: Snow) (mt :: ManaType) where
   singManaType :: SManaType snow mt
@@ -64,3 +76,21 @@ instance IsManaType 'Snow 'MTSnow where
 
 instance IsManaType 'NonSnow 'MTHybridBG where
   singManaType = SMTHybridBG
+
+instance IsManaType 'NonSnow 'MTPhyrexianWhite where
+  singManaType = SMTPhyrexianWhite
+
+instance IsManaType 'NonSnow 'MTPhyrexianBlue where
+  singManaType = SMTPhyrexianBlue
+
+instance IsManaType 'NonSnow 'MTPhyrexianBlack where
+  singManaType = SMTPhyrexianBlack
+
+instance IsManaType 'NonSnow 'MTPhyrexianRed where
+  singManaType = SMTPhyrexianRed
+
+instance IsManaType 'NonSnow 'MTPhyrexianGreen where
+  singManaType = SMTPhyrexianGreen
+
+instance IsManaType 'NonSnow 'MTPhyrexianColorless where
+  singManaType = SMTPhyrexianColorless

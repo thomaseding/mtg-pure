@@ -6,9 +6,11 @@
 module MtgPure.Model.Mana.ManaPool (
   ManaPool (..),
   CompleteManaPool (..),
+  ManaPayment (..),
 ) where
 
 import safe Data.Typeable (Typeable)
+import safe MtgPure.Model.Life (Life (..))
 import safe MtgPure.Model.Mana.Mana (Mana)
 import safe MtgPure.Model.Mana.ManaType (ManaType (..))
 import safe MtgPure.Model.Mana.Snow (Snow (..))
@@ -29,6 +31,11 @@ data CompleteManaPool = CompleteManaPool
   , poolNonSnow :: ManaPool 'NonSnow
   }
   deriving (Eq, Ord, Typeable) --  TODO: Make some of these orphans
+
+data ManaPayment = ManaPayment
+  { paymentMana :: CompleteManaPool
+  , paymentLife :: Life -- For Phyrexian mana
+  }
 
 instance Semigroup (ManaPool snow) where
   mp1 <> mp2 =
@@ -56,6 +63,22 @@ instance Semigroup (ManaPool snow) where
       , poolRed = r2
       , poolGreen = g2
       , poolColorless = c2
+      } = mp2
+
+instance Semigroup ManaPayment where
+  mp1 <> mp2 =
+    ManaPayment
+      { paymentMana = m1 <> m2
+      , paymentLife = Life $ l1 + l2
+      }
+   where
+    ManaPayment
+      { paymentMana = m1
+      , paymentLife = Life l1
+      } = mp1
+    ManaPayment
+      { paymentMana = m2
+      , paymentLife = Life l2
       } = mp2
 
 instance Semigroup CompleteManaPool where
@@ -90,4 +113,11 @@ instance Monoid CompleteManaPool where
     CompleteManaPool
       { poolSnow = mempty
       , poolNonSnow = mempty
+      }
+
+instance Monoid ManaPayment where
+  mempty =
+    ManaPayment
+      { paymentMana = mempty
+      , paymentLife = Life 0
       }

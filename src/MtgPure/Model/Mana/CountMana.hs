@@ -8,12 +8,12 @@ module MtgPure.Model.Mana.CountMana (
 ) where
 
 import safe MtgPure.Model.Mana.Mana (Mana (..))
-import safe MtgPure.Model.Mana.ManaCost (DynamicManaCost (..))
+import safe MtgPure.Model.Mana.ManaCost (DynamicManaCost (..), HybridManaCost (..), PhyrexianManaCost (..))
 import safe MtgPure.Model.Mana.ManaPool (CompleteManaPool (..), ManaPool (..))
 import safe MtgPure.Model.Variable (Var (NoVar))
 
 class CountMana a where
-  -- Returns the minimum amount. So for X2 style hybrid costs, that returns 1
+  -- Hybrid and phyrexian mana are counted as 1 mana.
   countMana :: a -> Int
 
 instance CountMana CompleteManaPool where
@@ -38,10 +38,28 @@ instance CountMana (Mana 'NoVar snow mt) where
   countMana = \case
     Mana mana -> mana
 
+instance CountMana (PhyrexianManaCost 'NoVar) where
+  countMana
+    PhyrexianManaCost
+      { phyrexianWhite = w
+      , phyrexianBlue = u
+      , phyrexianBlack = b
+      , phyrexianRed = r
+      , phyrexianGreen = g
+      } = countMana w + countMana u + countMana b + countMana r + countMana g
+
+instance CountMana (HybridManaCost 'NoVar) where
+  countMana
+    HybridManaCost
+      { hybridBG = bg
+      } = countMana bg
+
 instance CountMana (DynamicManaCost 'NoVar) where
   countMana
     DynamicManaCost
       { costGeneric = g
       , costSnow = s
-      , costHybridBG = bg
-      } = countMana g + countMana s + countMana bg
+      , costHybrid = h
+      , costPhyrexian = p
+      } =
+      countMana g + countMana s + countMana h + countMana p

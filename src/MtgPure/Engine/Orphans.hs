@@ -39,8 +39,13 @@ import safe MtgPure.Model.Land (Land (..))
 import safe MtgPure.Model.Library (Library (..))
 import safe MtgPure.Model.Life (Life (..))
 import safe MtgPure.Model.Mana.Mana (IsManaNoVar, Mana (..))
-import safe MtgPure.Model.Mana.ManaCost (DynamicManaCost (..), ManaCost (ManaCost'))
-import safe MtgPure.Model.Mana.ManaPool (CompleteManaPool (..), ManaPool (..))
+import safe MtgPure.Model.Mana.ManaCost (
+  DynamicManaCost (..),
+  HybridManaCost (..),
+  ManaCost (ManaCost'),
+  PhyrexianManaCost (..),
+ )
+import safe MtgPure.Model.Mana.ManaPool (CompleteManaPool (..), ManaPayment (..), ManaPool (..))
 import safe MtgPure.Model.Mana.Snow (IsSnow)
 import safe MtgPure.Model.Permanent (Permanent (..))
 import safe MtgPure.Model.PhaseStep (PhaseStep (..))
@@ -82,42 +87,61 @@ tellPrint s = tell $ DList.fromList (show s) <> "\n"
 tellLine :: DString -> Writer DString ()
 tellLine s = tell $ s <> "\n"
 
-mapManaCost ::
-  ( forall snow color.
-    (IsManaNoVar snow color) =>
-    Mana var snow color ->
-    Mana var' snow color
-  ) ->
-  ManaCost var ->
-  ManaCost var'
-mapManaCost f (ManaCost' w u b r g c (DynamicManaCost x s bg)) =
-  ManaCost' (f w) (f u) (f b) (f r) (f g) (f c) $ DynamicManaCost (f x) (f s) (f bg)
+class MapManaCost cost where
+  mapManaCost ::
+    ( forall snow color.
+      (IsManaNoVar snow color) =>
+      Mana var snow color ->
+      Mana var' snow color
+    ) ->
+    cost var ->
+    cost var'
+  mapManaCost2 ::
+    ( forall snow color.
+      IsManaNoVar snow color =>
+      Mana var snow color ->
+      Mana var snow color ->
+      Mana var' snow color
+    ) ->
+    cost var ->
+    cost var ->
+    cost var'
 
-mapManaCost2 ::
-  ( forall snow color.
-    IsManaNoVar snow color =>
-    Mana var snow color ->
-    Mana var snow color ->
-    Mana var' snow color
-  ) ->
-  ManaCost var ->
-  ManaCost var ->
-  ManaCost var'
-mapManaCost2
-  f
-  (ManaCost' w1 u1 b1 r1 g1 c1 (DynamicManaCost x1 s1 bg1))
-  (ManaCost' w2 u2 b2 r2 g2 c2 (DynamicManaCost x2 s2 bg2)) =
-    ManaCost'
-      (f w1 w2)
-      (f u1 u2)
-      (f b1 b2)
-      (f r1 r2)
-      (f g1 g2)
-      (f c1 c2)
-      $ DynamicManaCost
-        (f x1 x2)
-        (f s1 s2)
-        (f bg1 bg2)
+instance MapManaCost PhyrexianManaCost where
+  mapManaCost f (PhyrexianManaCost w u b r g c) =
+    PhyrexianManaCost (f w) (f u) (f b) (f r) (f g) (f c)
+  mapManaCost2
+    f
+    (PhyrexianManaCost w1 u1 b1 r1 g1 c1)
+    (PhyrexianManaCost w2 u2 b2 r2 g2 c2) =
+      PhyrexianManaCost (f w1 w2) (f u1 u2) (f b1 b2) (f r1 r2) (f g1 g2) (f c1 c2)
+
+instance MapManaCost HybridManaCost where
+  mapManaCost f (HybridManaCost bg) =
+    HybridManaCost (f bg)
+  mapManaCost2 f (HybridManaCost bg1) (HybridManaCost bg2) =
+    HybridManaCost (f bg1 bg2)
+
+instance MapManaCost ManaCost where
+  mapManaCost f (ManaCost' w u b r g c (DynamicManaCost x s hy phy)) =
+    ManaCost' (f w) (f u) (f b) (f r) (f g) (f c) $
+      DynamicManaCost (f x) (f s) (mapManaCost f hy) (mapManaCost f phy)
+  mapManaCost2
+    f
+    (ManaCost' w1 u1 b1 r1 g1 c1 (DynamicManaCost x1 s1 hy1 phy1))
+    (ManaCost' w2 u2 b2 r2 g2 c2 (DynamicManaCost x2 s2 hy2 phy2)) =
+      ManaCost'
+        (f w1 w2)
+        (f u1 u2)
+        (f b1 b2)
+        (f r1 r2)
+        (f g1 g2)
+        (f c1 c2)
+        $ DynamicManaCost
+          (f x1 x2)
+          (f s1 s2)
+          (mapManaCost2 f hy1 hy2)
+          (mapManaCost2 f phy1 phy2)
 
 mapManaPool ::
   (IsSnow snow, IsSnow snow') =>
@@ -192,6 +216,15 @@ instance Num CompleteManaPool where
   negate = mapCompleteManaPool negate
   fromInteger n = mempty{poolNonSnow = fromInteger n}
 
+instance Num ManaPayment where
+  p + q = p{paymentMana = paymentMana p + paymentMana q, paymentLife = paymentLife p + paymentLife q}
+  p - q = p{paymentMana = paymentMana p - paymentMana q, paymentLife = paymentLife p - paymentLife q}
+  p * q = p{paymentMana = paymentMana p * paymentMana q, paymentLife = paymentLife p * paymentLife q}
+  abs p = p{paymentMana = abs (paymentMana p), paymentLife = abs (paymentLife p)}
+  signum p = p{paymentMana = signum (paymentMana p), paymentLife = signum (paymentLife p)}
+  negate p = p{paymentMana = negate (paymentMana p), paymentLife = negate (paymentLife p)}
+  fromInteger n = mempty{paymentMana = fromInteger n}
+
 instance Num (Damage 'NoVar) where
   (+) (Damage x) (Damage y) = Damage $ x + y
   (-) (Damage x) (Damage y) = Damage $ x - y
@@ -239,7 +272,7 @@ instance Num (ManaCost 'NoVar) where
   abs = mapManaCost abs
   signum = mapManaCost signum
   negate = mapManaCost negate
-  fromInteger x = ManaCost' 0 0 0 0 0 0 $ DynamicManaCost (fromInteger x) 0 0
+  fromInteger x = ManaCost' 0 0 0 0 0 0 $ DynamicManaCost (fromInteger x) 0 mempty mempty
 
 instance ForceVars (ManaCost var) (ManaCost 'NoVar) where
   forceVars = mapManaCost forceVars

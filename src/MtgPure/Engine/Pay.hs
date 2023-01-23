@@ -12,6 +12,7 @@ module MtgPure.Engine.Pay (
   pay,
 ) where
 
+import safe Control.Exception (assert)
 import safe qualified Control.Monad as M
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
 import safe Control.Monad.Util (untilJust)
@@ -41,11 +42,13 @@ import safe MtgPure.Engine.State (
 import safe MtgPure.Model.Combinators (isTapped)
 import safe MtgPure.Model.Life (Life (..))
 import safe MtgPure.Model.Mana.CountMana (countMana)
-import safe MtgPure.Model.Mana.Mana (IsManaNoVar, Mana (..), thawMana)
-import safe MtgPure.Model.Mana.ManaCost (DynamicManaCost (..), ManaCost (..))
-import safe MtgPure.Model.Mana.ManaPool (CompleteManaPool (..), ManaPool (..))
+import safe MtgPure.Model.Mana.Mana (IsManaNoVar, Mana (..), freezeMana, thawMana)
+import safe MtgPure.Model.Mana.ManaCost (DynamicManaCost (..), HybridManaCost (..), ManaCost (..), PhyrexianManaCost (..))
+import safe MtgPure.Model.Mana.ManaPool (CompleteManaPool (..), ManaPayment (..), ManaPool (..))
+import safe MtgPure.Model.Mana.ManaSymbol (ManaSymbol (..))
+import safe MtgPure.Model.Mana.ManaType (ManaType (..))
 import safe MtgPure.Model.Mana.Snow (IsSnow, Snow (..))
-import safe MtgPure.Model.Mana.ToManaPool (toCompleteManaPool)
+import safe MtgPure.Model.Mana.ToManaPool (ToManaPool (..), toCompleteManaPool)
 import safe MtgPure.Model.Object.Object (Object)
 import safe MtgPure.Model.Object.ObjectN_ (ObjectN' (..))
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
@@ -88,25 +91,6 @@ class FindMana manas var | manas -> var where
       Maybe x
     ) ->
     Maybe x
-
-instance FindMana (ManaCost 'NoVar) 'NoVar where
-  findMana cost f =
-    getFirst $
-      mconcat $
-        map
-          First
-          [ f $ costWhite cost
-          , f $ costBlue cost
-          , f $ costBlack cost
-          , f $ costRed cost
-          , f $ costGreen cost
-          , f $ costColorless cost
-          , f $ costGeneric dyn
-          , f $ costSnow dyn
-          , f $ costHybridBG dyn
-          ]
-   where
-    dyn = costDynamic cost
 
 instance IsSnow snow => FindMana (ManaPool snow) 'NoVar where
   findMana (ManaPool w u b r g c) f =
@@ -157,6 +141,15 @@ extractFixedPayment' cost = ManaPool w u b r g c
   g = costGreen cost
   c = costColorless cost
 
+-- TODO: Prolly allow payment to be aborted by user.
+-- [Pact of Negation] is an example of a card with a mandatory cost that cannot be aborted.
+-- While players are not obligated to activate mana abilities, they must pay the cost with any
+-- mana in their pools if possible. This is easy enough for fixed mana costs, but for dynamic.
+-- I don't think MTG has any cards that require dynamic mana costs.
+-- I suppose the best way to handle this is to accept an argument for Mandatory/Optional.
+-- Game engine needs to search for at least one solution. If no solutions are found, then the payment
+-- is regardless of whether it is mandatory or optional.
+--
 -- TODO: Auto pay generic costs when there is only one solution.
 -- TODO: Auto pay snow costs when there is only one solution.
 -- TODO: Auto pay hybrid costs when there is only one solution.
@@ -166,7 +159,7 @@ promptPayForDynamic ::
   Object 'OTPlayer ->
   CompleteManaPool ->
   DynamicManaCost 'NoVar ->
-  Magic 'Private 'RW m CompleteManaPool
+  Magic 'Private 'RW m ManaPayment
 promptPayForDynamic oPlayer avail dyn = do
   prompt <- fromRO $ gets magicPrompt
   opaque <- fromRO $ gets mkOpaqueGameState
@@ -174,16 +167,127 @@ promptPayForDynamic oPlayer avail dyn = do
     payment <- fromPublic $ fromRO $ promptPayDynamicMana prompt attempt opaque oPlayer dyn
     case isPaymentCompatible payment dyn of
       False -> pure Nothing
-      True -> case isManaNonNegative $ avail - payment of
+      True -> case isManaNonNegative $ avail - paymentMana payment of
         False -> pure Nothing
-        True -> pure $ Just payment
+        True -> pure $ Just payment -- TODO: check life payment
 
--- TODO: Handle snow costs
--- TODO: Handle colored hybrid costs
+toPayment :: CompleteManaPool -> ManaPayment
+toPayment pool = mempty{paymentMana = pool}
+
 -- TODO: Handle X2 hybrid costs
--- TODO: Handle phyrexian costs
-isPaymentCompatible :: CompleteManaPool -> DynamicManaCost 'NoVar -> Bool
-isPaymentCompatible payment dyn = countMana payment == countMana dyn
+possiblePaymentsHybrid ::
+  ToManaPool 'NonSnow (ManaSymbol mt1) =>
+  ToManaPool 'NonSnow (ManaSymbol mt2) =>
+  ManaSymbol mt1 ->
+  ManaSymbol mt2 ->
+  Mana 'NoVar 'NonSnow mth ->
+  [ManaPayment]
+possiblePaymentsHybrid sym1 sym2 (Mana n) = case n <= 0 of
+  True -> [mempty]
+  False -> do
+    p <-
+      map
+        toPayment
+        [ mempty{poolNonSnow = toManaPool sym1}
+        , mempty{poolNonSnow = toManaPool sym2}
+        , mempty{poolSnow = mapManaPool freezeMana $ toManaPool sym1}
+        , mempty{poolSnow = mapManaPool freezeMana $ toManaPool sym2}
+        ]
+    q <- possiblePaymentsHybrid sym1 sym2 $ Mana $ n - 1
+    pure $ p <> q
+
+possiblePaymentsPhyrexian ::
+  forall mt mtp.
+  ToManaPool 'NonSnow (ManaSymbol mt) =>
+  ManaSymbol mt ->
+  Mana 'NoVar 'NonSnow mtp ->
+  [ManaPayment]
+possiblePaymentsPhyrexian sym (Mana n) = case n <= 0 of
+  True -> [mempty]
+  False -> do
+    p <-
+      [ toPayment $ mempty{poolNonSnow = toManaPool sym}
+        , toPayment $ mempty{poolSnow = mapManaPool freezeMana $ toManaPool sym}
+        , mempty{paymentLife = 2}
+        ]
+    q <- possiblePaymentsPhyrexian sym $ Mana $ n - 1
+    pure $ p <> q
+
+class PossiblePayments cost where
+  possiblePayments :: cost -> [ManaPayment]
+
+instance PossiblePayments (Mana 'NoVar 'NonSnow 'MTHybridBG) where
+  possiblePayments = possiblePaymentsHybrid B G
+
+instance PossiblePayments (Mana 'NoVar 'NonSnow 'MTPhyrexianWhite) where
+  possiblePayments = possiblePaymentsPhyrexian W
+
+instance PossiblePayments (Mana 'NoVar 'NonSnow 'MTPhyrexianBlue) where
+  possiblePayments = possiblePaymentsPhyrexian U
+
+instance PossiblePayments (Mana 'NoVar 'NonSnow 'MTPhyrexianBlack) where
+  possiblePayments = possiblePaymentsPhyrexian B
+
+instance PossiblePayments (Mana 'NoVar 'NonSnow 'MTPhyrexianRed) where
+  possiblePayments = possiblePaymentsPhyrexian R
+
+instance PossiblePayments (Mana 'NoVar 'NonSnow 'MTPhyrexianGreen) where
+  possiblePayments = possiblePaymentsPhyrexian G
+
+instance PossiblePayments (Mana 'NoVar 'NonSnow 'MTPhyrexianColorless) where
+  possiblePayments = possiblePaymentsPhyrexian C
+
+instance PossiblePayments (Mana 'NoVar 'Snow 'MTGeneric) where
+  possiblePayments (Mana n) = case n <= 0 of
+    True -> [mempty]
+    False -> do
+      p <-
+        [ toPayment $ mempty{poolSnow = mapManaPool freezeMana $ toManaPool W}
+          , toPayment $ mempty{poolSnow = mapManaPool freezeMana $ toManaPool U}
+          , toPayment $ mempty{poolSnow = mapManaPool freezeMana $ toManaPool B}
+          , toPayment $ mempty{poolSnow = mapManaPool freezeMana $ toManaPool R}
+          , toPayment $ mempty{poolSnow = mapManaPool freezeMana $ toManaPool G}
+          , toPayment $ mempty{poolSnow = mapManaPool freezeMana $ toManaPool C}
+          ]
+      q <- possiblePayments @(Mana 'NoVar 'Snow 'MTGeneric) $ Mana $ n - 1
+      pure $ p <> q
+
+instance PossiblePayments (HybridManaCost 'NoVar) where
+  possiblePayments hy = do
+    bg <- possiblePayments $ hybridBG hy
+    pure bg -- <> rg <> gw <> wb <> ur <> ...
+
+instance PossiblePayments (PhyrexianManaCost 'NoVar) where
+  possiblePayments phy = do
+    w <- possiblePayments $ phyrexianWhite phy
+    u <- possiblePayments $ phyrexianBlue phy
+    b <- possiblePayments $ phyrexianBlack phy
+    r <- possiblePayments $ phyrexianRed phy
+    g <- possiblePayments $ phyrexianGreen phy
+    c <- possiblePayments $ phyrexianColorless phy
+    pure $ w <> u <> b <> r <> g <> c
+
+instance PossiblePayments (DynamicManaCost 'NoVar) where
+  possiblePayments dyn = do
+    case costGeneric dyn of
+      0 -> pure ()
+      _ -> error "caller should zero out generic cost before calling possiblePayments to avoid big search tree"
+    s <- possiblePayments $ costSnow dyn
+    hy <- possiblePayments $ costHybrid dyn
+    phy <- possiblePayments $ costPhyrexian dyn
+    pure $ s <> hy <> phy
+
+isPaymentCompatible :: ManaPayment -> DynamicManaCost 'NoVar -> Bool
+isPaymentCompatible payment cost = not $ null do
+  candidate <- possiblePayments cost'
+  let remaining = payment - candidate
+  M.guard $ isManaNonNegative $ paymentMana remaining
+  M.guard $ countMana (paymentMana remaining) == countMana generic
+  pure () -- TODO: check life payment
+  pure candidate
+ where
+  cost' = cost{costGeneric = 0}
+  generic = costGeneric cost
 
 payManaCost :: Monad m => Object 'OTPlayer -> ManaCost 'Var -> Magic 'Private 'RW m Legality
 payManaCost oPlayer (forceVars -> cost) = logCall 'payManaCost do
@@ -200,11 +304,19 @@ payManaCost oPlayer (forceVars -> cost) = logCall 'payManaCost do
           case countMana dyn > countMana avail of
             True -> pure Illegal
             False -> do
+              -- XXX: This auto switching needs more smarts for life payments
               dynPayment <- case countMana dyn of
                 0 -> pure mempty
                 _ -> promptPayForDynamic oPlayer avail dyn
-              let pool' = pool - fixedPayment - dynPayment
-              setPlayer oPlayer player{playerMana = pool'}
+              let pool' = pool - fixedPayment - paymentMana dynPayment
+              setPlayer
+                oPlayer
+                player
+                  { playerMana = pool'
+                  , playerLife =
+                      let life = playerLife player - paymentLife dynPayment
+                       in assert (life > 0) life
+                  }
               pure Legal
 
 paySacrificeCost ::
