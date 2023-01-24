@@ -56,10 +56,10 @@ satisfies zo = logCall 'satisfies \case
   PlayerPays{} -> undefined
   RAnd reqs -> rAnd' zo reqs
   ROr reqs -> rOr' zo reqs
-  R2{} -> undefined
-  R3{} -> undefined
-  R4{} -> undefined
-  R5{} -> undefined
+  Req2{} -> undefined
+  Req3{} -> undefined
+  Req4{} -> undefined
+  Req5{} -> undefined
 
 hasLandType' ::
   forall zone m.

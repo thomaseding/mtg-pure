@@ -19,7 +19,8 @@ module MtgPure.Engine.Pay (
 
 import safe Control.Exception (assert)
 import safe qualified Control.Monad as M
-import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
+import safe Control.Monad.Access (Visibility (..))
+import safe qualified Control.Monad.Access as A
 import safe Control.Monad.Util (untilJust)
 import safe Data.Functor ((<&>))
 import safe qualified Data.List as List
@@ -50,7 +51,12 @@ import safe MtgPure.Model.Combinators (isTapped)
 import safe MtgPure.Model.Life (Life (..))
 import safe MtgPure.Model.Mana.CountMana (countMana)
 import safe MtgPure.Model.Mana.Mana (IsManaNoVar, Mana (..), freezeMana)
-import safe MtgPure.Model.Mana.ManaCost (DynamicManaCost (..), HybridManaCost (..), ManaCost (..), PhyrexianManaCost (..))
+import safe MtgPure.Model.Mana.ManaCost (
+  DynamicManaCost (..),
+  HybridManaCost (..),
+  ManaCost (..),
+  PhyrexianManaCost (..),
+ )
 import safe MtgPure.Model.Mana.ManaPool (CompleteManaPool (..), ManaPayment (..), ManaPool (..))
 import safe MtgPure.Model.Mana.ManaSymbol (ManaSymbol (..))
 import safe MtgPure.Model.Mana.ManaType (ManaType (..))
@@ -68,7 +74,7 @@ import safe MtgPure.Model.Zone (SZone (..), Zone (..))
 import safe MtgPure.Model.ZoneObject.Convert (oToZO1, toZO0, zo0ToPermanent)
 import safe MtgPure.Model.ZoneObject.ZoneObject (IsZO, ZoneObject (..))
 
-pay :: Monad m => Object 'OTPlayer -> Cost ot -> Magic 'Private 'RW m Legality
+pay :: Monad m => Object 'OTPlayer -> Cost ot -> Magic 'Private 'A.RW m Legality
 pay oPlayer = logCall 'pay do
   -- TODO: allow player to activate mana abilities iff the payment requires a mana cost.
   -- Prolly actually should be done on each mana payment attempt instead of ahead of time,
@@ -76,7 +82,7 @@ pay oPlayer = logCall 'pay do
   pure ()
   payRec oPlayer
 
-payRec :: Monad m => Object 'OTPlayer -> Cost ot -> Magic 'Private 'RW m Legality
+payRec :: Monad m => Object 'OTPlayer -> Cost ot -> Magic 'Private 'A.RW m Legality
 payRec oPlayer = logCall 'payRec \case
   AndCosts costs -> payAndCosts oPlayer costs
   CostCase{} -> undefined
@@ -107,7 +113,7 @@ instance FindMana CompleteManaPool 'NoVar where
   findMana pool f =
     getFirst $ mconcat $ map First [poolNonSnow pool `findMana` f, poolSnow pool `findMana` f]
 
-payLife :: Monad m => Object 'OTPlayer -> Life -> Magic 'Private 'RW m Legality
+payLife :: Monad m => Object 'OTPlayer -> Life -> Magic 'Private 'A.RW m Legality
 payLife oPlayer life = logCall 'payLife do
   fromRO (findPlayer oPlayer) >>= \case
     Nothing -> pure Illegal
@@ -171,7 +177,6 @@ extractFixedPayment' maxNonSNow cost = (ManaPool w u b r g c, ManaPool sw su sb 
 toPayment :: CompleteManaPool -> ManaPayment
 toPayment pool = mempty{paymentMana = pool}
 
--- TODO: Handle X2 hybrid costs
 possiblePaymentsHybrid ::
   ToManaPool 'NonSnow (ManaSymbol mt1) =>
   ToManaPool 'NonSnow (ManaSymbol mt2) =>
@@ -191,6 +196,24 @@ possiblePaymentsHybrid sym1 sym2 (Mana n) = case n <= 0 of
         , mempty{poolSnow = mapManaPool freezeMana $ toManaPool sym2}
         ]
     q <- possiblePaymentsHybrid sym1 sym2 $ Mana $ n - 1
+    pure $ p <> q
+
+possiblePaymentsHybrid2 ::
+  ToManaPool 'NonSnow (ManaSymbol mt) =>
+  ManaSymbol mt ->
+  Mana 'NoVar 'NonSnow mth ->
+  [ManaPayment]
+possiblePaymentsHybrid2 sym (Mana n) = case n <= 0 of
+  True -> [mempty]
+  False -> do
+    p <-
+      map
+        toPayment
+        [ mempty{poolNonSnow = toManaPool sym}
+        , mempty{poolSnow = mapManaPool freezeMana $ toManaPool sym}
+        ]
+        ++ possiblePaymentsImpl (Mana @ 'NoVar @ 'NonSnow @ 'MTGeneric 2)
+    q <- possiblePaymentsHybrid2 sym $ Mana $ n - 1
     pure $ p <> q
 
 possiblePaymentsPhyrexian ::
@@ -217,8 +240,50 @@ class PossiblePayments cost where
 possiblePayments :: HasCallStack => PossiblePayments cost => cost -> [ManaPayment]
 possiblePayments = map head . List.group . List.sort . possiblePaymentsImpl
 
+instance PossiblePayments (Mana 'NoVar 'NonSnow 'MTHybridWU) where
+  possiblePaymentsImpl = possiblePaymentsHybrid W U
+
+instance PossiblePayments (Mana 'NoVar 'NonSnow 'MTHybridUB) where
+  possiblePaymentsImpl = possiblePaymentsHybrid U B
+
+instance PossiblePayments (Mana 'NoVar 'NonSnow 'MTHybridBR) where
+  possiblePaymentsImpl = possiblePaymentsHybrid B R
+
+instance PossiblePayments (Mana 'NoVar 'NonSnow 'MTHybridRG) where
+  possiblePaymentsImpl = possiblePaymentsHybrid R G
+
+instance PossiblePayments (Mana 'NoVar 'NonSnow 'MTHybridGW) where
+  possiblePaymentsImpl = possiblePaymentsHybrid G W
+
+instance PossiblePayments (Mana 'NoVar 'NonSnow 'MTHybridWB) where
+  possiblePaymentsImpl = possiblePaymentsHybrid W B
+
+instance PossiblePayments (Mana 'NoVar 'NonSnow 'MTHybridUR) where
+  possiblePaymentsImpl = possiblePaymentsHybrid U R
+
 instance PossiblePayments (Mana 'NoVar 'NonSnow 'MTHybridBG) where
   possiblePaymentsImpl = possiblePaymentsHybrid B G
+
+instance PossiblePayments (Mana 'NoVar 'NonSnow 'MTHybridRW) where
+  possiblePaymentsImpl = possiblePaymentsHybrid R W
+
+instance PossiblePayments (Mana 'NoVar 'NonSnow 'MTHybridGU) where
+  possiblePaymentsImpl = possiblePaymentsHybrid G U
+
+instance PossiblePayments (Mana 'NoVar 'NonSnow 'MTHybridW2) where
+  possiblePaymentsImpl = possiblePaymentsHybrid2 W
+
+instance PossiblePayments (Mana 'NoVar 'NonSnow 'MTHybridU2) where
+  possiblePaymentsImpl = possiblePaymentsHybrid2 U
+
+instance PossiblePayments (Mana 'NoVar 'NonSnow 'MTHybridB2) where
+  possiblePaymentsImpl = possiblePaymentsHybrid2 B
+
+instance PossiblePayments (Mana 'NoVar 'NonSnow 'MTHybridR2) where
+  possiblePaymentsImpl = possiblePaymentsHybrid2 R
+
+instance PossiblePayments (Mana 'NoVar 'NonSnow 'MTHybridG2) where
+  possiblePaymentsImpl = possiblePaymentsHybrid2 G
 
 instance PossiblePayments (Mana 'NoVar 'NonSnow 'MTPhyrexianWhite) where
   possiblePaymentsImpl = possiblePaymentsPhyrexian W
@@ -238,7 +303,23 @@ instance PossiblePayments (Mana 'NoVar 'NonSnow 'MTPhyrexianGreen) where
 instance PossiblePayments (Mana 'NoVar 'NonSnow 'MTPhyrexianColorless) where
   possiblePaymentsImpl = possiblePaymentsPhyrexian C
 
-instance PossiblePayments (Mana 'NoVar 'Snow 'MTGeneric) where
+instance PossiblePayments (Mana 'NoVar 'NonSnow 'MTGeneric) where
+  possiblePaymentsImpl (Mana n) = case n <= 0 of
+    True -> [mempty]
+    False -> do
+      p <-
+        [ toPayment $ mempty{poolNonSnow = toManaPool W}
+          , toPayment $ mempty{poolNonSnow = toManaPool U}
+          , toPayment $ mempty{poolNonSnow = toManaPool B}
+          , toPayment $ mempty{poolNonSnow = toManaPool R}
+          , toPayment $ mempty{poolNonSnow = toManaPool G}
+          , toPayment $ mempty{poolNonSnow = toManaPool C}
+          ]
+          ++ possiblePaymentsImpl (Mana @ 'NoVar @ 'Snow @ 'MTSnow n)
+      q <- possiblePaymentsImpl @(Mana 'NoVar 'NonSnow 'MTGeneric) $ Mana $ n - 1
+      pure $ p <> q
+
+instance PossiblePayments (Mana 'NoVar 'Snow 'MTSnow) where
   possiblePaymentsImpl (Mana n) = case n <= 0 of
     True -> [mempty]
     False -> do
@@ -250,13 +331,27 @@ instance PossiblePayments (Mana 'NoVar 'Snow 'MTGeneric) where
           , toPayment $ mempty{poolSnow = mapManaPool freezeMana $ toManaPool G}
           , toPayment $ mempty{poolSnow = mapManaPool freezeMana $ toManaPool C}
           ]
-      q <- possiblePaymentsImpl @(Mana 'NoVar 'Snow 'MTGeneric) $ Mana $ n - 1
+      q <- possiblePaymentsImpl @(Mana 'NoVar 'Snow 'MTSnow) $ Mana $ n - 1
       pure $ p <> q
 
 instance PossiblePayments (HybridManaCost 'NoVar) where
   possiblePaymentsImpl hy = do
+    wu <- possiblePaymentsImpl $ hybridWU hy
+    ub <- possiblePaymentsImpl $ hybridUB hy
+    br <- possiblePaymentsImpl $ hybridBR hy
+    rg <- possiblePaymentsImpl $ hybridRG hy
+    gw <- possiblePaymentsImpl $ hybridGW hy
+    wb <- possiblePaymentsImpl $ hybridWB hy
+    ur <- possiblePaymentsImpl $ hybridUR hy
     bg <- possiblePaymentsImpl $ hybridBG hy
-    pure bg -- <> rg <> gw <> wb <> ur <> ...
+    rw <- possiblePaymentsImpl $ hybridRW hy
+    gu <- possiblePaymentsImpl $ hybridGU hy
+    w2 <- possiblePaymentsImpl $ hybridW2 hy
+    u2 <- possiblePaymentsImpl $ hybridU2 hy
+    b2 <- possiblePaymentsImpl $ hybridB2 hy
+    r2 <- possiblePaymentsImpl $ hybridR2 hy
+    g2 <- possiblePaymentsImpl $ hybridG2 hy
+    pure $ wu <> ub <> br <> rg <> gw <> wb <> ur <> bg <> rw <> gu <> w2 <> u2 <> b2 <> r2 <> g2
 
 instance PossiblePayments (PhyrexianManaCost 'NoVar) where
   possiblePaymentsImpl phy = do
@@ -382,7 +477,7 @@ playerCanPayManaCost player cost = case hasEnoughFixedMana pool cost of
             Nothing -> Nothing
             Just x -> Just $ payment <> mempty{paymentMana = x}
 
-payManaCost :: Monad m => Object 'OTPlayer -> ManaCost 'Var -> Magic 'Private 'RW m Legality
+payManaCost :: Monad m => Object 'OTPlayer -> ManaCost 'Var -> Magic 'Private 'A.RW m Legality
 payManaCost oPlayer (forceVars -> cost) = logCall 'payManaCost do
   fromRO (findPlayer oPlayer) >>= \case
     Nothing -> pure Illegal
@@ -420,7 +515,7 @@ promptPayForCompatibleDynamic ::
   Object 'OTPlayer ->
   CompleteManaPool ->
   DynamicManaCost 'NoVar ->
-  Magic 'Private 'RW m ManaPayment
+  Magic 'Private 'A.RW m ManaPayment
 promptPayForCompatibleDynamic oPlayer avail dyn = do
   prompt <- fromRO $ gets magicPrompt
   opaque <- fromRO $ gets mkOpaqueGameState
@@ -436,7 +531,7 @@ paySacrificeCost ::
   (Monad m, IsZO 'ZBattlefield ot, CoPermanent ot) =>
   Object 'OTPlayer ->
   Requirement 'ZBattlefield ot ->
-  Magic 'Private 'RW m Legality
+  Magic 'Private 'A.RW m Legality
 paySacrificeCost oPlayer req = logCall 'paySacrificeCost do
   fromRO (zosSatisfying req') >>= (\zos -> fromPublic $ pickOneZO oPlayer zos) >>= \case
     Nothing -> pure Illegal
@@ -459,7 +554,7 @@ payTapCost ::
   (Monad m, IsZO 'ZBattlefield ot, CoPermanent ot) =>
   Object 'OTPlayer ->
   Requirement 'ZBattlefield ot ->
-  Magic 'Private 'RW m Legality
+  Magic 'Private 'A.RW m Legality
 payTapCost oPlayer req = logCall 'payTapCost do
   fromRO (zosSatisfying req') >>= (\zos -> fromPublic $ pickOneZO oPlayer zos) >>= \case
     Nothing -> pure Illegal
@@ -476,7 +571,7 @@ payTapCost oPlayer req = logCall 'payTapCost do
       , req
       ]
 
-payAndCosts :: Monad m => Object 'OTPlayer -> [Cost ot] -> Magic 'Private 'RW m Legality
+payAndCosts :: Monad m => Object 'OTPlayer -> [Cost ot] -> Magic 'Private 'A.RW m Legality
 payAndCosts oPlayer = logCall 'payAndCosts \case
   [] -> pure Legal
   cost : costs ->
@@ -484,7 +579,7 @@ payAndCosts oPlayer = logCall 'payAndCosts \case
       Illegal -> pure Illegal
       Legal -> payAndCosts oPlayer costs
 
-payOrCosts :: Monad m => Object 'OTPlayer -> [Cost ot] -> Magic 'Private 'RW m Legality
+payOrCosts :: Monad m => Object 'OTPlayer -> [Cost ot] -> Magic 'Private 'A.RW m Legality
 payOrCosts oPlayer = logCall 'payOrCosts \case
   [] -> pure Illegal
   cost : _costs ->

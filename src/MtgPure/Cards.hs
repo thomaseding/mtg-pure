@@ -31,8 +31,10 @@ module MtgPure.Cards (
   darkRitual,
   deathriteShaman,
   divination,
+  elvishHexhunter,
   fling,
   forest,
+  fulminatorMage,
   frostMarsh,
   glacialFloodplain,
   gutlessGhoul,
@@ -77,6 +79,7 @@ module MtgPure.Cards (
   stoneRain,
   stoneThrowingDevils,
   sulfurousMire,
+  sunkenRuins,
   swamp,
   swanSong,
   thermopod,
@@ -84,6 +87,7 @@ module MtgPure.Cards (
   unholyStrength,
   vindicate,
   volatileFjord,
+  waspLancer,
   wastes,
   wear_tear,
   witchEngine,
@@ -105,6 +109,7 @@ import safe MtgPure.Model.Combinators (
   AsWithThis (..),
   ElectEffect (effect),
   HasLandType (hasLandType),
+  ToHybrid (..),
   addManaAnyColor,
   addToBattlefield,
   becomesTapped,
@@ -180,6 +185,7 @@ import safe MtgPure.Model.Recursive (
     AddMana,
     CantBeRegenerated,
     DrawCards,
+    EffectCase,
     EffectContinuous,
     GainLife,
     LoseLife,
@@ -318,6 +324,46 @@ mkDualLand name ty1 ty2 = Card name $
       , land_creatureTypes = []
       , land_landTypes = [BasicLand ty1, BasicLand ty2]
       , land_abilities = []
+      }
+
+mkHybridFilterLand ::
+  ToHybrid mt1 mt2 mth =>
+  CardName ->
+  ManaSymbol mt1 ->
+  ManaSymbol mt2 ->
+  Card OTNLand
+mkHybridFilterLand name sym1 sym2 = Card name $
+  YourLand \_you ->
+    LandFacet
+      { land_supertypes = []
+      , land_creatureTypes = []
+      , land_landTypes = []
+      , land_abilities =
+          [ Activated @ 'ZBattlefield $
+              thisObject \this -> do
+                controllerOf this \you ->
+                  ElectActivated
+                    Ability
+                      { activated_cost =
+                          AndCosts
+                            [ manaCostOf $ toHybrid sym1 sym2
+                            , tapCost [is this]
+                            ]
+                      , activated_effect = ChooseOption @()
+                          you
+                          (LS CTrue $ LS CTrue $ LZ CTrue)
+                          \option ->
+                            effect $
+                              EffectCase
+                                CaseFin
+                                  { caseFin = option
+                                  , ofFin =
+                                      LS (AddMana you $ toManaPool (sym1, sym1)) $
+                                        LS (AddMana you $ toManaPool (sym1, sym2)) $
+                                          LZ (AddMana you $ toManaPool (sym2, sym2))
+                                  }
+                      }
+          ]
       }
 
 mkFetchLand :: CardName -> BasicLandType -> BasicLandType -> Card OTNLand
@@ -795,6 +841,34 @@ divination = Card "Divination" $
             effect $ DrawCards you 2
         }
 
+elvishHexhunter :: Card OTNCreature
+elvishHexhunter = Card "Elvish Hexhunter" $
+  YourCreature \_you ->
+    CreatureFacet
+      { creature_colors = toColors (G, W)
+      , creature_cost = manaCostOf GW
+      , creature_supertypes = []
+      , creature_creatureTypes = [Elf, Shaman]
+      , creature_power = Power 1
+      , creature_toughness = Toughness 1
+      , creature_abilities =
+          [ Activated @ 'ZBattlefield $
+              thisObject \this ->
+                controllerOf this \you ->
+                  Target you $ masked @OTNEnchantment [] \target ->
+                    ElectActivated $
+                      Ability
+                        { activated_cost =
+                            AndCosts
+                              [ manaCostOf GW
+                              , tapCost [is this]
+                              , sacrificeCost [is this]
+                              ]
+                        , activated_effect = effect $ destroy target
+                        }
+          ]
+      }
+
 fling :: Card OTNInstant
 fling = Card "Fling" $
   YourInstant \you ->
@@ -819,6 +893,29 @@ fling = Card "Fling" $
 
 forest :: Card OTNLand
 forest = mkBasicLand Forest
+
+fulminatorMage :: Card OTNCreature
+fulminatorMage = Card "Fulminator Mage" $
+  YourCreature \_you ->
+    CreatureFacet
+      { creature_colors = toColors (B, R)
+      , creature_cost = manaCostOf (1, BR, BR)
+      , creature_supertypes = []
+      , creature_creatureTypes = [Elemental, Shaman]
+      , creature_power = Power 2
+      , creature_toughness = Toughness 2
+      , creature_abilities =
+          [ Activated @ 'ZBattlefield $
+              thisObject \this ->
+                controllerOf this \you ->
+                  Target you $ masked @OTNLand [nonBasic] \land ->
+                    ElectActivated $
+                      Ability
+                        { activated_cost = sacrificeCost [is this]
+                        , activated_effect = effect $ destroy land
+                        }
+          ]
+      }
 
 frostMarsh :: Card OTNLand
 frostMarsh = mkSnowCoveredTapLand "Frost Marsh" U B
@@ -1319,6 +1416,9 @@ stoneThrowingDevils = Card "Stone-Throwing Devils" $
 sulfurousMire :: Card OTNLand
 sulfurousMire = mkSnowCoveredTapDualLand "Sulfurous Mire" Swamp Mountain
 
+sunkenRuins :: Card OTNLand
+sunkenRuins = mkHybridFilterLand "Sunken Ruins" U B
+
 swamp :: Card OTNLand
 swamp = mkBasicLand Swamp
 
@@ -1406,6 +1506,19 @@ vindicate = Card "Vindicate" $
 
 volatileFjord :: Card OTNLand
 volatileFjord = mkSnowCoveredTapDualLand "Volatile Fjord" Island Mountain
+
+waspLancer :: Card OTNCreature
+waspLancer = Card "Wasp Lancer" $
+  YourCreature \_you ->
+    CreatureFacet
+      { creature_colors = toColors (U, B)
+      , creature_cost = manaCostOf (UB, UB, UB)
+      , creature_supertypes = []
+      , creature_creatureTypes = [Faerie, Soldier]
+      , creature_power = Power 3
+      , creature_toughness = Toughness 2
+      , creature_abilities = [Static Flying]
+      }
 
 -- NOTE: Wastes does NOT have an intrinsic mana ability.
 wastes :: Card OTNLand

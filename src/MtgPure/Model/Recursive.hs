@@ -755,14 +755,14 @@ data Requirement (zone :: Zone) (ot :: Type) :: Type where
   RAnd :: IsZO zone ot => [Requirement zone ot] -> Requirement zone ot
   ROr :: IsZO zone ot => [Requirement zone ot] -> Requirement zone ot
   -- TODO: Try to add some combinators that go from: forall a b. [forall liftOT. Requirement x] -> Requirement (ON2 a, b)
-  R2 ::
+  Req2 ::
     ( IsZO zone (OT2 a b)
     , Inst2 IsObjectType a b
     ) =>
     [Requirement zone (OT1 a)] ->
     [Requirement zone (OT1 b)] ->
     Requirement zone (OT2 a b)
-  R3 ::
+  Req3 ::
     ( IsZO zone (OT3 a b c)
     , Inst3 IsObjectType a b c
     ) =>
@@ -770,7 +770,7 @@ data Requirement (zone :: Zone) (ot :: Type) :: Type where
     [Requirement zone (OT1 b)] ->
     [Requirement zone (OT1 c)] ->
     Requirement zone (OT3 a b c)
-  R4 ::
+  Req4 ::
     ( IsZO zone (OT4 a b c d)
     , Inst4 IsObjectType a b c d
     ) =>
@@ -779,7 +779,7 @@ data Requirement (zone :: Zone) (ot :: Type) :: Type where
     [Requirement zone (OT1 c)] ->
     [Requirement zone (OT1 d)] ->
     Requirement zone (OT4 a b c d)
-  R5 ::
+  Req5 ::
     ( IsZO zone (OT5 a b c d e)
     , Inst5 IsObjectType a b c d e
     ) =>
@@ -806,10 +806,10 @@ instance ConsIndex (Requirement zone ot) where
     PlayerPays{} -> 11
     RAnd{} -> 12
     ROr{} -> 13
-    R2{} -> 14
-    R3{} -> 15
-    R4{} -> 16
-    R5{} -> 17
+    Req2{} -> 14
+    Req3{} -> 15
+    Req4{} -> 16
+    Req5{} -> 17
 
 ----------------------------------------
 

@@ -31,13 +31,27 @@ data PhyrexianManaCost (var :: Var) = PhyrexianManaCost
 
 -- TODO: other hybrid costs
 data HybridManaCost (var :: Var) = HybridManaCost
-  { hybridBG :: Mana var 'NonSnow 'MTHybridBG
+  { hybridWU :: Mana var 'NonSnow 'MTHybridWU
+  , hybridUB :: Mana var 'NonSnow 'MTHybridUB
+  , hybridBR :: Mana var 'NonSnow 'MTHybridBR
+  , hybridRG :: Mana var 'NonSnow 'MTHybridRG
+  , hybridGW :: Mana var 'NonSnow 'MTHybridGW
+  , hybridWB :: Mana var 'NonSnow 'MTHybridWB
+  , hybridUR :: Mana var 'NonSnow 'MTHybridUR
+  , hybridBG :: Mana var 'NonSnow 'MTHybridBG
+  , hybridRW :: Mana var 'NonSnow 'MTHybridRW
+  , hybridGU :: Mana var 'NonSnow 'MTHybridGU
+  , hybridW2 :: Mana var 'NonSnow 'MTHybridW2
+  , hybridU2 :: Mana var 'NonSnow 'MTHybridU2
+  , hybridB2 :: Mana var 'NonSnow 'MTHybridB2
+  , hybridR2 :: Mana var 'NonSnow 'MTHybridR2
+  , hybridG2 :: Mana var 'NonSnow 'MTHybridG2
   }
   deriving (Eq, Ord, Typeable) --  TODO: Make some of these orphans
 
 data DynamicManaCost (var :: Var) = DynamicManaCost
   { costGeneric :: Mana var 'NonSnow 'MTGeneric
-  , costSnow :: Mana var 'Snow 'MTGeneric
+  , costSnow :: Mana var 'Snow 'MTSnow
   , costHybrid :: HybridManaCost var
   , costPhyrexian :: PhyrexianManaCost var
   }
@@ -85,14 +99,56 @@ instance Semigroup (PhyrexianManaCost var) where
 instance Semigroup (HybridManaCost var) where
   hmc1 <> hmc2 =
     HybridManaCost
-      { hybridBG = bg1 <> bg2
+      { hybridWU = wu1 <> wu2
+      , hybridUB = ub1 <> ub2
+      , hybridBR = br1 <> br2
+      , hybridRG = rg1 <> rg2
+      , hybridGW = gw1 <> gw2
+      , hybridWB = wb1 <> wb2
+      , hybridUR = ur1 <> ur2
+      , hybridBG = bg1 <> bg2
+      , hybridRW = rw1 <> rw2
+      , hybridGU = gu1 <> gu2
+      , hybridW2 = w21 <> w22
+      , hybridU2 = u21 <> u22
+      , hybridB2 = b21 <> b22
+      , hybridR2 = r21 <> r22
+      , hybridG2 = g21 <> g22
       }
    where
     HybridManaCost
-      { hybridBG = bg1
+      { hybridWU = wu1
+      , hybridUB = ub1
+      , hybridBR = br1
+      , hybridRG = rg1
+      , hybridGW = gw1
+      , hybridWB = wb1
+      , hybridUR = ur1
+      , hybridBG = bg1
+      , hybridRW = rw1
+      , hybridGU = gu1
+      , hybridW2 = w21
+      , hybridU2 = u21
+      , hybridB2 = b21
+      , hybridR2 = r21
+      , hybridG2 = g21
       } = hmc1
     HybridManaCost
-      { hybridBG = bg2
+      { hybridWU = wu2
+      , hybridUB = ub2
+      , hybridBR = br2
+      , hybridRG = rg2
+      , hybridGW = gw2
+      , hybridWB = wb2
+      , hybridUR = ur2
+      , hybridBG = bg2
+      , hybridRW = rw2
+      , hybridGU = gu2
+      , hybridW2 = w22
+      , hybridU2 = u22
+      , hybridB2 = b22
+      , hybridR2 = r22
+      , hybridG2 = g22
       } = hmc2
 
 instance Semigroup (DynamicManaCost var) where
@@ -162,7 +218,21 @@ instance Monoid (PhyrexianManaCost var) where
 instance Monoid (HybridManaCost var) where
   mempty =
     HybridManaCost
-      { hybridBG = mempty
+      { hybridWU = mempty
+      , hybridUB = mempty
+      , hybridBR = mempty
+      , hybridRG = mempty
+      , hybridGW = mempty
+      , hybridWB = mempty
+      , hybridUR = mempty
+      , hybridBG = mempty
+      , hybridRW = mempty
+      , hybridGU = mempty
+      , hybridW2 = mempty
+      , hybridU2 = mempty
+      , hybridB2 = mempty
+      , hybridR2 = mempty
+      , hybridG2 = mempty
       }
 
 instance Monoid (DynamicManaCost var) where

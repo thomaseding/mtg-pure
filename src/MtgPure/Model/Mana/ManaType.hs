@@ -21,7 +21,21 @@ data ManaType
   | MTColorless
   | MTGeneric
   | MTSnow
+  | MTHybridWU
+  | MTHybridUB
+  | MTHybridBR
+  | MTHybridRG
+  | MTHybridGW
+  | MTHybridWB
+  | MTHybridUR
   | MTHybridBG
+  | MTHybridRW
+  | MTHybridGU
+  | MTHybridW2
+  | MTHybridU2
+  | MTHybridB2
+  | MTHybridR2
+  | MTHybridG2
   | MTPhyrexianWhite
   | MTPhyrexianBlue
   | MTPhyrexianBlack

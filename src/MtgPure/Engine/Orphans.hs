@@ -117,10 +117,43 @@ instance MapManaCost PhyrexianManaCost where
       PhyrexianManaCost (f w1 w2) (f u1 u2) (f b1 b2) (f r1 r2) (f g1 g2) (f c1 c2)
 
 instance MapManaCost HybridManaCost where
-  mapManaCost f (HybridManaCost bg) =
-    HybridManaCost (f bg)
-  mapManaCost2 f (HybridManaCost bg1) (HybridManaCost bg2) =
-    HybridManaCost (f bg1 bg2)
+  mapManaCost f (HybridManaCost wu ub br rg gw wb ur bg rw gu w2 u2 b2 r2 g2) =
+    HybridManaCost
+      (f wu)
+      (f ub)
+      (f br)
+      (f rg)
+      (f gw)
+      (f wb)
+      (f ur)
+      (f bg)
+      (f rw)
+      (f gu)
+      (f w2)
+      (f u2)
+      (f b2)
+      (f r2)
+      (f g2)
+  mapManaCost2
+    f
+    (HybridManaCost wu1 ub1 br1 rg1 gw1 wb1 ur1 bg1 rw1 gu1 w21 u21 b21 r21 g21)
+    (HybridManaCost wu2 ub2 br2 rg2 gw2 wb2 ur2 bg2 rw2 gu2 w22 u22 b22 r22 g22) =
+      HybridManaCost
+        (f wu1 wu2)
+        (f ub1 ub2)
+        (f br1 br2)
+        (f rg1 rg2)
+        (f gw1 gw2)
+        (f wb1 wb2)
+        (f ur1 ur2)
+        (f bg1 bg2)
+        (f rw1 rw2)
+        (f gu1 gu2)
+        (f w21 w22)
+        (f u21 u22)
+        (f b21 b22)
+        (f r21 r22)
+        (f g21 g22)
 
 instance MapManaCost ManaCost where
   mapManaCost f (ManaCost' w u b r g c (DynamicManaCost x s hy phy)) =

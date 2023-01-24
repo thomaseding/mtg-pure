@@ -12,7 +12,7 @@ import safe Data.Kind (Type)
 import safe MtgPure.Model.Mana.Mana (Mana (..), castManaType, litMana, thawMana)
 import safe MtgPure.Model.Mana.ManaCost (
   DynamicManaCost (..),
-  HybridManaCost (hybridBG),
+  HybridManaCost (..),
   ManaCost (..),
   PhyrexianManaCost (..),
   emptyManaCost,
@@ -97,7 +97,26 @@ instance ToManaCost (ManaSymbol a, Int) where
     x@(G, _) -> emptyManaCost{costGreen = toMana x}
     x@(C, _) -> emptyManaCost{costColorless = toMana x}
     x@(S, _) -> emptyManaCost{costDynamic = mempty{costSnow = toMana x}}
+    x@(WU, _) -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridWU = toMana x}}}
+    x@(UB, _) -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridUB = toMana x}}}
+    x@(BR, _) -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridBR = toMana x}}}
+    x@(RG, _) -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridRG = toMana x}}}
+    x@(GW, _) -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridGW = toMana x}}}
+    x@(WB, _) -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridWB = toMana x}}}
+    x@(UR, _) -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridUR = toMana x}}}
     x@(BG, _) -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridBG = toMana x}}}
+    x@(RW, _) -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridRW = toMana x}}}
+    x@(GU, _) -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridGU = toMana x}}}
+    x@(W2, _) -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridW2 = toMana x}}}
+    x@(U2, _) -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridU2 = toMana x}}}
+    x@(B2, _) -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridB2 = toMana x}}}
+    x@(R2, _) -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridR2 = toMana x}}}
+    x@(G2, _) -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridG2 = toMana x}}}
+    x@(PW, _) -> emptyManaCost{costDynamic = mempty{costPhyrexian = mempty{phyrexianWhite = toMana x}}}
+    x@(PU, _) -> emptyManaCost{costDynamic = mempty{costPhyrexian = mempty{phyrexianBlue = toMana x}}}
+    x@(PB, _) -> emptyManaCost{costDynamic = mempty{costPhyrexian = mempty{phyrexianBlack = toMana x}}}
+    x@(PR, _) -> emptyManaCost{costDynamic = mempty{costPhyrexian = mempty{phyrexianRed = toMana x}}}
+    x@(PG, _) -> emptyManaCost{costDynamic = mempty{costPhyrexian = mempty{phyrexianGreen = toMana x}}}
 
 instance ToManaCost (ManaSymbol a) where
   toManaCost = \case
@@ -108,7 +127,26 @@ instance ToManaCost (ManaSymbol a) where
     G -> toManaCost (G, 1 :: Int)
     C -> toManaCost (C, 1 :: Int)
     S -> toManaCost (S, 1 :: Int)
+    WU -> toManaCost (WU, 1 :: Int)
+    UB -> toManaCost (UB, 1 :: Int)
+    BR -> toManaCost (BR, 1 :: Int)
+    RG -> toManaCost (RG, 1 :: Int)
+    GW -> toManaCost (GW, 1 :: Int)
+    WB -> toManaCost (WB, 1 :: Int)
+    UR -> toManaCost (UR, 1 :: Int)
     BG -> toManaCost (BG, 1 :: Int)
+    RW -> toManaCost (RW, 1 :: Int)
+    GU -> toManaCost (GU, 1 :: Int)
+    W2 -> toManaCost (W2, 1 :: Int)
+    U2 -> toManaCost (U2, 1 :: Int)
+    B2 -> toManaCost (B2, 1 :: Int)
+    R2 -> toManaCost (R2, 1 :: Int)
+    G2 -> toManaCost (G2, 1 :: Int)
+    PW -> toManaCost (PW, 1 :: Int)
+    PU -> toManaCost (PU, 1 :: Int)
+    PB -> toManaCost (PB, 1 :: Int)
+    PR -> toManaCost (PR, 1 :: Int)
+    PG -> toManaCost (PG, 1 :: Int)
 
 instance ToManaCost (ManaPool 'NonSnow) where
   toManaCost (ManaPool w u b r g c) =

@@ -36,6 +36,7 @@ mainUnitPayMana = do
   testEmptyPool
   testSingletonPool
   testSnowCosts
+  testTwoBridCosts
   testMixedCosts
   putStrLn "Unit tests for PayMana passed"
 
@@ -51,7 +52,8 @@ testEmptyPool = do
   testPaymentIO None 20 emptyPool G
   testPaymentIO None 20 emptyPool C
   testPaymentIO None 20 emptyPool S
-  testPaymentIO None 20 emptyPool BG
+  testPaymentIO None 20 emptyPool WU
+  testPaymentIO None 20 emptyPool W2
   testPaymentIO None 20 emptyPool (W, W)
   testPaymentIO None 20 emptyPool (W, U)
   testPaymentIO None 20 emptyPool (1, U)
@@ -61,10 +63,18 @@ testSingletonPool = do
   testPaymentIO Unique 20 W 0
   testPaymentIO Unique 20 W 1
   testPaymentIO Unique 20 W W
+  testPaymentIO Unique 20 W WU
+  testPaymentIO Unique 20 W W2
   testPaymentIO None 20 W U
   testPaymentIO None 20 W C
   testPaymentIO None 20 W S
+  testPaymentIO None 20 W UB
+  testPaymentIO None 20 W U2
   testPaymentIO Unique 20 (freezeMana (toMana W)) S
+  testPaymentIO Unique 20 (freezeMana (toMana W)) WU
+  testPaymentIO Unique 20 (freezeMana (toMana W)) W2
+  testPaymentIO None 20 (freezeMana (toMana W)) UB
+  testPaymentIO None 20 (freezeMana (toMana W)) U2
 
 testSnowCosts :: HasCallStack => IO ()
 testSnowCosts = do
@@ -96,6 +106,29 @@ testSnowCosts = do
   testPaymentIO Unique 20 (freezeMana (toMana (W, 3 :: Int))) (S, 2 :: Int)
   testPaymentIO Unique 20 (freezeMana (toMana W), freezeMana (toMana U)) (S, 2 :: Int)
   testPaymentIO None 20 (freezeMana (toMana (W, 2 :: Int))) (S, 3 :: Int)
+
+testTwoBridCosts :: HasCallStack => IO ()
+testTwoBridCosts = do
+  testPaymentIO None 20 emptyPool W2
+  testPaymentIO Unique 20 W W2
+  testPaymentIO Unique 20 (U, U) W2
+  testPaymentIO Unique 20 (W, W) (W2, W2)
+  testPaymentIO None 20 (W, U) (W2, W2)
+  testPaymentIO None 20 (U, U) (W2, W2)
+  testPaymentIO None 20 (U, U, U) (W2, W2)
+  testPaymentIO Unique 20 (W, U, U) (W2, W2)
+  testPaymentIO Ambiguous 20 (W, W, U) (W2, W2)
+  testPaymentIO Unique 20 (U, U, U, U) (W2, W2)
+  testPaymentIO Ambiguous 20 (W, W) W2
+  testPaymentIO Ambiguous 20 (W, B) W2
+  testPaymentIO Unique 20 (W, W) (W2, W)
+  testPaymentIO Ambiguous 20 (W, W, W) (W2, W)
+  testPaymentIO Ambiguous 20 (W, W, U) (W2, W)
+  testPaymentIO Unique 20 (W, U, U) (W2, W)
+  testPaymentIO Ambiguous 20 (W, U, U) (W2, U)
+  testPaymentIO Ambiguous 20 (W, W, U) (W2, U)
+  testPaymentIO Unique 20 (W, U) (W2, U)
+  testPaymentIO None 20 (U, U, U) (W2, W)
 
 testMixedCosts :: HasCallStack => IO ()
 testMixedCosts = do

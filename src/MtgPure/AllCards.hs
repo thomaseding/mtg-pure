@@ -34,9 +34,11 @@ import safe MtgPure.Cards (
   darkRitual,
   deathriteShaman,
   divination,
+  elvishHexhunter,
   fling,
   forest,
   frostMarsh,
+  fulminatorMage,
   glacialFloodplain,
   grizzlyBears,
   gutlessGhoul,
@@ -81,6 +83,7 @@ import safe MtgPure.Cards (
   stoneRain,
   stoneThrowingDevils,
   sulfurousMire,
+  sunkenRuins,
   swamp,
   swanSong,
   thermopod,
@@ -88,6 +91,7 @@ import safe MtgPure.Cards (
   unholyStrength,
   vindicate,
   volatileFjord,
+  waspLancer,
   wastes,
   wear_tear,
   witchEngine,
@@ -122,8 +126,10 @@ allCards =
   , toCard darkRitual
   , toCard deathriteShaman
   , toCard divination
+  , toCard elvishHexhunter
   , toCard fling
   , toCard forest
+  , toCard fulminatorMage
   , toCard frostMarsh
   , toCard glacialFloodplain
   , toCard grizzlyBears
@@ -168,6 +174,7 @@ allCards =
   , toCard stoneRain
   , toCard stoneThrowingDevils
   , toCard sulfurousMire
+  , toCard sunkenRuins
   , toCard swamp
   , toCard swanSong
   , toCard thermopod
@@ -175,6 +182,7 @@ allCards =
   , toCard unholyStrength
   , toCard vindicate
   , toCard volatileFjord
+  , toCard waspLancer
   , toCard wastes
   , toCard wear_tear
   , toCard witchEngine

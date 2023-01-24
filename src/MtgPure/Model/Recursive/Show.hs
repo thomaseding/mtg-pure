@@ -1746,36 +1746,36 @@ showRequirement = \case
   ROr reqs -> yesParens do
     sReqs <- dollar <$> showRequirements reqs
     pure $ pure "ROr" <> sReqs
-  R2 reqsA reqsB -> yesParens do
+  Req2 reqsA reqsB -> yesParens do
     sReqsA <- parens <$> showRequirements reqsA
     sReqsB <- dollar <$> showRequirements reqsB
-    pure $ pure "R2 " <> sReqsA <> sReqsB
-  R3 reqsA reqsB reqsC -> yesParens do
+    pure $ pure "Req2 " <> sReqsA <> sReqsB
+  Req3 reqsA reqsB reqsC -> yesParens do
     sReqsA <- parens <$> showRequirements reqsA
     sReqsB <- parens <$> showRequirements reqsB
     sReqsC <- dollar <$> showRequirements reqsC
-    pure $ pure "R3 " <> sReqsA <> pure " " <> sReqsB <> sReqsC
-  R4 reqsA reqsB reqsC reqsD -> yesParens do
+    pure $ pure "Req3 " <> sReqsA <> pure " " <> sReqsB <> sReqsC
+  Req4 reqsA reqsB reqsC reqsD -> yesParens do
     sReqsA <- parens <$> showRequirements reqsA
     sReqsB <- parens <$> showRequirements reqsB
     sReqsC <- parens <$> showRequirements reqsC
     sReqsD <- dollar <$> showRequirements reqsD
     pure $
-      pure "R4 "
+      pure "Req4 "
         <> sReqsA
         <> pure " "
         <> sReqsB
         <> pure " "
         <> sReqsC
         <> sReqsD
-  R5 reqsA reqsB reqsC reqsD reqsE -> yesParens do
+  Req5 reqsA reqsB reqsC reqsD reqsE -> yesParens do
     sReqsA <- parens <$> showRequirements reqsA
     sReqsB <- parens <$> showRequirements reqsB
     sReqsC <- parens <$> showRequirements reqsC
     sReqsD <- parens <$> showRequirements reqsD
     sReqsE <- dollar <$> showRequirements reqsE
     pure $
-      pure "R5 "
+      pure "Req5 "
         <> sReqsA
         <> pure " "
         <> sReqsB

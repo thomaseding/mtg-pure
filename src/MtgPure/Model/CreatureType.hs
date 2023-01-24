@@ -17,6 +17,7 @@ data CreatureType
   | Eldrazi
   | Elemental
   | Elf
+  | Faerie
   | Goblin
   | Horror
   | Human

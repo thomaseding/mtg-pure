@@ -57,6 +57,7 @@ module MtgPure.Model.Combinators (
   tapCost,
   ToCard (..),
   ToToken (..),
+  ToHybrid (..),
   tyAp,
   unlifted_isBasicManaAbility,
   untilEndOfTurn,
@@ -82,6 +83,7 @@ import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.LandType (LandType (BasicLand))
 import safe MtgPure.Model.Mana.ManaCost (ManaCost)
 import safe MtgPure.Model.Mana.ManaSymbol (ManaSymbol (..))
+import safe MtgPure.Model.Mana.ManaType (ManaType (..))
 import safe MtgPure.Model.Mana.Snow (Snow (..))
 import safe MtgPure.Model.Mana.ToManaCost (ToManaCost (..))
 import safe MtgPure.Model.Mana.ToManaPool (ToManaPool (..))
@@ -581,3 +583,44 @@ mkBasicLandwalk = Static . Landwalk . pure . HasLandType . BasicLand
 
 swampwalk :: Ability OTNCreature
 swampwalk = mkBasicLandwalk Swamp
+
+class
+  ( ToManaPool 'NonSnow (ManaSymbol mt1)
+  , ToManaPool 'NonSnow (ManaSymbol mt2)
+  , ToManaCost (ManaSymbol mth)
+  ) =>
+  ToHybrid (mt1 :: ManaType) (mt2 :: ManaType) (mth :: ManaType)
+    | mt1 mt2 -> mth
+    , mth -> mt1 mt2
+  where
+  toHybrid :: ManaSymbol mt1 -> ManaSymbol mt2 -> ManaSymbol mth
+
+instance ToHybrid 'MTWhite 'MTBlue 'MTHybridWU where
+  toHybrid _ _ = WU
+
+instance ToHybrid 'MTBlue 'MTBlack 'MTHybridUB where
+  toHybrid _ _ = UB
+
+instance ToHybrid 'MTBlack 'MTRed 'MTHybridBR where
+  toHybrid _ _ = BR
+
+instance ToHybrid 'MTRed 'MTGreen 'MTHybridRG where
+  toHybrid _ _ = RG
+
+instance ToHybrid 'MTGreen 'MTWhite 'MTHybridGW where
+  toHybrid _ _ = GW
+
+instance ToHybrid 'MTWhite 'MTBlack 'MTHybridWB where
+  toHybrid _ _ = WB
+
+instance ToHybrid 'MTBlue 'MTRed 'MTHybridUR where
+  toHybrid _ _ = UR
+
+instance ToHybrid 'MTBlack 'MTGreen 'MTHybridBG where
+  toHybrid _ _ = BG
+
+instance ToHybrid 'MTRed 'MTWhite 'MTHybridRW where
+  toHybrid _ _ = RW
+
+instance ToHybrid 'MTGreen 'MTBlue 'MTHybridGU where
+  toHybrid _ _ = GU

@@ -1727,20 +1727,20 @@ ordRequirement x = case x of
   ROr reqs1 -> \case
     ROr reqs2 -> ordRequirements reqs1 reqs2
     y -> compareIndexM x y
-  R2 reqsA1 reqsB1 -> \case
-    R2 reqsA2 reqsB2 ->
+  Req2 reqsA1 reqsB1 -> \case
+    Req2 reqsA2 reqsB2 ->
       seqM [ordRequirements reqsA1 reqsA2, ordRequirements reqsB1 reqsB2]
     y -> compareIndexM x y
-  R3 reqsA1 reqsB1 reqsC1 -> \case
-    R3 reqsA2 reqsB2 reqsC2 ->
+  Req3 reqsA1 reqsB1 reqsC1 -> \case
+    Req3 reqsA2 reqsB2 reqsC2 ->
       seqM
         [ ordRequirements reqsA1 reqsA2
         , ordRequirements reqsB1 reqsB2
         , ordRequirements reqsC1 reqsC2
         ]
     y -> compareIndexM x y
-  R4 reqsA1 reqsB1 reqsC1 reqsD1 -> \case
-    R4 reqsA2 reqsB2 reqsC2 reqsD2 ->
+  Req4 reqsA1 reqsB1 reqsC1 reqsD1 -> \case
+    Req4 reqsA2 reqsB2 reqsC2 reqsD2 ->
       seqM
         [ ordRequirements reqsA1 reqsA2
         , ordRequirements reqsB1 reqsB2
@@ -1748,8 +1748,8 @@ ordRequirement x = case x of
         , ordRequirements reqsD1 reqsD2
         ]
     y -> compareIndexM x y
-  R5 reqsA1 reqsB1 reqsC1 reqsD1 reqsE1 -> \case
-    R5 reqsA2 reqsB2 reqsC2 reqsD2 reqsE2 ->
+  Req5 reqsA1 reqsB1 reqsC1 reqsD1 reqsE1 -> \case
+    Req5 reqsA2 reqsB2 reqsC2 reqsD2 reqsE2 ->
       seqM
         [ ordRequirements reqsA1 reqsA2
         , ordRequirements reqsB1 reqsB2
