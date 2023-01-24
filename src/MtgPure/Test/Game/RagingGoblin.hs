@@ -11,9 +11,9 @@
 {-# HLINT ignore "Redundant fmap" #-}
 {-# HLINT ignore "Evaluate" #-}
 
-module MtgPure.Test.Game.MountainRagingGoblin (
+module MtgPure.Test.Game.RagingGoblin (
   main,
-  mainMountainRagingGoblin,
+  mainRagingGoblin,
 ) where
 
 import safe MtgPure.Cards (mountain, ragingGoblin)
@@ -23,11 +23,11 @@ import safe MtgPure.Model.Recursive (AnyCard (..))
 import safe MtgPure.Model.Sideboard (Sideboard (..))
 
 main :: IO ()
-main = mainMountainRagingGoblin
+main = mainRagingGoblin
 
 -- NOTE: Still a WIP
-mainMountainRagingGoblin :: IO ()
-mainMountainRagingGoblin = runConsole input do
+mainRagingGoblin :: IO ()
+mainRagingGoblin = runConsole input do
   playConsoleGame $ replicate 2 (deck, side)
  where
   input =
@@ -56,7 +56,7 @@ side =
       ]
 
 replayLog :: Maybe FilePath
-replayLog = Nothing -- Just "replay-Mountain-RagingGoblin.log"
+replayLog = Nothing -- Just "replay-RagingGoblin.log"
 
 replayInputs :: [String]
 replayInputs = []

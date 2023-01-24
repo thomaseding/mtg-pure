@@ -22,3 +22,9 @@ newtype Hand :: Type where
 instance IsCardList Hand (ZO 'ZHand OTNCard) where
   toCardList = Hand
   fromCardList = unHand
+
+instance Semigroup Hand where
+  Hand a <> Hand b = Hand (a <> b)
+
+instance Monoid Hand where
+  mempty = Hand mempty

@@ -10,6 +10,7 @@ module MtgPure.Model.Mana.ManaCost (
   DynamicManaCost (..),
   ManaCost (..),
   emptyManaCost,
+  isOnlyGeneric,
 ) where
 
 import safe Data.Typeable (Typeable)
@@ -187,3 +188,12 @@ instance Monoid (ManaCost var) where
 
 emptyManaCost :: ManaCost var
 emptyManaCost = mempty
+
+isOnlyGeneric :: DynamicManaCost var -> Bool
+isOnlyGeneric
+  DynamicManaCost
+    { costGeneric = _x
+    , costSnow = s
+    , costHybrid = hy
+    , costPhyrexian = phy
+    } = s == mempty && hy == mempty && phy == mempty

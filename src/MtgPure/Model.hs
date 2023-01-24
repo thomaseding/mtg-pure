@@ -86,7 +86,7 @@ module MtgPure.Model (
 
 -- TODO:
 -- Don't bother with the Internal model structure as-is.
--- Instead have Model as the master repr and export the corresponding
+-- Instead have Model as the master representation and export the corresponding
 -- stuff to Model.Authoring and Model.Runtime
 
 import safe MtgPure.Model.AbilityType

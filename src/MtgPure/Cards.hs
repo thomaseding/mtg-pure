@@ -11,12 +11,17 @@ module MtgPure.Cards (
   acceptableLosses,
   ancestralRecall,
   allIsDust,
+  alpineMeadow,
   ancestralVision,
+  arcticFlats,
+  arcticTreeline,
   backlash,
   bayou,
   blackLotus,
   blaze,
   bloodMoon,
+  borealDruid,
+  borealShelf,
   braidwoodCup,
   cityOfBrass,
   cleanse,
@@ -28,13 +33,21 @@ module MtgPure.Cards (
   divination,
   fling,
   forest,
+  frostMarsh,
+  glacialFloodplain,
+  gutlessGhoul,
   grizzlyBears,
+  highlandForest,
+  highlandWeald,
   holyStrength,
+  icehideGolem,
+  iceTunnel,
   island,
   lavaAxe,
   lightningBolt,
   llanowarElves,
   manaLeak,
+  mouthOfRonom,
   mountain,
   moxEmerald,
   moxJet,
@@ -44,6 +57,7 @@ module MtgPure.Cards (
   nyxbornRollicker,
   ornithopter,
   ragingGoblin,
+  rimewoodFalls,
   plains,
   plummet,
   pollutedDelta,
@@ -51,17 +65,29 @@ module MtgPure.Cards (
   shatter,
   shock,
   sinkhole,
+  snowCoveredForest,
+  snowCoveredIsland,
+  snowCoveredMountain,
+  snowCoveredPlains,
+  snowCoveredSwamp,
+  snowfieldSinkhole,
   snuffOut,
+  squallDrifter,
   stifle,
   stoneRain,
   stoneThrowingDevils,
+  sulfurousMire,
   swamp,
   swanSong,
+  thermopod,
+  tresserhornSinks,
   unholyStrength,
   vindicate,
+  volatileFjord,
   wastes,
   wear_tear,
   witchEngine,
+  woodlandChasm,
   wrathOfGod,
   --
   birdToken,
@@ -159,6 +185,7 @@ import safe MtgPure.Model.Recursive (
     LoseLife,
     Sequence,
     StatDelta,
+    Tap,
     WithList
   ),
   Elect (
@@ -175,6 +202,7 @@ import safe MtgPure.Model.Recursive (
   ),
   Enchant (Enchant),
   EnchantmentType (Aura),
+  EntersStatic (EntersTapped),
   EventListener' (TimePoint),
   Requirement (
     ControlledBy,
@@ -186,6 +214,7 @@ import safe MtgPure.Model.Recursive (
   ),
   StaticAbility (
     Bestow,
+    Enters,
     FirstStrike,
     Flying,
     Fuse,
@@ -200,28 +229,93 @@ import safe MtgPure.Model.Recursive (
   pattern CTrue,
  )
 import safe MtgPure.Model.Step (Step (..))
+import safe qualified MtgPure.Model.Supertype as Ty
 import safe MtgPure.Model.TimePoint (TimePoint (..))
 import safe MtgPure.Model.Toughness (Toughness (..))
 import safe MtgPure.Model.Zone (Zone (..))
 
 ----------------------------------------
 
-mkBasicLand :: BasicLandType -> Card OTNLand
-mkBasicLand ty = Card name $
+mkBasicImpl :: [Ty.Supertype OTNLand] -> CardName -> BasicLandType -> Card OTNLand
+mkBasicImpl supertypes name ty = Card name $
   YourLand \_you ->
     LandFacet
-      { land_creatureTypes = []
+      { land_supertypes = supertypes
+      , land_creatureTypes = []
       , land_landTypes = [BasicLand ty]
       , land_abilities = []
       }
+
+mkBasicLand :: BasicLandType -> Card OTNLand
+mkBasicLand ty = mkBasicImpl [] name ty
  where
   name = CardName $ show ty
+
+mkSnowCovered :: BasicLandType -> Card OTNLand
+mkSnowCovered ty = mkBasicImpl [Ty.Snow] name ty
+ where
+  name = CardName $ "Snow-Covered " ++ show ty
+
+mkDualTapImpl :: [Ty.Supertype OTNLand] -> CardName -> BasicLandType -> BasicLandType -> Card OTNLand
+mkDualTapImpl supertypes name ty1 ty2 = Card name $
+  YourLand \_you ->
+    LandFacet
+      { land_supertypes = supertypes
+      , land_creatureTypes = []
+      , land_landTypes = [BasicLand ty1, BasicLand ty2]
+      , land_abilities = [Static $ Enters EntersTapped]
+      }
+
+mkSnowCoveredTapDualLand :: CardName -> BasicLandType -> BasicLandType -> Card OTNLand
+mkSnowCoveredTapDualLand = mkDualTapImpl [Ty.Snow]
+
+mkTapLandImpl ::
+  (ToManaPool 'NonSnow (ManaSymbol mt1), ToManaPool 'NonSnow (ManaSymbol mt2)) =>
+  [Ty.Supertype OTNLand] ->
+  CardName ->
+  ManaSymbol mt1 ->
+  ManaSymbol mt2 ->
+  Card OTNLand
+mkTapLandImpl supertypes name sym1 sym2 = Card name $
+  YourLand \_you ->
+    LandFacet
+      { land_supertypes = supertypes
+      , land_creatureTypes = []
+      , land_landTypes = []
+      , land_abilities =
+          [ Activated @ 'ZBattlefield $
+              thisObject \this -> do
+                controllerOf this \you ->
+                  ElectActivated
+                    Ability
+                      { activated_cost = tapCost [is this]
+                      , activated_effect = effect $ AddMana you $ toManaPool sym1
+                      }
+          , Activated @ 'ZBattlefield $
+              thisObject \this -> do
+                controllerOf this \you ->
+                  ElectActivated
+                    Ability
+                      { activated_cost = tapCost [is this]
+                      , activated_effect = effect $ AddMana you $ toManaPool sym2
+                      }
+          ]
+      }
+
+mkSnowCoveredTapLand ::
+  (ToManaPool 'NonSnow (ManaSymbol mt1), ToManaPool 'NonSnow (ManaSymbol mt2)) =>
+  CardName ->
+  ManaSymbol mt1 ->
+  ManaSymbol mt2 ->
+  Card OTNLand
+mkSnowCoveredTapLand = mkTapLandImpl [Ty.Snow]
 
 mkDualLand :: CardName -> BasicLandType -> BasicLandType -> Card OTNLand
 mkDualLand name ty1 ty2 = Card name $
   YourLand \_you ->
     LandFacet
-      { land_creatureTypes = []
+      { land_supertypes = []
+      , land_creatureTypes = []
       , land_landTypes = [BasicLand ty1, BasicLand ty2]
       , land_abilities = []
       }
@@ -230,7 +324,8 @@ mkFetchLand :: CardName -> BasicLandType -> BasicLandType -> Card OTNLand
 mkFetchLand name ty1 ty2 = Card name $
   YourLand \_you ->
     LandFacet
-      { land_creatureTypes = []
+      { land_supertypes = []
+      , land_creatureTypes = []
       , land_landTypes = []
       , land_abilities =
           [ Activated @ 'ZBattlefield $
@@ -259,6 +354,7 @@ mkMox name sym = Card name $
     ArtifactFacet
       { artifact_colors = toColors ()
       , artifact_cost = manaCostOf 0
+      , artifact_supertypes = []
       , artifact_artifactTypes = []
       , artifact_creatureTypes = []
       , artifact_abilities =
@@ -287,6 +383,7 @@ acceptableLosses = Card "Acceptable Losses" $
                 [ manaCostOf (3, R)
                 , DiscardRandomCost 1
                 ]
+          , sorcery_supertypes = []
           , sorcery_creatureTypes = []
           , sorcery_abilities = []
           , sorcery_effect = thisObject \this ->
@@ -300,6 +397,7 @@ allIsDust = Card "All Is Dust" $
       SorceryFacet
         { sorcery_colors = toColors ()
         , sorcery_cost = manaCostOf 7
+        , sorcery_supertypes = []
         , sorcery_creatureTypes = [Eldrazi]
         , sorcery_abilities = []
         , sorcery_effect = thisObject \_this ->
@@ -312,6 +410,15 @@ allIsDust = Card "All Is Dust" $
                         sacrifice player [is perm]
         }
 
+alpineMeadow :: Card OTNLand
+alpineMeadow = mkSnowCoveredTapDualLand "Alpine Meadow" Mountain Plains
+
+arcticFlats :: Card OTNLand
+arcticFlats = mkSnowCoveredTapLand "Arctic Flats" G W
+
+arcticTreeline :: Card OTNLand
+arcticTreeline = mkSnowCoveredTapDualLand "Arctic Treeline" Forest Plains
+
 ancestralRecall :: Card OTNInstant
 ancestralRecall = Card "Ancestral Recall" $
   YourInstant \you ->
@@ -319,6 +426,7 @@ ancestralRecall = Card "Ancestral Recall" $
       InstantFacet
         { instant_colors = toColors U
         , instant_cost = noCost
+        , instant_supertypes = []
         , instant_creatureTypes = []
         , instant_abilities = []
         , instant_effect = thisObject \_this ->
@@ -333,6 +441,7 @@ ancestralVision = Card "Ancestral Vision" $
         SorceryFacet
           { sorcery_colors = toColors U
           , sorcery_cost = noCost
+          , sorcery_supertypes = []
           , sorcery_creatureTypes = []
           , sorcery_abilities = [Static $ Suspend 4 $ Cost $ manaCostOf U]
           , sorcery_effect = thisObject \_this ->
@@ -348,6 +457,7 @@ backlash = Card "Backlash" $
           InstantFacet
             { instant_colors = toColors (B, R)
             , instant_cost = manaCostOf (1, B, R)
+            , instant_supertypes = []
             , instant_creatureTypes = []
             , instant_abilities = []
             , instant_effect = thisObject \_this ->
@@ -366,6 +476,7 @@ birdToken = Token $
       CreatureFacet
         { creature_colors = toColors U
         , creature_cost = noCost
+        , creature_supertypes = []
         , creature_creatureTypes = [Bird]
         , creature_power = Power 2
         , creature_toughness = Toughness 2
@@ -378,6 +489,7 @@ blackLotus = Card "Black Lotus" $
     ArtifactFacet
       { artifact_colors = toColors ()
       , artifact_cost = manaCostOf 0
+      , artifact_supertypes = []
       , artifact_artifactTypes = []
       , artifact_creatureTypes = []
       , artifact_abilities =
@@ -407,6 +519,7 @@ blaze = Card "Blaze" $
           SorceryFacet
             { sorcery_colors = toColors R
             , sorcery_cost = manaCostOf (VariableMana @ 'NonSnow @ 'MTGeneric x, R)
+            , sorcery_supertypes = []
             , sorcery_creatureTypes = []
             , sorcery_abilities = []
             , sorcery_effect = thisObject \this ->
@@ -419,6 +532,7 @@ bloodMoon = Card "Blood Moon" $
     EnchantmentFacet
       { enchantment_colors = toColors R
       , enchantment_cost = manaCostOf (2, R)
+      , enchantment_supertypes = []
       , enchantment_creatureTypes = []
       , enchantment_enchantmentTypes = []
       , enchantment_abilities =
@@ -431,12 +545,39 @@ bloodMoon = Card "Blood Moon" $
           ]
       }
 
+borealDruid :: Card OTNCreature
+borealDruid = Card "Boreal Druid" $
+  YourCreature \_you ->
+    CreatureFacet
+      { creature_colors = toColors G
+      , creature_cost = manaCostOf G
+      , creature_supertypes = [Ty.Snow]
+      , creature_creatureTypes = [Elf, Druid]
+      , creature_power = Power 1
+      , creature_toughness = Toughness 1
+      , creature_abilities =
+          [ Activated @ 'ZBattlefield $
+              thisObject \this ->
+                controllerOf this \you ->
+                  ElectActivated $
+                    Ability
+                      { activated_cost = tapCost [is this]
+                      , activated_effect =
+                          effect $ AddMana you $ toManaPool C
+                      }
+          ]
+      }
+
+borealShelf :: Card OTNLand
+borealShelf = mkSnowCoveredTapLand "Boreal Shelf" W U
+
 braidwoodCup :: Card OTNArtifact
 braidwoodCup = Card "Braidwood Cup" $
   YourArtifact \_you ->
     ArtifactFacet
       { artifact_colors = toColors ()
       , artifact_cost = manaCostOf 3
+      , artifact_supertypes = []
       , artifact_artifactTypes = []
       , artifact_creatureTypes = []
       , artifact_abilities =
@@ -459,6 +600,7 @@ counterspell = Card "Counterspell" $
         InstantFacet
           { instant_colors = toColors U
           , instant_cost = manaCostOf (U, U)
+          , instant_supertypes = []
           , instant_creatureTypes = []
           , instant_abilities = []
           , instant_effect = thisObject \_this ->
@@ -469,7 +611,8 @@ cityOfBrass :: Card OTNLand
 cityOfBrass = Card "City of Brass" $
   YourLand \_you ->
     LandFacet
-      { land_creatureTypes = []
+      { land_supertypes = []
+      , land_creatureTypes = []
       , land_landTypes = []
       , land_abilities =
           [ Triggered $
@@ -499,6 +642,7 @@ cleanse = Card "Cleanse" $
       SorceryFacet
         { sorcery_colors = toColors W
         , sorcery_cost = manaCostOf (2, W, W)
+        , sorcery_supertypes = []
         , sorcery_creatureTypes = []
         , sorcery_abilities = []
         , sorcery_effect = thisObject \_this ->
@@ -514,6 +658,7 @@ conversion = Card "Conversion" $
     EnchantmentFacet
       { enchantment_colors = toColors W
       , enchantment_cost = manaCostOf (2, W, W)
+      , enchantment_supertypes = []
       , enchantment_creatureTypes = []
       , enchantment_enchantmentTypes = []
       , enchantment_abilities =
@@ -548,6 +693,7 @@ damnation = Card "Damnation" $
       SorceryFacet
         { sorcery_colors = toColors B
         , sorcery_cost = manaCostOf (2, B, B)
+        , sorcery_supertypes = []
         , sorcery_creatureTypes = []
         , sorcery_abilities = []
         , sorcery_effect = thisObject \_this ->
@@ -567,6 +713,7 @@ darkRitual = Card "Dark Ritual" $
       InstantFacet
         { instant_colors = toColors B
         , instant_cost = manaCostOf B
+        , instant_supertypes = []
         , instant_creatureTypes = []
         , instant_abilities = []
         , instant_effect = thisObject \_this ->
@@ -579,6 +726,7 @@ deathriteShaman = Card "Deathrite Shaman" $
     CreatureFacet
       { creature_colors = toColors (B, G)
       , creature_cost = manaCostOf BG
+      , creature_supertypes = []
       , creature_creatureTypes = [Elf, Shaman]
       , creature_power = Power 1
       , creature_toughness = Toughness 2
@@ -640,6 +788,7 @@ divination = Card "Divination" $
       SorceryFacet
         { sorcery_colors = toColors U
         , sorcery_cost = manaCostOf (2, U)
+        , sorcery_supertypes = []
         , sorcery_creatureTypes = []
         , sorcery_abilities = []
         , sorcery_effect = thisObject \_this ->
@@ -659,6 +808,7 @@ fling = Card "Fling" $
                   [ manaCostOf (1, R)
                   , sacrificeCost [is sacChoice]
                   ]
+            , instant_supertypes = []
             , instant_creatureTypes = []
             , instant_abilities = []
             , instant_effect = thisObject \_this ->
@@ -670,17 +820,56 @@ fling = Card "Fling" $
 forest :: Card OTNLand
 forest = mkBasicLand Forest
 
+frostMarsh :: Card OTNLand
+frostMarsh = mkSnowCoveredTapLand "Frost Marsh" U B
+
+glacialFloodplain :: Card OTNLand
+glacialFloodplain = mkSnowCoveredTapDualLand "Glacial Floodplain" Plains Island
+
+gutlessGhoul :: Card OTNCreature
+gutlessGhoul = Card "Gutless Ghoul" $
+  YourCreature \_you ->
+    CreatureFacet
+      { creature_colors = toColors B
+      , creature_cost = manaCostOf (2, B)
+      , creature_supertypes = [Ty.Snow]
+      , creature_creatureTypes = [Zombie]
+      , creature_power = Power 2
+      , creature_toughness = Toughness 2
+      , creature_abilities =
+          [ Activated @ 'ZBattlefield $
+              thisObject \this ->
+                controllerOf this \you ->
+                  ElectActivated $
+                    Ability
+                      { activated_cost =
+                          AndCosts
+                            [ manaCostOf 1
+                            , sacrificeCost @OTNCreature []
+                            ]
+                      , activated_effect = effect $ GainLife you 2
+                      }
+          ]
+      }
+
 grizzlyBears :: Card OTNCreature
 grizzlyBears = Card "Grizzly Bears" $
   YourCreature \_you ->
     CreatureFacet
       { creature_colors = toColors G
       , creature_cost = manaCostOf (1, G)
+      , creature_supertypes = []
       , creature_creatureTypes = [Bear]
       , creature_power = Power 2
       , creature_toughness = Toughness 2
       , creature_abilities = []
       }
+
+highlandForest :: Card OTNLand
+highlandForest = mkSnowCoveredTapDualLand "Highland Forest" Mountain Forest
+
+highlandWeald :: Card OTNLand
+highlandWeald = mkSnowCoveredTapLand "Highland Weald" R G
 
 holyStrength :: Card OTNEnchantment
 holyStrength = Card "Holy Strength" $
@@ -688,6 +877,7 @@ holyStrength = Card "Holy Strength" $
     EnchantmentFacet
       { enchantment_colors = toColors W
       , enchantment_cost = manaCostOf W
+      , enchantment_supertypes = []
       , enchantment_creatureTypes = []
       , enchantment_enchantmentTypes =
           [ Aura $
@@ -696,6 +886,25 @@ holyStrength = Card "Holy Strength" $
           ]
       , enchantment_abilities = []
       }
+
+icehideGolem :: Card OTNArtifactCreature
+icehideGolem = Card "Icehide Golem" $
+  YourArtifactCreature \_you ->
+    ArtifactCreatureFacet
+      { artifactCreature_colors = toColors ()
+      , artifactCreature_cost = manaCostOf 1
+      , artifactCreature_supertypes = [Ty.Snow]
+      , artifactCreature_artifactTypes = []
+      , artifactCreature_creatureTypes = []
+      , artifactCreature_power = Power 2
+      , artifactCreature_toughness = Toughness 2
+      , artifactCreature_artifactAbilities = []
+      , artifactCreature_creatureAbilities = []
+      , artifactCreature_artifactCreatureAbilities = []
+      }
+
+iceTunnel :: Card OTNLand
+iceTunnel = mkSnowCoveredTapDualLand "Ice Tunnel" Island Swamp
 
 island :: Card OTNLand
 island = mkBasicLand Island
@@ -706,6 +915,7 @@ llanowarElves = Card "Llanowar Elves" $
     CreatureFacet
       { creature_colors = toColors G
       , creature_cost = manaCostOf G
+      , creature_supertypes = []
       , creature_creatureTypes = [Elf]
       , creature_power = Power 1
       , creature_toughness = Toughness 1
@@ -729,6 +939,7 @@ lavaAxe = Card "Lava Axe" $
         SorceryFacet
           { sorcery_colors = toColors R
           , sorcery_cost = manaCostOf (4, R)
+          , sorcery_supertypes = []
           , sorcery_creatureTypes = []
           , sorcery_abilities = []
           , sorcery_effect = thisObject \this ->
@@ -743,6 +954,7 @@ lightningBolt = Card "Lightning Bolt" $
         InstantFacet
           { instant_colors = toColors R
           , instant_cost = manaCostOf R
+          , instant_supertypes = []
           , instant_creatureTypes = []
           , instant_abilities = []
           , instant_effect = thisObject \this ->
@@ -757,6 +969,7 @@ manaLeak = Card "Mana Leak" $
         InstantFacet
           { instant_colors = toColors U
           , instant_cost = manaCostOf (1, U)
+          , instant_supertypes = []
           , instant_creatureTypes = []
           , instant_abilities = []
           , instant_effect = thisObject \_this ->
@@ -767,6 +980,39 @@ manaLeak = Card "Mana Leak" $
 
 mountain :: Card OTNLand
 mountain = mkBasicLand Mountain
+
+mouthOfRonom :: Card OTNLand
+mouthOfRonom = Card "Mouth of Ronom" $
+  YourLand \_you ->
+    LandFacet
+      { land_supertypes = [Ty.Snow]
+      , land_creatureTypes = []
+      , land_landTypes = []
+      , land_abilities =
+          [ Activated @ 'ZBattlefield $
+              thisObject \this ->
+                controllerOf this \you ->
+                  ElectActivated $
+                    Ability
+                      { activated_cost = tapCost [is this]
+                      , activated_effect = effect $ AddMana you $ toManaPool C
+                      }
+          , Activated @ 'ZBattlefield $
+              thisObject \this ->
+                controllerOf this \you ->
+                  Target you $ masked @OTNCreature [] \target ->
+                    ElectActivated $
+                      Ability
+                        { activated_cost =
+                            AndCosts
+                              [ manaCostOf (4, S)
+                              , tapCost [is this]
+                              , sacrificeCost [is this]
+                              ]
+                        , activated_effect = effect $ dealDamage this target 4
+                        }
+          ]
+      }
 
 moxEmerald :: Card OTNArtifact
 moxEmerald = mkMox "Mox Emerald" G
@@ -789,6 +1035,7 @@ nyxbornRollicker = Card "Nyxborn Rollicker" $
     EnchantmentCreatureFacet
       { enchantmentCreature_colors = toColors R
       , enchantmentCreature_cost = manaCostOf R
+      , enchantmentCreature_supertypes = []
       , enchantmentCreature_creatureTypes = [Satyr]
       , enchantmentCreature_enchantmentTypes = []
       , enchantmentCreature_power = Power 1
@@ -809,6 +1056,7 @@ ornithopter = Card "Ornithopter" $
     ArtifactCreatureFacet
       { artifactCreature_colors = toColors ()
       , artifactCreature_cost = manaCostOf 0
+      , artifactCreature_supertypes = []
       , artifactCreature_artifactTypes = []
       , artifactCreature_creatureTypes = []
       , artifactCreature_power = Power 0
@@ -829,6 +1077,7 @@ plummet = Card "Plummet" $
         InstantFacet
           { instant_colors = toColors G
           , instant_cost = manaCostOf (1, G)
+          , instant_supertypes = []
           , instant_creatureTypes = []
           , instant_abilities = []
           , instant_effect = thisObject \_this ->
@@ -844,6 +1093,7 @@ pradeshGypsies = Card "Pradesh Gypsies" $
     CreatureFacet
       { creature_colors = toColors G
       , creature_cost = manaCostOf (2, G)
+      , creature_supertypes = []
       , creature_creatureTypes = [Human, Nomad]
       , creature_power = Power 1
       , creature_toughness = Toughness 1
@@ -877,11 +1127,15 @@ ragingGoblin = Card "Raging Goblin" $
     CreatureFacet
       { creature_colors = toColors R
       , creature_cost = manaCostOf R
+      , creature_supertypes = []
       , creature_creatureTypes = [Goblin]
       , creature_power = Power 1
       , creature_toughness = Toughness 1
       , creature_abilities = [Static Haste]
       }
+
+rimewoodFalls :: Card OTNLand
+rimewoodFalls = mkSnowCoveredTapDualLand "Rimewood Falls" Forest Island
 
 shatter :: Card OTNInstant
 shatter = Card "Shatter" $
@@ -891,6 +1145,7 @@ shatter = Card "Shatter" $
         InstantFacet
           { instant_colors = toColors R
           , instant_cost = manaCostOf (1, R)
+          , instant_supertypes = []
           , instant_creatureTypes = []
           , instant_abilities = []
           , instant_effect = thisObject \_this ->
@@ -905,6 +1160,7 @@ shock = Card "Shock" $
         InstantFacet
           { instant_colors = toColors R
           , instant_cost = manaCostOf R
+          , instant_supertypes = []
           , instant_creatureTypes = []
           , instant_abilities = []
           , instant_effect = thisObject \this ->
@@ -919,11 +1175,15 @@ sinkhole = Card "Sinkhole" $
         SorceryFacet
           { sorcery_colors = toColors B
           , sorcery_cost = manaCostOf (B, B)
+          , sorcery_supertypes = []
           , sorcery_creatureTypes = []
           , sorcery_abilities = []
           , sorcery_effect = thisObject \_this ->
               effect $ destroy target
           }
+
+snowfieldSinkhole :: Card OTNLand
+snowfieldSinkhole = mkSnowCoveredTapDualLand "Snowfield Sinkhole" Plains Swamp
 
 snuffOut :: Card OTNInstant
 snuffOut = Card "Snuff Out" $
@@ -946,6 +1206,7 @@ snuffOut = Card "Snuff Out" $
                           LS (manaCostOf (3, B)) $
                             LZ @() $ PayLife 4
                       }
+              , instant_supertypes = []
               , instant_creatureTypes = []
               , instant_abilities = []
               , instant_effect = thisObject \_this ->
@@ -962,11 +1223,55 @@ soldierToken = Token $
       CreatureFacet
         { creature_colors = toColors W
         , creature_cost = noCost
+        , creature_supertypes = []
         , creature_creatureTypes = [Soldier]
         , creature_power = Power 1
         , creature_toughness = Toughness 1
         , creature_abilities = []
         }
+
+snowCoveredForest :: Card OTNLand
+snowCoveredForest = mkSnowCovered Forest
+
+snowCoveredIsland :: Card OTNLand
+snowCoveredIsland = mkSnowCovered Island
+
+snowCoveredMountain :: Card OTNLand
+snowCoveredMountain = mkSnowCovered Mountain
+
+snowCoveredPlains :: Card OTNLand
+snowCoveredPlains = mkSnowCovered Plains
+
+snowCoveredSwamp :: Card OTNLand
+snowCoveredSwamp = mkSnowCovered Swamp
+
+squallDrifter :: Card OTNCreature
+squallDrifter = Card "Squall Drifter" $
+  YourCreature \_you ->
+    CreatureFacet
+      { creature_colors = toColors W
+      , creature_cost = manaCostOf (1, W)
+      , creature_supertypes = [Ty.Snow]
+      , creature_creatureTypes = [Elemental]
+      , creature_power = Power 1
+      , creature_toughness = Toughness 1
+      , creature_abilities =
+          [ Static Flying
+          , Activated @ 'ZBattlefield $
+              thisObject \this ->
+                controllerOf this \you ->
+                  Target you $ masked @OTNCreature [] \target ->
+                    ElectActivated $
+                      Ability
+                        { activated_cost =
+                            AndCosts
+                              [ manaCostOf W
+                              , tapCost [is this]
+                              ]
+                        , activated_effect = effect $ Tap target
+                        }
+          ]
+      }
 
 stifle :: Card OTNInstant
 stifle = Card "Stifle" $
@@ -976,6 +1281,7 @@ stifle = Card "Stifle" $
         InstantFacet
           { instant_colors = toColors U
           , instant_cost = manaCostOf U
+          , instant_supertypes = []
           , instant_creatureTypes = []
           , instant_abilities = []
           , instant_effect = thisObject \_this ->
@@ -990,6 +1296,7 @@ stoneRain = Card "Stone Rain" $
         SorceryFacet
           { sorcery_colors = toColors R
           , sorcery_cost = manaCostOf (2, R)
+          , sorcery_supertypes = []
           , sorcery_creatureTypes = []
           , sorcery_abilities = []
           , sorcery_effect = thisObject \_this ->
@@ -1002,11 +1309,15 @@ stoneThrowingDevils = Card "Stone-Throwing Devils" $
     CreatureFacet
       { creature_colors = toColors B
       , creature_cost = manaCostOf B
+      , creature_supertypes = []
       , creature_creatureTypes = [Devil]
       , creature_power = Power 1
       , creature_toughness = Toughness 1
       , creature_abilities = [Static FirstStrike]
       }
+
+sulfurousMire :: Card OTNLand
+sulfurousMire = mkSnowCoveredTapDualLand "Sulfurous Mire" Swamp Mountain
 
 swamp :: Card OTNLand
 swamp = mkBasicLand Swamp
@@ -1020,6 +1331,7 @@ swanSong = Card "Swan Song" $
           InstantFacet
             { instant_colors = toColors U
             , instant_cost = manaCostOf U
+            , instant_supertypes = []
             , instant_creatureTypes = []
             , instant_abilities = []
             , instant_effect = thisObject \_this ->
@@ -1029,12 +1341,45 @@ swanSong = Card "Swan Song" $
                   ]
             }
 
+thermopod :: Card OTNCreature
+thermopod = Card "Thermopod" $
+  YourCreature \_you ->
+    CreatureFacet
+      { creature_colors = toColors R
+      , creature_cost = manaCostOf (1, R)
+      , creature_supertypes = [Ty.Snow]
+      , creature_creatureTypes = [Slug]
+      , creature_power = Power 4
+      , creature_toughness = Toughness 3
+      , creature_abilities =
+          [ Activated @ 'ZBattlefield $
+              thisObject \this ->
+                ElectActivated $
+                  Ability
+                    { activated_cost = manaCostOf S
+                    , activated_effect = effect $ untilEndOfTurn $ gainAbility this $ Static Haste
+                    }
+          , Activated @ 'ZBattlefield $
+              thisObject \this ->
+                controllerOf this \you ->
+                  ElectActivated $
+                    Ability
+                      { activated_cost = sacrificeCost @OTNCreature []
+                      , activated_effect = effect $ AddMana you $ toManaPool R
+                      }
+          ]
+      }
+
+tresserhornSinks :: Card OTNLand
+tresserhornSinks = mkSnowCoveredTapLand "Tresserhorn Sinks" B R
+
 unholyStrength :: Card OTNEnchantment
 unholyStrength = Card "Unholy Strength" $
   YourEnchantment \_you ->
     EnchantmentFacet
       { enchantment_colors = toColors B
       , enchantment_cost = manaCostOf B
+      , enchantment_supertypes = []
       , enchantment_creatureTypes = []
       , enchantment_enchantmentTypes =
           [ Aura $
@@ -1052,18 +1397,23 @@ vindicate = Card "Vindicate" $
         SorceryFacet
           { sorcery_colors = toColors (W, B)
           , sorcery_cost = manaCostOf (1, W, B)
+          , sorcery_supertypes = []
           , sorcery_creatureTypes = []
           , sorcery_abilities = []
           , sorcery_effect = thisObject \_this ->
               effect $ destroy target
           }
 
+volatileFjord :: Card OTNLand
+volatileFjord = mkSnowCoveredTapDualLand "Volatile Fjord" Island Mountain
+
 -- NOTE: Wastes does NOT have an intrinsic mana ability.
 wastes :: Card OTNLand
 wastes = Card "Wastes" $
   YourLand \_you ->
     LandFacet
-      { land_creatureTypes = []
+      { land_supertypes = [Ty.Basic]
+      , land_creatureTypes = []
       , land_landTypes = []
       , land_abilities =
           [ Activated @ 'ZBattlefield $
@@ -1088,6 +1438,7 @@ wear_tear = SplitCard wear tear [Static Fuse]
           InstantFacet
             { instant_colors = toColors R
             , instant_cost = manaCostOf (1, R)
+            , instant_supertypes = []
             , instant_creatureTypes = []
             , instant_abilities = []
             , instant_effect = thisObject \_this ->
@@ -1101,6 +1452,7 @@ wear_tear = SplitCard wear tear [Static Fuse]
           InstantFacet
             { instant_colors = toColors W
             , instant_cost = manaCostOf W
+            , instant_supertypes = []
             , instant_creatureTypes = []
             , instant_abilities = []
             , instant_effect = thisObject \_this ->
@@ -1113,6 +1465,7 @@ witchEngine = Card "Witch Engine" $
     CreatureFacet
       { creature_colors = toColors B
       , creature_cost = manaCostOf (5, B)
+      , creature_supertypes = []
       , creature_creatureTypes = [Horror]
       , creature_power = Power 4
       , creature_toughness = Toughness 4
@@ -1137,6 +1490,9 @@ witchEngine = Card "Witch Engine" $
           ]
       }
 
+woodlandChasm :: Card OTNLand
+woodlandChasm = mkSnowCoveredTapDualLand "Woodland Chasm" Swamp Forest
+
 wrathOfGod :: Card OTNSorcery
 wrathOfGod = Card "Wrath of God" $
   YourSorcery \_you ->
@@ -1144,6 +1500,7 @@ wrathOfGod = Card "Wrath of God" $
       SorceryFacet
         { sorcery_colors = toColors W
         , sorcery_cost = manaCostOf (2, W, W)
+        , sorcery_supertypes = []
         , sorcery_creatureTypes = []
         , sorcery_abilities = []
         , sorcery_effect = thisObject \_this ->

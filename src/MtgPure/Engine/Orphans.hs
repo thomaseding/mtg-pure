@@ -299,6 +299,8 @@ deriving instance Show Land
 
 deriving instance Show Library
 
+deriving instance Show ManaPayment
+
 deriving instance Show Permanent
 
 deriving instance Show PhaseStep

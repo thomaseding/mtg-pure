@@ -13,7 +13,9 @@ data CreatureType
   = Bear
   | Bird
   | Devil
+  | Druid
   | Eldrazi
+  | Elemental
   | Elf
   | Goblin
   | Horror
@@ -24,6 +26,7 @@ data CreatureType
   | Rebel
   | Satyr
   | Shaman
+  | Slug
   | Soldier
   | Zombie
   deriving (Eq, Ord, Show, Typeable)

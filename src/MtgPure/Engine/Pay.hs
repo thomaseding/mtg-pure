@@ -7,9 +7,14 @@
 {-# HLINT ignore "Use const" #-}
 {-# HLINT ignore "Use if" #-}
 {-# HLINT ignore "Redundant pure" #-}
+{-# HLINT ignore "Redundant flip" #-}
 
 module MtgPure.Engine.Pay (
   pay,
+  playerCanPayManaCost,
+  CanPayManaCost (..),
+  PossiblePayments,
+  possiblePayments,
 ) where
 
 import safe Control.Exception (assert)
@@ -17,7 +22,9 @@ import safe qualified Control.Monad as M
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
 import safe Control.Monad.Util (untilJust)
 import safe Data.Functor ((<&>))
+import safe qualified Data.List as List
 import safe Data.Monoid (First (..))
+import safe GHC.Stack (HasCallStack)
 import safe MtgPure.Engine.Fwd.Api (
   enact,
   findPlayer,
@@ -42,7 +49,7 @@ import safe MtgPure.Engine.State (
 import safe MtgPure.Model.Combinators (isTapped)
 import safe MtgPure.Model.Life (Life (..))
 import safe MtgPure.Model.Mana.CountMana (countMana)
-import safe MtgPure.Model.Mana.Mana (IsManaNoVar, Mana (..), freezeMana, thawMana)
+import safe MtgPure.Model.Mana.Mana (IsManaNoVar, Mana (..), freezeMana)
 import safe MtgPure.Model.Mana.ManaCost (DynamicManaCost (..), HybridManaCost (..), ManaCost (..), PhyrexianManaCost (..))
 import safe MtgPure.Model.Mana.ManaPool (CompleteManaPool (..), ManaPayment (..), ManaPool (..))
 import safe MtgPure.Model.Mana.ManaSymbol (ManaSymbol (..))
@@ -113,14 +120,16 @@ payLife oPlayer life = logCall 'payLife do
           pure Legal
 
 hasEnoughFixedMana :: CompleteManaPool -> ManaCost 'NoVar -> Bool
-hasEnoughFixedMana completePool cost = isManaNonNegative pool
+hasEnoughFixedMana completePool cost = isEachManaNonNegative nonSnow'' && isEachManaNonNegative snow''
  where
   nonSnow = poolNonSnow completePool
   snow = poolSnow completePool
-  pool = (nonSnow <> mapManaPool thawMana snow) - extractFixedPayment' cost
+  (nonSnow', snow') = extractFixedPayment' nonSnow cost
+  nonSnow'' = nonSnow - nonSnow'
+  snow'' = snow - snow'
 
-isManaNonNegative :: FindMana manas 'NoVar => manas -> Bool
-isManaNonNegative pool = case findMana pool isBad of
+isEachManaNonNegative :: FindMana manas 'NoVar => manas -> Bool
+isEachManaNonNegative pool = case findMana pool isBad of
   Nothing -> True
   Just () -> False
  where
@@ -128,48 +137,36 @@ isManaNonNegative pool = case findMana pool isBad of
     True -> Just ()
     False -> Nothing
 
-extractFixedPayment :: ManaCost 'NoVar -> CompleteManaPool
-extractFixedPayment = toCompleteManaPool . extractFixedPayment'
+extractFixedPayment :: ManaPool 'NonSnow -> ManaCost 'NoVar -> CompleteManaPool
+extractFixedPayment maxNonSnow = toCompleteManaPool . extractFixedPayment' maxNonSnow
 
-extractFixedPayment' :: ManaCost 'NoVar -> ManaPool 'NonSnow
-extractFixedPayment' cost = ManaPool w u b r g c
+extractFixedPayment' :: ManaPool 'NonSnow -> ManaCost 'NoVar -> (ManaPool 'NonSnow, ManaPool 'Snow)
+extractFixedPayment' maxNonSNow cost = (ManaPool w u b r g c, ManaPool sw su sb sr sg sc)
  where
-  w = costWhite cost
-  u = costBlue cost
-  b = costBlack cost
-  r = costRed cost
-  g = costGreen cost
-  c = costColorless cost
-
--- TODO: Prolly allow payment to be aborted by user.
--- [Pact of Negation] is an example of a card with a mandatory cost that cannot be aborted.
--- While players are not obligated to activate mana abilities, they must pay the cost with any
--- mana in their pools if possible. This is easy enough for fixed mana costs, but for dynamic.
--- I don't think MTG has any cards that require dynamic mana costs.
--- I suppose the best way to handle this is to accept an argument for Mandatory/Optional.
--- Game engine needs to search for at least one solution. If no solutions are found, then the payment
--- is regardless of whether it is mandatory or optional.
---
--- TODO: Auto pay generic costs when there is only one solution.
--- TODO: Auto pay snow costs when there is only one solution.
--- TODO: Auto pay hybrid costs when there is only one solution.
--- TODO: Auto pay phyrexian costs when there is only one solution.
-promptPayForDynamic ::
-  Monad m =>
-  Object 'OTPlayer ->
-  CompleteManaPool ->
-  DynamicManaCost 'NoVar ->
-  Magic 'Private 'RW m ManaPayment
-promptPayForDynamic oPlayer avail dyn = do
-  prompt <- fromRO $ gets magicPrompt
-  opaque <- fromRO $ gets mkOpaqueGameState
-  untilJust \attempt -> do
-    payment <- fromPublic $ fromRO $ promptPayDynamicMana prompt attempt opaque oPlayer dyn
-    case isPaymentCompatible payment dyn of
-      False -> pure Nothing
-      True -> case isManaNonNegative $ avail - paymentMana payment of
-        False -> pure Nothing
-        True -> pure $ Just payment -- TODO: check life payment
+  mw = poolWhite maxNonSNow
+  mu = poolBlue maxNonSNow
+  mb = poolBlack maxNonSNow
+  mr = poolRed maxNonSNow
+  mg = poolGreen maxNonSNow
+  mc = poolColorless maxNonSNow
+  cw = costWhite cost
+  cu = costBlue cost
+  cb = costBlack cost
+  cr = costRed cost
+  cg = costGreen cost
+  cc = costColorless cost
+  w = min mw cw
+  u = min mu cu
+  b = min mb cb
+  r = min mr cr
+  g = min mg cg
+  c = min mc cc
+  sw = freezeMana $ cw - w
+  su = freezeMana $ cu - u
+  sb = freezeMana $ cb - b
+  sr = freezeMana $ cr - r
+  sg = freezeMana $ cg - g
+  sc = freezeMana $ cc - c
 
 toPayment :: CompleteManaPool -> ManaPayment
 toPayment pool = mempty{paymentMana = pool}
@@ -214,31 +211,35 @@ possiblePaymentsPhyrexian sym (Mana n) = case n <= 0 of
     pure $ p <> q
 
 class PossiblePayments cost where
-  possiblePayments :: cost -> [ManaPayment]
+  -- | This is allowed to return duplicates.
+  possiblePaymentsImpl :: HasCallStack => cost -> [ManaPayment]
+
+possiblePayments :: HasCallStack => PossiblePayments cost => cost -> [ManaPayment]
+possiblePayments = map head . List.group . List.sort . possiblePaymentsImpl
 
 instance PossiblePayments (Mana 'NoVar 'NonSnow 'MTHybridBG) where
-  possiblePayments = possiblePaymentsHybrid B G
+  possiblePaymentsImpl = possiblePaymentsHybrid B G
 
 instance PossiblePayments (Mana 'NoVar 'NonSnow 'MTPhyrexianWhite) where
-  possiblePayments = possiblePaymentsPhyrexian W
+  possiblePaymentsImpl = possiblePaymentsPhyrexian W
 
 instance PossiblePayments (Mana 'NoVar 'NonSnow 'MTPhyrexianBlue) where
-  possiblePayments = possiblePaymentsPhyrexian U
+  possiblePaymentsImpl = possiblePaymentsPhyrexian U
 
 instance PossiblePayments (Mana 'NoVar 'NonSnow 'MTPhyrexianBlack) where
-  possiblePayments = possiblePaymentsPhyrexian B
+  possiblePaymentsImpl = possiblePaymentsPhyrexian B
 
 instance PossiblePayments (Mana 'NoVar 'NonSnow 'MTPhyrexianRed) where
-  possiblePayments = possiblePaymentsPhyrexian R
+  possiblePaymentsImpl = possiblePaymentsPhyrexian R
 
 instance PossiblePayments (Mana 'NoVar 'NonSnow 'MTPhyrexianGreen) where
-  possiblePayments = possiblePaymentsPhyrexian G
+  possiblePaymentsImpl = possiblePaymentsPhyrexian G
 
 instance PossiblePayments (Mana 'NoVar 'NonSnow 'MTPhyrexianColorless) where
-  possiblePayments = possiblePaymentsPhyrexian C
+  possiblePaymentsImpl = possiblePaymentsPhyrexian C
 
 instance PossiblePayments (Mana 'NoVar 'Snow 'MTGeneric) where
-  possiblePayments (Mana n) = case n <= 0 of
+  possiblePaymentsImpl (Mana n) = case n <= 0 of
     True -> [mempty]
     False -> do
       p <-
@@ -249,75 +250,187 @@ instance PossiblePayments (Mana 'NoVar 'Snow 'MTGeneric) where
           , toPayment $ mempty{poolSnow = mapManaPool freezeMana $ toManaPool G}
           , toPayment $ mempty{poolSnow = mapManaPool freezeMana $ toManaPool C}
           ]
-      q <- possiblePayments @(Mana 'NoVar 'Snow 'MTGeneric) $ Mana $ n - 1
+      q <- possiblePaymentsImpl @(Mana 'NoVar 'Snow 'MTGeneric) $ Mana $ n - 1
       pure $ p <> q
 
 instance PossiblePayments (HybridManaCost 'NoVar) where
-  possiblePayments hy = do
-    bg <- possiblePayments $ hybridBG hy
+  possiblePaymentsImpl hy = do
+    bg <- possiblePaymentsImpl $ hybridBG hy
     pure bg -- <> rg <> gw <> wb <> ur <> ...
 
 instance PossiblePayments (PhyrexianManaCost 'NoVar) where
-  possiblePayments phy = do
-    w <- possiblePayments $ phyrexianWhite phy
-    u <- possiblePayments $ phyrexianBlue phy
-    b <- possiblePayments $ phyrexianBlack phy
-    r <- possiblePayments $ phyrexianRed phy
-    g <- possiblePayments $ phyrexianGreen phy
-    c <- possiblePayments $ phyrexianColorless phy
+  possiblePaymentsImpl phy = do
+    w <- possiblePaymentsImpl $ phyrexianWhite phy
+    u <- possiblePaymentsImpl $ phyrexianBlue phy
+    b <- possiblePaymentsImpl $ phyrexianBlack phy
+    r <- possiblePaymentsImpl $ phyrexianRed phy
+    g <- possiblePaymentsImpl $ phyrexianGreen phy
+    c <- possiblePaymentsImpl $ phyrexianColorless phy
     pure $ w <> u <> b <> r <> g <> c
 
 instance PossiblePayments (DynamicManaCost 'NoVar) where
-  possiblePayments dyn = do
+  possiblePaymentsImpl dyn = do
     case costGeneric dyn of
       0 -> pure ()
       _ -> error "caller should zero out generic cost before calling possiblePayments to avoid big search tree"
-    s <- possiblePayments $ costSnow dyn
-    hy <- possiblePayments $ costHybrid dyn
-    phy <- possiblePayments $ costPhyrexian dyn
+    s <- possiblePaymentsImpl $ costSnow dyn
+    hy <- possiblePaymentsImpl $ costHybrid dyn
+    phy <- possiblePaymentsImpl $ costPhyrexian dyn
     pure $ s <> hy <> phy
 
 isPaymentCompatible :: ManaPayment -> DynamicManaCost 'NoVar -> Bool
-isPaymentCompatible payment cost = not $ null do
-  candidate <- possiblePayments cost'
+isPaymentCompatible payment fullDyn = not $ null do
+  candidate <- possiblePayments dyn
   let remaining = payment - candidate
-  M.guard $ isManaNonNegative $ paymentMana remaining
+  M.guard $ isEachManaNonNegative $ paymentMana remaining
   M.guard $ countMana (paymentMana remaining) == countMana generic
   pure () -- TODO: check life payment
   pure candidate
  where
-  cost' = cost{costGeneric = 0}
-  generic = costGeneric cost
+  dyn = fullDyn{costGeneric = 0}
+  generic = costGeneric fullDyn
+
+class PayGenericUnambiguously pool where
+  payGenericUnambiguouslyImpl :: (pool -> CompleteManaPool) -> Int -> pool -> Maybe CompleteManaPool
+
+instance PayGenericUnambiguously CompleteManaPool where
+  payGenericUnambiguouslyImpl _go generic pool =
+    let nonSnow = payGenericUnambiguouslyImpl goNonSnow generic $ poolNonSnow pool
+        snow = payGenericUnambiguouslyImpl goSnow generic $ poolSnow pool
+     in case (nonSnow, snow) of
+          (Nothing, Nothing) -> Nothing
+          (Just _, Just _) -> Nothing
+          (Just x, Nothing) -> Just x
+          (Nothing, Just x) -> Just x
+   where
+    goNonSnow x = pool{poolNonSnow = x}
+    goSnow x = pool{poolSnow = x}
+
+instance PayGenericUnambiguously (ManaPool snow) where
+  payGenericUnambiguouslyImpl go generic pool
+    | poolWhite pool >= x && pool{poolWhite = 0} == mempty = Just $ go mempty{poolWhite = x}
+    | poolBlue pool >= x && pool{poolBlue = 0} == mempty = Just $ go mempty{poolBlue = x}
+    | poolBlack pool >= x && pool{poolBlack = 0} == mempty = Just $ go mempty{poolBlack = x}
+    | poolRed pool >= x && pool{poolRed = 0} == mempty = Just $ go mempty{poolRed = x}
+    | poolGreen pool >= x && pool{poolGreen = 0} == mempty = Just $ go mempty{poolGreen = x}
+    | poolColorless pool >= x && pool{poolColorless = 0} == mempty = Just $ go mempty{poolColorless = x}
+    | otherwise = Nothing
+   where
+    x :: Mana 'NoVar snow mt
+    x = fromIntegral generic
+
+payGenericUnambiguously :: Int -> CompleteManaPool -> Maybe CompleteManaPool
+payGenericUnambiguously generic pool = case generic == countMana pool of
+  True -> Just pool
+  False -> payGenericUnambiguouslyImpl id generic pool
+
+data CanPayManaCost where
+  CantPayMana :: CanPayManaCost
+  -- | Returns `Just dynPayment` iff there is exactly one payment solution.
+  -- This is the full dynamic mana cost, including the generic mana.
+  -- Returns `Nothing` if there are multiple solutions.
+  CanPayMana :: Maybe ManaPayment -> CanPayManaCost
+
+getUniqueElem :: Eq a => [a] -> Maybe a
+getUniqueElem = \case
+  [] -> Nothing
+  xs -> case all (== head xs) xs of
+    True -> Just $ head xs
+    False -> Nothing
+
+-- NOTE: This code would be a lot simpler if generic mana was included in the generated payments.
+-- However that would make the search space much larger, and special casing generic mana to be
+-- handled at the end prevents giant trees. Imagine if X was 20 or something. I can live with a
+-- large search space for the other dynamic mana costs, since real world cards don't have variable
+-- costs for those. (e.g. no cards have hybrid mana costs for X, or at least it is rare). If such
+-- cards exist and cause performance problems, we can revisit this to special case them or update
+-- the algorithm to handle them. (e.g. bust out a third-party discrete constraint solver).
+playerCanPayManaCost :: HasCallStack => Player -> ManaCost 'NoVar -> CanPayManaCost
+playerCanPayManaCost player cost = case hasEnoughFixedMana pool cost of
+  False -> CantPayMana
+  True -> do
+    case countMana fullDyn > countMana avail of
+      True -> CantPayMana
+      False -> do
+        case dynNoGenericSolutions of
+          [] -> CantPayMana
+          [paymentNoGeneric] -> CanPayMana $ toFullDynPayment paymentNoGeneric
+          paymentsNoGeneric ->
+            CanPayMana $
+              let fullDynPayments = map toFullDynPayment paymentsNoGeneric
+               in -- While the paymentsNoGeneric are unique, the fullDynPayments may not be.
+                  M.join $ getUniqueElem fullDynPayments
+ where
+  pool = playerMana player
+  fixedPayment = extractFixedPayment (poolNonSnow pool) cost
+  avail = pool - fixedPayment
+  fullDyn = costDynamic cost
+  generic = costGeneric fullDyn
+  dynNoGeneric = fullDyn{costGeneric = 0}
+  dynNoGenericCandidates = possiblePayments dynNoGeneric
+  dynNoGenericSolutions = filter isSolution dynNoGenericCandidates
+  isSolution candidate =
+    let remaining = avail - paymentMana candidate
+     in case isEachManaNonNegative remaining && countMana remaining >= countMana generic of
+          False -> False
+          True -> True -- TODO: check life payment
+  toFullDynPayment payment =
+    let avail' = avail - paymentMana payment
+     in case generic of
+          0 -> Just payment
+          _ -> case payGenericUnambiguously (countMana generic) avail' of
+            Nothing -> Nothing
+            Just x -> Just $ payment <> mempty{paymentMana = x}
 
 payManaCost :: Monad m => Object 'OTPlayer -> ManaCost 'Var -> Magic 'Private 'RW m Legality
 payManaCost oPlayer (forceVars -> cost) = logCall 'payManaCost do
   fromRO (findPlayer oPlayer) >>= \case
     Nothing -> pure Illegal
-    Just player -> do
-      let pool = playerMana player
-      case hasEnoughFixedMana pool cost of
-        False -> pure Illegal
-        True -> do
-          let fixedPayment = extractFixedPayment cost
-              avail = pool - fixedPayment
-              dyn = costDynamic cost
-          case countMana dyn > countMana avail of
-            True -> pure Illegal
-            False -> do
-              -- XXX: This auto switching needs more smarts for life payments
-              dynPayment <- case countMana dyn of
-                0 -> pure mempty
-                _ -> promptPayForDynamic oPlayer avail dyn
-              let pool' = pool - fixedPayment - paymentMana dynPayment
-              setPlayer
-                oPlayer
-                player
-                  { playerMana = pool'
-                  , playerLife =
-                      let life = playerLife player - paymentLife dynPayment
-                       in assert (life > 0) life
-                  }
-              pure Legal
+    Just player -> case playerCanPayManaCost player cost of
+      CantPayMana -> pure Illegal
+      CanPayMana mDynSolution -> do
+        let pool = playerMana player
+            fixedPayment = extractFixedPayment (poolNonSnow pool) cost
+            avail = pool - fixedPayment
+            fullDyn = costDynamic cost
+        dynPayment <- case mDynSolution of
+          Just solution -> pure solution
+          Nothing -> promptPayForCompatibleDynamic oPlayer avail fullDyn
+        let pool' = pool - fixedPayment - paymentMana dynPayment
+        setPlayer
+          oPlayer
+          player
+            { playerMana = pool'
+            , playerLife =
+                let life = playerLife player - paymentLife dynPayment
+                 in assert (life > 0) life
+            }
+        pure Legal
+
+-- TODO: Prolly allow payment to be aborted by user.
+-- [Pact of Negation] is an example of a card with a mandatory cost that cannot be aborted.
+-- While players are not obligated to activate mana abilities, they must pay the cost with any
+-- mana in their pools if possible. This is easy enough for fixed mana costs, but for dynamic.
+-- I don't think MTG has any cards that require dynamic mana costs.
+-- I suppose the best way to handle this is to accept an argument for Mandatory/Optional.
+-- Game engine needs to search for at least one solution. If no solutions are found, then the payment
+-- is aborted regardless of whether it is mandatory or optional.
+promptPayForCompatibleDynamic ::
+  Monad m =>
+  Object 'OTPlayer ->
+  CompleteManaPool ->
+  DynamicManaCost 'NoVar ->
+  Magic 'Private 'RW m ManaPayment
+promptPayForCompatibleDynamic oPlayer avail dyn = do
+  prompt <- fromRO $ gets magicPrompt
+  opaque <- fromRO $ gets mkOpaqueGameState
+  untilJust \attempt -> do
+    payment <- fromPublic $ fromRO $ promptPayDynamicMana prompt attempt opaque oPlayer dyn
+    case isPaymentCompatible payment dyn of
+      False -> pure Nothing
+      True -> case isEachManaNonNegative $ avail - paymentMana payment of
+        False -> pure Nothing
+        True -> pure $ Just payment -- TODO: check life payment
 
 paySacrificeCost ::
   (Monad m, IsZO 'ZBattlefield ot, CoPermanent ot) =>

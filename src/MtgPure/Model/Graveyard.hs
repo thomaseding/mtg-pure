@@ -21,3 +21,9 @@ newtype Graveyard :: Type where
 instance IsCardList Graveyard (ZO 'ZGraveyard OTNCard) where
   toCardList = Graveyard
   fromCardList = unGraveyard
+
+instance Semigroup Graveyard where
+  Graveyard a <> Graveyard b = Graveyard (a <> b)
+
+instance Monoid Graveyard where
+  mempty = Graveyard mempty

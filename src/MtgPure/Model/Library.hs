@@ -21,3 +21,9 @@ newtype Library :: Type where
 instance IsCardList Library (ZO 'ZLibrary OTNCard) where
   toCardList = Library
   fromCardList = unLibrary
+
+instance Semigroup Library where
+  Library a <> Library b = Library (a <> b)
+
+instance Monoid Library where
+  mempty = Library mempty

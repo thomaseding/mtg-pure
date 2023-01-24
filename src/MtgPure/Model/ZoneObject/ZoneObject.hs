@@ -112,7 +112,7 @@ type IsOTN (ot :: Type) =
 type IsZO (zone :: Zone) (ot :: Type) =
   ( IsOTN ot
   , IsZone zone
-  -- XXX: Prolly dont want to put these here so they dont leak to Authoring
+  -- XXX: Prolly don't want to put these here so they don't leak to Authoring
   --, Eq (ZO zone ot)
   --, Ord (ZO zone ot)
   --, Show (ZO zone ot)

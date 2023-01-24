@@ -36,6 +36,7 @@ data ManaPayment = ManaPayment
   { paymentMana :: CompleteManaPool
   , paymentLife :: Life -- For Phyrexian mana
   }
+  deriving (Eq, Ord, Typeable) --  TODO: Make some of these orphans
 
 instance Semigroup (ManaPool snow) where
   mp1 <> mp2 =

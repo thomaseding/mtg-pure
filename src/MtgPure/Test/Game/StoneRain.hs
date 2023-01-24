@@ -11,9 +11,9 @@
 {-# HLINT ignore "Redundant fmap" #-}
 {-# HLINT ignore "Evaluate" #-}
 
-module MtgPure.Test.Game.MountainStoneRain (
+module MtgPure.Test.Game.StoneRain (
   main,
-  mainMountainStoneRain,
+  mainStoneRain,
 ) where
 
 import safe MtgPure.Cards (mountain, stoneRain)
@@ -23,11 +23,11 @@ import safe MtgPure.Model.Recursive (AnyCard (..))
 import safe MtgPure.Model.Sideboard (Sideboard (..))
 
 main :: IO ()
-main = mainMountainStoneRain
+main = mainStoneRain
 
 -- NOTE: Still a WIP
-mainMountainStoneRain :: IO ()
-mainMountainStoneRain = runConsole input do
+mainStoneRain :: IO ()
+mainStoneRain = runConsole input do
   playConsoleGame $ replicate 2 (deck, side)
  where
   input =
@@ -56,7 +56,7 @@ side =
       ]
 
 replayLog :: Maybe FilePath
-replayLog = Nothing -- Just "replay-Mountain-StoneRain.log"
+replayLog = Nothing -- Just "replay-StoneRain.log"
 
 replayInputs :: [String]
 replayInputs =

@@ -20,6 +20,7 @@ module MtgPure.Model.Recursive (
   Else (..),
   Enchant (..),
   EnchantmentType (..),
+  EntersStatic (..),
   Event,
   EventListener,
   EventListener' (..),
@@ -88,7 +89,6 @@ import safe MtgPure.Model.Object.OTNAliases (
   OTNEnchantmentCreature,
   OTNInstant,
   OTNLand,
-  OTNPermanent,
   OTNPlaneswalker,
   OTNPlayer,
   OTNSorcery,
@@ -101,6 +101,7 @@ import safe MtgPure.Model.Object.Singleton.Spell (CoSpell)
 import safe MtgPure.Model.Power (Power)
 import safe MtgPure.Model.PrePost (IsPrePost, PrePost (..))
 import safe MtgPure.Model.Rarity (Rarity)
+import safe MtgPure.Model.Supertype (Supertype)
 import safe MtgPure.Model.TimePoint (TimePoint)
 import safe MtgPure.Model.Toughness (Toughness)
 import safe MtgPure.Model.Variable (Var (Var), Variable)
@@ -123,7 +124,7 @@ import safe MtgPure.Model.ZoneObject.ZoneObject (
 --    Ability ot (experimenting with engine not having this "exact" notion)
 --    Card ot
 --    EnchantmentType ot
---    WithThis zone litfOT ot
+--    WithThis zone liftOT ot
 --
 -- "ot is (at least) one of (a,b,c,...)"
 --    Enchant zone ot
@@ -316,6 +317,7 @@ data CardFacet (ot :: Type) :: Type where
   ArtifactFacet ::
     { artifact_colors :: Colors
     , artifact_cost :: Cost OTNArtifact
+    , artifact_supertypes :: [Supertype OTNArtifact]
     , artifact_artifactTypes :: [ArtifactType]
     , artifact_creatureTypes :: [CreatureType]
     , artifact_abilities :: [Ability OTNArtifact]
@@ -324,6 +326,7 @@ data CardFacet (ot :: Type) :: Type where
   ArtifactCreatureFacet ::
     { artifactCreature_colors :: Colors
     , artifactCreature_cost :: Cost OTNArtifactCreature
+    , artifactCreature_supertypes :: [Supertype OTNArtifactCreature]
     , artifactCreature_artifactTypes :: [ArtifactType]
     , artifactCreature_creatureTypes :: [CreatureType]
     , artifactCreature_power :: Power
@@ -334,7 +337,8 @@ data CardFacet (ot :: Type) :: Type where
     } ->
     CardFacet OTNArtifactCreature
   ArtifactLandFacet ::
-    { artifactLand_artifactTypes :: [ArtifactType]
+    { artifactLand_supertypes :: [Supertype OTNArtifactLand]
+    , artifactLand_artifactTypes :: [ArtifactType]
     , artifactLand_creatureTypes :: [CreatureType]
     , artifactLand_landTypes :: [LandType]
     , artifactLand_artifactAbilities :: [Ability OTNArtifact]
@@ -345,6 +349,7 @@ data CardFacet (ot :: Type) :: Type where
   CreatureFacet ::
     { creature_colors :: Colors
     , creature_cost :: Cost OTNCreature
+    , creature_supertypes :: [Supertype OTNCreature]
     , creature_creatureTypes :: [CreatureType]
     , creature_power :: Power
     , creature_toughness :: Toughness
@@ -354,6 +359,7 @@ data CardFacet (ot :: Type) :: Type where
   EnchantmentFacet ::
     { enchantment_colors :: Colors
     , enchantment_cost :: Cost OTNEnchantment
+    , enchantment_supertypes :: [Supertype OTNEnchantment]
     , enchantment_creatureTypes :: [CreatureType]
     , enchantment_enchantmentTypes :: [EnchantmentType OTNEnchantment]
     , enchantment_abilities :: [Ability OTNEnchantment]
@@ -362,6 +368,7 @@ data CardFacet (ot :: Type) :: Type where
   EnchantmentCreatureFacet ::
     { enchantmentCreature_colors :: Colors
     , enchantmentCreature_cost :: Cost OTNEnchantmentCreature
+    , enchantmentCreature_supertypes :: [Supertype OTNEnchantmentCreature]
     , enchantmentCreature_creatureTypes :: [CreatureType]
     , enchantmentCreature_enchantmentTypes :: [EnchantmentType OTNEnchantmentCreature]
     , enchantmentCreature_power :: Power
@@ -374,6 +381,7 @@ data CardFacet (ot :: Type) :: Type where
   InstantFacet ::
     { instant_colors :: Colors
     , instant_cost :: Cost OTNInstant
+    , instant_supertypes :: [Supertype OTNInstant]
     , instant_creatureTypes :: [CreatureType]
     , -- instant_oneShotTypes :: [OneShotType] e.g. Arcane
       instant_abilities :: [Ability OTNInstant]
@@ -381,7 +389,8 @@ data CardFacet (ot :: Type) :: Type where
     } ->
     CardFacet OTNInstant
   LandFacet ::
-    { land_creatureTypes :: [CreatureType]
+    { land_supertypes :: [Supertype OTNLand]
+    , land_creatureTypes :: [CreatureType]
     , land_landTypes :: [LandType]
     , land_abilities :: [Ability OTNLand]
     } ->
@@ -389,6 +398,7 @@ data CardFacet (ot :: Type) :: Type where
   PlaneswalkerFacet ::
     { planeswalker_colors :: Colors
     , planeswalker_cost :: Cost OTNPlaneswalker
+    , planeswalker_supertypes :: [Supertype OTNPlaneswalker]
     , planeswalker_loyalty :: Loyalty
     , planeswalker_abilities :: [Ability OTNPlaneswalker]
     } ->
@@ -396,6 +406,7 @@ data CardFacet (ot :: Type) :: Type where
   SorceryFacet ::
     { sorcery_colors :: Colors
     , sorcery_cost :: Cost OTNSorcery
+    , sorcery_supertypes :: [Supertype OTNSorcery]
     , sorcery_creatureTypes :: [CreatureType]
     , -- instant_oneShotTypes :: [OneShotType] e.g. Arcane
       sorcery_abilities :: [Ability OTNSorcery]
@@ -517,8 +528,8 @@ data Effect (ef :: EffectType) :: Type where
   Sequence :: [Effect ef] -> Effect ef
   ShuffleLibrary :: ZOPlayer -> Effect 'OneShot
   StatDelta :: ZOCreature -> Power -> Toughness -> Effect 'Continuous
-  Tap :: ZO 'ZBattlefield OTNPermanent -> Effect 'OneShot
-  Untap :: ZO 'ZBattlefield OTNPermanent -> Effect 'OneShot
+  Tap :: CoPermanent ot => ZO 'ZBattlefield ot -> Effect 'OneShot
+  Untap :: CoPermanent ot => ZO 'ZBattlefield ot -> Effect 'OneShot
   Until :: Elect 'Post Event OTNPlayer -> Effect 'Continuous -> Effect 'Continuous
   WithList :: IsZO zone ot => WithList (Effect ef) zone ot -> Effect ef
   deriving (Typeable)
@@ -667,6 +678,21 @@ instance ConsIndex (EnchantmentType ot) where
 
 ----------------------------------------
 
+-- This is distinct from triggered ETB effects.
+data EntersStatic (zone :: Zone) (ot :: Type) :: Type where
+  EntersTapped :: (CoPermanent ot, IsOTN ot) => EntersStatic 'ZBattlefield ot
+  -- EntersWithCounters :: (CoPermanent ot, IsOTN ot) => CounterType ot -> Int -> EntersStatic 'ZBattlefield ot
+  deriving (Typeable)
+
+instance ConsIndex (EntersStatic zone ot) where
+  consIndex = \case
+    EntersTapped{} -> 1
+
+----------------------------------------
+
+-- TODO: move out of this module
+class IsZone zone => CoNonBattlefield (zone :: Zone)
+
 -- See `Until` constructor for a place where this is used. e.g. [Pradesh Gypsies]
 type Event = EventListener' Proxy
 
@@ -675,6 +701,8 @@ type EventListener = EventListener' (Elect 'Post (Effect 'OneShot))
 
 data EventListener' (liftOT :: Type -> Type) :: Type where
   BecomesTapped :: (CoPermanent ot, IsOTN ot, Typeable liftOT) => WithLinkedObject 'ZBattlefield liftOT ot -> EventListener' liftOT
+  EntersBattlefield :: (CoPermanent ot, IsOTN ot, Typeable liftOT) => WithLinkedObject 'ZBattlefield liftOT ot -> EventListener' liftOT
+  EntersNonBattlefield :: (CoNonBattlefield zone, CoCard ot, Typeable liftOT) => WithLinkedObject zone liftOT ot -> EventListener' liftOT
   Events :: [EventListener' liftOT] -> EventListener' liftOT
   SpellIsCast :: (CoSpell ot, IsOTN ot) => WithLinkedObject 'ZBattlefield liftOT ot -> EventListener' liftOT
   TimePoint :: Typeable p => TimePoint p -> liftOT OTNPlayer -> EventListener' liftOT
@@ -683,9 +711,11 @@ data EventListener' (liftOT :: Type -> Type) :: Type where
 instance ConsIndex (EventListener' liftOT) where
   consIndex = \case
     BecomesTapped{} -> 1
-    Events{} -> 2
-    SpellIsCast{} -> 3
-    TimePoint{} -> 4
+    EntersBattlefield{} -> 2
+    EntersNonBattlefield{} -> 3
+    Events{} -> 4
+    SpellIsCast{} -> 5
+    TimePoint{} -> 6
 
 ----------------------------------------
 
@@ -937,6 +967,7 @@ data StaticAbility (zone :: Zone) (ot :: Type) :: Type where
   As :: (ot ~ OTN x, IsOTN ot) => Elect 'Post EventListener ot -> StaticAbility 'ZBattlefield ot -- 603.6d: not a triggered ability
   -- XXX: BestowPre and BestowPost
   Bestow :: ot ~ OTNEnchantmentCreature => Elect 'Pre (Cost ot) ot -> Enchant 'ZBattlefield OTNCreature -> StaticAbility 'ZBattlefield ot
+  Enters :: IsZO zone ot => EntersStatic zone ot -> StaticAbility zone ot
   FirstStrike :: ot ~ OTNCreature => StaticAbility 'ZBattlefield ot
   Flying :: ot ~ OTNCreature => StaticAbility 'ZBattlefield ot
   Fuse :: IsOTN ot => StaticAbility 'ZHand (ot, ot) -- TODO: Add witness or constraint for OTNInstant or OTNSorcery
@@ -952,14 +983,15 @@ instance ConsIndex (StaticAbility zone ot) where
   consIndex = \case
     As{} -> 1
     Bestow{} -> 2
-    FirstStrike{} -> 3
-    Flying{} -> 4
-    Fuse{} -> 5
-    Haste{} -> 6
-    Landwalk{} -> 7
-    StaticContinuous{} -> 8
-    Suspend{} -> 9
-    Trample{} -> 10
+    Enters{} -> 3
+    FirstStrike{} -> 4
+    Flying{} -> 5
+    Fuse{} -> 6
+    Haste{} -> 7
+    Landwalk{} -> 8
+    StaticContinuous{} -> 9
+    Suspend{} -> 10
+    Trample{} -> 11
 
 ----------------------------------------
 

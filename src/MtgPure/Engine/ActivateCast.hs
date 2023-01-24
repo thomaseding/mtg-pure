@@ -89,6 +89,7 @@ import safe MtgPure.Model.Object.ObjectN_ (ObjectN' (O1))
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Object.PromoteIdToObjectN (promoteIdToObjectN)
 import safe MtgPure.Model.Object.ToObjectN.Classes (ToObject2' (..), ToObject6' (..))
+import safe MtgPure.Model.PhaseStep (PhaseStep (..))
 import safe MtgPure.Model.Player (Player (..))
 import safe MtgPure.Model.PrePost (PrePost (..))
 import safe MtgPure.Model.Recursive (
@@ -113,6 +114,39 @@ import safe MtgPure.Model.ZoneObject.ZoneObject (IsOTN, IsZO, ZO, ZOPlayer, Zone
 
 type Legality' = Maybe ()
 
+data Speed = InstantSpeed | SorcerySpeed
+  deriving (Eq, Ord, Show, Typeable)
+
+getAbilitySpeed :: Monad m => IsZO zone ot => SomeActivatedAbility zone ot -> Magic 'Private 'RO m Speed
+getAbilitySpeed _ = pure InstantSpeed -- TODO: activate only as a sorcery
+
+getSpellSpeed :: Monad m => IsZone zone => ZO zone OTNSpell -> Magic 'Private 'RO m Speed
+getSpellSpeed _ = pure SorcerySpeed -- TODO: Instants, flash, etc.
+
+speedIsAllowable :: Monad m => Speed -> Magic 'Private 'RO m Bool
+speedIsAllowable speed = do
+  -- TODO: check if a split second spell is on the stack
+  phaseStep <- gets magicPhaseStep
+  pure case speed of
+    InstantSpeed -> True
+    SorcerySpeed -> case phaseStep of
+      PSPreCombatMainPhase -> True
+      PSPostCombatMainPhase -> True
+      _ -> False
+
+_canActivateAbilityNow :: Monad m => Object 'OTPlayer -> IsZO zone ot => SomeActivatedAbility zone ot -> Magic 'Private 'RO m Bool
+_canActivateAbilityNow oPlayer ability = logCall '_canActivateAbilityNow do
+  hasPriority <- fromPublic $ getHasPriority oPlayer
+  speed <- fromRO $ getAbilitySpeed ability
+  speedIsAllowable speed <&> (&& hasPriority)
+
+_canPlaySpellNow :: Monad m => Object 'OTPlayer -> IsZone zone => ZO zone OTNSpell -> Magic 'Private 'RO m Bool
+_canPlaySpellNow oPlayer = logCall '_canPlaySpellNow \zoSpell -> do
+  hasPriority <- fromPublic $ getHasPriority oPlayer
+  speed <- fromRO $ getSpellSpeed zoSpell
+  speedIsAllowable speed <&> (&& hasPriority)
+
+-- XXX: obsolete; replace with `canActivateAbilityNow`
 newtype ActivateAbilityReqs = ActivateAbilityReqs
   { activateAbilityReqs_hasPriority :: Bool
   }
@@ -133,6 +167,7 @@ getActivateAbilityReqs oPlayer = logCall 'getActivateAbilityReqs do
       { activateAbilityReqs_hasPriority = hasPriority -- (116.2a)
       }
 
+-- XXX: obsolete; replace with `canCastSpellNow`
 newtype CastSpellReqs = CastSpellReqs
   { castSpellReqs_hasPriority :: Bool
   }

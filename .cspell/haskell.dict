@@ -1,8 +1,13 @@
+-fobject-code
+-hidir
+-odir
+-Werror
 -Wno-unrecognised-pragmas
 assocs
 elems
 fmap
 forall
+ghci
 HLINT
 mconcat
 mempty

@@ -49,10 +49,11 @@ import safe MtgPure.Model.IsCardList (IsCardList (..), popCard)
 import safe MtgPure.Model.Life (Life (..))
 import safe MtgPure.Model.Mana.ManaPool (CompleteManaPool (..), ManaPool (..))
 import safe MtgPure.Model.Mana.Snow (Snow (..))
-import safe MtgPure.Model.Object.OTNAliases (OTNDamageSource, OTNPermanent)
+import safe MtgPure.Model.Object.OTNAliases (OTNDamageSource)
 import safe MtgPure.Model.Object.Object (Object)
 import safe MtgPure.Model.Object.ObjectId (getObjectId)
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
+import safe MtgPure.Model.Object.Singleton.Permanent (CoPermanent)
 import safe MtgPure.Model.Permanent (Permanent (..), Tapped (..))
 import safe MtgPure.Model.Player (Player (..))
 import safe MtgPure.Model.Recursive (Effect (..))
@@ -195,18 +196,20 @@ drawCards' :: Monad m => Maybe SourceZO -> Int -> Object 'OTPlayer -> Magic 'Pri
 drawCards' mSource n oPlayer = logCall 'drawCards' do
   fmap mconcat $ M.replicateM n $ drawCard' mSource oPlayer
 
-untap' :: Monad m => Maybe SourceZO -> ZO 'ZBattlefield OTNPermanent -> Magic 'Private 'RW m [Ev]
-untap' mSource oPerm = logCall 'untap' do
-  perm <- fromRO $ getPermanent oPerm
-  setPermanent oPerm $ Just perm{permanentTapped = Untapped}
+untap' :: (CoPermanent ot, Monad m) => Maybe SourceZO -> ZO 'ZBattlefield ot -> Magic 'Private 'RW m [Ev]
+untap' mSource zoPerm' = logCall 'untap' do
+  let zoPerm = zo0ToPermanent $ toZO0 zoPerm'
+  perm <- fromRO $ getPermanent zoPerm
+  setPermanent zoPerm $ Just perm{permanentTapped = Untapped}
   case permanentTapped perm of
     Untapped -> pure []
-    Tapped -> pure [EvUntapped mSource oPerm]
+    Tapped -> pure [EvUntapped mSource zoPerm]
 
-tap' :: Monad m => Maybe SourceZO -> ZO 'ZBattlefield OTNPermanent -> Magic 'Private 'RW m [Ev]
-tap' mSource oPerm = logCall 'tap' do
-  perm <- fromRO $ getPermanent oPerm
-  setPermanent oPerm $ Just perm{permanentTapped = Tapped}
+tap' :: (CoPermanent ot, Monad m) => Maybe SourceZO -> ZO 'ZBattlefield ot -> Magic 'Private 'RW m [Ev]
+tap' mSource zoPerm' = logCall 'tap' do
+  let zoPerm = zo0ToPermanent $ toZO0 zoPerm'
+  perm <- fromRO $ getPermanent zoPerm
+  setPermanent zoPerm $ Just perm{permanentTapped = Tapped}
   case permanentTapped perm of
     Tapped -> pure []
-    Untapped -> pure [EvTapped mSource oPerm]
+    Untapped -> pure [EvTapped mSource zoPerm]

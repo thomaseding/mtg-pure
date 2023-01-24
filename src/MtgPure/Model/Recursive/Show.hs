@@ -48,7 +48,7 @@ import safe MtgPure.Model.Damage (Damage, Damage' (..))
 import safe MtgPure.Model.LandType (LandType (..))
 import safe MtgPure.Model.Loyalty (Loyalty)
 import safe MtgPure.Model.Mana.Mana (Mana (..))
-import safe MtgPure.Model.Mana.ManaCost (DynamicManaCost (..), HybridManaCost (..), ManaCost (..), PhyrexianManaCost (..))
+import safe MtgPure.Model.Mana.ManaCost (DynamicManaCost (..), HybridManaCost (..), ManaCost (..), PhyrexianManaCost (..), isOnlyGeneric)
 import safe MtgPure.Model.Mana.ManaPool (CompleteManaPool (..), ManaPool (..))
 import safe MtgPure.Model.Mana.ManaSymbol (ManaSymbol (..))
 import safe MtgPure.Model.Object.IsObjectType (IsObjectType (..))
@@ -112,6 +112,7 @@ import safe MtgPure.Model.Recursive (
   Else (..),
   Enchant (..),
   EnchantmentType (..),
+  EntersStatic (..),
   Event,
   EventListener,
   EventListener' (..),
@@ -183,6 +184,9 @@ instance Show Condition where
 instance Show (Cost ot) where
   show = runEnvM defaultDepthLimit . showCost
 
+instance Show (DynamicManaCost var) where
+  show = runEnvM defaultDepthLimit . showDynamicManaCost
+
 instance Show (Effect ef) where
   show = runEnvM defaultDepthLimit . showEffect
 
@@ -195,11 +199,17 @@ instance Show (EnchantmentType ot) where
 instance Show EventListener where
   show = runEnvM defaultDepthLimit . showEventListener
 
+instance Show (HybridManaCost var) where
+  show = runEnvM defaultDepthLimit . showHybridManaCost
+
 instance Show (ManaCost var) where
   show = runEnvM defaultDepthLimit . showManaCost
 
 instance Show (ManaPool snow) where
   show = runEnvM defaultDepthLimit . showManaPool
+
+instance Show (PhyrexianManaCost var) where
+  show = runEnvM defaultDepthLimit . showPhyrexianManaCost
 
 instance Show (Requirement zone ot) where
   show = runEnvM defaultDepthLimit . showRequirement
@@ -529,9 +539,10 @@ showCardImpl consName (getCardName -> CardName name) cont = yesParens do
     Just 0 -> pure $ pure consName <> pure " " <> sName <> pure " ..."
     _ -> cont
 
+-- FIXME: supertypes
 showCardFacet :: CardFacet ot -> EnvM ParenItems
 showCardFacet = \case
-  ArtifactFacet colors cost artTypes creatTypes abilities -> yesParens do
+  ArtifactFacet colors cost _sups artTypes creatTypes abilities -> yesParens do
     sColors <- parens <$> showColors colors
     sCost <- parens <$> showCost cost
     sArtTypes <- parens <$> showArtifactTypes artTypes
@@ -547,7 +558,7 @@ showCardFacet = \case
         <> pure " "
         <> sCreatTypes
         <> sAbilities
-  ArtifactCreatureFacet colors cost artTypes creatTypes power toughness artAbils creatAbils bothAbils ->
+  ArtifactCreatureFacet colors cost _sups artTypes creatTypes power toughness artAbils creatAbils bothAbils ->
     yesParens do
       sColors <- parens <$> showColors colors
       sCost <- parens <$> showCost cost
@@ -576,7 +587,7 @@ showCardFacet = \case
           <> pure " "
           <> sCreatAbils
           <> sBothAbils
-  ArtifactLandFacet artTypes creatTypes landTypes artAbils landAbils bothAbils ->
+  ArtifactLandFacet _sups artTypes creatTypes landTypes artAbils landAbils bothAbils ->
     yesParens do
       sArtTypes <- parens <$> showArtifactTypes artTypes
       sCreatTypes <- parens <$> showCreatureTypes creatTypes
@@ -596,7 +607,7 @@ showCardFacet = \case
           <> pure " "
           <> sLandAbils
           <> sBothAbils
-  CreatureFacet colors cost creatureTypes power toughness abilities ->
+  CreatureFacet colors cost _sups creatureTypes power toughness abilities ->
     yesParens do
       sColors <- parens <$> showColors colors
       sCost <- parens <$> showCost cost
@@ -616,7 +627,7 @@ showCardFacet = \case
           <> pure " "
           <> sToughness
           <> sAbilities
-  EnchantmentFacet colors cost creatTypes enchantTypes abilities -> yesParens do
+  EnchantmentFacet colors cost _sups creatTypes enchantTypes abilities -> yesParens do
     sColors <- parens <$> showColors colors
     sCost <- parens <$> showCost cost
     sCreatTypes <- parens <$> showCreatureTypes creatTypes
@@ -631,7 +642,7 @@ showCardFacet = \case
         <> pure " "
         <> sEnchantTypes
         <> sAbilities
-  EnchantmentCreatureFacet colors cost creatTypes enchantTypes power toughness creatAbils enchAbils bothAbils ->
+  EnchantmentCreatureFacet colors cost _sups creatTypes enchantTypes power toughness creatAbils enchAbils bothAbils ->
     yesParens do
       sColors <- parens <$> showColors colors
       sCost <- parens <$> showCost cost
@@ -660,14 +671,14 @@ showCardFacet = \case
           <> pure " "
           <> sEnchAbils
           <> sBothAbils
-  InstantFacet colors cost creatTypes abilities oneShot -> do
+  InstantFacet colors cost _sups creatTypes abilities oneShot -> do
     showOneShot "InstantFacet " colors cost creatTypes abilities oneShot
-  LandFacet creatTypes landTypes abilities -> yesParens do
+  LandFacet _sups creatTypes landTypes abilities -> yesParens do
     sCreatTypes <- parens <$> showCreatureTypes creatTypes
     sLandTypes <- parens <$> showLandTypes landTypes
     sAbilities <- dollar <$> showAbilities abilities
     pure $ pure "LandFacet " <> sCreatTypes <> pure " " <> sLandTypes <> sAbilities
-  PlaneswalkerFacet colors cost loyalty abilities -> yesParens do
+  PlaneswalkerFacet colors cost _sups loyalty abilities -> yesParens do
     sColors <- parens <$> showColors colors
     sCost <- parens <$> showCost cost
     sLoyalty <- parens <$> showLoyalty loyalty
@@ -680,7 +691,7 @@ showCardFacet = \case
         <> pure " "
         <> sLoyalty
         <> sAbilities
-  SorceryFacet colors cost creatTypes abilities oneShot -> do
+  SorceryFacet colors cost _sups creatTypes abilities oneShot -> do
     showOneShot "SorceryFacet " colors cost creatTypes abilities oneShot
  where
   showOneShot ::
@@ -1078,6 +1089,11 @@ showEnchantmentType = \case
 showEnchantmentTypes :: [EnchantmentType ot] -> EnvM ParenItems
 showEnchantmentTypes = showListM showEnchantmentType
 
+showEntersStatic :: EntersStatic zone ot -> EnvM ParenItems
+showEntersStatic = \case
+  EntersTapped -> noParens do
+    pure $ pure "EntersTapped"
+
 showEvent :: Event -> EnvM ParenItems
 showEvent = showEventListener' \Proxy -> noParens $ pure $ pure "Proxy"
 
@@ -1092,6 +1108,12 @@ showEventListener' showX = \case
   BecomesTapped withObject -> yesParens do
     sWithObject <- dollar <$> showWithLinkedObject showX "perm" withObject
     pure $ pure "BecomesTapped" <> sWithObject
+  EntersBattlefield withObject -> yesParens do
+    sWithObject <- dollar <$> showWithLinkedObject showX "perm" withObject
+    pure $ pure "EntersBattlefield" <> sWithObject
+  EntersNonBattlefield withObject -> yesParens do
+    sWithObject <- dollar <$> showWithLinkedObject showX "perm" withObject
+    pure $ pure "EntersNonBattlefield" <> sWithObject
   Events listeners -> yesParens do
     sListeners <- dollar <$> showListM (showEventListener' showX) listeners
     pure $ pure "Events" <> sListeners
@@ -1128,7 +1150,7 @@ showLoyalty = yesParens . pure . pure . fromString . show
 showMana :: Mana var snow a -> EnvM ParenItems
 showMana =
   yesParens . \case
-    x@Mana{} -> pure $ pure $ fromString $ show x
+    Mana x -> pure $ pure $ fromString $ show x
     VariableMana var -> do
       let sVar = pure $ getVarName var
       pure $ pure "VariableMana " <> sVar
@@ -1136,6 +1158,66 @@ showMana =
       sX <- parens <$> showMana x
       sY <- parens <$> showMana y
       pure $ pure "SumMana " <> sX <> pure " " <> sY
+
+showPhyrexianManaCost :: PhyrexianManaCost var -> EnvM ParenItems
+showPhyrexianManaCost cost = noParens do
+  let PhyrexianManaCost
+        { phyrexianWhite = w
+        , phyrexianBlue = u
+        , phyrexianBlack = b
+        , phyrexianRed = r
+        , phyrexianGreen = g
+        , phyrexianColorless = c
+        } = cost
+  case cost == mempty of
+    True -> pure $ pure "mempty"
+    False -> do
+      sW <- parens <$> showMana w
+      sU <- parens <$> showMana u
+      sB <- parens <$> showMana b
+      sR <- parens <$> showMana r
+      sG <- parens <$> showMana g
+      sC <- dollar <$> showMana c
+      pure $
+        pure "PhyrexianManaCost "
+          <> sW
+          <> pure " "
+          <> sU
+          <> pure " "
+          <> sB
+          <> pure " "
+          <> sR
+          <> pure " "
+          <> sG
+          <> sC
+
+showHybridManaCost :: HybridManaCost var -> EnvM ParenItems
+showHybridManaCost cost = noParens do
+  let HybridManaCost
+        { hybridBG = bg
+        } = cost
+  case cost == mempty of
+    True -> pure $ pure "mempty"
+    False -> do
+      sBG <- parens <$> showMana bg
+      pure $ pure "HybridManaCost " <> sBG
+
+showDynamicManaCost :: DynamicManaCost var -> EnvM ParenItems
+showDynamicManaCost cost = noParens do
+  let DynamicManaCost
+        { costSnow = s
+        , costGeneric = x
+        , costHybrid = hy
+        , costPhyrexian = phy
+        } = cost
+  case isOnlyGeneric cost of
+    True -> dropParens <$> showMana x
+    False -> do
+      sS <- parens <$> showMana s
+      sX <- parens <$> showMana x
+      sHy <- parens <$> showHybridManaCost hy
+      sPhy <- dollar <$> showPhyrexianManaCost phy
+      pure $ pure "DynamicManaCost " <> sS <> pure " " <> sX <> pure " " <> sHy <> sPhy
 
 -- FIXME
 showManaCost :: ManaCost var -> EnvM ParenItems
@@ -1729,6 +1811,9 @@ showStaticAbility = \case
     sCost <- parens <$> showElect cost
     sEnchant <- dollar <$> showEnchant enchant
     pure $ pure "Bestow " <> sCost <> sEnchant
+  Enters entersStatic -> yesParens do
+    sEntersStatic <- dollar <$> showEntersStatic entersStatic
+    pure $ pure "Enters" <> sEntersStatic
   FirstStrike -> noParens do
     pure $ pure "FirstStrike"
   Flying -> noParens do

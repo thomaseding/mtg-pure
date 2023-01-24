@@ -51,27 +51,27 @@ instance {-# OVERLAPPABLE #-} (Inst6 (ToManaPool 'NonSnow) a b c d e f) => ToMan
       <> toManaPool e
       <> toManaPool f
 
-instance ToManaPool 'NonSnow (Mana 'NoVar 'NonSnow 'MTWhite) where
+instance ToManaPool snow (Mana 'NoVar snow 'MTWhite) where
   toManaPool = \case
     x@Mana{} -> mempty{poolWhite = x}
 
-instance ToManaPool 'NonSnow (Mana 'NoVar 'NonSnow 'MTBlue) where
+instance ToManaPool snow (Mana 'NoVar snow 'MTBlue) where
   toManaPool = \case
     x@Mana{} -> mempty{poolBlue = x}
 
-instance ToManaPool 'NonSnow (Mana 'NoVar 'NonSnow 'MTBlack) where
+instance ToManaPool snow (Mana 'NoVar snow 'MTBlack) where
   toManaPool = \case
     x@Mana{} -> mempty{poolBlack = x}
 
-instance ToManaPool 'NonSnow (Mana 'NoVar 'NonSnow 'MTRed) where
+instance ToManaPool snow (Mana 'NoVar snow 'MTRed) where
   toManaPool = \case
     x@Mana{} -> mempty{poolRed = x}
 
-instance ToManaPool 'NonSnow (Mana 'NoVar 'NonSnow 'MTGreen) where
+instance ToManaPool snow (Mana 'NoVar snow 'MTGreen) where
   toManaPool = \case
     x@Mana{} -> mempty{poolGreen = x}
 
-instance ToManaPool 'NonSnow (Mana 'NoVar 'NonSnow 'MTColorless) where
+instance ToManaPool snow (Mana 'NoVar snow 'MTColorless) where
   toManaPool = \case
     x@Mana{} -> mempty{poolColorless = x}
 
@@ -221,6 +221,30 @@ instance ToCompleteManaPool (Mana 'NoVar 'NonSnow 'MTGreen) where
 instance ToCompleteManaPool (Mana 'NoVar 'NonSnow 'MTColorless) where
   toCompleteManaPool = \case
     x@Mana{} -> mempty{poolNonSnow = mempty{poolColorless = x}}
+
+instance ToCompleteManaPool (Mana 'NoVar 'Snow 'MTWhite) where
+  toCompleteManaPool = \case
+    x@Mana{} -> mempty{poolSnow = mempty{poolWhite = x}}
+
+instance ToCompleteManaPool (Mana 'NoVar 'Snow 'MTBlue) where
+  toCompleteManaPool = \case
+    x@Mana{} -> mempty{poolSnow = mempty{poolBlue = x}}
+
+instance ToCompleteManaPool (Mana 'NoVar 'Snow 'MTBlack) where
+  toCompleteManaPool = \case
+    x@Mana{} -> mempty{poolSnow = mempty{poolBlack = x}}
+
+instance ToCompleteManaPool (Mana 'NoVar 'Snow 'MTRed) where
+  toCompleteManaPool = \case
+    x@Mana{} -> mempty{poolSnow = mempty{poolRed = x}}
+
+instance ToCompleteManaPool (Mana 'NoVar 'Snow 'MTGreen) where
+  toCompleteManaPool = \case
+    x@Mana{} -> mempty{poolSnow = mempty{poolGreen = x}}
+
+instance ToCompleteManaPool (Mana 'NoVar 'Snow 'MTColorless) where
+  toCompleteManaPool = \case
+    x@Mana{} -> mempty{poolSnow = mempty{poolColorless = x}}
 
 instance ToCompleteManaPool (ManaSymbol 'MTWhite, Integer) where
   toCompleteManaPool (sym, n) = toCompleteManaPool (sym, fromInteger n :: Int)

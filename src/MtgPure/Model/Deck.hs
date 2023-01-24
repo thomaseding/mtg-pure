@@ -14,3 +14,9 @@ import safe MtgPure.Model.Recursive (AnyCard)
 newtype Deck :: Type where
   Deck :: {unDeck :: [AnyCard]} -> Deck
   deriving (Typeable)
+
+instance Semigroup Deck where
+  Deck a <> Deck b = Deck (a <> b)
+
+instance Monoid Deck where
+  mempty = Deck mempty

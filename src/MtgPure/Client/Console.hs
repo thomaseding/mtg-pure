@@ -72,7 +72,6 @@ import safe MtgPure.Model.Combinators (basicManaAbility)
 import safe MtgPure.Model.Deck (Deck (..))
 import safe MtgPure.Model.Hand (Hand (..))
 import safe MtgPure.Model.Library (Library (..))
-import safe MtgPure.Model.Mana.Mana (Mana (..))
 import safe MtgPure.Model.Mana.ManaCost (DynamicManaCost (..))
 import safe MtgPure.Model.Mana.ManaPool (CompleteManaPool, ManaPayment (..))
 import safe MtgPure.Model.Mana.ManaSymbol (ManaSymbol (..))
@@ -88,6 +87,7 @@ import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Object.ToObjectN.Instances ()
 import safe MtgPure.Model.PhaseStep (prettyPhaseStep)
 import safe MtgPure.Model.Player (Player (..))
+import safe MtgPure.Model.Recursive.Show ()
 import safe MtgPure.Model.Sideboard (Sideboard (..))
 import safe MtgPure.Model.Variable (Var (..))
 import safe MtgPure.Model.Zone (IsZone, Zone (..))
@@ -457,18 +457,11 @@ consolePromptPayDynamicMana ::
   Magic 'Public 'RO Console ManaPayment
 consolePromptPayDynamicMana attempt opaque oPlayer dyn = M.lift do
   (pool, text) <- queryMagic opaque do
-    let DynamicManaCost
-          { costGeneric = generic
-          , costSnow = _snow -- TODO
-          , costHybrid = _hybrid -- TODO
-          , costPhyrexian = _phyrexian -- TODO
-          } = dyn
-        Mana x = generic
     liftIO case attempt of
       Attempt 0 -> pure ()
       Attempt n -> putStrLn $ "Retrying[" ++ show n ++ "]..."
     let sPlayer = "player=" ++ show (unObjectId $ getObjectId oPlayer)
-    text <- M.lift $ prompt $ "PayGeneric " ++ sPlayer ++ " generic=" ++ show x ++ ": "
+    text <- M.lift $ prompt $ "PayDynamicMana " ++ sPlayer ++ " cost=" ++ show dyn ++ ": "
     let pool = case parseManaPool text of
           Nothing -> mempty
           Just p -> p

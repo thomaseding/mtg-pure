@@ -5,6 +5,7 @@
 
 module MtgPure.Model.Player (
   Player (..),
+  emptyPlayer,
 ) where
 
 import safe Data.Kind (Type)
@@ -13,7 +14,7 @@ import safe MtgPure.Model.Deck (Deck)
 import safe MtgPure.Model.Graveyard (Graveyard)
 import safe MtgPure.Model.Hand (Hand)
 import safe MtgPure.Model.Library (Library)
-import safe MtgPure.Model.Life (Life)
+import safe MtgPure.Model.Life (Life (..))
 import safe MtgPure.Model.Mana.ManaPool (CompleteManaPool)
 import safe MtgPure.Model.Sideboard (Sideboard)
 
@@ -34,3 +35,20 @@ data Player :: Type where
     } ->
     Player
   deriving (Typeable)
+
+emptyPlayer :: Player
+emptyPlayer =
+  Player
+    { playerDrewFromEmptyLibrary = False
+    , playerGraveyard = mempty
+    , playerHand = mempty
+    , playerLandsPlayedThisTurn = 0
+    , playerLibrary = mempty
+    , playerLife = Life 0
+    , playerLost = False
+    , playerMana = mempty
+    , playerStartingDeck = mempty
+    , playerStartingHandSize = 0
+    , playerStartingLife = Life 0
+    , playerStartingSideboard = mempty
+    }
