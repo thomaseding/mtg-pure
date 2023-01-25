@@ -26,12 +26,12 @@ instance CountMana CompleteManaPool where
 instance CountMana (ManaPool snow) where
   countMana
     ManaPool
-      { poolWhite = w
-      , poolBlue = u
-      , poolBlack = b
-      , poolRed = r
-      , poolGreen = g
-      , poolColorless = c
+      { poolW = w
+      , poolU = u
+      , poolB = b
+      , poolR = r
+      , poolG = g
+      , poolC = c
       } = countMana w + countMana u + countMana b + countMana r + countMana g + countMana c
 
 instance CountMana (Mana 'NoVar snow mt) where

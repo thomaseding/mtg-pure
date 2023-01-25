@@ -1319,12 +1319,12 @@ showManaCost cost = yesParens do
 showManaPool :: ManaPool snow -> EnvM ParenItems
 showManaPool pool = yesParens do
   let ManaPool
-        { poolWhite = w
-        , poolBlue = u
-        , poolBlack = b
-        , poolRed = r
-        , poolGreen = g
-        , poolColorless = c
+        { poolW = w
+        , poolU = u
+        , poolB = b
+        , poolR = r
+        , poolG = g
+        , poolC = c
         } = pool
       lits =
         sequence

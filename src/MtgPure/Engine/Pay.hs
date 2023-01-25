@@ -149,12 +149,12 @@ extractFixedPayment maxNonSnow = toCompleteManaPool . extractFixedPayment' maxNo
 extractFixedPayment' :: ManaPool 'NonSnow -> ManaCost 'NoVar -> (ManaPool 'NonSnow, ManaPool 'Snow)
 extractFixedPayment' maxNonSNow cost = (ManaPool w u b r g c, ManaPool sw su sb sr sg sc)
  where
-  mw = poolWhite maxNonSNow
-  mu = poolBlue maxNonSNow
-  mb = poolBlack maxNonSNow
-  mr = poolRed maxNonSNow
-  mg = poolGreen maxNonSNow
-  mc = poolColorless maxNonSNow
+  mw = poolW maxNonSNow
+  mu = poolU maxNonSNow
+  mb = poolB maxNonSNow
+  mr = poolR maxNonSNow
+  mg = poolG maxNonSNow
+  mc = poolC maxNonSNow
   cw = costW cost
   cu = costU cost
   cb = costB cost
@@ -428,12 +428,12 @@ instance PayGenericUnambiguously CompleteManaPool where
 
 instance PayGenericUnambiguously (ManaPool snow) where
   payGenericUnambiguouslyImpl go generic pool
-    | poolWhite pool >= x && pool{poolWhite = 0} == mempty = Just $ go mempty{poolWhite = x}
-    | poolBlue pool >= x && pool{poolBlue = 0} == mempty = Just $ go mempty{poolBlue = x}
-    | poolBlack pool >= x && pool{poolBlack = 0} == mempty = Just $ go mempty{poolBlack = x}
-    | poolRed pool >= x && pool{poolRed = 0} == mempty = Just $ go mempty{poolRed = x}
-    | poolGreen pool >= x && pool{poolGreen = 0} == mempty = Just $ go mempty{poolGreen = x}
-    | poolColorless pool >= x && pool{poolColorless = 0} == mempty = Just $ go mempty{poolColorless = x}
+    | poolW pool >= x && pool{poolW = 0} == mempty = Just $ go mempty{poolW = x}
+    | poolU pool >= x && pool{poolU = 0} == mempty = Just $ go mempty{poolU = x}
+    | poolB pool >= x && pool{poolB = 0} == mempty = Just $ go mempty{poolB = x}
+    | poolR pool >= x && pool{poolR = 0} == mempty = Just $ go mempty{poolR = x}
+    | poolG pool >= x && pool{poolG = 0} == mempty = Just $ go mempty{poolG = x}
+    | poolC pool >= x && pool{poolC = 0} == mempty = Just $ go mempty{poolC = x}
     | otherwise = Nothing
    where
     x :: Mana 'NoVar snow mt

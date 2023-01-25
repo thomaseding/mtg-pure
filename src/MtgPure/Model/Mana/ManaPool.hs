@@ -17,12 +17,12 @@ import safe MtgPure.Model.Mana.Snow (Snow (..))
 import safe MtgPure.Model.Variable (Var (NoVar))
 
 data ManaPool (snow :: Snow) = ManaPool
-  { poolWhite :: Mana 'NoVar snow 'TyW
-  , poolBlue :: Mana 'NoVar snow 'TyU
-  , poolBlack :: Mana 'NoVar snow 'TyB
-  , poolRed :: Mana 'NoVar snow 'TyR
-  , poolGreen :: Mana 'NoVar snow 'TyG
-  , poolColorless :: Mana 'NoVar snow 'TyC
+  { poolW :: Mana 'NoVar snow 'TyW
+  , poolU :: Mana 'NoVar snow 'TyU
+  , poolB :: Mana 'NoVar snow 'TyB
+  , poolR :: Mana 'NoVar snow 'TyR
+  , poolG :: Mana 'NoVar snow 'TyG
+  , poolC :: Mana 'NoVar snow 'TyC
   }
   deriving (Eq, Ord, Typeable) --  TODO: Make some of these orphans
 
@@ -41,29 +41,29 @@ data ManaPayment = ManaPayment
 instance Semigroup (ManaPool snow) where
   mp1 <> mp2 =
     ManaPool
-      { poolWhite = w1 <> w2
-      , poolBlue = u1 <> u2
-      , poolBlack = b1 <> b2
-      , poolRed = r1 <> r2
-      , poolGreen = g1 <> g2
-      , poolColorless = c1 <> c2
+      { poolW = w1 <> w2
+      , poolU = u1 <> u2
+      , poolB = b1 <> b2
+      , poolR = r1 <> r2
+      , poolG = g1 <> g2
+      , poolC = c1 <> c2
       }
    where
     ManaPool
-      { poolWhite = w1
-      , poolBlue = u1
-      , poolBlack = b1
-      , poolRed = r1
-      , poolGreen = g1
-      , poolColorless = c1
+      { poolW = w1
+      , poolU = u1
+      , poolB = b1
+      , poolR = r1
+      , poolG = g1
+      , poolC = c1
       } = mp1
     ManaPool
-      { poolWhite = w2
-      , poolBlue = u2
-      , poolBlack = b2
-      , poolRed = r2
-      , poolGreen = g2
-      , poolColorless = c2
+      { poolW = w2
+      , poolU = u2
+      , poolB = b2
+      , poolR = r2
+      , poolG = g2
+      , poolC = c2
       } = mp2
 
 instance Semigroup ManaPayment where
@@ -101,12 +101,12 @@ instance Semigroup CompleteManaPool where
 instance Monoid (ManaPool snow) where
   mempty =
     ManaPool
-      { poolWhite = mempty
-      , poolBlue = mempty
-      , poolBlack = mempty
-      , poolRed = mempty
-      , poolGreen = mempty
-      , poolColorless = mempty
+      { poolW = mempty
+      , poolU = mempty
+      , poolB = mempty
+      , poolR = mempty
+      , poolG = mempty
+      , poolC = mempty
       }
 
 instance Monoid CompleteManaPool where
