@@ -14,7 +14,7 @@ module MtgPure.Test.Engine.Unit.PayMana (
 ) where
 
 import safe GHC.Stack (HasCallStack)
-import safe MtgPure.Engine.Pay (CanPayManaCost (..), playerCanPayManaCost, possiblePayments)
+import safe MtgPure.Engine.PayMana (CanPayManaCost (..), playerCanPayManaCost, possiblePayments)
 import safe MtgPure.Model.Life (Life (..))
 import safe MtgPure.Model.Mana.ManaCost (ManaCost (..))
 import safe MtgPure.Model.Mana.ManaPool (CompleteManaPool)
