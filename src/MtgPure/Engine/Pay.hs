@@ -174,8 +174,17 @@ extractFixedPayment' maxNonSNow cost = (ManaPool w u b r g c, ManaPool sw su sb 
   sg = freezeMana $ cg - g
   sc = freezeMana $ cc - c
 
-toPayment :: CompleteManaPool -> ManaPayment
-toPayment pool = mempty{paymentMana = pool}
+data PartialManaPayment = PartialManaPayment ManaPayment (Mana 'NoVar 'NonSnow 'Ty1)
+  deriving (Eq, Ord, Show)
+
+instance Semigroup PartialManaPayment where
+  PartialManaPayment p1 m1 <> PartialManaPayment p2 m2 = PartialManaPayment (p1 <> p2) (m1 + m2)
+
+instance Monoid PartialManaPayment where
+  mempty = PartialManaPayment mempty 0
+
+toPayment :: CompleteManaPool -> PartialManaPayment
+toPayment pool = PartialManaPayment mempty{paymentMana = pool} 0
 
 possiblePaymentsHybrid ::
   ToManaPool 'NonSnow (ManaSymbol mt1) =>
@@ -183,7 +192,7 @@ possiblePaymentsHybrid ::
   ManaSymbol mt1 ->
   ManaSymbol mt2 ->
   Mana 'NoVar 'NonSnow mth ->
-  [ManaPayment]
+  [PartialManaPayment]
 possiblePaymentsHybrid sym1 sym2 (Mana n) = case n <= 0 of
   True -> [mempty]
   False -> do
@@ -202,7 +211,7 @@ possiblePaymentsHybrid2 ::
   ToManaPool 'NonSnow (ManaSymbol mt) =>
   ManaSymbol mt ->
   Mana 'NoVar 'NonSnow mth ->
-  [ManaPayment]
+  [PartialManaPayment]
 possiblePaymentsHybrid2 sym (Mana n) = case n <= 0 of
   True -> [mempty]
   False -> do
@@ -221,23 +230,23 @@ possiblePaymentsPhyrexian ::
   ToManaPool 'NonSnow (ManaSymbol mt) =>
   ManaSymbol mt ->
   Mana 'NoVar 'NonSnow mtp ->
-  [ManaPayment]
+  [PartialManaPayment]
 possiblePaymentsPhyrexian sym (Mana n) = case n <= 0 of
   True -> [mempty]
   False -> do
     p <-
       [ toPayment $ mempty{poolNonSnow = toManaPool sym}
         , toPayment $ mempty{poolSnow = mapManaPool freezeMana $ toManaPool sym}
-        , mempty{paymentLife = 2}
+        , PartialManaPayment mempty{paymentLife = 2} 0
         ]
     q <- possiblePaymentsPhyrexian sym $ Mana $ n - 1
     pure $ p <> q
 
 class PossiblePayments cost where
   -- | This is allowed to return duplicates.
-  possiblePaymentsImpl :: HasCallStack => cost -> [ManaPayment]
+  possiblePaymentsImpl :: HasCallStack => cost -> [PartialManaPayment]
 
-possiblePayments :: HasCallStack => PossiblePayments cost => cost -> [ManaPayment]
+possiblePayments :: HasCallStack => PossiblePayments cost => cost -> [PartialManaPayment]
 possiblePayments = map head . List.group . List.sort . possiblePaymentsImpl
 
 instance PossiblePayments (Mana 'NoVar 'NonSnow 'TyWU) where
@@ -306,8 +315,8 @@ instance PossiblePayments (Mana 'NoVar 'NonSnow 'TyPG) where
 instance PossiblePayments (Mana 'NoVar 'NonSnow 'TyPC) where
   possiblePaymentsImpl = possiblePaymentsPhyrexian C
 
-singleNonSnowPayments :: [ManaPayment]
-singleNonSnowPayments =
+_singleNonSnowPayments :: [PartialManaPayment]
+_singleNonSnowPayments =
   [ toPayment $ mempty{poolNonSnow = toManaPool W}
   , toPayment $ mempty{poolNonSnow = toManaPool U}
   , toPayment $ mempty{poolNonSnow = toManaPool B}
@@ -316,7 +325,7 @@ singleNonSnowPayments =
   , toPayment $ mempty{poolNonSnow = toManaPool C}
   ]
 
-singleSnowPayments :: [ManaPayment]
+singleSnowPayments :: [PartialManaPayment]
 singleSnowPayments =
   [ toPayment $ mempty{poolSnow = toManaPool SW}
   , toPayment $ mempty{poolSnow = toManaPool SU}
@@ -326,11 +335,11 @@ singleSnowPayments =
   , toPayment $ mempty{poolSnow = toManaPool SC}
   ]
 
-singleGenericPayments :: [ManaPayment]
-singleGenericPayments = singleNonSnowPayments ++ singleSnowPayments
+singleGenericPayments :: [PartialManaPayment]
+singleGenericPayments = [PartialManaPayment mempty 1] -- singleNonSnowPayments ++ singleSnowPayments
 
-doubleGenericPayments :: [ManaPayment]
-doubleGenericPayments = possiblePayments (Mana @ 'NoVar @ 'NonSnow @ 'Ty1 2)
+doubleGenericPayments :: [PartialManaPayment]
+doubleGenericPayments = [PartialManaPayment mempty 2] -- possiblePayments (Mana @ 'NoVar @ 'NonSnow @ 'Ty1 2)
 
 instance PossiblePayments (Mana 'NoVar 'NonSnow 'Ty1) where
   possiblePaymentsImpl (Mana n) = case n <= 0 of
@@ -390,15 +399,16 @@ instance PossiblePayments (DynamicManaCost 'NoVar) where
 
 isPaymentCompatible :: ManaPayment -> DynamicManaCost 'NoVar -> Bool
 isPaymentCompatible payment fullDyn = not $ null do
-  candidate <- possiblePayments dyn
+  PartialManaPayment candidate genericB <- possiblePayments dyn
   let remaining = payment - candidate
+      generic = genericA + genericB
   M.guard $ isEachManaNonNegative $ paymentMana remaining
   M.guard $ countMana (paymentMana remaining) == countMana generic
   pure () -- TODO: check life payment
   pure candidate
  where
   dyn = fullDyn{costGeneric = 0}
-  generic = costGeneric fullDyn
+  genericA = costGeneric fullDyn
 
 class PayGenericUnambiguously pool where
   payGenericUnambiguouslyImpl :: (pool -> CompleteManaPool) -> Int -> pool -> Maybe CompleteManaPool
@@ -475,17 +485,19 @@ playerCanPayManaCost player cost = case hasEnoughFixedMana pool cost of
   fixedPayment = extractFixedPayment (poolNonSnow pool) cost
   avail = pool - fixedPayment
   fullDyn = costDynamic cost
-  generic = costGeneric fullDyn
+  genericA = costGeneric fullDyn
   dynNoGeneric = fullDyn{costGeneric = 0}
   dynNoGenericCandidates = possiblePayments dynNoGeneric
   dynNoGenericSolutions = filter isSolution dynNoGenericCandidates
-  isSolution candidate =
+  isSolution (PartialManaPayment candidate genericB) =
     let remaining = avail - paymentMana candidate
+        generic = genericA + genericB
      in case isEachManaNonNegative remaining && countMana remaining >= countMana generic of
           False -> False
           True -> True -- TODO: check life payment
-  toFullDynPayment payment =
+  toFullDynPayment (PartialManaPayment payment genericB) =
     let avail' = avail - paymentMana payment
+        generic = genericA + genericB
      in case generic of
           0 -> Just payment
           _ -> case payGenericUnambiguously (countMana generic) avail' of
