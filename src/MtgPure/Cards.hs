@@ -564,7 +564,7 @@ blaze = Card "Blaze" $
         ElectCard $
           SorceryFacet
             { sorcery_colors = toColors R
-            , sorcery_cost = manaCostOf (VariableMana @ 'NonSnow @ 'MTGeneric x, R)
+            , sorcery_cost = manaCostOf (VariableMana @ 'NonSnow @ 'Ty1 x, R)
             , sorcery_supertypes = []
             , sorcery_creatureTypes = []
             , sorcery_abilities = []

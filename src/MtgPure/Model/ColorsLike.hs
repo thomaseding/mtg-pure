@@ -29,19 +29,19 @@ instance ColorsLike Color where
     Red -> toColors R
     Green -> toColors G
 
-instance ColorsLike (ManaSymbol 'MTWhite) where
+instance ColorsLike (ManaSymbol 'TyW) where
   toColors ~W = Colors (Just W) Nothing Nothing Nothing Nothing
 
-instance ColorsLike (ManaSymbol 'MTBlue) where
+instance ColorsLike (ManaSymbol 'TyU) where
   toColors ~U = Colors Nothing (Just U) Nothing Nothing Nothing
 
-instance ColorsLike (ManaSymbol 'MTBlack) where
+instance ColorsLike (ManaSymbol 'TyB) where
   toColors ~B = Colors Nothing Nothing (Just B) Nothing Nothing
 
-instance ColorsLike (ManaSymbol 'MTRed) where
+instance ColorsLike (ManaSymbol 'TyR) where
   toColors ~R = Colors Nothing Nothing Nothing (Just R) Nothing
 
-instance ColorsLike (ManaSymbol 'MTGreen) where
+instance ColorsLike (ManaSymbol 'TyG) where
   toColors ~G = Colors Nothing Nothing Nothing Nothing (Just G)
 
 instance (ColorsLike a, ColorsLike b) => ColorsLike (a, b) where

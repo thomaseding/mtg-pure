@@ -68,25 +68,25 @@ instance ToManaCost Integer where
   toManaCost n = toManaCost (fromInteger n :: Int)
 
 instance ToManaCost Int where
-  toManaCost = toManaCost @(Mana 'Var 'NonSnow 'MTGeneric) . Mana
+  toManaCost = toManaCost @(Mana 'Var 'NonSnow 'Ty1) . Mana
 
 instance IsManaType snow mt => ToManaCost (Mana 'Var snow mt) where
   toManaCost x = case singManaType @snow @mt of
-    SMTWhite -> emptyManaCost{costWhite = x}
-    SMTBlue -> emptyManaCost{costBlue = x}
-    SMTBlack -> emptyManaCost{costBlack = x}
-    SMTRed -> emptyManaCost{costRed = x}
-    SMTGreen -> emptyManaCost{costGreen = x}
-    SMTColorless -> emptyManaCost{costColorless = x}
-    SMTGeneric -> emptyManaCost{costDynamic = mempty{costGeneric = x}}
-    SMTSnow -> emptyManaCost{costDynamic = mempty{costSnow = castManaType x}}
-    SMTHybridBG -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridBG = x}}}
-    SMTPhyrexianWhite -> emptyManaCost{costDynamic = mempty{costPhyrexian = mempty{phyrexianWhite = x}}}
-    SMTPhyrexianBlue -> emptyManaCost{costDynamic = mempty{costPhyrexian = mempty{phyrexianBlue = x}}}
-    SMTPhyrexianBlack -> emptyManaCost{costDynamic = mempty{costPhyrexian = mempty{phyrexianBlack = x}}}
-    SMTPhyrexianRed -> emptyManaCost{costDynamic = mempty{costPhyrexian = mempty{phyrexianRed = x}}}
-    SMTPhyrexianGreen -> emptyManaCost{costDynamic = mempty{costPhyrexian = mempty{phyrexianGreen = x}}}
-    SMTPhyrexianColorless -> emptyManaCost{costDynamic = mempty{costPhyrexian = mempty{phyrexianColorless = x}}}
+    STyW -> emptyManaCost{costWhite = x}
+    STyU -> emptyManaCost{costBlue = x}
+    STyB -> emptyManaCost{costBlack = x}
+    STyR -> emptyManaCost{costRed = x}
+    STyG -> emptyManaCost{costGreen = x}
+    STyC -> emptyManaCost{costColorless = x}
+    STy1 -> emptyManaCost{costDynamic = mempty{costGeneric = x}}
+    STyS -> emptyManaCost{costDynamic = mempty{costSnow = castManaType x}}
+    STyBG -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridBG = x}}}
+    STyPW -> emptyManaCost{costDynamic = mempty{costPhyrexian = mempty{phyrexianWhite = x}}}
+    STyPU -> emptyManaCost{costDynamic = mempty{costPhyrexian = mempty{phyrexianBlue = x}}}
+    STyPB -> emptyManaCost{costDynamic = mempty{costPhyrexian = mempty{phyrexianBlack = x}}}
+    STyPR -> emptyManaCost{costDynamic = mempty{costPhyrexian = mempty{phyrexianRed = x}}}
+    STyPG -> emptyManaCost{costDynamic = mempty{costPhyrexian = mempty{phyrexianGreen = x}}}
+    STyPC -> emptyManaCost{costDynamic = mempty{costPhyrexian = mempty{phyrexianColorless = x}}}
 
 instance ToManaCost (ManaSymbol a, Int) where
   toManaCost = \case

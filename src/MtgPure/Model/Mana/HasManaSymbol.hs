@@ -13,17 +13,17 @@ import safe MtgPure.Model.Mana.ManaType (ManaType (..))
 class HasManaSymbol a where
   manaSymbol :: ManaSymbol a
 
-instance HasManaSymbol 'MTWhite where
+instance HasManaSymbol 'TyW where
   manaSymbol = mempty
 
-instance HasManaSymbol 'MTBlue where
+instance HasManaSymbol 'TyU where
   manaSymbol = mempty
 
-instance HasManaSymbol 'MTBlack where
+instance HasManaSymbol 'TyB where
   manaSymbol = mempty
 
-instance HasManaSymbol 'MTRed where
+instance HasManaSymbol 'TyR where
   manaSymbol = mempty
 
-instance HasManaSymbol 'MTGreen where
+instance HasManaSymbol 'TyG where
   manaSymbol = mempty

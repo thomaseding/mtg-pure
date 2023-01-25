@@ -595,32 +595,32 @@ class
   where
   toHybrid :: ManaSymbol mt1 -> ManaSymbol mt2 -> ManaSymbol mth
 
-instance ToHybrid 'MTWhite 'MTBlue 'MTHybridWU where
+instance ToHybrid 'TyW 'TyU 'TyWU where
   toHybrid _ _ = WU
 
-instance ToHybrid 'MTBlue 'MTBlack 'MTHybridUB where
+instance ToHybrid 'TyU 'TyB 'TyUB where
   toHybrid _ _ = UB
 
-instance ToHybrid 'MTBlack 'MTRed 'MTHybridBR where
+instance ToHybrid 'TyB 'TyR 'TyBR where
   toHybrid _ _ = BR
 
-instance ToHybrid 'MTRed 'MTGreen 'MTHybridRG where
+instance ToHybrid 'TyR 'TyG 'TyRG where
   toHybrid _ _ = RG
 
-instance ToHybrid 'MTGreen 'MTWhite 'MTHybridGW where
+instance ToHybrid 'TyG 'TyW 'TyGW where
   toHybrid _ _ = GW
 
-instance ToHybrid 'MTWhite 'MTBlack 'MTHybridWB where
+instance ToHybrid 'TyW 'TyB 'TyWB where
   toHybrid _ _ = WB
 
-instance ToHybrid 'MTBlue 'MTRed 'MTHybridUR where
+instance ToHybrid 'TyU 'TyR 'TyUR where
   toHybrid _ _ = UR
 
-instance ToHybrid 'MTBlack 'MTGreen 'MTHybridBG where
+instance ToHybrid 'TyB 'TyG 'TyBG where
   toHybrid _ _ = BG
 
-instance ToHybrid 'MTRed 'MTWhite 'MTHybridRW where
+instance ToHybrid 'TyR 'TyW 'TyRW where
   toHybrid _ _ = RW
 
-instance ToHybrid 'MTGreen 'MTBlue 'MTHybridGU where
+instance ToHybrid 'TyG 'TyU 'TyGU where
   toHybrid _ _ = GU

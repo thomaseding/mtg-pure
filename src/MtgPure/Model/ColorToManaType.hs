@@ -11,8 +11,8 @@ import safe MtgPure.Model.Color (Color (..))
 import safe MtgPure.Model.Mana.ManaType (ManaType (..))
 
 type family ColorToManaType (c :: Color) = (mt :: ManaType) | mt -> c where
-  ColorToManaType 'White = 'MTWhite
-  ColorToManaType 'Blue = 'MTBlue
-  ColorToManaType 'Black = 'MTBlack
-  ColorToManaType 'Red = 'MTRed
-  ColorToManaType 'Green = 'MTGreen
+  ColorToManaType 'White = 'TyW
+  ColorToManaType 'Blue = 'TyU
+  ColorToManaType 'Black = 'TyB
+  ColorToManaType 'Red = 'TyR
+  ColorToManaType 'Green = 'TyG

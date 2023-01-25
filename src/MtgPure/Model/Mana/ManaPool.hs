@@ -17,12 +17,12 @@ import safe MtgPure.Model.Mana.Snow (Snow (..))
 import safe MtgPure.Model.Variable (Var (NoVar))
 
 data ManaPool (snow :: Snow) = ManaPool
-  { poolWhite :: Mana 'NoVar snow 'MTWhite
-  , poolBlue :: Mana 'NoVar snow 'MTBlue
-  , poolBlack :: Mana 'NoVar snow 'MTBlack
-  , poolRed :: Mana 'NoVar snow 'MTRed
-  , poolGreen :: Mana 'NoVar snow 'MTGreen
-  , poolColorless :: Mana 'NoVar snow 'MTColorless
+  { poolWhite :: Mana 'NoVar snow 'TyW
+  , poolBlue :: Mana 'NoVar snow 'TyU
+  , poolBlack :: Mana 'NoVar snow 'TyB
+  , poolRed :: Mana 'NoVar snow 'TyR
+  , poolGreen :: Mana 'NoVar snow 'TyG
+  , poolColorless :: Mana 'NoVar snow 'TyC
   }
   deriving (Eq, Ord, Typeable) --  TODO: Make some of these orphans
 

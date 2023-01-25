@@ -166,7 +166,7 @@ data AnyElected (pEffect :: PrePost) :: Type where
 data Prompt' (opaqueGameState :: (Type -> Type) -> Type) (m :: Type -> Type) (magic :: Type -> Type) = Prompt
   { exceptionCantBeginGameWithoutPlayers :: m ()
   , exceptionInvalidCastSpell :: opaqueGameState m -> Object 'OTPlayer -> InvalidCastSpell -> m ()
-  , exceptionInvalidGenericManaPayment :: Mana 'NoVar 'NonSnow 'MTGeneric -> CompleteManaPool -> m ()
+  , exceptionInvalidGenericManaPayment :: Mana 'NoVar 'NonSnow 'Ty1 -> CompleteManaPool -> m ()
   , exceptionInvalidPlayLand :: opaqueGameState m -> Object 'OTPlayer -> InvalidPlayLand -> m ()
   , exceptionInvalidShuffle :: CardCount -> [CardIndex] -> m ()
   , exceptionInvalidStartingPlayer :: PlayerCount -> PlayerIndex -> m ()

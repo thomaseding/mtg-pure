@@ -20,50 +20,50 @@ import safe MtgPure.Model.Mana.Snow (Snow (..))
 import safe MtgPure.Model.Variable (Var (..))
 
 data PhyrexianManaCost (var :: Var) = PhyrexianManaCost
-  { phyrexianWhite :: Mana var 'NonSnow 'MTPhyrexianWhite
-  , phyrexianBlue :: Mana var 'NonSnow 'MTPhyrexianBlue
-  , phyrexianBlack :: Mana var 'NonSnow 'MTPhyrexianBlack
-  , phyrexianRed :: Mana var 'NonSnow 'MTPhyrexianRed
-  , phyrexianGreen :: Mana var 'NonSnow 'MTPhyrexianGreen
-  , phyrexianColorless :: Mana var 'NonSnow 'MTPhyrexianColorless
+  { phyrexianWhite :: Mana var 'NonSnow 'TyPW
+  , phyrexianBlue :: Mana var 'NonSnow 'TyPU
+  , phyrexianBlack :: Mana var 'NonSnow 'TyPB
+  , phyrexianRed :: Mana var 'NonSnow 'TyPR
+  , phyrexianGreen :: Mana var 'NonSnow 'TyPG
+  , phyrexianColorless :: Mana var 'NonSnow 'TyPC
   }
   deriving (Eq, Ord, Typeable) --  TODO: Make some of these orphans
 
 -- TODO: other hybrid costs
 data HybridManaCost (var :: Var) = HybridManaCost
-  { hybridWU :: Mana var 'NonSnow 'MTHybridWU
-  , hybridUB :: Mana var 'NonSnow 'MTHybridUB
-  , hybridBR :: Mana var 'NonSnow 'MTHybridBR
-  , hybridRG :: Mana var 'NonSnow 'MTHybridRG
-  , hybridGW :: Mana var 'NonSnow 'MTHybridGW
-  , hybridWB :: Mana var 'NonSnow 'MTHybridWB
-  , hybridUR :: Mana var 'NonSnow 'MTHybridUR
-  , hybridBG :: Mana var 'NonSnow 'MTHybridBG
-  , hybridRW :: Mana var 'NonSnow 'MTHybridRW
-  , hybridGU :: Mana var 'NonSnow 'MTHybridGU
-  , hybridW2 :: Mana var 'NonSnow 'MTHybridW2
-  , hybridU2 :: Mana var 'NonSnow 'MTHybridU2
-  , hybridB2 :: Mana var 'NonSnow 'MTHybridB2
-  , hybridR2 :: Mana var 'NonSnow 'MTHybridR2
-  , hybridG2 :: Mana var 'NonSnow 'MTHybridG2
+  { hybridWU :: Mana var 'NonSnow 'TyWU
+  , hybridUB :: Mana var 'NonSnow 'TyUB
+  , hybridBR :: Mana var 'NonSnow 'TyBR
+  , hybridRG :: Mana var 'NonSnow 'TyRG
+  , hybridGW :: Mana var 'NonSnow 'TyGW
+  , hybridWB :: Mana var 'NonSnow 'TyWB
+  , hybridUR :: Mana var 'NonSnow 'TyUR
+  , hybridBG :: Mana var 'NonSnow 'TyBG
+  , hybridRW :: Mana var 'NonSnow 'TyRW
+  , hybridGU :: Mana var 'NonSnow 'TyGU
+  , hybridW2 :: Mana var 'NonSnow 'TyW2
+  , hybridU2 :: Mana var 'NonSnow 'TyU2
+  , hybridB2 :: Mana var 'NonSnow 'TyB2
+  , hybridR2 :: Mana var 'NonSnow 'TyR2
+  , hybridG2 :: Mana var 'NonSnow 'TyG2
   }
   deriving (Eq, Ord, Typeable) --  TODO: Make some of these orphans
 
 data DynamicManaCost (var :: Var) = DynamicManaCost
-  { costGeneric :: Mana var 'NonSnow 'MTGeneric
-  , costSnow :: Mana var 'Snow 'MTSnow
+  { costGeneric :: Mana var 'NonSnow 'Ty1
+  , costSnow :: Mana var 'Snow 'TyS
   , costHybrid :: HybridManaCost var
   , costPhyrexian :: PhyrexianManaCost var
   }
   deriving (Eq, Ord, Typeable) --  TODO: Make some of these orphans
 
 data ManaCost (var :: Var) = ManaCost'
-  { costWhite :: Mana var 'NonSnow 'MTWhite
-  , costBlue :: Mana var 'NonSnow 'MTBlue
-  , costBlack :: Mana var 'NonSnow 'MTBlack
-  , costRed :: Mana var 'NonSnow 'MTRed
-  , costGreen :: Mana var 'NonSnow 'MTGreen
-  , costColorless :: Mana var 'NonSnow 'MTColorless
+  { costWhite :: Mana var 'NonSnow 'TyW
+  , costBlue :: Mana var 'NonSnow 'TyU
+  , costBlack :: Mana var 'NonSnow 'TyB
+  , costRed :: Mana var 'NonSnow 'TyR
+  , costGreen :: Mana var 'NonSnow 'TyG
+  , costColorless :: Mana var 'NonSnow 'TyC
   , costDynamic :: DynamicManaCost var
   }
   deriving (Eq, Ord, Typeable) --  TODO: Make some of these orphans

@@ -14,11 +14,11 @@ import safe MtgPure.Model.Mana.ManaType (ManaType (..))
 
 data Colors :: Type where
   Colors ::
-    Maybe (ManaSymbol 'MTWhite) ->
-    Maybe (ManaSymbol 'MTBlue) ->
-    Maybe (ManaSymbol 'MTBlack) ->
-    Maybe (ManaSymbol 'MTRed) ->
-    Maybe (ManaSymbol 'MTGreen) ->
+    Maybe (ManaSymbol 'TyW) ->
+    Maybe (ManaSymbol 'TyU) ->
+    Maybe (ManaSymbol 'TyB) ->
+    Maybe (ManaSymbol 'TyR) ->
+    Maybe (ManaSymbol 'TyG) ->
     Colors
   deriving (Eq, Ord, Show, Typeable)
 

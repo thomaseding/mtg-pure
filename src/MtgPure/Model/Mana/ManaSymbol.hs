@@ -12,33 +12,33 @@ import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.Mana.ManaType (ManaType (..))
 
 data ManaSymbol :: ManaType -> Type where
-  W :: ManaSymbol 'MTWhite
-  U :: ManaSymbol 'MTBlue
-  B :: ManaSymbol 'MTBlack
-  R :: ManaSymbol 'MTRed
-  G :: ManaSymbol 'MTGreen
-  C :: ManaSymbol 'MTColorless
-  S :: ManaSymbol 'MTSnow
-  WU :: ManaSymbol 'MTHybridWU
-  UB :: ManaSymbol 'MTHybridUB
-  BR :: ManaSymbol 'MTHybridBR
-  RG :: ManaSymbol 'MTHybridRG
-  GW :: ManaSymbol 'MTHybridGW
-  WB :: ManaSymbol 'MTHybridWB
-  UR :: ManaSymbol 'MTHybridUR
-  BG :: ManaSymbol 'MTHybridBG
-  RW :: ManaSymbol 'MTHybridRW
-  GU :: ManaSymbol 'MTHybridGU
-  W2 :: ManaSymbol 'MTHybridW2
-  U2 :: ManaSymbol 'MTHybridU2
-  B2 :: ManaSymbol 'MTHybridB2
-  R2 :: ManaSymbol 'MTHybridR2
-  G2 :: ManaSymbol 'MTHybridG2
-  PW :: ManaSymbol 'MTPhyrexianWhite
-  PU :: ManaSymbol 'MTPhyrexianBlue
-  PB :: ManaSymbol 'MTPhyrexianBlack
-  PR :: ManaSymbol 'MTPhyrexianRed
-  PG :: ManaSymbol 'MTPhyrexianGreen
+  W :: ManaSymbol 'TyW
+  U :: ManaSymbol 'TyU
+  B :: ManaSymbol 'TyB
+  R :: ManaSymbol 'TyR
+  G :: ManaSymbol 'TyG
+  C :: ManaSymbol 'TyC
+  S :: ManaSymbol 'TyS
+  WU :: ManaSymbol 'TyWU
+  UB :: ManaSymbol 'TyUB
+  BR :: ManaSymbol 'TyBR
+  RG :: ManaSymbol 'TyRG
+  GW :: ManaSymbol 'TyGW
+  WB :: ManaSymbol 'TyWB
+  UR :: ManaSymbol 'TyUR
+  BG :: ManaSymbol 'TyBG
+  RW :: ManaSymbol 'TyRW
+  GU :: ManaSymbol 'TyGU
+  W2 :: ManaSymbol 'TyW2
+  U2 :: ManaSymbol 'TyU2
+  B2 :: ManaSymbol 'TyB2
+  R2 :: ManaSymbol 'TyR2
+  G2 :: ManaSymbol 'TyG2
+  PW :: ManaSymbol 'TyPW
+  PU :: ManaSymbol 'TyPU
+  PB :: ManaSymbol 'TyPB
+  PR :: ManaSymbol 'TyPR
+  PG :: ManaSymbol 'TyPG
   deriving (Typeable)
 
 deriving instance Eq (ManaSymbol a)
@@ -50,68 +50,68 @@ deriving instance Show (ManaSymbol a)
 instance Semigroup (ManaSymbol a) where
   x <> _ = x
 
-instance Monoid (ManaSymbol 'MTWhite) where
+instance Monoid (ManaSymbol 'TyW) where
   mempty = W
 
-instance Monoid (ManaSymbol 'MTBlue) where
+instance Monoid (ManaSymbol 'TyU) where
   mempty = U
 
-instance Monoid (ManaSymbol 'MTBlack) where
+instance Monoid (ManaSymbol 'TyB) where
   mempty = B
 
-instance Monoid (ManaSymbol 'MTRed) where
+instance Monoid (ManaSymbol 'TyR) where
   mempty = R
 
-instance Monoid (ManaSymbol 'MTGreen) where
+instance Monoid (ManaSymbol 'TyG) where
   mempty = G
 
-instance Monoid (ManaSymbol 'MTColorless) where
+instance Monoid (ManaSymbol 'TyC) where
   mempty = C
 
-instance Monoid (ManaSymbol 'MTSnow) where
+instance Monoid (ManaSymbol 'TyS) where
   mempty = S
 
-instance Monoid (ManaSymbol 'MTHybridWU) where
+instance Monoid (ManaSymbol 'TyWU) where
   mempty = WU
 
-instance Monoid (ManaSymbol 'MTHybridUB) where
+instance Monoid (ManaSymbol 'TyUB) where
   mempty = UB
 
-instance Monoid (ManaSymbol 'MTHybridBR) where
+instance Monoid (ManaSymbol 'TyBR) where
   mempty = BR
 
-instance Monoid (ManaSymbol 'MTHybridRG) where
+instance Monoid (ManaSymbol 'TyRG) where
   mempty = RG
 
-instance Monoid (ManaSymbol 'MTHybridGW) where
+instance Monoid (ManaSymbol 'TyGW) where
   mempty = GW
 
-instance Monoid (ManaSymbol 'MTHybridWB) where
+instance Monoid (ManaSymbol 'TyWB) where
   mempty = WB
 
-instance Monoid (ManaSymbol 'MTHybridUR) where
+instance Monoid (ManaSymbol 'TyUR) where
   mempty = UR
 
-instance Monoid (ManaSymbol 'MTHybridBG) where
+instance Monoid (ManaSymbol 'TyBG) where
   mempty = BG
 
-instance Monoid (ManaSymbol 'MTHybridRW) where
+instance Monoid (ManaSymbol 'TyRW) where
   mempty = RW
 
-instance Monoid (ManaSymbol 'MTHybridGU) where
+instance Monoid (ManaSymbol 'TyGU) where
   mempty = GU
 
-instance Monoid (ManaSymbol 'MTHybridW2) where
+instance Monoid (ManaSymbol 'TyW2) where
   mempty = W2
 
-instance Monoid (ManaSymbol 'MTHybridU2) where
+instance Monoid (ManaSymbol 'TyU2) where
   mempty = U2
 
-instance Monoid (ManaSymbol 'MTHybridB2) where
+instance Monoid (ManaSymbol 'TyB2) where
   mempty = B2
 
-instance Monoid (ManaSymbol 'MTHybridR2) where
+instance Monoid (ManaSymbol 'TyR2) where
   mempty = R2
 
-instance Monoid (ManaSymbol 'MTHybridG2) where
+instance Monoid (ManaSymbol 'TyG2) where
   mempty = G2

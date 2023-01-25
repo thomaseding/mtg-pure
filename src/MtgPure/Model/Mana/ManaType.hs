@@ -13,98 +13,98 @@ import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.Mana.Snow (Snow (..))
 
 data ManaType
-  = MTWhite
-  | MTBlue
-  | MTBlack
-  | MTRed
-  | MTGreen
-  | MTColorless
-  | MTGeneric
-  | MTSnow
-  | MTHybridWU
-  | MTHybridUB
-  | MTHybridBR
-  | MTHybridRG
-  | MTHybridGW
-  | MTHybridWB
-  | MTHybridUR
-  | MTHybridBG
-  | MTHybridRW
-  | MTHybridGU
-  | MTHybridW2
-  | MTHybridU2
-  | MTHybridB2
-  | MTHybridR2
-  | MTHybridG2
-  | MTPhyrexianWhite
-  | MTPhyrexianBlue
-  | MTPhyrexianBlack
-  | MTPhyrexianRed
-  | MTPhyrexianGreen
-  | MTPhyrexianColorless
+  = TyW
+  | TyU
+  | TyB
+  | TyR
+  | TyG
+  | TyC
+  | Ty1
+  | TyS
+  | TyWU
+  | TyUB
+  | TyBR
+  | TyRG
+  | TyGW
+  | TyWB
+  | TyUR
+  | TyBG
+  | TyRW
+  | TyGU
+  | TyW2
+  | TyU2
+  | TyB2
+  | TyR2
+  | TyG2
+  | TyPW
+  | TyPU
+  | TyPB
+  | TyPR
+  | TyPG
+  | TyPC
   deriving (Eq, Ord, Typeable)
 
 data SManaType (snow :: Snow) (mt :: ManaType) where
-  SMTWhite :: SManaType 'NonSnow 'MTWhite
-  SMTBlue :: SManaType 'NonSnow 'MTBlue
-  SMTBlack :: SManaType 'NonSnow 'MTBlack
-  SMTRed :: SManaType 'NonSnow 'MTRed
-  SMTGreen :: SManaType 'NonSnow 'MTGreen
-  SMTColorless :: SManaType 'NonSnow 'MTColorless
-  SMTGeneric :: SManaType 'NonSnow 'MTGeneric
-  SMTSnow :: SManaType 'Snow 'MTSnow
-  SMTHybridBG :: SManaType 'NonSnow 'MTHybridBG
-  SMTPhyrexianWhite :: SManaType 'NonSnow 'MTPhyrexianWhite
-  SMTPhyrexianBlue :: SManaType 'NonSnow 'MTPhyrexianBlue
-  SMTPhyrexianBlack :: SManaType 'NonSnow 'MTPhyrexianBlack
-  SMTPhyrexianRed :: SManaType 'NonSnow 'MTPhyrexianRed
-  SMTPhyrexianGreen :: SManaType 'NonSnow 'MTPhyrexianGreen
-  SMTPhyrexianColorless :: SManaType 'NonSnow 'MTPhyrexianColorless
+  STyW :: SManaType 'NonSnow 'TyW
+  STyU :: SManaType 'NonSnow 'TyU
+  STyB :: SManaType 'NonSnow 'TyB
+  STyR :: SManaType 'NonSnow 'TyR
+  STyG :: SManaType 'NonSnow 'TyG
+  STyC :: SManaType 'NonSnow 'TyC
+  STy1 :: SManaType 'NonSnow 'Ty1
+  STyS :: SManaType 'Snow 'TyS
+  STyBG :: SManaType 'NonSnow 'TyBG
+  STyPW :: SManaType 'NonSnow 'TyPW
+  STyPU :: SManaType 'NonSnow 'TyPU
+  STyPB :: SManaType 'NonSnow 'TyPB
+  STyPR :: SManaType 'NonSnow 'TyPR
+  STyPG :: SManaType 'NonSnow 'TyPG
+  STyPC :: SManaType 'NonSnow 'TyPC
 
 class IsManaType (snow :: Snow) (mt :: ManaType) where
   singManaType :: SManaType snow mt
 
-instance IsManaType 'NonSnow 'MTWhite where
-  singManaType = SMTWhite
+instance IsManaType 'NonSnow 'TyW where
+  singManaType = STyW
 
-instance IsManaType 'NonSnow 'MTBlue where
-  singManaType = SMTBlue
+instance IsManaType 'NonSnow 'TyU where
+  singManaType = STyU
 
-instance IsManaType 'NonSnow 'MTBlack where
-  singManaType = SMTBlack
+instance IsManaType 'NonSnow 'TyB where
+  singManaType = STyB
 
-instance IsManaType 'NonSnow 'MTRed where
-  singManaType = SMTRed
+instance IsManaType 'NonSnow 'TyR where
+  singManaType = STyR
 
-instance IsManaType 'NonSnow 'MTGreen where
-  singManaType = SMTGreen
+instance IsManaType 'NonSnow 'TyG where
+  singManaType = STyG
 
-instance IsManaType 'NonSnow 'MTColorless where
-  singManaType = SMTColorless
+instance IsManaType 'NonSnow 'TyC where
+  singManaType = STyC
 
-instance IsManaType 'NonSnow 'MTGeneric where
-  singManaType = SMTGeneric
+instance IsManaType 'NonSnow 'Ty1 where
+  singManaType = STy1
 
-instance IsManaType 'Snow 'MTSnow where
-  singManaType = SMTSnow
+instance IsManaType 'Snow 'TyS where
+  singManaType = STyS
 
-instance IsManaType 'NonSnow 'MTHybridBG where
-  singManaType = SMTHybridBG
+instance IsManaType 'NonSnow 'TyBG where
+  singManaType = STyBG
 
-instance IsManaType 'NonSnow 'MTPhyrexianWhite where
-  singManaType = SMTPhyrexianWhite
+instance IsManaType 'NonSnow 'TyPW where
+  singManaType = STyPW
 
-instance IsManaType 'NonSnow 'MTPhyrexianBlue where
-  singManaType = SMTPhyrexianBlue
+instance IsManaType 'NonSnow 'TyPU where
+  singManaType = STyPU
 
-instance IsManaType 'NonSnow 'MTPhyrexianBlack where
-  singManaType = SMTPhyrexianBlack
+instance IsManaType 'NonSnow 'TyPB where
+  singManaType = STyPB
 
-instance IsManaType 'NonSnow 'MTPhyrexianRed where
-  singManaType = SMTPhyrexianRed
+instance IsManaType 'NonSnow 'TyPR where
+  singManaType = STyPR
 
-instance IsManaType 'NonSnow 'MTPhyrexianGreen where
-  singManaType = SMTPhyrexianGreen
+instance IsManaType 'NonSnow 'TyPG where
+  singManaType = STyPG
 
-instance IsManaType 'NonSnow 'MTPhyrexianColorless where
-  singManaType = SMTPhyrexianColorless
+instance IsManaType 'NonSnow 'TyPC where
+  singManaType = STyPC

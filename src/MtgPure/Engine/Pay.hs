@@ -212,7 +212,7 @@ possiblePaymentsHybrid2 sym (Mana n) = case n <= 0 of
         [ mempty{poolNonSnow = toManaPool sym}
         , mempty{poolSnow = mapManaPool freezeMana $ toManaPool sym}
         ]
-        ++ possiblePaymentsImpl (Mana @ 'NoVar @ 'NonSnow @ 'MTGeneric 2)
+        ++ possiblePaymentsImpl (Mana @ 'NoVar @ 'NonSnow @ 'Ty1 2)
     q <- possiblePaymentsHybrid2 sym $ Mana $ n - 1
     pure $ p <> q
 
@@ -240,70 +240,70 @@ class PossiblePayments cost where
 possiblePayments :: HasCallStack => PossiblePayments cost => cost -> [ManaPayment]
 possiblePayments = map head . List.group . List.sort . possiblePaymentsImpl
 
-instance PossiblePayments (Mana 'NoVar 'NonSnow 'MTHybridWU) where
+instance PossiblePayments (Mana 'NoVar 'NonSnow 'TyWU) where
   possiblePaymentsImpl = possiblePaymentsHybrid W U
 
-instance PossiblePayments (Mana 'NoVar 'NonSnow 'MTHybridUB) where
+instance PossiblePayments (Mana 'NoVar 'NonSnow 'TyUB) where
   possiblePaymentsImpl = possiblePaymentsHybrid U B
 
-instance PossiblePayments (Mana 'NoVar 'NonSnow 'MTHybridBR) where
+instance PossiblePayments (Mana 'NoVar 'NonSnow 'TyBR) where
   possiblePaymentsImpl = possiblePaymentsHybrid B R
 
-instance PossiblePayments (Mana 'NoVar 'NonSnow 'MTHybridRG) where
+instance PossiblePayments (Mana 'NoVar 'NonSnow 'TyRG) where
   possiblePaymentsImpl = possiblePaymentsHybrid R G
 
-instance PossiblePayments (Mana 'NoVar 'NonSnow 'MTHybridGW) where
+instance PossiblePayments (Mana 'NoVar 'NonSnow 'TyGW) where
   possiblePaymentsImpl = possiblePaymentsHybrid G W
 
-instance PossiblePayments (Mana 'NoVar 'NonSnow 'MTHybridWB) where
+instance PossiblePayments (Mana 'NoVar 'NonSnow 'TyWB) where
   possiblePaymentsImpl = possiblePaymentsHybrid W B
 
-instance PossiblePayments (Mana 'NoVar 'NonSnow 'MTHybridUR) where
+instance PossiblePayments (Mana 'NoVar 'NonSnow 'TyUR) where
   possiblePaymentsImpl = possiblePaymentsHybrid U R
 
-instance PossiblePayments (Mana 'NoVar 'NonSnow 'MTHybridBG) where
+instance PossiblePayments (Mana 'NoVar 'NonSnow 'TyBG) where
   possiblePaymentsImpl = possiblePaymentsHybrid B G
 
-instance PossiblePayments (Mana 'NoVar 'NonSnow 'MTHybridRW) where
+instance PossiblePayments (Mana 'NoVar 'NonSnow 'TyRW) where
   possiblePaymentsImpl = possiblePaymentsHybrid R W
 
-instance PossiblePayments (Mana 'NoVar 'NonSnow 'MTHybridGU) where
+instance PossiblePayments (Mana 'NoVar 'NonSnow 'TyGU) where
   possiblePaymentsImpl = possiblePaymentsHybrid G U
 
-instance PossiblePayments (Mana 'NoVar 'NonSnow 'MTHybridW2) where
+instance PossiblePayments (Mana 'NoVar 'NonSnow 'TyW2) where
   possiblePaymentsImpl = possiblePaymentsHybrid2 W
 
-instance PossiblePayments (Mana 'NoVar 'NonSnow 'MTHybridU2) where
+instance PossiblePayments (Mana 'NoVar 'NonSnow 'TyU2) where
   possiblePaymentsImpl = possiblePaymentsHybrid2 U
 
-instance PossiblePayments (Mana 'NoVar 'NonSnow 'MTHybridB2) where
+instance PossiblePayments (Mana 'NoVar 'NonSnow 'TyB2) where
   possiblePaymentsImpl = possiblePaymentsHybrid2 B
 
-instance PossiblePayments (Mana 'NoVar 'NonSnow 'MTHybridR2) where
+instance PossiblePayments (Mana 'NoVar 'NonSnow 'TyR2) where
   possiblePaymentsImpl = possiblePaymentsHybrid2 R
 
-instance PossiblePayments (Mana 'NoVar 'NonSnow 'MTHybridG2) where
+instance PossiblePayments (Mana 'NoVar 'NonSnow 'TyG2) where
   possiblePaymentsImpl = possiblePaymentsHybrid2 G
 
-instance PossiblePayments (Mana 'NoVar 'NonSnow 'MTPhyrexianWhite) where
+instance PossiblePayments (Mana 'NoVar 'NonSnow 'TyPW) where
   possiblePaymentsImpl = possiblePaymentsPhyrexian W
 
-instance PossiblePayments (Mana 'NoVar 'NonSnow 'MTPhyrexianBlue) where
+instance PossiblePayments (Mana 'NoVar 'NonSnow 'TyPU) where
   possiblePaymentsImpl = possiblePaymentsPhyrexian U
 
-instance PossiblePayments (Mana 'NoVar 'NonSnow 'MTPhyrexianBlack) where
+instance PossiblePayments (Mana 'NoVar 'NonSnow 'TyPB) where
   possiblePaymentsImpl = possiblePaymentsPhyrexian B
 
-instance PossiblePayments (Mana 'NoVar 'NonSnow 'MTPhyrexianRed) where
+instance PossiblePayments (Mana 'NoVar 'NonSnow 'TyPR) where
   possiblePaymentsImpl = possiblePaymentsPhyrexian R
 
-instance PossiblePayments (Mana 'NoVar 'NonSnow 'MTPhyrexianGreen) where
+instance PossiblePayments (Mana 'NoVar 'NonSnow 'TyPG) where
   possiblePaymentsImpl = possiblePaymentsPhyrexian G
 
-instance PossiblePayments (Mana 'NoVar 'NonSnow 'MTPhyrexianColorless) where
+instance PossiblePayments (Mana 'NoVar 'NonSnow 'TyPC) where
   possiblePaymentsImpl = possiblePaymentsPhyrexian C
 
-instance PossiblePayments (Mana 'NoVar 'NonSnow 'MTGeneric) where
+instance PossiblePayments (Mana 'NoVar 'NonSnow 'Ty1) where
   possiblePaymentsImpl (Mana n) = case n <= 0 of
     True -> [mempty]
     False -> do
@@ -315,11 +315,11 @@ instance PossiblePayments (Mana 'NoVar 'NonSnow 'MTGeneric) where
           , toPayment $ mempty{poolNonSnow = toManaPool G}
           , toPayment $ mempty{poolNonSnow = toManaPool C}
           ]
-          ++ possiblePaymentsImpl (Mana @ 'NoVar @ 'Snow @ 'MTSnow n)
-      q <- possiblePaymentsImpl @(Mana 'NoVar 'NonSnow 'MTGeneric) $ Mana $ n - 1
+          ++ possiblePaymentsImpl (Mana @ 'NoVar @ 'Snow @ 'TyS n)
+      q <- possiblePaymentsImpl @(Mana 'NoVar 'NonSnow 'Ty1) $ Mana $ n - 1
       pure $ p <> q
 
-instance PossiblePayments (Mana 'NoVar 'Snow 'MTSnow) where
+instance PossiblePayments (Mana 'NoVar 'Snow 'TyS) where
   possiblePaymentsImpl (Mana n) = case n <= 0 of
     True -> [mempty]
     False -> do
@@ -331,7 +331,7 @@ instance PossiblePayments (Mana 'NoVar 'Snow 'MTSnow) where
           , toPayment $ mempty{poolSnow = mapManaPool freezeMana $ toManaPool G}
           , toPayment $ mempty{poolSnow = mapManaPool freezeMana $ toManaPool C}
           ]
-      q <- possiblePaymentsImpl @(Mana 'NoVar 'Snow 'MTSnow) $ Mana $ n - 1
+      q <- possiblePaymentsImpl @(Mana 'NoVar 'Snow 'TyS) $ Mana $ n - 1
       pure $ p <> q
 
 instance PossiblePayments (HybridManaCost 'NoVar) where
