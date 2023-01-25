@@ -30,6 +30,7 @@ import safe MtgPure.Engine.Fwd.Api (
   enact,
   findPlayer,
   getPermanent,
+  getPlayer,
   pickOneZO,
   pushGraveyardCard,
   satisfies,
@@ -379,7 +380,7 @@ isPaymentCompatible payment dyn = not $ null do
   let remaining = payment - candidate
   M.guard $ isEachManaNonNegative $ paymentMana remaining
   M.guard $ countMana (paymentMana remaining) == countMana generic
-  pure () -- TODO: check life payment
+  M.guard $ paymentLife remaining == 0
   pure candidate
 
 class PayGenericUnambiguously pool where
@@ -463,9 +464,9 @@ playerCanPayManaCost player cost = case hasEnoughFixedMana pool cost of
   dynSolutions = filter isSolution dynCandidates
   isSolution (PartialManaPayment candidate generic) =
     let remaining = avail - paymentMana candidate
-     in case isEachManaNonNegative remaining && countMana remaining >= countMana generic of
-          False -> False
-          True -> True -- TODO: check life payment
+        hasMana = isEachManaNonNegative remaining && countMana remaining >= countMana generic
+        hasLife = playerLife player > paymentLife candidate || paymentLife candidate == 0
+     in hasMana && hasLife
   toFullDynPayment (PartialManaPayment payment generic) =
     let avail' = avail - paymentMana payment
      in case payGenericUnambiguously (countMana generic) avail' of
@@ -512,15 +513,17 @@ promptPayForCompatibleDynamic ::
   DynamicManaCost 'NoVar ->
   Magic 'Private 'A.RO m ManaPayment
 promptPayForCompatibleDynamic oPlayer avail dyn = do
+  player <- getPlayer oPlayer
   prompt <- gets magicPrompt
   opaque <- gets mkOpaqueGameState
   untilJust \attempt -> do
     payment <- fromPublic $ promptPayDynamicMana prompt attempt opaque oPlayer dyn
-    case isPaymentCompatible payment dyn of
-      False -> pure Nothing
-      True -> case isEachManaNonNegative $ avail - paymentMana payment of
-        False -> pure Nothing
-        True -> pure $ Just payment -- TODO: check life payment
+    let hasMana = isEachManaNonNegative $ avail - paymentMana payment
+        hasLife = playerLife player > paymentLife payment || paymentLife payment == 0
+        isCompatible = isPaymentCompatible payment dyn
+    pure case hasMana && hasLife && isCompatible of
+      False -> Nothing
+      True -> Just payment
 
 paySacrificeCost ::
   (Monad m, IsZO 'ZBattlefield ot, CoPermanent ot) =>
@@ -579,5 +582,5 @@ payOrCosts oPlayer = logCall 'payOrCosts \case
   [] -> pure Illegal
   cost : _costs ->
     payRec oPlayer cost >>= \case
-      Legal -> pure Legal -- TODO: Offer other choices
+      Legal -> pure Legal -- TODO: Offer other choices through prompt
       Illegal -> undefined

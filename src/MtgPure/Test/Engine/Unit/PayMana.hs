@@ -14,8 +14,9 @@ module MtgPure.Test.Engine.Unit.PayMana (
 ) where
 
 import safe GHC.Stack (HasCallStack)
-import safe MtgPure.Engine.Pay (CanPayManaCost (..), playerCanPayManaCost)
+import safe MtgPure.Engine.Pay (CanPayManaCost (..), playerCanPayManaCost, possiblePayments)
 import safe MtgPure.Model.Life (Life (..))
+import safe MtgPure.Model.Mana.ManaCost (ManaCost (..))
 import safe MtgPure.Model.Mana.ManaPool (CompleteManaPool)
 import safe MtgPure.Model.Mana.ManaSymbol (ManaSymbol (..))
 import safe MtgPure.Model.Mana.ToManaCost (ToManaCost (..))
@@ -29,6 +30,43 @@ main = mainUnitPayMana
 emptyPool :: HasCallStack => CompleteManaPool
 emptyPool = mempty
 
+toPlayer :: HasCallStack => ToCompleteManaPool pool => Life -> pool -> Player
+toPlayer life pool =
+  emptyPlayer
+    { playerMana = toCompleteManaPool pool
+    , playerLife = life
+    }
+
+data Solution
+  = None
+  | Unique
+  | Ambiguous
+  deriving (Eq, Show)
+
+testPayment :: HasCallStack => (ToCompleteManaPool pool, ToManaCost cost) => Life -> pool -> cost -> Solution
+testPayment life pool cost = go $ playerCanPayManaCost player cost'
+ where
+  player = toPlayer life pool
+  cost' = forceVars $ toManaCost cost
+  go = \case
+    CantPayMana -> None
+    CanPayMana mPayment -> case mPayment of
+      Nothing -> Ambiguous
+      Just _ -> Unique
+
+testPaymentIO :: HasCallStack => (ToCompleteManaPool pool, ToManaCost cost) => Solution -> Life -> pool -> cost -> IO ()
+testPaymentIO expected life pool cost = do
+  let actual = testPayment life pool cost
+  case actual == expected of
+    True -> pure ()
+    False -> error $ "Expected " <> show expected <> " but got " <> show actual
+
+_debugCost :: (HasCallStack, ToManaCost cost) => cost -> IO ()
+_debugCost cost = do
+  let payments = possiblePayments $ costDynamic $ forceVars $ toManaCost cost
+  mapM_ print payments
+  print $ length payments
+
 mainUnitPayMana :: HasCallStack => IO ()
 mainUnitPayMana = do
   testEmptyPool
@@ -36,6 +74,7 @@ mainUnitPayMana = do
   testSnowCosts
   testTwoBridCosts
   testMixedCosts
+  testPhyrexianCosts
   putStrLn "Unit tests for PayMana passed"
 
 testEmptyPool :: HasCallStack => IO ()
@@ -158,33 +197,56 @@ testMixedCosts = do
   testPaymentIO None 20 (W, W, W, U, U, C) 7
   testPaymentIO Unique 20 (SW, SU) (W, U)
 
-toPlayer :: HasCallStack => ToCompleteManaPool pool => Life -> pool -> Player
-toPlayer life pool =
-  emptyPlayer
-    { playerMana = toCompleteManaPool pool
-    , playerLife = life
-    }
+testPhyrexianCosts :: HasCallStack => IO ()
+testPhyrexianCosts = do
+  testPaymentIO Unique 20 emptyPool PW
+  testPaymentIO Unique 3 emptyPool PW
+  testPaymentIO None 2 emptyPool PW
+  testPaymentIO None 1 emptyPool PW
+  testPaymentIO None 0 emptyPool PW
 
-data Solution
-  = None
-  | Unique
-  | Ambiguous
-  deriving (Eq, Show)
+  testPaymentIO Ambiguous 20 W PW
+  testPaymentIO Ambiguous 3 W PW
+  testPaymentIO Unique 2 W PW
+  testPaymentIO Unique 1 W PW
+  testPaymentIO Unique 0 W PW
 
-testPayment :: HasCallStack => (ToCompleteManaPool pool, ToManaCost cost) => Life -> pool -> cost -> Solution
-testPayment life pool cost = go $ playerCanPayManaCost player cost'
- where
-  player = toPlayer life pool
-  cost' = forceVars $ toManaCost cost
-  go = \case
-    CantPayMana -> None
-    CanPayMana mPayment -> case mPayment of
-      Nothing -> Ambiguous
-      Just _ -> Unique
+  testPaymentIO Unique 5 emptyPool (PW, PW)
+  testPaymentIO None 4 emptyPool (PW, PW)
+  testPaymentIO None 3 emptyPool (PW, PW)
+  testPaymentIO None 2 emptyPool (PW, PW)
+  testPaymentIO None 1 emptyPool (PW, PW)
+  testPaymentIO None 0 emptyPool (PW, PW)
 
-testPaymentIO :: HasCallStack => (ToCompleteManaPool pool, ToManaCost cost) => Solution -> Life -> pool -> cost -> IO ()
-testPaymentIO expected life pool cost = do
-  let actual = testPayment life pool cost
-  case actual == expected of
-    True -> pure ()
-    False -> error $ "Expected " <> show expected <> " but got " <> show actual
+  testPaymentIO Unique 5 emptyPool (PW, PU)
+  testPaymentIO None 4 emptyPool (PW, PU)
+  testPaymentIO None 3 emptyPool (PW, PU)
+  testPaymentIO None 2 emptyPool (PW, PU)
+  testPaymentIO None 1 emptyPool (PW, PU)
+  testPaymentIO None 0 emptyPool (PW, PU)
+
+  testPaymentIO Ambiguous 20 W (PW, PW)
+  testPaymentIO Ambiguous 5 W (PW, PW)
+  testPaymentIO Unique 4 W (PW, PW)
+  testPaymentIO Unique 3 W (PW, PW)
+  testPaymentIO None 2 W (PW, PW)
+  testPaymentIO None 1 W (PW, PW)
+  testPaymentIO None 0 W (PW, PW)
+  testPaymentIO Unique 1 (W, W) (PW, PW)
+  testPaymentIO Ambiguous 3 (W, W) (PW, PW)
+  testPaymentIO Unique 2 (W, W) (PW, PW)
+  testPaymentIO Unique 1 (W, W) (PW, PW)
+
+  testPaymentIO Ambiguous 20 W (PW, PU)
+  testPaymentIO Ambiguous 5 W (PW, PU)
+  testPaymentIO Unique 4 W (PW, PU)
+  testPaymentIO Unique 3 W (PW, PU)
+  testPaymentIO None 2 W (PW, PU)
+  testPaymentIO None 1 W (PW, PU)
+  testPaymentIO None 0 W (PW, PU)
+  testPaymentIO None 1 (W, W) (PW, PU)
+  testPaymentIO None 1 (W, W) (PW, PU)
+  testPaymentIO Unique 1 (W, U) (PW, PU)
+  testPaymentIO Ambiguous 3 (W, U) (PW, PU)
+  testPaymentIO Unique 1 (W, U, U) (PW, PU)
+  testPaymentIO Unique 1 (W, U, U) (PW, PU)
