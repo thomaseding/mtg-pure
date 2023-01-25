@@ -29,18 +29,22 @@ import safe MtgPure.Cards (
   cityOfBrass,
   cleanse,
   conversion,
+  corrosiveGale,
   counterspell,
   damnation,
   darkRitual,
   deathriteShaman,
+  dismember,
   divination,
   elvishHexhunter,
   fling,
   forest,
   frostMarsh,
   fulminatorMage,
+  giantGrowth,
   glacialFloodplain,
   grizzlyBears,
+  gutShot,
   gutlessGhoul,
   highlandForest,
   highlandWeald,
@@ -52,6 +56,7 @@ import safe MtgPure.Cards (
   lightningBolt,
   llanowarElves,
   manaLeak,
+  moltensteelDragon,
   mountain,
   mouthOfRonom,
   moxEmerald,
@@ -59,17 +64,20 @@ import safe MtgPure.Cards (
   moxPearl,
   moxRuby,
   moxSapphire,
+  mutagenicGrowth,
   nyxbornRollicker,
   ornithopter,
   plains,
   plummet,
   pollutedDelta,
+  porcelainLegionnaire,
   pradeshGypsies,
   ragingGoblin,
   rimewoodFalls,
   shatter,
   shock,
   sinkhole,
+  slashPanther,
   snowCoveredForest,
   snowCoveredIsland,
   snowCoveredMountain,
@@ -78,6 +86,7 @@ import safe MtgPure.Cards (
   snowfieldSinkhole,
   snuffOut,
   soldierToken,
+  spinedThopter,
   squallDrifter,
   stifle,
   stoneRain,
@@ -87,6 +96,7 @@ import safe MtgPure.Cards (
   swamp,
   swanSong,
   thermopod,
+  thunderingTanadon,
   tresserhornSinks,
   unholyStrength,
   vindicate,
@@ -121,19 +131,23 @@ allCards =
   , toCard cityOfBrass
   , toCard cleanse
   , toCard conversion
+  , toCard corrosiveGale
   , toCard counterspell
   , toCard damnation
   , toCard darkRitual
   , toCard deathriteShaman
+  , toCard dismember
   , toCard divination
   , toCard elvishHexhunter
   , toCard fling
   , toCard forest
   , toCard fulminatorMage
   , toCard frostMarsh
+  , toCard giantGrowth
   , toCard glacialFloodplain
   , toCard grizzlyBears
   , toCard gutlessGhoul
+  , toCard gutShot
   , toCard highlandForest
   , toCard highlandWeald
   , toCard icehideGolem
@@ -144,6 +158,7 @@ allCards =
   , toCard lightningBolt
   , toCard llanowarElves
   , toCard manaLeak
+  , toCard moltensteelDragon
   , toCard mouthOfRonom
   , toCard mountain
   , toCard moxEmerald
@@ -151,8 +166,10 @@ allCards =
   , toCard moxPearl
   , toCard moxRuby
   , toCard moxSapphire
+  , toCard mutagenicGrowth
   , toCard nyxbornRollicker
   , toCard ornithopter
+  , toCard porcelainLegionnaire
   , toCard ragingGoblin
   , toCard plains
   , toCard plummet
@@ -162,6 +179,7 @@ allCards =
   , toCard shatter
   , toCard shock
   , toCard sinkhole
+  , toCard slashPanther
   , toCard snowCoveredForest
   , toCard snowCoveredIsland
   , toCard snowCoveredMountain
@@ -169,6 +187,7 @@ allCards =
   , toCard snowCoveredSwamp
   , toCard snowfieldSinkhole
   , toCard snuffOut
+  , toCard spinedThopter
   , toCard squallDrifter
   , toCard stifle
   , toCard stoneRain
@@ -178,6 +197,7 @@ allCards =
   , toCard swamp
   , toCard swanSong
   , toCard thermopod
+  , toCard thunderingTanadon
   , toCard tresserhornSinks
   , toCard unholyStrength
   , toCard vindicate

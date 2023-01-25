@@ -11,8 +11,11 @@ import safe Data.Typeable (Typeable)
 
 data CreatureType
   = Bear
+  | Beast
   | Bird
+  | Cat
   | Devil
+  | Dragon
   | Druid
   | Eldrazi
   | Elemental
@@ -29,5 +32,6 @@ data CreatureType
   | Shaman
   | Slug
   | Soldier
+  | Thopter
   | Zombie
   deriving (Eq, Ord, Show, Typeable)

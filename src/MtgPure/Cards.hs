@@ -26,18 +26,22 @@ module MtgPure.Cards (
   cityOfBrass,
   cleanse,
   conversion,
+  corrosiveGale,
   counterspell,
   damnation,
   darkRitual,
   deathriteShaman,
+  dismember,
   divination,
   elvishHexhunter,
   fling,
   forest,
   fulminatorMage,
   frostMarsh,
+  giantGrowth,
   glacialFloodplain,
   gutlessGhoul,
+  gutShot,
   grizzlyBears,
   highlandForest,
   highlandWeald,
@@ -49,6 +53,7 @@ module MtgPure.Cards (
   lightningBolt,
   llanowarElves,
   manaLeak,
+  moltensteelDragon,
   mouthOfRonom,
   mountain,
   moxEmerald,
@@ -56,8 +61,10 @@ module MtgPure.Cards (
   moxPearl,
   moxRuby,
   moxSapphire,
+  mutagenicGrowth,
   nyxbornRollicker,
   ornithopter,
+  porcelainLegionnaire,
   ragingGoblin,
   rimewoodFalls,
   plains,
@@ -67,6 +74,7 @@ module MtgPure.Cards (
   shatter,
   shock,
   sinkhole,
+  slashPanther,
   snowCoveredForest,
   snowCoveredIsland,
   snowCoveredMountain,
@@ -74,6 +82,7 @@ module MtgPure.Cards (
   snowCoveredSwamp,
   snowfieldSinkhole,
   snuffOut,
+  spinedThopter,
   squallDrifter,
   stifle,
   stoneRain,
@@ -83,6 +92,7 @@ module MtgPure.Cards (
   swamp,
   swanSong,
   thermopod,
+  thunderingTanadon,
   tresserhornSinks,
   unholyStrength,
   vindicate,
@@ -226,7 +236,8 @@ import safe MtgPure.Model.Recursive (
     Fuse,
     Haste,
     StaticContinuous,
-    Suspend
+    Suspend,
+    Trample
   ),
   Token (..),
   TriggeredAbility (When),
@@ -732,6 +743,24 @@ conversion = Card "Conversion" $
           ]
       }
 
+corrosiveGale :: Card OTNSorcery
+corrosiveGale = Card "Corrosive Gale" $
+  YourSorcery \_you ->
+    VariableInt \x ->
+      ElectCard $
+        SorceryFacet
+          { sorcery_colors = toColors G
+          , sorcery_cost = manaCostOf (VariableMana @ 'NonSnow @ 'Ty1 x, PG)
+          , sorcery_supertypes = []
+          , sorcery_creatureTypes = []
+          , sorcery_abilities = []
+          , sorcery_effect = thisObject \this ->
+              All $ maskeds @OTNCreature [hasAbility \_this -> Static Flying] \targets ->
+                effect $
+                  WithList $ Each targets \victim ->
+                    dealDamage this victim x
+          }
+
 damnation :: Card OTNSorcery
 damnation = Card "Damnation" $
   YourSorcery \_you ->
@@ -827,6 +856,26 @@ deathriteShaman = Card "Deathrite Shaman" $
           ]
       }
 
+dismember :: Card OTNInstant
+dismember = Card "Dismember" $
+  YourInstant \you ->
+    Target you $ masked @OTNCreature [] \target ->
+      ElectCard $
+        InstantFacet
+          { instant_colors = toColors B
+          , instant_cost = manaCostOf (1, PB, PB)
+          , instant_supertypes = []
+          , instant_creatureTypes = []
+          , instant_abilities = []
+          , instant_effect = thisObject \_this ->
+              effect $
+                untilEndOfTurn $
+                  gainAbility target $
+                    Static $
+                      StaticContinuous $
+                        effect $ StatDelta target (Power 2) (Toughness 2)
+          }
+
 divination :: Card OTNSorcery
 divination = Card "Divination" $
   YourSorcery \you ->
@@ -920,6 +969,26 @@ fulminatorMage = Card "Fulminator Mage" $
 frostMarsh :: Card OTNLand
 frostMarsh = mkSnowCoveredTapLand "Frost Marsh" U B
 
+giantGrowth :: Card OTNInstant
+giantGrowth = Card "Giant Growth" $
+  YourInstant \you ->
+    Target you $ masked @OTNCreature [] \target ->
+      ElectCard $
+        InstantFacet
+          { instant_colors = toColors G
+          , instant_cost = manaCostOf G
+          , instant_supertypes = []
+          , instant_creatureTypes = []
+          , instant_abilities = []
+          , instant_effect = thisObject \_this ->
+              effect $
+                untilEndOfTurn $
+                  gainAbility target $
+                    Static $
+                      StaticContinuous $
+                        effect $ StatDelta target (Power 3) (Toughness 3)
+          }
+
 glacialFloodplain :: Card OTNLand
 glacialFloodplain = mkSnowCoveredTapDualLand "Glacial Floodplain" Plains Island
 
@@ -948,6 +1017,21 @@ gutlessGhoul = Card "Gutless Ghoul" $
                       }
           ]
       }
+
+gutShot :: Card OTNInstant
+gutShot = Card "Gut Shot" $
+  YourInstant \you ->
+    Target you $ masked @OTNCreaturePlayer [] \target ->
+      ElectCard $
+        InstantFacet
+          { instant_colors = toColors R
+          , instant_cost = manaCostOf PR
+          , instant_supertypes = []
+          , instant_creatureTypes = []
+          , instant_abilities = []
+          , instant_effect = thisObject \this ->
+              effect $ dealDamage this target 1
+          }
 
 grizzlyBears :: Card OTNCreature
 grizzlyBears = Card "Grizzly Bears" $
@@ -1075,6 +1159,38 @@ manaLeak = Card "Mana Leak" $
                   effect $ counterSpell spell
           }
 
+moltensteelDragon :: Card OTNArtifactCreature
+moltensteelDragon = Card "Moltensteel Dragon" $
+  YourArtifactCreature \_you ->
+    ArtifactCreatureFacet
+      { artifactCreature_colors = toColors R
+      , artifactCreature_cost = manaCostOf (4, PR, PR)
+      , artifactCreature_supertypes = []
+      , artifactCreature_artifactTypes = []
+      , artifactCreature_creatureTypes = [Dragon]
+      , artifactCreature_power = Power 4
+      , artifactCreature_toughness = Toughness 4
+      , artifactCreature_artifactAbilities = []
+      , artifactCreature_creatureAbilities =
+          [ Static Flying
+          , Activated @ 'ZBattlefield $
+              thisObject \this ->
+                ElectActivated $
+                  Ability
+                    { activated_cost = manaCostOf PR
+                    , activated_effect =
+                        effect $
+                          untilEndOfTurn $
+                            gainAbility this $
+                              Static $
+                                StaticContinuous $
+                                  effect $
+                                    StatDelta this (Power 1) (Toughness 0)
+                    }
+          ]
+      , artifactCreature_artifactCreatureAbilities = []
+      }
+
 mountain :: Card OTNLand
 mountain = mkBasicLand Mountain
 
@@ -1125,6 +1241,26 @@ moxRuby = mkMox "Mox Ruby" R
 
 moxSapphire :: Card OTNArtifact
 moxSapphire = mkMox "Mox Sapphire" U
+
+mutagenicGrowth :: Card OTNInstant
+mutagenicGrowth = Card "Mutagenic Growth" $
+  YourInstant \you ->
+    Target you $ masked @OTNCreature [] \target ->
+      ElectCard $
+        InstantFacet
+          { instant_colors = toColors G
+          , instant_cost = manaCostOf PG
+          , instant_supertypes = []
+          , instant_creatureTypes = []
+          , instant_abilities = []
+          , instant_effect = thisObject \_this ->
+              effect $
+                untilEndOfTurn $
+                  gainAbility target $
+                    Static $
+                      StaticContinuous $
+                        effect $ StatDelta target (Power 2) (Toughness 2)
+          }
 
 nyxbornRollicker :: Card OTNEnchantmentCreature
 nyxbornRollicker = Card "Nyxborn Rollicker" $
@@ -1183,6 +1319,22 @@ plummet = Card "Plummet" $
 
 pollutedDelta :: Card OTNLand
 pollutedDelta = mkFetchLand "PollutedDelta" Island Swamp
+
+porcelainLegionnaire :: Card OTNArtifactCreature
+porcelainLegionnaire = Card "Porcelain Legionnaire" $
+  YourArtifactCreature \_you ->
+    ArtifactCreatureFacet
+      { artifactCreature_colors = toColors W
+      , artifactCreature_cost = manaCostOf (2, PW)
+      , artifactCreature_supertypes = []
+      , artifactCreature_artifactTypes = []
+      , artifactCreature_creatureTypes = [Soldier]
+      , artifactCreature_power = Power 3
+      , artifactCreature_toughness = Toughness 1
+      , artifactCreature_artifactAbilities = []
+      , artifactCreature_creatureAbilities = [Static FirstStrike]
+      , artifactCreature_artifactCreatureAbilities = []
+      }
 
 pradeshGypsies :: Card OTNCreature
 pradeshGypsies = Card "Pradesh Gypsies" $
@@ -1279,6 +1431,22 @@ sinkhole = Card "Sinkhole" $
               effect $ destroy target
           }
 
+slashPanther :: Card OTNArtifactCreature
+slashPanther = Card "Slash Panther" $
+  YourArtifactCreature \_you ->
+    ArtifactCreatureFacet
+      { artifactCreature_colors = toColors R
+      , artifactCreature_cost = manaCostOf (4, PR)
+      , artifactCreature_supertypes = []
+      , artifactCreature_artifactTypes = []
+      , artifactCreature_creatureTypes = [Cat]
+      , artifactCreature_power = Power 4
+      , artifactCreature_toughness = Toughness 2
+      , artifactCreature_artifactAbilities = []
+      , artifactCreature_creatureAbilities = [Static Haste]
+      , artifactCreature_artifactCreatureAbilities = []
+      }
+
 snowfieldSinkhole :: Card OTNLand
 snowfieldSinkhole = mkSnowCoveredTapDualLand "Snowfield Sinkhole" Plains Swamp
 
@@ -1313,20 +1481,6 @@ snuffOut = Card "Snuff Out" $
                     ]
               }
 
-soldierToken :: Token OTNCreature
-soldierToken = Token $
-  Card "Soldier Token" $
-    YourCreature \_you ->
-      CreatureFacet
-        { creature_colors = toColors W
-        , creature_cost = noCost
-        , creature_supertypes = []
-        , creature_creatureTypes = [Soldier]
-        , creature_power = Power 1
-        , creature_toughness = Toughness 1
-        , creature_abilities = []
-        }
-
 snowCoveredForest :: Card OTNLand
 snowCoveredForest = mkSnowCovered Forest
 
@@ -1341,6 +1495,36 @@ snowCoveredPlains = mkSnowCovered Plains
 
 snowCoveredSwamp :: Card OTNLand
 snowCoveredSwamp = mkSnowCovered Swamp
+
+soldierToken :: Token OTNCreature
+soldierToken = Token $
+  Card "Soldier Token" $
+    YourCreature \_you ->
+      CreatureFacet
+        { creature_colors = toColors W
+        , creature_cost = noCost
+        , creature_supertypes = []
+        , creature_creatureTypes = [Soldier]
+        , creature_power = Power 1
+        , creature_toughness = Toughness 1
+        , creature_abilities = []
+        }
+
+spinedThopter :: Card OTNArtifactCreature
+spinedThopter = Card "Spined Thopter" $
+  YourArtifactCreature \_you ->
+    ArtifactCreatureFacet
+      { artifactCreature_colors = toColors U
+      , artifactCreature_cost = manaCostOf (2, PU)
+      , artifactCreature_supertypes = []
+      , artifactCreature_artifactTypes = []
+      , artifactCreature_creatureTypes = [Thopter]
+      , artifactCreature_power = Power 2
+      , artifactCreature_toughness = Toughness 1
+      , artifactCreature_artifactAbilities = []
+      , artifactCreature_creatureAbilities = [Static Flying]
+      , artifactCreature_artifactCreatureAbilities = []
+      }
 
 squallDrifter :: Card OTNCreature
 squallDrifter = Card "Squall Drifter" $
@@ -1468,6 +1652,22 @@ thermopod = Card "Thermopod" $
                       , activated_effect = effect $ AddMana you $ toManaPool R
                       }
           ]
+      }
+
+thunderingTanadon :: Card OTNArtifactCreature
+thunderingTanadon = Card "Thundering Tanadon" $
+  YourArtifactCreature \_you ->
+    ArtifactCreatureFacet
+      { artifactCreature_colors = toColors G
+      , artifactCreature_cost = manaCostOf (4, PG, PG)
+      , artifactCreature_supertypes = []
+      , artifactCreature_artifactTypes = []
+      , artifactCreature_creatureTypes = [Beast]
+      , artifactCreature_power = Power 5
+      , artifactCreature_toughness = Toughness 4
+      , artifactCreature_artifactAbilities = []
+      , artifactCreature_creatureAbilities = [Static Trample]
+      , artifactCreature_artifactCreatureAbilities = []
       }
 
 tresserhornSinks :: Card OTNLand
