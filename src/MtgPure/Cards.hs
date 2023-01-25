@@ -138,7 +138,7 @@ import safe MtgPure.Model.Combinators (
   ifElse,
   is,
   isTapped,
-  manaCostOf,
+  manaCost,
   noCost,
   nonBasic,
   nonBlack,
@@ -357,7 +357,7 @@ mkHybridFilterLand name sym1 sym2 = Card name $
                     Ability
                       { activated_cost =
                           AndCosts
-                            [ manaCostOf $ toHybrid sym1 sym2
+                            [ manaCost $ toHybrid sym1 sym2
                             , tapCost [is this]
                             ]
                       , activated_effect = ChooseOption @()
@@ -410,7 +410,7 @@ mkMox name sym = Card name $
   YourArtifact \_you ->
     ArtifactFacet
       { artifact_colors = toColors ()
-      , artifact_cost = manaCostOf 0
+      , artifact_cost = manaCost 0
       , artifact_supertypes = []
       , artifact_artifactTypes = []
       , artifact_creatureTypes = []
@@ -437,7 +437,7 @@ acceptableLosses = Card "Acceptable Losses" $
           { sorcery_colors = toColors R
           , sorcery_cost =
               AndCosts
-                [ manaCostOf (3, R)
+                [ manaCost (3, R)
                 , DiscardRandomCost 1
                 ]
           , sorcery_supertypes = []
@@ -453,7 +453,7 @@ allIsDust = Card "All Is Dust" $
     ElectCard $
       SorceryFacet
         { sorcery_colors = toColors ()
-        , sorcery_cost = manaCostOf 7
+        , sorcery_cost = manaCost 7
         , sorcery_supertypes = []
         , sorcery_creatureTypes = [Eldrazi]
         , sorcery_abilities = []
@@ -500,7 +500,7 @@ ancestralVision = Card "Ancestral Vision" $
           , sorcery_cost = noCost
           , sorcery_supertypes = []
           , sorcery_creatureTypes = []
-          , sorcery_abilities = [Static $ Suspend 4 $ Cost $ manaCostOf U]
+          , sorcery_abilities = [Static $ Suspend 4 $ Cost $ manaCost U]
           , sorcery_effect = thisObject \_this ->
               effect $ DrawCards target 3
           }
@@ -513,7 +513,7 @@ backlash = Card "Backlash" $
         ElectCard $
           InstantFacet
             { instant_colors = toColors (B, R)
-            , instant_cost = manaCostOf (1, B, R)
+            , instant_cost = manaCost (1, B, R)
             , instant_supertypes = []
             , instant_creatureTypes = []
             , instant_abilities = []
@@ -545,7 +545,7 @@ blackLotus = Card "Black Lotus" $
   YourArtifact \_you ->
     ArtifactFacet
       { artifact_colors = toColors ()
-      , artifact_cost = manaCostOf 0
+      , artifact_cost = manaCost 0
       , artifact_supertypes = []
       , artifact_artifactTypes = []
       , artifact_creatureTypes = []
@@ -575,7 +575,7 @@ blaze = Card "Blaze" $
         ElectCard $
           SorceryFacet
             { sorcery_colors = toColors R
-            , sorcery_cost = manaCostOf (VariableMana @ 'NonSnow @ 'Ty1 x, R)
+            , sorcery_cost = manaCost (VariableMana @ 'NonSnow @ 'Ty1 x, R)
             , sorcery_supertypes = []
             , sorcery_creatureTypes = []
             , sorcery_abilities = []
@@ -588,7 +588,7 @@ bloodMoon = Card "Blood Moon" $
   YourEnchantment \_you ->
     EnchantmentFacet
       { enchantment_colors = toColors R
-      , enchantment_cost = manaCostOf (2, R)
+      , enchantment_cost = manaCost (2, R)
       , enchantment_supertypes = []
       , enchantment_creatureTypes = []
       , enchantment_enchantmentTypes = []
@@ -607,7 +607,7 @@ borealDruid = Card "Boreal Druid" $
   YourCreature \_you ->
     CreatureFacet
       { creature_colors = toColors G
-      , creature_cost = manaCostOf G
+      , creature_cost = manaCost G
       , creature_supertypes = [Ty.Snow]
       , creature_creatureTypes = [Elf, Druid]
       , creature_power = Power 1
@@ -633,7 +633,7 @@ braidwoodCup = Card "Braidwood Cup" $
   YourArtifact \_you ->
     ArtifactFacet
       { artifact_colors = toColors ()
-      , artifact_cost = manaCostOf 3
+      , artifact_cost = manaCost 3
       , artifact_supertypes = []
       , artifact_artifactTypes = []
       , artifact_creatureTypes = []
@@ -656,7 +656,7 @@ counterspell = Card "Counterspell" $
       ElectCard $
         InstantFacet
           { instant_colors = toColors U
-          , instant_cost = manaCostOf (U, U)
+          , instant_cost = manaCost (U, U)
           , instant_supertypes = []
           , instant_creatureTypes = []
           , instant_abilities = []
@@ -698,7 +698,7 @@ cleanse = Card "Cleanse" $
     ElectCard $
       SorceryFacet
         { sorcery_colors = toColors W
-        , sorcery_cost = manaCostOf (2, W, W)
+        , sorcery_cost = manaCost (2, W, W)
         , sorcery_supertypes = []
         , sorcery_creatureTypes = []
         , sorcery_abilities = []
@@ -714,7 +714,7 @@ conversion = Card "Conversion" $
   YourEnchantment \_you ->
     EnchantmentFacet
       { enchantment_colors = toColors W
-      , enchantment_cost = manaCostOf (2, W, W)
+      , enchantment_cost = manaCost (2, W, W)
       , enchantment_supertypes = []
       , enchantment_creatureTypes = []
       , enchantment_enchantmentTypes = []
@@ -750,7 +750,7 @@ corrosiveGale = Card "Corrosive Gale" $
       ElectCard $
         SorceryFacet
           { sorcery_colors = toColors G
-          , sorcery_cost = manaCostOf (VariableMana @ 'NonSnow @ 'Ty1 x, PG)
+          , sorcery_cost = manaCost (VariableMana @ 'NonSnow @ 'Ty1 x, PG)
           , sorcery_supertypes = []
           , sorcery_creatureTypes = []
           , sorcery_abilities = []
@@ -767,7 +767,7 @@ damnation = Card "Damnation" $
     ElectCard $
       SorceryFacet
         { sorcery_colors = toColors B
-        , sorcery_cost = manaCostOf (2, B, B)
+        , sorcery_cost = manaCost (2, B, B)
         , sorcery_supertypes = []
         , sorcery_creatureTypes = []
         , sorcery_abilities = []
@@ -787,7 +787,7 @@ darkRitual = Card "Dark Ritual" $
     ElectCard $
       InstantFacet
         { instant_colors = toColors B
-        , instant_cost = manaCostOf B
+        , instant_cost = manaCost B
         , instant_supertypes = []
         , instant_creatureTypes = []
         , instant_abilities = []
@@ -800,7 +800,7 @@ deathriteShaman = Card "Deathrite Shaman" $
   YourCreature \_you ->
     CreatureFacet
       { creature_colors = toColors (B, G)
-      , creature_cost = manaCostOf BG
+      , creature_cost = manaCost BG
       , creature_supertypes = []
       , creature_creatureTypes = [Elf, Shaman]
       , creature_power = Power 1
@@ -829,7 +829,7 @@ deathriteShaman = Card "Deathrite Shaman" $
                       Ability
                         { activated_cost =
                             AndCosts
-                              [ manaCostOf B
+                              [ manaCost B
                               , tapCost [is this]
                               , ExileCost [is spell]
                               ]
@@ -847,7 +847,7 @@ deathriteShaman = Card "Deathrite Shaman" $
                       Ability
                         { activated_cost =
                             AndCosts
-                              [ manaCostOf G
+                              [ manaCost G
                               , tapCost [is this]
                               , ExileCost [is creature]
                               ]
@@ -863,7 +863,7 @@ dismember = Card "Dismember" $
       ElectCard $
         InstantFacet
           { instant_colors = toColors B
-          , instant_cost = manaCostOf (1, PB, PB)
+          , instant_cost = manaCost (1, PB, PB)
           , instant_supertypes = []
           , instant_creatureTypes = []
           , instant_abilities = []
@@ -882,7 +882,7 @@ divination = Card "Divination" $
     ElectCard $
       SorceryFacet
         { sorcery_colors = toColors U
-        , sorcery_cost = manaCostOf (2, U)
+        , sorcery_cost = manaCost (2, U)
         , sorcery_supertypes = []
         , sorcery_creatureTypes = []
         , sorcery_abilities = []
@@ -895,7 +895,7 @@ elvishHexhunter = Card "Elvish Hexhunter" $
   YourCreature \_you ->
     CreatureFacet
       { creature_colors = toColors (G, W)
-      , creature_cost = manaCostOf GW
+      , creature_cost = manaCost GW
       , creature_supertypes = []
       , creature_creatureTypes = [Elf, Shaman]
       , creature_power = Power 1
@@ -909,7 +909,7 @@ elvishHexhunter = Card "Elvish Hexhunter" $
                       Ability
                         { activated_cost =
                             AndCosts
-                              [ manaCostOf GW
+                              [ manaCost GW
                               , tapCost [is this]
                               , sacrificeCost [is this]
                               ]
@@ -928,7 +928,7 @@ fling = Card "Fling" $
             { instant_colors = toColors R
             , instant_cost =
                 AndCosts
-                  [ manaCostOf (1, R)
+                  [ manaCost (1, R)
                   , sacrificeCost [is sacChoice]
                   ]
             , instant_supertypes = []
@@ -948,7 +948,7 @@ fulminatorMage = Card "Fulminator Mage" $
   YourCreature \_you ->
     CreatureFacet
       { creature_colors = toColors (B, R)
-      , creature_cost = manaCostOf (1, BR, BR)
+      , creature_cost = manaCost (1, BR, BR)
       , creature_supertypes = []
       , creature_creatureTypes = [Elemental, Shaman]
       , creature_power = Power 2
@@ -976,7 +976,7 @@ giantGrowth = Card "Giant Growth" $
       ElectCard $
         InstantFacet
           { instant_colors = toColors G
-          , instant_cost = manaCostOf G
+          , instant_cost = manaCost G
           , instant_supertypes = []
           , instant_creatureTypes = []
           , instant_abilities = []
@@ -997,7 +997,7 @@ gutlessGhoul = Card "Gutless Ghoul" $
   YourCreature \_you ->
     CreatureFacet
       { creature_colors = toColors B
-      , creature_cost = manaCostOf (2, B)
+      , creature_cost = manaCost (2, B)
       , creature_supertypes = [Ty.Snow]
       , creature_creatureTypes = [Zombie]
       , creature_power = Power 2
@@ -1010,7 +1010,7 @@ gutlessGhoul = Card "Gutless Ghoul" $
                     Ability
                       { activated_cost =
                           AndCosts
-                            [ manaCostOf 1
+                            [ manaCost 1
                             , sacrificeCost @OTNCreature []
                             ]
                       , activated_effect = effect $ GainLife you 2
@@ -1025,7 +1025,7 @@ gutShot = Card "Gut Shot" $
       ElectCard $
         InstantFacet
           { instant_colors = toColors R
-          , instant_cost = manaCostOf PR
+          , instant_cost = manaCost PR
           , instant_supertypes = []
           , instant_creatureTypes = []
           , instant_abilities = []
@@ -1038,7 +1038,7 @@ grizzlyBears = Card "Grizzly Bears" $
   YourCreature \_you ->
     CreatureFacet
       { creature_colors = toColors G
-      , creature_cost = manaCostOf (1, G)
+      , creature_cost = manaCost (1, G)
       , creature_supertypes = []
       , creature_creatureTypes = [Bear]
       , creature_power = Power 2
@@ -1057,7 +1057,7 @@ holyStrength = Card "Holy Strength" $
   YourEnchantment \_you ->
     EnchantmentFacet
       { enchantment_colors = toColors W
-      , enchantment_cost = manaCostOf W
+      , enchantment_cost = manaCost W
       , enchantment_supertypes = []
       , enchantment_creatureTypes = []
       , enchantment_enchantmentTypes =
@@ -1073,7 +1073,7 @@ icehideGolem = Card "Icehide Golem" $
   YourArtifactCreature \_you ->
     ArtifactCreatureFacet
       { artifactCreature_colors = toColors ()
-      , artifactCreature_cost = manaCostOf 1
+      , artifactCreature_cost = manaCost 1
       , artifactCreature_supertypes = [Ty.Snow]
       , artifactCreature_artifactTypes = []
       , artifactCreature_creatureTypes = []
@@ -1095,7 +1095,7 @@ llanowarElves = Card "Llanowar Elves" $
   YourCreature \_you ->
     CreatureFacet
       { creature_colors = toColors G
-      , creature_cost = manaCostOf G
+      , creature_cost = manaCost G
       , creature_supertypes = []
       , creature_creatureTypes = [Elf]
       , creature_power = Power 1
@@ -1119,7 +1119,7 @@ lavaAxe = Card "Lava Axe" $
       ElectCard $
         SorceryFacet
           { sorcery_colors = toColors R
-          , sorcery_cost = manaCostOf (4, R)
+          , sorcery_cost = manaCost (4, R)
           , sorcery_supertypes = []
           , sorcery_creatureTypes = []
           , sorcery_abilities = []
@@ -1134,7 +1134,7 @@ lightningBolt = Card "Lightning Bolt" $
       ElectCard $
         InstantFacet
           { instant_colors = toColors R
-          , instant_cost = manaCostOf R
+          , instant_cost = manaCost R
           , instant_supertypes = []
           , instant_creatureTypes = []
           , instant_abilities = []
@@ -1149,7 +1149,7 @@ manaLeak = Card "Mana Leak" $
       ElectCard $
         InstantFacet
           { instant_colors = toColors U
-          , instant_cost = manaCostOf (1, U)
+          , instant_cost = manaCost (1, U)
           , instant_supertypes = []
           , instant_creatureTypes = []
           , instant_abilities = []
@@ -1164,7 +1164,7 @@ moltensteelDragon = Card "Moltensteel Dragon" $
   YourArtifactCreature \_you ->
     ArtifactCreatureFacet
       { artifactCreature_colors = toColors R
-      , artifactCreature_cost = manaCostOf (4, PR, PR)
+      , artifactCreature_cost = manaCost (4, PR, PR)
       , artifactCreature_supertypes = []
       , artifactCreature_artifactTypes = []
       , artifactCreature_creatureTypes = [Dragon]
@@ -1177,7 +1177,7 @@ moltensteelDragon = Card "Moltensteel Dragon" $
               thisObject \this ->
                 ElectActivated $
                   Ability
-                    { activated_cost = manaCostOf PR
+                    { activated_cost = manaCost PR
                     , activated_effect =
                         effect $
                           untilEndOfTurn $
@@ -1218,7 +1218,7 @@ mouthOfRonom = Card "Mouth of Ronom" $
                       Ability
                         { activated_cost =
                             AndCosts
-                              [ manaCostOf (4, S)
+                              [ manaCost (4, S)
                               , tapCost [is this]
                               , sacrificeCost [is this]
                               ]
@@ -1249,7 +1249,7 @@ mutagenicGrowth = Card "Mutagenic Growth" $
       ElectCard $
         InstantFacet
           { instant_colors = toColors G
-          , instant_cost = manaCostOf PG
+          , instant_cost = manaCost PG
           , instant_supertypes = []
           , instant_creatureTypes = []
           , instant_abilities = []
@@ -1267,7 +1267,7 @@ nyxbornRollicker = Card "Nyxborn Rollicker" $
   YourEnchantmentCreature \_you ->
     EnchantmentCreatureFacet
       { enchantmentCreature_colors = toColors R
-      , enchantmentCreature_cost = manaCostOf R
+      , enchantmentCreature_cost = manaCost R
       , enchantmentCreature_supertypes = []
       , enchantmentCreature_creatureTypes = [Satyr]
       , enchantmentCreature_enchantmentTypes = []
@@ -1277,7 +1277,7 @@ nyxbornRollicker = Card "Nyxborn Rollicker" $
       , enchantmentCreature_enchantmentAbilities = []
       , enchantmentCreature_enchantmentCreatureAbilities =
           [ Static $
-              Bestow (Cost $ manaCostOf (1, R)) $
+              Bestow (Cost $ manaCost (1, R)) $
                 Enchant $ linked [] \enchanted ->
                   effect $ StatDelta enchanted (Power 1) (Toughness 1)
           ]
@@ -1288,7 +1288,7 @@ ornithopter = Card "Ornithopter" $
   YourArtifactCreature \_you ->
     ArtifactCreatureFacet
       { artifactCreature_colors = toColors ()
-      , artifactCreature_cost = manaCostOf 0
+      , artifactCreature_cost = manaCost 0
       , artifactCreature_supertypes = []
       , artifactCreature_artifactTypes = []
       , artifactCreature_creatureTypes = []
@@ -1309,7 +1309,7 @@ plummet = Card "Plummet" $
       ElectCard $
         InstantFacet
           { instant_colors = toColors G
-          , instant_cost = manaCostOf (1, G)
+          , instant_cost = manaCost (1, G)
           , instant_supertypes = []
           , instant_creatureTypes = []
           , instant_abilities = []
@@ -1325,7 +1325,7 @@ porcelainLegionnaire = Card "Porcelain Legionnaire" $
   YourArtifactCreature \_you ->
     ArtifactCreatureFacet
       { artifactCreature_colors = toColors W
-      , artifactCreature_cost = manaCostOf (2, PW)
+      , artifactCreature_cost = manaCost (2, PW)
       , artifactCreature_supertypes = []
       , artifactCreature_artifactTypes = []
       , artifactCreature_creatureTypes = [Soldier]
@@ -1341,7 +1341,7 @@ pradeshGypsies = Card "Pradesh Gypsies" $
   YourCreature \_you ->
     CreatureFacet
       { creature_colors = toColors G
-      , creature_cost = manaCostOf (2, G)
+      , creature_cost = manaCost (2, G)
       , creature_supertypes = []
       , creature_creatureTypes = [Human, Nomad]
       , creature_power = Power 1
@@ -1355,7 +1355,7 @@ pradeshGypsies = Card "Pradesh Gypsies" $
                       Ability
                         { activated_cost =
                             AndCosts
-                              [ manaCostOf (1, G)
+                              [ manaCost (1, G)
                               , tapCost [is this]
                               ]
                         , activated_effect =
@@ -1375,7 +1375,7 @@ ragingGoblin = Card "Raging Goblin" $
   YourCreature \_you ->
     CreatureFacet
       { creature_colors = toColors R
-      , creature_cost = manaCostOf R
+      , creature_cost = manaCost R
       , creature_supertypes = []
       , creature_creatureTypes = [Goblin]
       , creature_power = Power 1
@@ -1393,7 +1393,7 @@ shatter = Card "Shatter" $
       ElectCard $
         InstantFacet
           { instant_colors = toColors R
-          , instant_cost = manaCostOf (1, R)
+          , instant_cost = manaCost (1, R)
           , instant_supertypes = []
           , instant_creatureTypes = []
           , instant_abilities = []
@@ -1408,7 +1408,7 @@ shock = Card "Shock" $
       ElectCard $
         InstantFacet
           { instant_colors = toColors R
-          , instant_cost = manaCostOf R
+          , instant_cost = manaCost R
           , instant_supertypes = []
           , instant_creatureTypes = []
           , instant_abilities = []
@@ -1423,7 +1423,7 @@ sinkhole = Card "Sinkhole" $
       ElectCard $
         SorceryFacet
           { sorcery_colors = toColors B
-          , sorcery_cost = manaCostOf (B, B)
+          , sorcery_cost = manaCost (B, B)
           , sorcery_supertypes = []
           , sorcery_creatureTypes = []
           , sorcery_abilities = []
@@ -1436,7 +1436,7 @@ slashPanther = Card "Slash Panther" $
   YourArtifactCreature \_you ->
     ArtifactCreatureFacet
       { artifactCreature_colors = toColors R
-      , artifactCreature_cost = manaCostOf (4, PR)
+      , artifactCreature_cost = manaCost (4, PR)
       , artifactCreature_supertypes = []
       , artifactCreature_artifactTypes = []
       , artifactCreature_creatureTypes = [Cat]
@@ -1468,7 +1468,7 @@ snuffOut = Card "Snuff Out" $
                     CaseFin
                       { caseFin = option
                       , ofFin =
-                          LS (manaCostOf (3, B)) $
+                          LS (manaCost (3, B)) $
                             LZ @() $ PayLife 4
                       }
               , instant_supertypes = []
@@ -1515,7 +1515,7 @@ spinedThopter = Card "Spined Thopter" $
   YourArtifactCreature \_you ->
     ArtifactCreatureFacet
       { artifactCreature_colors = toColors U
-      , artifactCreature_cost = manaCostOf (2, PU)
+      , artifactCreature_cost = manaCost (2, PU)
       , artifactCreature_supertypes = []
       , artifactCreature_artifactTypes = []
       , artifactCreature_creatureTypes = [Thopter]
@@ -1531,7 +1531,7 @@ squallDrifter = Card "Squall Drifter" $
   YourCreature \_you ->
     CreatureFacet
       { creature_colors = toColors W
-      , creature_cost = manaCostOf (1, W)
+      , creature_cost = manaCost (1, W)
       , creature_supertypes = [Ty.Snow]
       , creature_creatureTypes = [Elemental]
       , creature_power = Power 1
@@ -1546,7 +1546,7 @@ squallDrifter = Card "Squall Drifter" $
                       Ability
                         { activated_cost =
                             AndCosts
-                              [ manaCostOf W
+                              [ manaCost W
                               , tapCost [is this]
                               ]
                         , activated_effect = effect $ Tap target
@@ -1561,7 +1561,7 @@ stifle = Card "Stifle" $
       ElectCard $
         InstantFacet
           { instant_colors = toColors U
-          , instant_cost = manaCostOf U
+          , instant_cost = manaCost U
           , instant_supertypes = []
           , instant_creatureTypes = []
           , instant_abilities = []
@@ -1576,7 +1576,7 @@ stoneRain = Card "Stone Rain" $
       ElectCard $
         SorceryFacet
           { sorcery_colors = toColors R
-          , sorcery_cost = manaCostOf (2, R)
+          , sorcery_cost = manaCost (2, R)
           , sorcery_supertypes = []
           , sorcery_creatureTypes = []
           , sorcery_abilities = []
@@ -1589,7 +1589,7 @@ stoneThrowingDevils = Card "Stone-Throwing Devils" $
   YourCreature \_you ->
     CreatureFacet
       { creature_colors = toColors B
-      , creature_cost = manaCostOf B
+      , creature_cost = manaCost B
       , creature_supertypes = []
       , creature_creatureTypes = [Devil]
       , creature_power = Power 1
@@ -1614,7 +1614,7 @@ swanSong = Card "Swan Song" $
         ElectCard $
           InstantFacet
             { instant_colors = toColors U
-            , instant_cost = manaCostOf U
+            , instant_cost = manaCost U
             , instant_supertypes = []
             , instant_creatureTypes = []
             , instant_abilities = []
@@ -1630,7 +1630,7 @@ thermopod = Card "Thermopod" $
   YourCreature \_you ->
     CreatureFacet
       { creature_colors = toColors R
-      , creature_cost = manaCostOf (1, R)
+      , creature_cost = manaCost (1, R)
       , creature_supertypes = [Ty.Snow]
       , creature_creatureTypes = [Slug]
       , creature_power = Power 4
@@ -1640,7 +1640,7 @@ thermopod = Card "Thermopod" $
               thisObject \this ->
                 ElectActivated $
                   Ability
-                    { activated_cost = manaCostOf S
+                    { activated_cost = manaCost S
                     , activated_effect = effect $ untilEndOfTurn $ gainAbility this $ Static Haste
                     }
           , Activated @ 'ZBattlefield $
@@ -1659,7 +1659,7 @@ thunderingTanadon = Card "Thundering Tanadon" $
   YourArtifactCreature \_you ->
     ArtifactCreatureFacet
       { artifactCreature_colors = toColors G
-      , artifactCreature_cost = manaCostOf (4, PG, PG)
+      , artifactCreature_cost = manaCost (4, PG, PG)
       , artifactCreature_supertypes = []
       , artifactCreature_artifactTypes = []
       , artifactCreature_creatureTypes = [Beast]
@@ -1678,7 +1678,7 @@ unholyStrength = Card "Unholy Strength" $
   YourEnchantment \_you ->
     EnchantmentFacet
       { enchantment_colors = toColors B
-      , enchantment_cost = manaCostOf B
+      , enchantment_cost = manaCost B
       , enchantment_supertypes = []
       , enchantment_creatureTypes = []
       , enchantment_enchantmentTypes =
@@ -1696,7 +1696,7 @@ vindicate = Card "Vindicate" $
       ElectCard $
         SorceryFacet
           { sorcery_colors = toColors (W, B)
-          , sorcery_cost = manaCostOf (1, W, B)
+          , sorcery_cost = manaCost (1, W, B)
           , sorcery_supertypes = []
           , sorcery_creatureTypes = []
           , sorcery_abilities = []
@@ -1712,7 +1712,7 @@ waspLancer = Card "Wasp Lancer" $
   YourCreature \_you ->
     CreatureFacet
       { creature_colors = toColors (U, B)
-      , creature_cost = manaCostOf (UB, UB, UB)
+      , creature_cost = manaCost (UB, UB, UB)
       , creature_supertypes = []
       , creature_creatureTypes = [Faerie, Soldier]
       , creature_power = Power 3
@@ -1750,7 +1750,7 @@ wear_tear = SplitCard wear tear [Static Fuse]
         ElectCard $
           InstantFacet
             { instant_colors = toColors R
-            , instant_cost = manaCostOf (1, R)
+            , instant_cost = manaCost (1, R)
             , instant_supertypes = []
             , instant_creatureTypes = []
             , instant_abilities = []
@@ -1764,7 +1764,7 @@ wear_tear = SplitCard wear tear [Static Fuse]
         ElectCard $
           InstantFacet
             { instant_colors = toColors W
-            , instant_cost = manaCostOf W
+            , instant_cost = manaCost W
             , instant_supertypes = []
             , instant_creatureTypes = []
             , instant_abilities = []
@@ -1777,7 +1777,7 @@ witchEngine = Card "Witch Engine" $
   YourCreature \_you ->
     CreatureFacet
       { creature_colors = toColors B
-      , creature_cost = manaCostOf (5, B)
+      , creature_cost = manaCost (5, B)
       , creature_supertypes = []
       , creature_creatureTypes = [Horror]
       , creature_power = Power 4
@@ -1812,7 +1812,7 @@ wrathOfGod = Card "Wrath of God" $
     ElectCard $
       SorceryFacet
         { sorcery_colors = toColors W
-        , sorcery_cost = manaCostOf (2, W, W)
+        , sorcery_cost = manaCost (2, W, W)
         , sorcery_supertypes = []
         , sorcery_creatureTypes = []
         , sorcery_abilities = []

@@ -52,7 +52,7 @@ module MtgPure.Model.Combinators (
   sacrificeCost,
   satisfies,
   searchLibrary,
-  manaCostOf,
+  manaCost,
   swampwalk,
   tapCost,
   ToCard (..),
@@ -277,8 +277,8 @@ instance AsDamage (Damage 'Var) where
 instance AsDamage (Variable Int) where
   asDamage = VariableDamage
 
-manaCostOf :: ToManaCost a => a -> Cost ot
-manaCostOf = ManaCost . toManaCost
+manaCost :: ToManaCost a => a -> Cost ot
+manaCost = ManaCost . toManaCost
 
 noCost :: Cost ot
 noCost = OrCosts []
