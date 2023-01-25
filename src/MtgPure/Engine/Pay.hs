@@ -221,7 +221,7 @@ possiblePaymentsHybrid2 sym (Mana n) = case n <= 0 of
         [ mempty{poolNonSnow = toManaPool sym}
         , mempty{poolSnow = mapManaPool freezeMana $ toManaPool sym}
         ]
-        ++ doubleGenericPayments
+        ++ [PartialManaPayment mempty 2]
     q <- possiblePaymentsHybrid2 sym $ Mana $ n - 1
     pure $ p <> q
 
@@ -235,9 +235,9 @@ possiblePaymentsPhyrexian sym (Mana n) = case n <= 0 of
   True -> [mempty]
   False -> do
     p <-
-      [ toPayment $ mempty{poolNonSnow = toManaPool sym}
+      [ PartialManaPayment mempty{paymentLife = 2} 0
+        , toPayment $ mempty{poolNonSnow = toManaPool sym}
         , toPayment $ mempty{poolSnow = mapManaPool freezeMana $ toManaPool sym}
-        , PartialManaPayment mempty{paymentLife = 2} 0
         ]
     q <- possiblePaymentsPhyrexian sym $ Mana $ n - 1
     pure $ p <> q
@@ -315,16 +315,6 @@ instance PossiblePayments (Mana 'NoVar 'NonSnow 'TyPG) where
 instance PossiblePayments (Mana 'NoVar 'NonSnow 'TyPC) where
   possiblePaymentsImpl = possiblePaymentsPhyrexian C
 
-_singleNonSnowPayments :: [PartialManaPayment]
-_singleNonSnowPayments =
-  [ toPayment $ mempty{poolNonSnow = toManaPool W}
-  , toPayment $ mempty{poolNonSnow = toManaPool U}
-  , toPayment $ mempty{poolNonSnow = toManaPool B}
-  , toPayment $ mempty{poolNonSnow = toManaPool R}
-  , toPayment $ mempty{poolNonSnow = toManaPool G}
-  , toPayment $ mempty{poolNonSnow = toManaPool C}
-  ]
-
 singleSnowPayments :: [PartialManaPayment]
 singleSnowPayments =
   [ toPayment $ mempty{poolSnow = toManaPool SW}
@@ -335,23 +325,12 @@ singleSnowPayments =
   , toPayment $ mempty{poolSnow = toManaPool SC}
   ]
 
-singleGenericPayments :: [PartialManaPayment]
-singleGenericPayments = [PartialManaPayment mempty 1] -- singleNonSnowPayments ++ singleSnowPayments
-
-doubleGenericPayments :: [PartialManaPayment]
-doubleGenericPayments = [PartialManaPayment mempty 2] -- possiblePayments (Mana @ 'NoVar @ 'NonSnow @ 'Ty1 2)
-
 instance PossiblePayments (Mana 'NoVar 'NonSnow 'Ty1) where
-  possiblePaymentsImpl (Mana n) = case n <= 0 of
-    True -> [mempty]
-    False -> do
-      p <- singleGenericPayments
-      q <- possiblePaymentsImpl @(Mana 'NoVar 'NonSnow 'Ty1) $ Mana $ n - 1
-      pure $ p <> q
+  possiblePaymentsImpl n = assert (n >= 0) [PartialManaPayment mempty n]
 
 instance PossiblePayments (Mana 'NoVar 'Snow 'Ty1) where
   possiblePaymentsImpl (Mana n) = case n <= 0 of
-    True -> [mempty]
+    True -> assert (n == 0) [mempty]
     False -> do
       p <- singleSnowPayments
       q <- possiblePaymentsImpl @(Mana 'NoVar 'Snow 'Ty1) $ Mana $ n - 1
@@ -389,26 +368,19 @@ instance PossiblePayments (PhyrexianManaCost 'NoVar) where
 
 instance PossiblePayments (DynamicManaCost 'NoVar) where
   possiblePaymentsImpl dyn = do
-    case costGeneric dyn of
-      0 -> pure ()
-      _ -> error "caller should zero out generic cost before calling possiblePayments to avoid big search tree"
     s <- possiblePaymentsImpl $ costSnow dyn
     hy <- possiblePaymentsImpl $ costHybrid dyn
     phy <- possiblePaymentsImpl $ costPhyrexian dyn
-    pure $ s <> hy <> phy
+    pure $ PartialManaPayment mempty (costGeneric dyn) <> s <> hy <> phy
 
 isPaymentCompatible :: ManaPayment -> DynamicManaCost 'NoVar -> Bool
-isPaymentCompatible payment fullDyn = not $ null do
-  PartialManaPayment candidate genericB <- possiblePayments dyn
+isPaymentCompatible payment dyn = not $ null do
+  PartialManaPayment candidate generic <- possiblePayments dyn
   let remaining = payment - candidate
-      generic = genericA + genericB
   M.guard $ isEachManaNonNegative $ paymentMana remaining
   M.guard $ countMana (paymentMana remaining) == countMana generic
   pure () -- TODO: check life payment
   pure candidate
- where
-  dyn = fullDyn{costGeneric = 0}
-  genericA = costGeneric fullDyn
 
 class PayGenericUnambiguously pool where
   payGenericUnambiguouslyImpl :: (pool -> CompleteManaPool) -> Int -> pool -> Maybe CompleteManaPool
@@ -440,9 +412,11 @@ instance PayGenericUnambiguously (ManaPool snow) where
     x = fromIntegral generic
 
 payGenericUnambiguously :: Int -> CompleteManaPool -> Maybe CompleteManaPool
-payGenericUnambiguously generic pool = case generic == countMana pool of
-  True -> Just pool
-  False -> payGenericUnambiguouslyImpl id generic pool
+payGenericUnambiguously generic pool = case generic of
+  0 -> Just mempty
+  _ -> case generic == countMana pool of
+    True -> Just pool
+    False -> payGenericUnambiguouslyImpl id generic pool
 
 data CanPayManaCost where
   CantPayMana :: CanPayManaCost
@@ -469,40 +443,34 @@ playerCanPayManaCost :: HasCallStack => Player -> ManaCost 'NoVar -> CanPayManaC
 playerCanPayManaCost player cost = case hasEnoughFixedMana pool cost of
   False -> CantPayMana
   True -> do
-    case countMana fullDyn > countMana avail of
+    case countMana dyn > countMana avail of
       True -> CantPayMana
       False -> do
-        case dynNoGenericSolutions of
+        case dynSolutions of
           [] -> CantPayMana
-          [paymentNoGeneric] -> CanPayMana $ toFullDynPayment paymentNoGeneric
-          paymentsNoGeneric ->
+          [partialPayment] -> CanPayMana $ toFullDynPayment partialPayment
+          partialPayments ->
             CanPayMana $
-              let fullDynPayments = map toFullDynPayment paymentsNoGeneric
-               in -- While the paymentsNoGeneric are unique, the fullDynPayments may not be.
+              let fullDynPayments = map toFullDynPayment partialPayments
+               in -- While the partialPayments are unique, the fullDynPayments may not be.
                   M.join $ getUniqueElem fullDynPayments
  where
   pool = playerMana player
   fixedPayment = extractFixedPayment (poolNonSnow pool) cost
   avail = pool - fixedPayment
-  fullDyn = costDynamic cost
-  genericA = costGeneric fullDyn
-  dynNoGeneric = fullDyn{costGeneric = 0}
-  dynNoGenericCandidates = possiblePayments dynNoGeneric
-  dynNoGenericSolutions = filter isSolution dynNoGenericCandidates
-  isSolution (PartialManaPayment candidate genericB) =
+  dyn = costDynamic cost
+  dynCandidates = possiblePayments dyn
+  dynSolutions = filter isSolution dynCandidates
+  isSolution (PartialManaPayment candidate generic) =
     let remaining = avail - paymentMana candidate
-        generic = genericA + genericB
      in case isEachManaNonNegative remaining && countMana remaining >= countMana generic of
           False -> False
           True -> True -- TODO: check life payment
-  toFullDynPayment (PartialManaPayment payment genericB) =
+  toFullDynPayment (PartialManaPayment payment generic) =
     let avail' = avail - paymentMana payment
-        generic = genericA + genericB
-     in case generic of
-          0 -> Just payment
-          _ -> case payGenericUnambiguously (countMana generic) avail' of
-            Nothing -> Nothing
-            Just x -> Just $ payment <> mempty{paymentMana = x}
+     in case payGenericUnambiguously (countMana generic) avail' of
+          Nothing -> Nothing
+          Just x -> Just $ payment <> mempty{paymentMana = x}
 
 payManaCost :: Monad m => Object 'OTPlayer -> ManaCost 'Var -> Magic 'Private 'A.RW m Legality
 payManaCost oPlayer (forceVars -> cost) = logCall 'payManaCost do
@@ -514,10 +482,10 @@ payManaCost oPlayer (forceVars -> cost) = logCall 'payManaCost do
         let pool = playerMana player
             fixedPayment = extractFixedPayment (poolNonSnow pool) cost
             avail = pool - fixedPayment
-            fullDyn = costDynamic cost
+            dyn = costDynamic cost
         dynPayment <- case mDynSolution of
           Just solution -> pure solution
-          Nothing -> promptPayForCompatibleDynamic oPlayer avail fullDyn
+          Nothing -> fromRO $ promptPayForCompatibleDynamic oPlayer avail dyn
         let pool' = pool - fixedPayment - paymentMana dynPayment
         setPlayer
           oPlayer
@@ -542,12 +510,12 @@ promptPayForCompatibleDynamic ::
   Object 'OTPlayer ->
   CompleteManaPool ->
   DynamicManaCost 'NoVar ->
-  Magic 'Private 'A.RW m ManaPayment
+  Magic 'Private 'A.RO m ManaPayment
 promptPayForCompatibleDynamic oPlayer avail dyn = do
-  prompt <- fromRO $ gets magicPrompt
-  opaque <- fromRO $ gets mkOpaqueGameState
+  prompt <- gets magicPrompt
+  opaque <- gets mkOpaqueGameState
   untilJust \attempt -> do
-    payment <- fromPublic $ fromRO $ promptPayDynamicMana prompt attempt opaque oPlayer dyn
+    payment <- fromPublic $ promptPayDynamicMana prompt attempt opaque oPlayer dyn
     case isPaymentCompatible payment dyn of
       False -> pure Nothing
       True -> case isEachManaNonNegative $ avail - paymentMana payment of
