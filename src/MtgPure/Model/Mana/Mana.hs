@@ -28,23 +28,23 @@ type IsManaNoVar snow color =
   , Num (Mana 'NoVar snow color)
   )
 
-data Mana (v :: Var) (snow :: Snow) (mt :: ManaType) :: Type where
+data Mana (var :: Var) (snow :: Snow) (mt :: ManaType) :: Type where
   Mana :: Int -> Mana v snow mt
   VariableMana :: Variable Int -> Mana 'Var snow mt
   SumMana :: Mana 'Var snow mt -> Mana 'Var snow mt -> Mana 'Var snow mt
   deriving (Typeable)
 
 -- TODO: Make this an orphan
-deriving instance Eq (Mana v snow mt)
+deriving instance Eq (Mana var snow mt)
 
 -- TODO: Make this an orphan
-deriving instance Ord (Mana v snow mt)
+deriving instance Ord (Mana var snow mt)
 
 -- TODO: Make this an orphan
-deriving instance Show (Mana v snow mt)
+deriving instance Show (Mana var snow mt)
 
 -- TODO: Make this an orphan
-instance Semigroup (Mana v snow mt) where
+instance Semigroup (Mana var snow mt) where
   (<>) x y = case (x, y) of
     (Mana a, Mana b) -> Mana (a + b)
     (Mana 0, _) -> y
@@ -55,30 +55,30 @@ instance Semigroup (Mana v snow mt) where
     (_, SumMana{}) -> SumMana x y
 
 -- TODO: Make this an orphan
-instance Monoid (Mana v snow mt) where
+instance Monoid (Mana var snow mt) where
   mempty = Mana 0
 
 -- TODO: Make this an orphan
-instance Num (Mana 'NoVar snow mt) => ForceVars (Mana v snow mt) (Mana 'NoVar snow mt) where
+instance Num (Mana 'NoVar snow mt) => ForceVars (Mana var snow mt) (Mana 'NoVar snow mt) where
   forceVars = \case
     Mana n -> Mana n
     VariableMana (ReifiedVariable _ n) -> Mana n
     SumMana x y -> forceVars x + forceVars y
 
-castManaType :: forall mt' mt snow v. Mana v snow mt -> Mana v snow mt'
+castManaType :: forall mt' mt snow var. Mana var snow mt -> Mana var snow mt'
 castManaType = castManaImpl
 
-castManaImpl :: Mana v snow mt -> Mana v snow' mt'
+castManaImpl :: Mana var snow mt -> Mana var snow' mt'
 castManaImpl = \case
   Mana n -> Mana n
   VariableMana v -> VariableMana v
   SumMana x y -> SumMana (castManaImpl x) (castManaImpl y)
 
-litMana :: Mana 'NoVar snow color -> Mana 'Var snow color
+litMana :: Mana 'NoVar snow mt -> Mana 'Var snow mt
 litMana (Mana x) = Mana x
 
-thawMana :: Mana 'NoVar 'Snow color -> Mana 'NoVar 'NonSnow color
+thawMana :: Mana var 'Snow mt -> Mana var 'NonSnow mt
 thawMana = castManaImpl
 
-freezeMana :: Mana 'NoVar 'NonSnow color -> Mana 'NoVar 'Snow color
+freezeMana :: Mana var 'NonSnow mt -> Mana var 'Snow mt
 freezeMana = castManaImpl

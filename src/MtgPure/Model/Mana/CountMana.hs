@@ -41,11 +41,11 @@ instance CountMana (Mana 'NoVar snow mt) where
 instance CountMana (PhyrexianManaCost 'NoVar) where
   countMana
     PhyrexianManaCost
-      { phyrexianWhite = w
-      , phyrexianBlue = u
-      , phyrexianBlack = b
-      , phyrexianRed = r
-      , phyrexianGreen = g
+      { phyrexianW = w
+      , phyrexianU = u
+      , phyrexianB = b
+      , phyrexianR = r
+      , phyrexianG = g
       } = countMana w + countMana u + countMana b + countMana r + countMana g
 
 instance CountMana (HybridManaCost 'NoVar) where

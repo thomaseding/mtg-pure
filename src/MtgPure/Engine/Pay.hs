@@ -155,12 +155,12 @@ extractFixedPayment' maxNonSNow cost = (ManaPool w u b r g c, ManaPool sw su sb 
   mr = poolRed maxNonSNow
   mg = poolGreen maxNonSNow
   mc = poolColorless maxNonSNow
-  cw = costWhite cost
-  cu = costBlue cost
-  cb = costBlack cost
-  cr = costRed cost
-  cg = costGreen cost
-  cc = costColorless cost
+  cw = costW cost
+  cu = costU cost
+  cb = costB cost
+  cr = costR cost
+  cg = costG cost
+  cc = costC cost
   w = min mw cw
   u = min mu cu
   b = min mb cb
@@ -212,7 +212,7 @@ possiblePaymentsHybrid2 sym (Mana n) = case n <= 0 of
         [ mempty{poolNonSnow = toManaPool sym}
         , mempty{poolSnow = mapManaPool freezeMana $ toManaPool sym}
         ]
-        ++ possiblePaymentsImpl (Mana @ 'NoVar @ 'NonSnow @ 'Ty1 2)
+        ++ doubleGenericPayments
     q <- possiblePaymentsHybrid2 sym $ Mana $ n - 1
     pure $ p <> q
 
@@ -285,6 +285,9 @@ instance PossiblePayments (Mana 'NoVar 'NonSnow 'TyR2) where
 instance PossiblePayments (Mana 'NoVar 'NonSnow 'TyG2) where
   possiblePaymentsImpl = possiblePaymentsHybrid2 G
 
+instance PossiblePayments (Mana 'NoVar 'NonSnow 'TyC2) where
+  possiblePaymentsImpl = possiblePaymentsHybrid2 C
+
 instance PossiblePayments (Mana 'NoVar 'NonSnow 'TyPW) where
   possiblePaymentsImpl = possiblePaymentsPhyrexian W
 
@@ -303,35 +306,46 @@ instance PossiblePayments (Mana 'NoVar 'NonSnow 'TyPG) where
 instance PossiblePayments (Mana 'NoVar 'NonSnow 'TyPC) where
   possiblePaymentsImpl = possiblePaymentsPhyrexian C
 
+singleNonSnowPayments :: [ManaPayment]
+singleNonSnowPayments =
+  [ toPayment $ mempty{poolNonSnow = toManaPool W}
+  , toPayment $ mempty{poolNonSnow = toManaPool U}
+  , toPayment $ mempty{poolNonSnow = toManaPool B}
+  , toPayment $ mempty{poolNonSnow = toManaPool R}
+  , toPayment $ mempty{poolNonSnow = toManaPool G}
+  , toPayment $ mempty{poolNonSnow = toManaPool C}
+  ]
+
+singleSnowPayments :: [ManaPayment]
+singleSnowPayments =
+  [ toPayment $ mempty{poolSnow = toManaPool SW}
+  , toPayment $ mempty{poolSnow = toManaPool SU}
+  , toPayment $ mempty{poolSnow = toManaPool SB}
+  , toPayment $ mempty{poolSnow = toManaPool SR}
+  , toPayment $ mempty{poolSnow = toManaPool SG}
+  , toPayment $ mempty{poolSnow = toManaPool SC}
+  ]
+
+singleGenericPayments :: [ManaPayment]
+singleGenericPayments = singleNonSnowPayments ++ singleSnowPayments
+
+doubleGenericPayments :: [ManaPayment]
+doubleGenericPayments = possiblePayments (Mana @ 'NoVar @ 'NonSnow @ 'Ty1 2)
+
 instance PossiblePayments (Mana 'NoVar 'NonSnow 'Ty1) where
   possiblePaymentsImpl (Mana n) = case n <= 0 of
     True -> [mempty]
     False -> do
-      p <-
-        [ toPayment $ mempty{poolNonSnow = toManaPool W}
-          , toPayment $ mempty{poolNonSnow = toManaPool U}
-          , toPayment $ mempty{poolNonSnow = toManaPool B}
-          , toPayment $ mempty{poolNonSnow = toManaPool R}
-          , toPayment $ mempty{poolNonSnow = toManaPool G}
-          , toPayment $ mempty{poolNonSnow = toManaPool C}
-          ]
-          ++ possiblePaymentsImpl (Mana @ 'NoVar @ 'Snow @ 'TyS n)
+      p <- singleGenericPayments
       q <- possiblePaymentsImpl @(Mana 'NoVar 'NonSnow 'Ty1) $ Mana $ n - 1
       pure $ p <> q
 
-instance PossiblePayments (Mana 'NoVar 'Snow 'TyS) where
+instance PossiblePayments (Mana 'NoVar 'Snow 'Ty1) where
   possiblePaymentsImpl (Mana n) = case n <= 0 of
     True -> [mempty]
     False -> do
-      p <-
-        [ toPayment $ mempty{poolSnow = mapManaPool freezeMana $ toManaPool W}
-          , toPayment $ mempty{poolSnow = mapManaPool freezeMana $ toManaPool U}
-          , toPayment $ mempty{poolSnow = mapManaPool freezeMana $ toManaPool B}
-          , toPayment $ mempty{poolSnow = mapManaPool freezeMana $ toManaPool R}
-          , toPayment $ mempty{poolSnow = mapManaPool freezeMana $ toManaPool G}
-          , toPayment $ mempty{poolSnow = mapManaPool freezeMana $ toManaPool C}
-          ]
-      q <- possiblePaymentsImpl @(Mana 'NoVar 'Snow 'TyS) $ Mana $ n - 1
+      p <- singleSnowPayments
+      q <- possiblePaymentsImpl @(Mana 'NoVar 'Snow 'Ty1) $ Mana $ n - 1
       pure $ p <> q
 
 instance PossiblePayments (HybridManaCost 'NoVar) where
@@ -351,16 +365,17 @@ instance PossiblePayments (HybridManaCost 'NoVar) where
     b2 <- possiblePaymentsImpl $ hybridB2 hy
     r2 <- possiblePaymentsImpl $ hybridR2 hy
     g2 <- possiblePaymentsImpl $ hybridG2 hy
-    pure $ wu <> ub <> br <> rg <> gw <> wb <> ur <> bg <> rw <> gu <> w2 <> u2 <> b2 <> r2 <> g2
+    c2 <- possiblePaymentsImpl $ hybridC2 hy
+    pure $ wu <> ub <> br <> rg <> gw <> wb <> ur <> bg <> rw <> gu <> w2 <> u2 <> b2 <> r2 <> g2 <> c2
 
 instance PossiblePayments (PhyrexianManaCost 'NoVar) where
   possiblePaymentsImpl phy = do
-    w <- possiblePaymentsImpl $ phyrexianWhite phy
-    u <- possiblePaymentsImpl $ phyrexianBlue phy
-    b <- possiblePaymentsImpl $ phyrexianBlack phy
-    r <- possiblePaymentsImpl $ phyrexianRed phy
-    g <- possiblePaymentsImpl $ phyrexianGreen phy
-    c <- possiblePaymentsImpl $ phyrexianColorless phy
+    w <- possiblePaymentsImpl $ phyrexianW phy
+    u <- possiblePaymentsImpl $ phyrexianU phy
+    b <- possiblePaymentsImpl $ phyrexianB phy
+    r <- possiblePaymentsImpl $ phyrexianR phy
+    g <- possiblePaymentsImpl $ phyrexianG phy
+    c <- possiblePaymentsImpl $ phyrexianC phy
     pure $ w <> u <> b <> r <> g <> c
 
 instance PossiblePayments (DynamicManaCost 'NoVar) where

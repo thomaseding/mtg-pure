@@ -20,12 +20,12 @@ import safe MtgPure.Model.Mana.Snow (Snow (..))
 import safe MtgPure.Model.Variable (Var (..))
 
 data PhyrexianManaCost (var :: Var) = PhyrexianManaCost
-  { phyrexianWhite :: Mana var 'NonSnow 'TyPW
-  , phyrexianBlue :: Mana var 'NonSnow 'TyPU
-  , phyrexianBlack :: Mana var 'NonSnow 'TyPB
-  , phyrexianRed :: Mana var 'NonSnow 'TyPR
-  , phyrexianGreen :: Mana var 'NonSnow 'TyPG
-  , phyrexianColorless :: Mana var 'NonSnow 'TyPC
+  { phyrexianW :: Mana var 'NonSnow 'TyPW
+  , phyrexianU :: Mana var 'NonSnow 'TyPU
+  , phyrexianB :: Mana var 'NonSnow 'TyPB
+  , phyrexianR :: Mana var 'NonSnow 'TyPR
+  , phyrexianG :: Mana var 'NonSnow 'TyPG
+  , phyrexianC :: Mana var 'NonSnow 'TyPC
   }
   deriving (Eq, Ord, Typeable) --  TODO: Make some of these orphans
 
@@ -46,24 +46,25 @@ data HybridManaCost (var :: Var) = HybridManaCost
   , hybridB2 :: Mana var 'NonSnow 'TyB2
   , hybridR2 :: Mana var 'NonSnow 'TyR2
   , hybridG2 :: Mana var 'NonSnow 'TyG2
+  , hybridC2 :: Mana var 'NonSnow 'TyC2
   }
   deriving (Eq, Ord, Typeable) --  TODO: Make some of these orphans
 
 data DynamicManaCost (var :: Var) = DynamicManaCost
   { costGeneric :: Mana var 'NonSnow 'Ty1
-  , costSnow :: Mana var 'Snow 'TyS
+  , costSnow :: Mana var 'Snow 'Ty1
   , costHybrid :: HybridManaCost var
   , costPhyrexian :: PhyrexianManaCost var
   }
   deriving (Eq, Ord, Typeable) --  TODO: Make some of these orphans
 
 data ManaCost (var :: Var) = ManaCost'
-  { costWhite :: Mana var 'NonSnow 'TyW
-  , costBlue :: Mana var 'NonSnow 'TyU
-  , costBlack :: Mana var 'NonSnow 'TyB
-  , costRed :: Mana var 'NonSnow 'TyR
-  , costGreen :: Mana var 'NonSnow 'TyG
-  , costColorless :: Mana var 'NonSnow 'TyC
+  { costW :: Mana var 'NonSnow 'TyW
+  , costU :: Mana var 'NonSnow 'TyU
+  , costB :: Mana var 'NonSnow 'TyB
+  , costR :: Mana var 'NonSnow 'TyR
+  , costG :: Mana var 'NonSnow 'TyG
+  , costC :: Mana var 'NonSnow 'TyC
   , costDynamic :: DynamicManaCost var
   }
   deriving (Eq, Ord, Typeable) --  TODO: Make some of these orphans
@@ -71,29 +72,29 @@ data ManaCost (var :: Var) = ManaCost'
 instance Semigroup (PhyrexianManaCost var) where
   pmc1 <> pmc2 =
     PhyrexianManaCost
-      { phyrexianWhite = w1 <> w2
-      , phyrexianBlue = u1 <> u2
-      , phyrexianBlack = b1 <> b2
-      , phyrexianRed = r1 <> r2
-      , phyrexianGreen = g1 <> g2
-      , phyrexianColorless = c1 <> c2
+      { phyrexianW = w1 <> w2
+      , phyrexianU = u1 <> u2
+      , phyrexianB = b1 <> b2
+      , phyrexianR = r1 <> r2
+      , phyrexianG = g1 <> g2
+      , phyrexianC = c1 <> c2
       }
    where
     PhyrexianManaCost
-      { phyrexianWhite = w1
-      , phyrexianBlue = u1
-      , phyrexianBlack = b1
-      , phyrexianRed = r1
-      , phyrexianGreen = g1
-      , phyrexianColorless = c1
+      { phyrexianW = w1
+      , phyrexianU = u1
+      , phyrexianB = b1
+      , phyrexianR = r1
+      , phyrexianG = g1
+      , phyrexianC = c1
       } = pmc1
     PhyrexianManaCost
-      { phyrexianWhite = w2
-      , phyrexianBlue = u2
-      , phyrexianBlack = b2
-      , phyrexianRed = r2
-      , phyrexianGreen = g2
-      , phyrexianColorless = c2
+      { phyrexianW = w2
+      , phyrexianU = u2
+      , phyrexianB = b2
+      , phyrexianR = r2
+      , phyrexianG = g2
+      , phyrexianC = c2
       } = pmc2
 
 instance Semigroup (HybridManaCost var) where
@@ -114,6 +115,7 @@ instance Semigroup (HybridManaCost var) where
       , hybridB2 = b21 <> b22
       , hybridR2 = r21 <> r22
       , hybridG2 = g21 <> g22
+      , hybridC2 = c21 <> c22
       }
    where
     HybridManaCost
@@ -132,6 +134,7 @@ instance Semigroup (HybridManaCost var) where
       , hybridB2 = b21
       , hybridR2 = r21
       , hybridG2 = g21
+      , hybridC2 = c21
       } = hmc1
     HybridManaCost
       { hybridWU = wu2
@@ -149,6 +152,7 @@ instance Semigroup (HybridManaCost var) where
       , hybridB2 = b22
       , hybridR2 = r22
       , hybridG2 = g22
+      , hybridC2 = c22
       } = hmc2
 
 instance Semigroup (DynamicManaCost var) where
@@ -176,43 +180,43 @@ instance Semigroup (DynamicManaCost var) where
 instance Semigroup (ManaCost var) where
   mc1 <> mc2 =
     ManaCost'
-      { costWhite = w1 <> w2
-      , costBlue = u1 <> u2
-      , costBlack = b1 <> b2
-      , costRed = r1 <> r2
-      , costGreen = g1 <> g2
-      , costColorless = c1 <> c2
+      { costW = w1 <> w2
+      , costU = u1 <> u2
+      , costB = b1 <> b2
+      , costR = r1 <> r2
+      , costG = g1 <> g2
+      , costC = c1 <> c2
       , costDynamic = d1 <> d2
       }
    where
     ManaCost'
-      { costWhite = w1
-      , costBlue = u1
-      , costBlack = b1
-      , costRed = r1
-      , costGreen = g1
-      , costColorless = c1
+      { costW = w1
+      , costU = u1
+      , costB = b1
+      , costR = r1
+      , costG = g1
+      , costC = c1
       , costDynamic = d1
       } = mc1
     ManaCost'
-      { costWhite = w2
-      , costBlue = u2
-      , costBlack = b2
-      , costRed = r2
-      , costGreen = g2
-      , costColorless = c2
+      { costW = w2
+      , costU = u2
+      , costB = b2
+      , costR = r2
+      , costG = g2
+      , costC = c2
       , costDynamic = d2
       } = mc2
 
 instance Monoid (PhyrexianManaCost var) where
   mempty =
     PhyrexianManaCost
-      { phyrexianWhite = mempty
-      , phyrexianBlue = mempty
-      , phyrexianBlack = mempty
-      , phyrexianRed = mempty
-      , phyrexianGreen = mempty
-      , phyrexianColorless = mempty
+      { phyrexianW = mempty
+      , phyrexianU = mempty
+      , phyrexianB = mempty
+      , phyrexianR = mempty
+      , phyrexianG = mempty
+      , phyrexianC = mempty
       }
 
 instance Monoid (HybridManaCost var) where
@@ -233,6 +237,7 @@ instance Monoid (HybridManaCost var) where
       , hybridB2 = mempty
       , hybridR2 = mempty
       , hybridG2 = mempty
+      , hybridC2 = mempty
       }
 
 instance Monoid (DynamicManaCost var) where
@@ -247,12 +252,12 @@ instance Monoid (DynamicManaCost var) where
 instance Monoid (ManaCost var) where
   mempty =
     ManaCost'
-      { costWhite = mempty
-      , costBlue = mempty
-      , costBlack = mempty
-      , costRed = mempty
-      , costGreen = mempty
-      , costColorless = mempty
+      { costW = mempty
+      , costU = mempty
+      , costB = mempty
+      , costR = mempty
+      , costG = mempty
+      , costC = mempty
       , costDynamic = mempty
       }
 

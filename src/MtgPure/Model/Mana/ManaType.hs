@@ -5,22 +5,31 @@
 
 module MtgPure.Model.Mana.ManaType (
   ManaType (..),
-  SManaType (..),
-  IsManaType (..),
+  ManaTypeToSnow,
+  SPoolType (..),
+  SCostType (..),
+  IsPoolType (..),
+  IsCostType (..),
 ) where
 
 import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.Mana.Snow (Snow (..))
 
 data ManaType
-  = TyW
+  = Ty1
+  | TyW
   | TyU
   | TyB
   | TyR
   | TyG
   | TyC
-  | Ty1
   | TyS
+  | TySW
+  | TySU
+  | TySB
+  | TySR
+  | TySG
+  | TySC
   | TyWU
   | TyUB
   | TyBR
@@ -36,6 +45,7 @@ data ManaType
   | TyB2
   | TyR2
   | TyG2
+  | TyC2
   | TyPW
   | TyPU
   | TyPB
@@ -44,67 +54,218 @@ data ManaType
   | TyPC
   deriving (Eq, Ord, Typeable)
 
-data SManaType (snow :: Snow) (mt :: ManaType) where
-  STyW :: SManaType 'NonSnow 'TyW
-  STyU :: SManaType 'NonSnow 'TyU
-  STyB :: SManaType 'NonSnow 'TyB
-  STyR :: SManaType 'NonSnow 'TyR
-  STyG :: SManaType 'NonSnow 'TyG
-  STyC :: SManaType 'NonSnow 'TyC
-  STy1 :: SManaType 'NonSnow 'Ty1
-  STyS :: SManaType 'Snow 'TyS
-  STyBG :: SManaType 'NonSnow 'TyBG
-  STyPW :: SManaType 'NonSnow 'TyPW
-  STyPU :: SManaType 'NonSnow 'TyPU
-  STyPB :: SManaType 'NonSnow 'TyPB
-  STyPR :: SManaType 'NonSnow 'TyPR
-  STyPG :: SManaType 'NonSnow 'TyPG
-  STyPC :: SManaType 'NonSnow 'TyPC
+type family ManaTypeToSnow (mt :: ManaType) = (snow :: Snow) where
+  ManaTypeToSnow 'Ty1 = 'NonSnow
+  ManaTypeToSnow 'TyW = 'NonSnow
+  ManaTypeToSnow 'TyU = 'NonSnow
+  ManaTypeToSnow 'TyB = 'NonSnow
+  ManaTypeToSnow 'TyR = 'NonSnow
+  ManaTypeToSnow 'TyG = 'NonSnow
+  ManaTypeToSnow 'TyC = 'NonSnow
+  ManaTypeToSnow 'TyS = 'Snow
+  ManaTypeToSnow 'TySW = 'Snow
+  ManaTypeToSnow 'TySU = 'Snow
+  ManaTypeToSnow 'TySB = 'Snow
+  ManaTypeToSnow 'TySR = 'Snow
+  ManaTypeToSnow 'TySG = 'Snow
+  ManaTypeToSnow 'TySC = 'Snow
+  ManaTypeToSnow 'TyWU = 'NonSnow
+  ManaTypeToSnow 'TyUB = 'NonSnow
+  ManaTypeToSnow 'TyBR = 'NonSnow
+  ManaTypeToSnow 'TyRG = 'NonSnow
+  ManaTypeToSnow 'TyGW = 'NonSnow
+  ManaTypeToSnow 'TyWB = 'NonSnow
+  ManaTypeToSnow 'TyUR = 'NonSnow
+  ManaTypeToSnow 'TyBG = 'NonSnow
+  ManaTypeToSnow 'TyRW = 'NonSnow
+  ManaTypeToSnow 'TyGU = 'NonSnow
+  ManaTypeToSnow 'TyW2 = 'NonSnow
+  ManaTypeToSnow 'TyU2 = 'NonSnow
+  ManaTypeToSnow 'TyB2 = 'NonSnow
+  ManaTypeToSnow 'TyR2 = 'NonSnow
+  ManaTypeToSnow 'TyG2 = 'NonSnow
+  ManaTypeToSnow 'TyC2 = 'NonSnow
+  ManaTypeToSnow 'TyPW = 'NonSnow
+  ManaTypeToSnow 'TyPU = 'NonSnow
+  ManaTypeToSnow 'TyPB = 'NonSnow
+  ManaTypeToSnow 'TyPR = 'NonSnow
+  ManaTypeToSnow 'TyPG = 'NonSnow
+  ManaTypeToSnow 'TyPC = 'NonSnow
 
-class IsManaType (snow :: Snow) (mt :: ManaType) where
-  singManaType :: SManaType snow mt
+data SPoolType (mt :: ManaType) where
+  SPTyW :: SPoolType 'TyW
+  SPTyU :: SPoolType 'TyU
+  SPTyB :: SPoolType 'TyB
+  SPTyR :: SPoolType 'TyR
+  SPTyG :: SPoolType 'TyG
+  SPTyC :: SPoolType 'TyC
+  SPTySW :: SPoolType 'TySW
+  SPTySU :: SPoolType 'TySU
+  SPTySB :: SPoolType 'TySB
+  SPTySR :: SPoolType 'TySR
+  SPTySG :: SPoolType 'TySG
+  SPTySC :: SPoolType 'TySC
 
-instance IsManaType 'NonSnow 'TyW where
-  singManaType = STyW
+data SCostType (mt :: ManaType) where
+  SCTy1 :: SCostType 'Ty1
+  SCTyW :: SCostType 'TyW
+  SCTyU :: SCostType 'TyU
+  SCTyB :: SCostType 'TyB
+  SCTyR :: SCostType 'TyR
+  SCTyG :: SCostType 'TyG
+  SCTyC :: SCostType 'TyC
+  SCTyS :: SCostType 'TyS
+  SCTyWU :: SCostType 'TyWU
+  SCTyUB :: SCostType 'TyUB
+  SCTyBR :: SCostType 'TyBR
+  SCTyRG :: SCostType 'TyRG
+  SCTyGW :: SCostType 'TyGW
+  SCTyWB :: SCostType 'TyWB
+  SCTyUR :: SCostType 'TyUR
+  SCTyBG :: SCostType 'TyBG
+  SCTyRW :: SCostType 'TyRW
+  SCTyGU :: SCostType 'TyGU
+  SCTyW2 :: SCostType 'TyW2
+  SCTyU2 :: SCostType 'TyU2
+  SCTyB2 :: SCostType 'TyB2
+  SCTyR2 :: SCostType 'TyR2
+  SCTyG2 :: SCostType 'TyG2
+  SCTyC2 :: SCostType 'TyC2
+  SCTyPW :: SCostType 'TyPW
+  SCTyPU :: SCostType 'TyPU
+  SCTyPB :: SCostType 'TyPB
+  SCTyPR :: SCostType 'TyPR
+  SCTyPG :: SCostType 'TyPG
+  SCTyPC :: SCostType 'TyPC
 
-instance IsManaType 'NonSnow 'TyU where
-  singManaType = STyU
+class IsPoolType (mt :: ManaType) where
+  singPoolType :: SPoolType mt
 
-instance IsManaType 'NonSnow 'TyB where
-  singManaType = STyB
+instance IsPoolType 'TyW where
+  singPoolType = SPTyW
 
-instance IsManaType 'NonSnow 'TyR where
-  singManaType = STyR
+instance IsPoolType 'TyU where
+  singPoolType = SPTyU
 
-instance IsManaType 'NonSnow 'TyG where
-  singManaType = STyG
+instance IsPoolType 'TyB where
+  singPoolType = SPTyB
 
-instance IsManaType 'NonSnow 'TyC where
-  singManaType = STyC
+instance IsPoolType 'TyR where
+  singPoolType = SPTyR
 
-instance IsManaType 'NonSnow 'Ty1 where
-  singManaType = STy1
+instance IsPoolType 'TyG where
+  singPoolType = SPTyG
 
-instance IsManaType 'Snow 'TyS where
-  singManaType = STyS
+instance IsPoolType 'TyC where
+  singPoolType = SPTyC
 
-instance IsManaType 'NonSnow 'TyBG where
-  singManaType = STyBG
+instance IsPoolType 'TySW where
+  singPoolType = SPTySW
 
-instance IsManaType 'NonSnow 'TyPW where
-  singManaType = STyPW
+instance IsPoolType 'TySU where
+  singPoolType = SPTySU
 
-instance IsManaType 'NonSnow 'TyPU where
-  singManaType = STyPU
+instance IsPoolType 'TySB where
+  singPoolType = SPTySB
 
-instance IsManaType 'NonSnow 'TyPB where
-  singManaType = STyPB
+instance IsPoolType 'TySR where
+  singPoolType = SPTySR
 
-instance IsManaType 'NonSnow 'TyPR where
-  singManaType = STyPR
+instance IsPoolType 'TySG where
+  singPoolType = SPTySG
 
-instance IsManaType 'NonSnow 'TyPG where
-  singManaType = STyPG
+instance IsPoolType 'TySC where
+  singPoolType = SPTySC
 
-instance IsManaType 'NonSnow 'TyPC where
-  singManaType = STyPC
+class IsCostType (mt :: ManaType) where
+  singCostType :: SCostType mt
+
+instance IsCostType 'Ty1 where
+  singCostType = SCTy1
+
+instance IsCostType 'TyW where
+  singCostType = SCTyW
+
+instance IsCostType 'TyU where
+  singCostType = SCTyU
+
+instance IsCostType 'TyB where
+  singCostType = SCTyB
+
+instance IsCostType 'TyR where
+  singCostType = SCTyR
+
+instance IsCostType 'TyG where
+  singCostType = SCTyG
+
+instance IsCostType 'TyC where
+  singCostType = SCTyC
+
+instance IsCostType 'TyS where
+  singCostType = SCTyS
+
+instance IsCostType 'TyWU where
+  singCostType = SCTyWU
+
+instance IsCostType 'TyUB where
+  singCostType = SCTyUB
+
+instance IsCostType 'TyBR where
+  singCostType = SCTyBR
+
+instance IsCostType 'TyRG where
+  singCostType = SCTyRG
+
+instance IsCostType 'TyGW where
+  singCostType = SCTyGW
+
+instance IsCostType 'TyWB where
+  singCostType = SCTyWB
+
+instance IsCostType 'TyUR where
+  singCostType = SCTyUR
+
+instance IsCostType 'TyBG where
+  singCostType = SCTyBG
+
+instance IsCostType 'TyRW where
+  singCostType = SCTyRW
+
+instance IsCostType 'TyGU where
+  singCostType = SCTyGU
+
+instance IsCostType 'TyW2 where
+  singCostType = SCTyW2
+
+instance IsCostType 'TyU2 where
+  singCostType = SCTyU2
+
+instance IsCostType 'TyB2 where
+  singCostType = SCTyB2
+
+instance IsCostType 'TyR2 where
+  singCostType = SCTyR2
+
+instance IsCostType 'TyG2 where
+  singCostType = SCTyG2
+
+instance IsCostType 'TyC2 where
+  singCostType = SCTyC2
+
+instance IsCostType 'TyPW where
+  singCostType = SCTyPW
+
+instance IsCostType 'TyPU where
+  singCostType = SCTyPU
+
+instance IsCostType 'TyPB where
+  singCostType = SCTyPB
+
+instance IsCostType 'TyPR where
+  singCostType = SCTyPR
+
+instance IsCostType 'TyPG where
+  singCostType = SCTyPG
+
+instance IsCostType 'TyPC where
+  singCostType = SCTyPC

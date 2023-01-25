@@ -358,9 +358,9 @@ mkHybridFilterLand name sym1 sym2 = Card name $
                                 CaseFin
                                   { caseFin = option
                                   , ofFin =
-                                      LS (AddMana you $ toManaPool (sym1, sym1)) $
-                                        LS (AddMana you $ toManaPool (sym1, sym2)) $
-                                          LZ (AddMana you $ toManaPool (sym2, sym2))
+                                      LS (AddMana you $ toManaPool (sym1, sym1, ())) $
+                                        LS (AddMana you $ toManaPool (sym1, sym2, ())) $
+                                          LZ (AddMana you $ toManaPool (sym2, sym2, ()))
                                   }
                       }
           ]

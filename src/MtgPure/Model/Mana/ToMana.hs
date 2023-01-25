@@ -41,8 +41,26 @@ instance ToMana var (ManaSymbol 'TyG, Int) 'NonSnow 'TyG where
 instance ToMana var (ManaSymbol 'TyC, Int) 'NonSnow 'TyC where
   toMana (C, n) = Mana n
 
-instance ToMana var (ManaSymbol 'TyS, Int) 'Snow 'TyS where
+instance ToMana var (ManaSymbol 'TyS, Int) 'Snow 'Ty1 where
   toMana (S, n) = Mana n
+
+instance ToMana var (ManaSymbol 'TySW, Int) 'Snow 'TyW where
+  toMana (SW, n) = Mana n
+
+instance ToMana var (ManaSymbol 'TySU, Int) 'Snow 'TyU where
+  toMana (SU, n) = Mana n
+
+instance ToMana var (ManaSymbol 'TySB, Int) 'Snow 'TyB where
+  toMana (SB, n) = Mana n
+
+instance ToMana var (ManaSymbol 'TySR, Int) 'Snow 'TyR where
+  toMana (SR, n) = Mana n
+
+instance ToMana var (ManaSymbol 'TySG, Int) 'Snow 'TyG where
+  toMana (SG, n) = Mana n
+
+instance ToMana var (ManaSymbol 'TySC, Int) 'Snow 'TyC where
+  toMana (SC, n) = Mana n
 
 instance ToMana var (ManaSymbol 'TyWU, Int) 'NonSnow 'TyWU where
   toMana (WU, n) = Mana n
@@ -89,6 +107,9 @@ instance ToMana var (ManaSymbol 'TyR2, Int) 'NonSnow 'TyR2 where
 instance ToMana var (ManaSymbol 'TyG2, Int) 'NonSnow 'TyG2 where
   toMana (G2, n) = Mana n
 
+instance ToMana var (ManaSymbol 'TyC2, Int) 'NonSnow 'TyC2 where
+  toMana (C2, n) = Mana n
+
 instance ToMana var (ManaSymbol 'TyPW, Int) 'NonSnow 'TyPW where
   toMana (PW, n) = Mana n
 
@@ -103,6 +124,9 @@ instance ToMana var (ManaSymbol 'TyPR, Int) 'NonSnow 'TyPR where
 
 instance ToMana var (ManaSymbol 'TyPG, Int) 'NonSnow 'TyPG where
   toMana (PG, n) = Mana n
+
+instance ToMana var (ManaSymbol 'TyPC, Int) 'NonSnow 'TyPC where
+  toMana (PC, n) = Mana n
 
 instance ToMana var (ManaSymbol 'TyW) 'NonSnow 'TyW where
   toMana W = toMana (W, 1 :: Int)
@@ -122,7 +146,7 @@ instance ToMana var (ManaSymbol 'TyG) 'NonSnow 'TyG where
 instance ToMana var (ManaSymbol 'TyC) 'NonSnow 'TyC where
   toMana C = toMana (C, 1 :: Int)
 
-instance ToMana var (ManaSymbol 'TyS) 'Snow 'TyS where
+instance ToMana var (ManaSymbol 'TyS) 'Snow 'Ty1 where
   toMana S = toMana (S, 1 :: Int)
 
 instance ToMana var (ManaSymbol 'TyWU) 'NonSnow 'TyWU where
@@ -167,6 +191,9 @@ instance ToMana var (ManaSymbol 'TyB2) 'NonSnow 'TyB2 where
 instance ToMana var (ManaSymbol 'TyR2) 'NonSnow 'TyR2 where
   toMana R2 = toMana (R2, 1 :: Int)
 
+instance ToMana var (ManaSymbol 'TyC2) 'NonSnow 'TyC2 where
+  toMana C2 = toMana (C2, 1 :: Int)
+
 instance ToMana var (ManaSymbol 'TyG2) 'NonSnow 'TyG2 where
   toMana G2 = toMana (G2, 1 :: Int)
 
@@ -184,3 +211,6 @@ instance ToMana var (ManaSymbol 'TyPR) 'NonSnow 'TyPR where
 
 instance ToMana var (ManaSymbol 'TyPG) 'NonSnow 'TyPG where
   toMana PG = toMana (PG, 1 :: Int)
+
+instance ToMana var (ManaSymbol 'TyPC) 'NonSnow 'TyPC where
+  toMana PC = toMana (PC, 1 :: Int)

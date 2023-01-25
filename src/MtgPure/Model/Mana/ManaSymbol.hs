@@ -19,6 +19,12 @@ data ManaSymbol :: ManaType -> Type where
   G :: ManaSymbol 'TyG
   C :: ManaSymbol 'TyC
   S :: ManaSymbol 'TyS
+  SW :: ManaSymbol 'TySW
+  SU :: ManaSymbol 'TySU
+  SB :: ManaSymbol 'TySB
+  SR :: ManaSymbol 'TySR
+  SG :: ManaSymbol 'TySG
+  SC :: ManaSymbol 'TySC
   WU :: ManaSymbol 'TyWU
   UB :: ManaSymbol 'TyUB
   BR :: ManaSymbol 'TyBR
@@ -34,11 +40,13 @@ data ManaSymbol :: ManaType -> Type where
   B2 :: ManaSymbol 'TyB2
   R2 :: ManaSymbol 'TyR2
   G2 :: ManaSymbol 'TyG2
+  C2 :: ManaSymbol 'TyC2
   PW :: ManaSymbol 'TyPW
   PU :: ManaSymbol 'TyPU
   PB :: ManaSymbol 'TyPB
   PR :: ManaSymbol 'TyPR
   PG :: ManaSymbol 'TyPG
+  PC :: ManaSymbol 'TyPC
   deriving (Typeable)
 
 deriving instance Eq (ManaSymbol a)
@@ -115,3 +123,24 @@ instance Monoid (ManaSymbol 'TyR2) where
 
 instance Monoid (ManaSymbol 'TyG2) where
   mempty = G2
+
+instance Monoid (ManaSymbol 'TyC2) where
+  mempty = C2
+
+instance Monoid (ManaSymbol 'TyPW) where
+  mempty = PW
+
+instance Monoid (ManaSymbol 'TyPU) where
+  mempty = PU
+
+instance Monoid (ManaSymbol 'TyPB) where
+  mempty = PB
+
+instance Monoid (ManaSymbol 'TyPR) where
+  mempty = PR
+
+instance Monoid (ManaSymbol 'TyPG) where
+  mempty = PG
+
+instance Monoid (ManaSymbol 'TyPC) where
+  mempty = PC

@@ -19,9 +19,8 @@ import safe MtgPure.Model.Mana.ManaCost (
  )
 import safe MtgPure.Model.Mana.ManaPool (CompleteManaPool (..), ManaPool (..))
 import safe MtgPure.Model.Mana.ManaSymbol (ManaSymbol (..))
-import safe MtgPure.Model.Mana.ManaType (IsManaType (..), ManaType (..), SManaType (..))
+import safe MtgPure.Model.Mana.ManaType (IsCostType (..), ManaType (..), ManaTypeToSnow, SCostType (..))
 import safe MtgPure.Model.Mana.Snow (Snow (..))
-import safe MtgPure.Model.Mana.ToMana (toMana)
 import safe MtgPure.Model.Variable (Var (..))
 
 -- NOTE: This takes `'Var` instead of `var :: Var` to avoid some authoring ambiguities
@@ -70,104 +69,125 @@ instance ToManaCost Integer where
 instance ToManaCost Int where
   toManaCost = toManaCost @(Mana 'Var 'NonSnow 'Ty1) . Mana
 
-instance IsManaType snow mt => ToManaCost (Mana 'Var snow mt) where
-  toManaCost x = case singManaType @snow @mt of
-    STyW -> emptyManaCost{costWhite = x}
-    STyU -> emptyManaCost{costBlue = x}
-    STyB -> emptyManaCost{costBlack = x}
-    STyR -> emptyManaCost{costRed = x}
-    STyG -> emptyManaCost{costGreen = x}
-    STyC -> emptyManaCost{costColorless = x}
-    STy1 -> emptyManaCost{costDynamic = mempty{costGeneric = x}}
-    STyS -> emptyManaCost{costDynamic = mempty{costSnow = castManaType x}}
-    STyBG -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridBG = x}}}
-    STyPW -> emptyManaCost{costDynamic = mempty{costPhyrexian = mempty{phyrexianWhite = x}}}
-    STyPU -> emptyManaCost{costDynamic = mempty{costPhyrexian = mempty{phyrexianBlue = x}}}
-    STyPB -> emptyManaCost{costDynamic = mempty{costPhyrexian = mempty{phyrexianBlack = x}}}
-    STyPR -> emptyManaCost{costDynamic = mempty{costPhyrexian = mempty{phyrexianRed = x}}}
-    STyPG -> emptyManaCost{costDynamic = mempty{costPhyrexian = mempty{phyrexianGreen = x}}}
-    STyPC -> emptyManaCost{costDynamic = mempty{costPhyrexian = mempty{phyrexianColorless = x}}}
+instance (IsCostType mt, snow ~ ManaTypeToSnow mt) => ToManaCost (Mana 'Var snow mt) where
+  toManaCost x = case singCostType @mt of
+    SCTy1 -> emptyManaCost{costDynamic = mempty{costGeneric = x}}
+    SCTyW -> emptyManaCost{costW = x}
+    SCTyU -> emptyManaCost{costU = x}
+    SCTyB -> emptyManaCost{costB = x}
+    SCTyR -> emptyManaCost{costR = x}
+    SCTyG -> emptyManaCost{costG = x}
+    SCTyC -> emptyManaCost{costC = x}
+    SCTyS -> emptyManaCost{costDynamic = mempty{costSnow = castManaType x}}
+    SCTyWU -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridWU = x}}}
+    SCTyUB -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridUB = x}}}
+    SCTyBR -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridBR = x}}}
+    SCTyRG -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridRG = x}}}
+    SCTyGW -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridGW = x}}}
+    SCTyWB -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridWB = x}}}
+    SCTyUR -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridUR = x}}}
+    SCTyBG -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridBG = x}}}
+    SCTyRW -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridRW = x}}}
+    SCTyGU -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridGU = x}}}
+    SCTyW2 -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridW2 = x}}}
+    SCTyU2 -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridU2 = x}}}
+    SCTyB2 -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridB2 = x}}}
+    SCTyR2 -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridR2 = x}}}
+    SCTyG2 -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridG2 = x}}}
+    SCTyC2 -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridC2 = x}}}
+    SCTyPW -> emptyManaCost{costDynamic = mempty{costPhyrexian = mempty{phyrexianW = x}}}
+    SCTyPU -> emptyManaCost{costDynamic = mempty{costPhyrexian = mempty{phyrexianU = x}}}
+    SCTyPB -> emptyManaCost{costDynamic = mempty{costPhyrexian = mempty{phyrexianB = x}}}
+    SCTyPR -> emptyManaCost{costDynamic = mempty{costPhyrexian = mempty{phyrexianR = x}}}
+    SCTyPG -> emptyManaCost{costDynamic = mempty{costPhyrexian = mempty{phyrexianG = x}}}
+    SCTyPC -> emptyManaCost{costDynamic = mempty{costPhyrexian = mempty{phyrexianC = x}}}
 
-instance ToManaCost (ManaSymbol a, Int) where
-  toManaCost = \case
-    x@(W, _) -> emptyManaCost{costWhite = toMana x}
-    x@(U, _) -> emptyManaCost{costBlue = toMana x}
-    x@(B, _) -> emptyManaCost{costBlack = toMana x}
-    x@(R, _) -> emptyManaCost{costRed = toMana x}
-    x@(G, _) -> emptyManaCost{costGreen = toMana x}
-    x@(C, _) -> emptyManaCost{costColorless = toMana x}
-    x@(S, _) -> emptyManaCost{costDynamic = mempty{costSnow = toMana x}}
-    x@(WU, _) -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridWU = toMana x}}}
-    x@(UB, _) -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridUB = toMana x}}}
-    x@(BR, _) -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridBR = toMana x}}}
-    x@(RG, _) -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridRG = toMana x}}}
-    x@(GW, _) -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridGW = toMana x}}}
-    x@(WB, _) -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridWB = toMana x}}}
-    x@(UR, _) -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridUR = toMana x}}}
-    x@(BG, _) -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridBG = toMana x}}}
-    x@(RW, _) -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridRW = toMana x}}}
-    x@(GU, _) -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridGU = toMana x}}}
-    x@(W2, _) -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridW2 = toMana x}}}
-    x@(U2, _) -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridU2 = toMana x}}}
-    x@(B2, _) -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridB2 = toMana x}}}
-    x@(R2, _) -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridR2 = toMana x}}}
-    x@(G2, _) -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridG2 = toMana x}}}
-    x@(PW, _) -> emptyManaCost{costDynamic = mempty{costPhyrexian = mempty{phyrexianWhite = toMana x}}}
-    x@(PU, _) -> emptyManaCost{costDynamic = mempty{costPhyrexian = mempty{phyrexianBlue = toMana x}}}
-    x@(PB, _) -> emptyManaCost{costDynamic = mempty{costPhyrexian = mempty{phyrexianBlack = toMana x}}}
-    x@(PR, _) -> emptyManaCost{costDynamic = mempty{costPhyrexian = mempty{phyrexianRed = toMana x}}}
-    x@(PG, _) -> emptyManaCost{costDynamic = mempty{costPhyrexian = mempty{phyrexianGreen = toMana x}}}
+instance IsCostType mt => ToManaCost (ManaSymbol mt, Int) where
+  toManaCost (_, n) = case singCostType @mt of
+    SCTy1 -> emptyManaCost{costDynamic = mempty{costGeneric = Mana n}}
+    SCTyW -> emptyManaCost{costW = Mana n}
+    SCTyU -> emptyManaCost{costU = Mana n}
+    SCTyB -> emptyManaCost{costB = Mana n}
+    SCTyR -> emptyManaCost{costR = Mana n}
+    SCTyG -> emptyManaCost{costG = Mana n}
+    SCTyC -> emptyManaCost{costC = Mana n}
+    SCTyS -> emptyManaCost{costDynamic = mempty{costSnow = Mana n}}
+    SCTyWU -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridWU = Mana n}}}
+    SCTyUB -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridUB = Mana n}}}
+    SCTyBR -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridBR = Mana n}}}
+    SCTyRG -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridRG = Mana n}}}
+    SCTyGW -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridGW = Mana n}}}
+    SCTyWB -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridWB = Mana n}}}
+    SCTyUR -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridUR = Mana n}}}
+    SCTyBG -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridBG = Mana n}}}
+    SCTyRW -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridRW = Mana n}}}
+    SCTyGU -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridGU = Mana n}}}
+    SCTyW2 -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridW2 = Mana n}}}
+    SCTyU2 -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridU2 = Mana n}}}
+    SCTyB2 -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridB2 = Mana n}}}
+    SCTyR2 -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridR2 = Mana n}}}
+    SCTyG2 -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridG2 = Mana n}}}
+    SCTyC2 -> emptyManaCost{costDynamic = mempty{costHybrid = mempty{hybridC2 = Mana n}}}
+    SCTyPW -> emptyManaCost{costDynamic = mempty{costPhyrexian = mempty{phyrexianW = Mana n}}}
+    SCTyPU -> emptyManaCost{costDynamic = mempty{costPhyrexian = mempty{phyrexianU = Mana n}}}
+    SCTyPB -> emptyManaCost{costDynamic = mempty{costPhyrexian = mempty{phyrexianB = Mana n}}}
+    SCTyPR -> emptyManaCost{costDynamic = mempty{costPhyrexian = mempty{phyrexianR = Mana n}}}
+    SCTyPG -> emptyManaCost{costDynamic = mempty{costPhyrexian = mempty{phyrexianG = Mana n}}}
+    SCTyPC -> emptyManaCost{costDynamic = mempty{costPhyrexian = mempty{phyrexianC = Mana n}}}
 
-instance ToManaCost (ManaSymbol a) where
-  toManaCost = \case
-    W -> toManaCost (W, 1 :: Int)
-    U -> toManaCost (U, 1 :: Int)
-    B -> toManaCost (B, 1 :: Int)
-    R -> toManaCost (R, 1 :: Int)
-    G -> toManaCost (G, 1 :: Int)
-    C -> toManaCost (C, 1 :: Int)
-    S -> toManaCost (S, 1 :: Int)
-    WU -> toManaCost (WU, 1 :: Int)
-    UB -> toManaCost (UB, 1 :: Int)
-    BR -> toManaCost (BR, 1 :: Int)
-    RG -> toManaCost (RG, 1 :: Int)
-    GW -> toManaCost (GW, 1 :: Int)
-    WB -> toManaCost (WB, 1 :: Int)
-    UR -> toManaCost (UR, 1 :: Int)
-    BG -> toManaCost (BG, 1 :: Int)
-    RW -> toManaCost (RW, 1 :: Int)
-    GU -> toManaCost (GU, 1 :: Int)
-    W2 -> toManaCost (W2, 1 :: Int)
-    U2 -> toManaCost (U2, 1 :: Int)
-    B2 -> toManaCost (B2, 1 :: Int)
-    R2 -> toManaCost (R2, 1 :: Int)
-    G2 -> toManaCost (G2, 1 :: Int)
-    PW -> toManaCost (PW, 1 :: Int)
-    PU -> toManaCost (PU, 1 :: Int)
-    PB -> toManaCost (PB, 1 :: Int)
-    PR -> toManaCost (PR, 1 :: Int)
-    PG -> toManaCost (PG, 1 :: Int)
+instance IsCostType mt => ToManaCost (ManaSymbol mt) where
+  toManaCost _ = case singCostType @mt of
+    SCTy1 -> emptyManaCost{costDynamic = mempty{costGeneric = Mana 1}}
+    SCTyW -> toManaCost (W, 1 :: Int)
+    SCTyU -> toManaCost (U, 1 :: Int)
+    SCTyB -> toManaCost (B, 1 :: Int)
+    SCTyR -> toManaCost (R, 1 :: Int)
+    SCTyG -> toManaCost (G, 1 :: Int)
+    SCTyC -> toManaCost (C, 1 :: Int)
+    SCTyS -> toManaCost (S, 1 :: Int)
+    SCTyWU -> toManaCost (WU, 1 :: Int)
+    SCTyUB -> toManaCost (UB, 1 :: Int)
+    SCTyBR -> toManaCost (BR, 1 :: Int)
+    SCTyRG -> toManaCost (RG, 1 :: Int)
+    SCTyGW -> toManaCost (GW, 1 :: Int)
+    SCTyWB -> toManaCost (WB, 1 :: Int)
+    SCTyUR -> toManaCost (UR, 1 :: Int)
+    SCTyBG -> toManaCost (BG, 1 :: Int)
+    SCTyRW -> toManaCost (RW, 1 :: Int)
+    SCTyGU -> toManaCost (GU, 1 :: Int)
+    SCTyW2 -> toManaCost (W2, 1 :: Int)
+    SCTyU2 -> toManaCost (U2, 1 :: Int)
+    SCTyB2 -> toManaCost (B2, 1 :: Int)
+    SCTyR2 -> toManaCost (R2, 1 :: Int)
+    SCTyG2 -> toManaCost (G2, 1 :: Int)
+    SCTyC2 -> toManaCost (C2, 1 :: Int)
+    SCTyPW -> toManaCost (PW, 1 :: Int)
+    SCTyPU -> toManaCost (PU, 1 :: Int)
+    SCTyPB -> toManaCost (PB, 1 :: Int)
+    SCTyPR -> toManaCost (PR, 1 :: Int)
+    SCTyPG -> toManaCost (PG, 1 :: Int)
+    SCTyPC -> toManaCost (PC, 1 :: Int)
 
 instance ToManaCost (ManaPool 'NonSnow) where
   toManaCost (ManaPool w u b r g c) =
     emptyManaCost
-      { costWhite = litMana w
-      , costBlue = litMana u
-      , costBlack = litMana b
-      , costRed = litMana r
-      , costGreen = litMana g
-      , costColorless = litMana c
+      { costW = litMana w
+      , costU = litMana u
+      , costB = litMana b
+      , costR = litMana r
+      , costG = litMana g
+      , costC = litMana c
       }
 
 instance ToManaCost (ManaPool 'Snow) where
   toManaCost (ManaPool w u b r g c) =
     emptyManaCost
-      { costWhite = go w
-      , costBlue = go u
-      , costBlack = go b
-      , costRed = go r
-      , costGreen = go g
-      , costColorless = go c
+      { costW = go w
+      , costU = go u
+      , costB = go b
+      , costR = go r
+      , costG = go g
+      , costC = go c
       }
    where
     go = litMana . thawMana

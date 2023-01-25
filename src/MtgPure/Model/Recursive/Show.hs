@@ -1162,12 +1162,12 @@ showMana =
 showPhyrexianManaCost :: PhyrexianManaCost var -> EnvM ParenItems
 showPhyrexianManaCost cost = noParens do
   let PhyrexianManaCost
-        { phyrexianWhite = w
-        , phyrexianBlue = u
-        , phyrexianBlack = b
-        , phyrexianRed = r
-        , phyrexianGreen = g
-        , phyrexianColorless = c
+        { phyrexianW = w
+        , phyrexianU = u
+        , phyrexianB = b
+        , phyrexianR = r
+        , phyrexianG = g
+        , phyrexianC = c
         } = cost
   case cost == mempty of
     True -> pure $ pure "mempty"
@@ -1223,12 +1223,12 @@ showDynamicManaCost cost = noParens do
 showManaCost :: ManaCost var -> EnvM ParenItems
 showManaCost cost = yesParens do
   let ManaCost'
-        { costWhite = w
-        , costBlue = u
-        , costBlack = b
-        , costRed = r
-        , costGreen = g
-        , costColorless = c
+        { costW = w
+        , costU = u
+        , costB = b
+        , costR = r
+        , costG = g
+        , costC = c
         , costDynamic = dyn
         } = cost
       DynamicManaCost
@@ -1241,12 +1241,12 @@ showManaCost cost = yesParens do
         { hybridBG = bg
         } = hybrid
       PhyrexianManaCost
-        { phyrexianWhite = _pw
-        , phyrexianBlue = _pu
-        , phyrexianBlack = _pb
-        , phyrexianRed = _pr
-        , phyrexianGreen = _pg
-        , phyrexianColorless = _pc
+        { phyrexianW = _pw
+        , phyrexianU = _pu
+        , phyrexianB = _pb
+        , phyrexianR = _pr
+        , phyrexianG = _pg
+        , phyrexianC = _pc
         } = phyrexian
       lits =
         sequence

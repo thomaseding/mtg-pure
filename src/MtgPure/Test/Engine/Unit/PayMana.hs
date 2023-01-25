@@ -16,10 +16,8 @@ module MtgPure.Test.Engine.Unit.PayMana (
 import safe GHC.Stack (HasCallStack)
 import safe MtgPure.Engine.Pay (CanPayManaCost (..), playerCanPayManaCost)
 import safe MtgPure.Model.Life (Life (..))
-import safe MtgPure.Model.Mana.Mana (freezeMana)
 import safe MtgPure.Model.Mana.ManaPool (CompleteManaPool)
 import safe MtgPure.Model.Mana.ManaSymbol (ManaSymbol (..))
-import safe MtgPure.Model.Mana.ToMana (ToMana (toMana))
 import safe MtgPure.Model.Mana.ToManaCost (ToManaCost (..))
 import safe MtgPure.Model.Mana.ToManaPool (ToCompleteManaPool (..))
 import safe MtgPure.Model.Player (Player (..), emptyPlayer)
@@ -70,42 +68,42 @@ testSingletonPool = do
   testPaymentIO None 20 W S
   testPaymentIO None 20 W UB
   testPaymentIO None 20 W U2
-  testPaymentIO Unique 20 (freezeMana (toMana W)) S
-  testPaymentIO Unique 20 (freezeMana (toMana W)) WU
-  testPaymentIO Unique 20 (freezeMana (toMana W)) W2
-  testPaymentIO None 20 (freezeMana (toMana W)) UB
-  testPaymentIO None 20 (freezeMana (toMana W)) U2
+  testPaymentIO Unique 20 SW S
+  testPaymentIO Unique 20 SW WU
+  testPaymentIO Unique 20 SW W2
+  testPaymentIO None 20 SW UB
+  testPaymentIO None 20 SW U2
 
 testSnowCosts :: HasCallStack => IO ()
 testSnowCosts = do
-  testPaymentIO Unique 20 (freezeMana (toMana W)) S
-  testPaymentIO Unique 20 (freezeMana (toMana W), W) 0
-  testPaymentIO Ambiguous 20 (freezeMana (toMana W), W) 1
-  testPaymentIO Ambiguous 20 (freezeMana (toMana W), freezeMana (toMana G)) 1
-  testPaymentIO Unique 20 (freezeMana (toMana W), W) 2
-  testPaymentIO Unique 20 (freezeMana (toMana W), W) (S, W)
-  testPaymentIO Unique 20 (freezeMana (toMana W), W) (1, W)
-  testPaymentIO Unique 20 (freezeMana (toMana W), W) (1, S)
-  testPaymentIO None 20 (freezeMana (toMana W), freezeMana (toMana G)) (W, W)
-  testPaymentIO Ambiguous 20 (freezeMana (toMana W), freezeMana (toMana G)) 1
-  testPaymentIO Unique 20 (freezeMana (toMana W), freezeMana (toMana G)) 2
-  testPaymentIO Unique 20 (freezeMana (toMana W), freezeMana (toMana G)) (W, G)
-  testPaymentIO Unique 20 (freezeMana (toMana W), freezeMana (toMana G)) (1, G)
-  testPaymentIO Unique 20 (freezeMana (toMana W), freezeMana (toMana G)) (1, W)
-  testPaymentIO Unique 20 (freezeMana (toMana W), freezeMana (toMana G)) (S, G)
-  testPaymentIO Unique 20 (freezeMana (toMana W), freezeMana (toMana G)) (S, W)
-  testPaymentIO Unique 20 (freezeMana (toMana W), freezeMana (toMana W)) (1, S)
-  testPaymentIO Unique 20 (freezeMana (toMana W), freezeMana (toMana G)) (1, S)
-  testPaymentIO Unique 20 (freezeMana (toMana W), freezeMana (toMana G)) (S, 2 :: Int)
-  testPaymentIO None 20 (freezeMana (toMana W), freezeMana (toMana G)) 3
-  testPaymentIO Unique 20 (freezeMana (toMana W), W) S
-  testPaymentIO Unique 20 (freezeMana (toMana W), (W, 2)) S
-  testPaymentIO Ambiguous 20 (freezeMana (toMana W), freezeMana (toMana U)) S
-  testPaymentIO Unique 20 (freezeMana (toMana (W, 2 :: Int))) S
-  testPaymentIO Unique 20 (freezeMana (toMana (W, 2 :: Int))) (S, 2 :: Int)
-  testPaymentIO Unique 20 (freezeMana (toMana (W, 3 :: Int))) (S, 2 :: Int)
-  testPaymentIO Unique 20 (freezeMana (toMana W), freezeMana (toMana U)) (S, 2 :: Int)
-  testPaymentIO None 20 (freezeMana (toMana (W, 2 :: Int))) (S, 3 :: Int)
+  testPaymentIO Unique 20 SW S
+  testPaymentIO Unique 20 SW 0
+  testPaymentIO Ambiguous 20 (SW, W) 1
+  testPaymentIO Ambiguous 20 (SW, SG) 1
+  testPaymentIO Unique 20 (SW, W) 2
+  testPaymentIO Unique 20 (SW, W) (S, W)
+  testPaymentIO Unique 20 (SW, W) (1, W)
+  testPaymentIO Unique 20 (SW, W) (1, S)
+  testPaymentIO None 20 (SW, SG) (W, W)
+  testPaymentIO Ambiguous 20 (SW, SG) 1
+  testPaymentIO Unique 20 (SW, SG) 2
+  testPaymentIO Unique 20 (SW, SG) (W, G)
+  testPaymentIO Unique 20 (SW, SG) (1, G)
+  testPaymentIO Unique 20 (SW, SG) (1, W)
+  testPaymentIO Unique 20 (SW, SG) (S, G)
+  testPaymentIO Unique 20 (SW, SG) (S, W)
+  testPaymentIO Unique 20 (SW, SG) (1, S)
+  testPaymentIO Unique 20 (SW, SG) (1, S)
+  testPaymentIO Unique 20 (SW, SG) (S, S)
+  testPaymentIO None 20 (SW, SG) 3
+  testPaymentIO Unique 20 (SW, W) S
+  testPaymentIO Unique 20 (SW, (W, W)) S
+  testPaymentIO Ambiguous 20 (SW, SU) S
+  testPaymentIO Unique 20 (SW, SW) S
+  testPaymentIO Unique 20 (SW, SW) (S, S)
+  testPaymentIO Unique 20 (SW, SW, SW) (S, S)
+  testPaymentIO Unique 20 (SW, SU) (S, S)
+  testPaymentIO None 20 (SW, SW) (S, S, S)
 
 testTwoBridCosts :: HasCallStack => IO ()
 testTwoBridCosts = do
@@ -158,7 +156,7 @@ testMixedCosts = do
   testPaymentIO Ambiguous 20 (W, W, W, U, U, C) (4, W)
   testPaymentIO Ambiguous 20 (W, W, W, U, U, C) 5
   testPaymentIO None 20 (W, W, W, U, U, C) 7
-  testPaymentIO Unique 20 (freezeMana (toMana W), freezeMana (toMana U)) (W, U)
+  testPaymentIO Unique 20 (SW, SU) (W, U)
 
 toPlayer :: HasCallStack => ToCompleteManaPool pool => Life -> pool -> Player
 toPlayer life pool =
