@@ -1,13 +1,16 @@
--- ghci -hidir .output -odir .output -fobject-code -Wall -Werror -XDataKinds MtgPure
+{-# LANGUAGE Safe #-}
 
 module MtgPure (
   module MtgPure.AllCards,
   module MtgPure.Cards,
-  module MtgPure.Client.Console,
+  module MtgPure.Client.Terminal,
   module MtgPure.Engine,
   module MtgPure.Model,
   NatList (..),
+  mainAnsiBoxExample,
+  mainAnsiBoxMagic,
   mainCodeGenToObjectN,
+  mainHybrid,
   mainManaAbility,
   mainRagingGoblin,
   mainShock,
@@ -17,9 +20,14 @@ module MtgPure (
 ) where
 
 import safe Data.Nat (NatList (..))
+import safe Demo.AnsiBox (mainAnsiBoxExample)
+import safe Demo.AnsiMagicBoard (mainAnsiBoxMagic)
+import safe Demo.SerializableMonadApi.ProofOfConcept ()
+import safe Demo.SerializableMonadApi.Variable ()
+import safe Demo.SerializableMonadApi.VariableMonad ()
 import safe MtgPure.AllCards
 import safe MtgPure.Cards
-import safe MtgPure.Client.Console
+import safe MtgPure.Client.Terminal
 import safe MtgPure.Engine hiding (
   ActivePlayer,
   ControllerOf,
@@ -29,12 +37,10 @@ import safe MtgPure.Engine hiding (
  )
 import safe MtgPure.Model
 import safe MtgPure.Model.Object.ToObjectN.CodeGen (mainCodeGenToObjectN)
-import safe MtgPure.Test.Engine.Unit.MagicCont (mainUnitMagicCont)
-import safe MtgPure.Test.Engine.Unit.PayMana (mainUnitPayMana)
-import safe MtgPure.Test.Game.ManaAbility (mainManaAbility)
-import safe MtgPure.Test.Game.RagingGoblin (mainRagingGoblin)
-import safe MtgPure.Test.Game.Shock (mainShock)
-import safe MtgPure.Test.Game.StoneRain (mainStoneRain)
-import safe MtgPure.Test.SerializableMonadApi.ProofOfConcept ()
-import safe MtgPure.Test.SerializableMonadApi.Variabled ()
-import safe MtgPure.Test.SerializableMonadApi.VariabledMonad ()
+import safe Test.Engine.Unit.MagicCont (mainUnitMagicCont)
+import safe Test.Engine.Unit.PayMana (mainUnitPayMana)
+import safe Test.Game.Hybrid (mainHybrid)
+import safe Test.Game.ManaAbility (mainManaAbility)
+import safe Test.Game.RagingGoblin (mainRagingGoblin)
+import safe Test.Game.Shock (mainShock)
+import safe Test.Game.StoneRain (mainStoneRain)

@@ -1,3 +1,4 @@
+{-# LANGUAGE Safe #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Avoid lambda" #-}
@@ -33,6 +34,7 @@ module MtgPure.Engine.Core (
   getPlayer,
   indexToActivated,
   newObjectId,
+  newVariableId,
   pickOneZO,
   pushGraveyardCard,
   pushHandCard,
@@ -124,6 +126,7 @@ import safe MtgPure.Model.Recursive (
   YourCardFacet (..),
   fromSome,
  )
+import MtgPure.Model.Variable (VariableId, VariableId' (..))
 import safe MtgPure.Model.Zone (IsZone (..), SZone (..), Zone (..))
 import safe MtgPure.Model.ZoneObject.Convert (
   ToZO0,
@@ -450,6 +453,12 @@ newObjectId = logCall 'newObjectId do
   ObjectId i <- fromRO $ gets magicNextObjectId
   modify \st -> st{magicNextObjectId = ObjectId $ i + 1}
   pure $ ObjectId i
+
+newVariableId :: Monad m => Magic 'Private 'RW m VariableId
+newVariableId = logCall 'newVariableId do
+  VariableId i <- fromRO $ gets magicNextVariableId
+  modify \st -> st{magicNextVariableId = VariableId $ i + 1}
+  pure $ VariableId i
 
 data PlayerCardsInfo zone m = PlayerCardsInfo
   { pci_ :: ()

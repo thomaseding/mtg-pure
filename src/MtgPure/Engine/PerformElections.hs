@@ -1,3 +1,4 @@
+{-# LANGUAGE Safe #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Avoid lambda" #-}
@@ -16,12 +17,16 @@ module MtgPure.Engine.PerformElections (
 
 import safe Control.Exception (assert)
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
+import safe qualified Control.Monad.Trans as M
 import safe Control.Monad.Util (untilJust)
 import safe Data.List.NonEmpty (NonEmpty (..))
 import safe qualified Data.Map.Strict as Map
+import safe Data.Nat (Fin (..), IsNat, NatList (..))
+import safe Data.Typeable (Typeable)
 import safe MtgPure.Engine.Fwd.Api (
   caseOf,
   getPermanent,
+  newVariableId,
   zosSatisfying,
  )
 import safe MtgPure.Engine.Monad (fromPublic, fromRO, gets, modify)
@@ -50,6 +55,7 @@ import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Permanent (Permanent (..))
 import safe MtgPure.Model.PrePost (PrePost (..))
 import safe MtgPure.Model.Recursive (
+  Condition,
   Effect (..),
   Elect (..),
   List (List),
@@ -91,7 +97,7 @@ performElections' failureX zoStack goTerm = logCall 'performElections' \case
   ActivePlayer{} -> undefined
   All masked -> electAll goRec masked
   Choose oPlayer thisToElect -> electA Choose' zoStack failureX goRec oPlayer thisToElect
-  ChooseOption{} -> undefined
+  ChooseOption zoPlayer choices choiceToElect -> chooseOption goRec zoPlayer choices choiceToElect
   Condition{} -> undefined
   ControllerOf zo cont -> electControllerOf goRec zo cont
   Cost cost -> goTerm cost
@@ -114,13 +120,30 @@ performElections' failureX zoStack goTerm = logCall 'performElections' \case
   goTarget :: IsZO zone ot => ZOPlayer -> WithMaskedObject zone (Elect p el) ot -> Magic 'Private 'RW m x
   goTarget = electA Target' zoStack failureX goRec
 
+chooseOption ::
+  (Monad m, IsNat n, Typeable user) =>
+  (Elect p el ot -> Magic 'Private 'RW m x) ->
+  ZOPlayer ->
+  NatList user n Condition ->
+  (Variable (Fin user n) -> Elect p el ot) ->
+  Magic 'Private 'RW m x
+chooseOption goElect zoPlayer choices cont = logCall 'chooseOption do
+  let oPlayer = zo1ToO zoPlayer
+  opaque <- fromRO $ gets mkOpaqueGameState
+  prompt <- fromRO $ gets magicPrompt
+  fin <- M.lift $ promptChooseOption prompt opaque oPlayer choices
+  varId <- newVariableId
+  let var = ReifiedVariable varId fin
+  goElect $ cont var
+
 electVariableInt ::
   Monad m =>
   (Elect 'Pre el ot -> Magic 'Private 'RW m x) ->
   (Variable Int -> Elect 'Pre el ot) ->
   Magic 'Private 'RW m x
 electVariableInt goElect cont = logCall 'electVariableInt do
-  let var = ReifiedVariable undefined undefined
+  varId <- newVariableId
+  let var = ReifiedVariable varId undefined -- TODO: prompt user for reified value
   goElect $ cont var
 
 controllerOf ::

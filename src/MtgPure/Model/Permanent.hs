@@ -1,3 +1,4 @@
+{-# LANGUAGE Safe #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Avoid lambda" #-}

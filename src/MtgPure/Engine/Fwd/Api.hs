@@ -1,3 +1,4 @@
+{-# LANGUAGE Safe #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Avoid lambda" #-}
@@ -53,6 +54,7 @@ module MtgPure.Engine.Fwd.Api (
   indexToActivated,
   modifyPlayer,
   newObjectId,
+  newVariableId,
   ownerOf,
   pay,
   performElections,
@@ -132,6 +134,7 @@ import safe MtgPure.Model.Recursive (
   Elect,
   Requirement,
  )
+import safe MtgPure.Model.Variable (VariableId)
 import safe MtgPure.Model.Zone (Zone (..))
 import safe MtgPure.Model.ZoneObject.ZoneObject (IsOTN, IsZO, ZO)
 
@@ -393,6 +396,9 @@ modifyPlayer o f = do
 
 newObjectId :: Monad m => Magic 'Private 'RW m ObjectId
 newObjectId = fwd0 fwd_newObjectId
+
+newVariableId :: Monad m => Magic 'Private 'RW m VariableId
+newVariableId = fwd0 fwd_newVariableId
 
 ownerOf :: (IsZO zone ot, Monad m) => ZO zone ot -> Magic 'Private 'RO m (Object 'OTPlayer)
 ownerOf = fwd1 fwd_ownerOf

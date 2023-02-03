@@ -1,3 +1,4 @@
+{-# LANGUAGE Safe #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
@@ -15,6 +16,7 @@ module MtgPure.Model.Recursive.Show (
   showSetToken,
 ) where
 
+import safe qualified Control.Monad as M
 import safe qualified Control.Monad.State.Strict as State
 import safe qualified Data.DList as DList
 import safe Data.Inst (
@@ -48,7 +50,13 @@ import safe MtgPure.Model.Damage (Damage, Damage' (..))
 import safe MtgPure.Model.LandType (LandType (..))
 import safe MtgPure.Model.Loyalty (Loyalty)
 import safe MtgPure.Model.Mana.Mana (Mana (..))
-import safe MtgPure.Model.Mana.ManaCost (DynamicManaCost (..), HybridManaCost (..), ManaCost (..), PhyrexianManaCost (..), isOnlyGeneric)
+import safe MtgPure.Model.Mana.ManaCost (
+  DynamicManaCost (..),
+  HybridManaCost (..),
+  ManaCost (..),
+  PhyrexianManaCost (..),
+  isOnlyGeneric,
+ )
 import safe MtgPure.Model.Mana.ManaPool (CompleteManaPool (..), ManaPool (..))
 import safe MtgPure.Model.Mana.ManaSymbol (ManaSymbol (..))
 import safe MtgPure.Model.Object.IsObjectType (IsObjectType (..))
@@ -137,6 +145,7 @@ import safe MtgPure.Model.Recursive (
 import safe MtgPure.Model.TimePoint (TimePoint (..))
 import safe MtgPure.Model.Toughness (Toughness)
 import safe MtgPure.Model.Variable (
+  Var (..),
   Variable (..),
   VariableId,
   VariableId' (..),
@@ -243,14 +252,15 @@ instance IsZO zone ot => Show (WithThisTriggered zone ot) where
 
 ----------------------------------------
 
-class LiteralMana mana where
-  literalMana :: mana -> Maybe Int
+tryLitMana :: Mana var snow mt -> Maybe Int
+tryLitMana = \case
+  Mana x -> Just x
+  VariableMana{} -> Nothing
+  SumMana{} -> Nothing
 
-instance LiteralMana (Mana var snow mt) where
-  literalMana = \case
-    Mana x -> Just x
-    VariableMana{} -> Nothing
-    SumMana{} -> Nothing
+litMana :: Mana 'NoVar snow mt -> Int
+litMana = \case
+  Mana x -> x
 
 ----------------------------------------
 
@@ -1210,14 +1220,16 @@ showDynamicManaCost cost = noParens do
         , costHybrid = hy
         , costPhyrexian = phy
         } = cost
-  case isOnlyGeneric cost of
-    True -> dropParens <$> showMana x
-    False -> do
-      sS <- parens <$> showMana s
-      sX <- parens <$> showMana x
-      sHy <- parens <$> showHybridManaCost hy
-      sPhy <- dollar <$> showPhyrexianManaCost phy
-      pure $ pure "DynamicManaCost " <> sS <> pure " " <> sX <> pure " " <> sHy <> sPhy
+  case cost == mempty of
+    True -> pure $ pure "mempty"
+    False -> case isOnlyGeneric cost of
+      True -> dropParens <$> showMana x
+      False -> do
+        sS <- parens <$> showMana s
+        sX <- parens <$> showMana x
+        sHy <- parens <$> showHybridManaCost hy
+        sPhy <- dollar <$> showPhyrexianManaCost phy
+        pure $ pure "DynamicManaCost " <> sS <> pure " " <> sX <> pure " " <> sHy <> sPhy
 
 -- FIXME
 showManaCost :: ManaCost var -> EnvM ParenItems
@@ -1238,54 +1250,172 @@ showManaCost cost = yesParens do
         , costPhyrexian = phyrexian
         } = dyn
       HybridManaCost
-        { hybridBG = bg
+        { hybridWU = wu
+        , hybridUB = ub
+        , hybridBR = br
+        , hybridRG = rg
+        , hybridGW = gw
+        , hybridWB = wb
+        , hybridUR = ur
+        , hybridBG = bg
+        , hybridRW = rw
+        , hybridGU = gu
+        , hybridW2 = w2
+        , hybridU2 = u2
+        , hybridB2 = b2
+        , hybridR2 = r2
+        , hybridG2 = g2
+        , hybridC2 = c2
         } = hybrid
       PhyrexianManaCost
-        { phyrexianW = _pw
-        , phyrexianU = _pu
-        , phyrexianB = _pb
-        , phyrexianR = _pr
-        , phyrexianG = _pg
-        , phyrexianC = _pc
+        { phyrexianW = pw
+        , phyrexianU = pu
+        , phyrexianB = pb
+        , phyrexianR = pr
+        , phyrexianG = pg
+        , phyrexianC = pc
         } = phyrexian
       lits =
         sequence
-          [ literalMana w
-          , literalMana u
-          , literalMana b
-          , literalMana r
-          , literalMana g
-          , literalMana c
-          , literalMana x
-          , literalMana s
-          , literalMana bg
+          [ tryLitMana x
+          , tryLitMana w
+          , tryLitMana u
+          , tryLitMana b
+          , tryLitMana r
+          , tryLitMana g
+          , tryLitMana c
+          , tryLitMana s
+          , tryLitMana wu
+          , tryLitMana ub
+          , tryLitMana br
+          , tryLitMana rg
+          , tryLitMana gw
+          , tryLitMana wb
+          , tryLitMana ur
+          , tryLitMana bg
+          , tryLitMana rw
+          , tryLitMana gu
+          , tryLitMana w2
+          , tryLitMana u2
+          , tryLitMana b2
+          , tryLitMana r2
+          , tryLitMana g2
+          , tryLitMana c2
+          , tryLitMana pw
+          , tryLitMana pu
+          , tryLitMana pb
+          , tryLitMana pr
+          , tryLitMana pg
+          , tryLitMana pc
           ]
   case lits of
-    Just [litW, litU, litB, litR, litG, litC, litX, litS, litBG] -> do
-      let numX = litX
-          numW = (W, litW)
-          numU = (U, litU)
-          numB = (B, litB)
-          numR = (R, litR)
-          numG = (G, litG)
-          numC = (C, litC)
-          numS = (S, litS)
-          numBG = (BG, litBG)
-          go (sym, num) = case num of
-            0 -> Nothing
-            1 -> Just $ show sym
-            _ -> Just $ "(" ++ show sym ++ "," ++ show num ++ ")"
-          go' num = case num of
-            0 -> Nothing
-            _ -> Just $ show num
-          manas' =
-            [go' numX, go numW, go numU, go numB, go numR, go numG, go numC, go numS, go numBG]
-          manas = catMaybes manas'
-          sManas = case manas of
-            [] -> "0"
-            [m] -> m
-            _ -> "(" ++ List.intercalate "," manas ++ ")"
-      pure $ pure $ fromString $ "toManaCost " ++ sManas
+    Just
+      [ litX
+        , litW
+        , litU
+        , litB
+        , litR
+        , litG
+        , litC
+        , litS
+        , litWU
+        , litUB
+        , litBR
+        , litRG
+        , litGW
+        , litWB
+        , litUR
+        , litBG
+        , litRW
+        , litGU
+        , litW2
+        , litU2
+        , litB2
+        , litR2
+        , litG2
+        , litC2
+        , litPW
+        , litPU
+        , litPB
+        , litPR
+        , litPG
+        , litPC
+        ] -> do
+        let numX = litX
+            numW = (W, litW)
+            numU = (U, litU)
+            numB = (B, litB)
+            numR = (R, litR)
+            numG = (G, litG)
+            numC = (C, litC)
+            numS = (S, litS)
+            numWU = (WU, litWU)
+            numUB = (UB, litUB)
+            numBR = (BR, litBR)
+            numRG = (RG, litRG)
+            numGW = (GW, litGW)
+            numWB = (WB, litWB)
+            numUR = (UR, litUR)
+            numBG = (BG, litBG)
+            numRW = (RW, litRW)
+            numGU = (GU, litGU)
+            numW2 = (W2, litW2)
+            numU2 = (U2, litU2)
+            numB2 = (B2, litB2)
+            numR2 = (R2, litR2)
+            numG2 = (G2, litG2)
+            numC2 = (C2, litC2)
+            numPW = (PW, litPW)
+            numPU = (PU, litPU)
+            numPB = (PB, litPB)
+            numPR = (PR, litPR)
+            numPG = (PG, litPG)
+            numPC = (PC, litPC)
+            go (sym, num)
+              | num == 0 = []
+              | num < 10 = replicate num $ show sym
+              | otherwise = ["(" ++ show sym ++ "," ++ show num ++ ")"]
+            go' num = case num of
+              0 -> []
+              _ -> [show num]
+            manas' =
+              [ go' numX
+              , go numW
+              , go numU
+              , go numB
+              , go numR
+              , go numG
+              , go numC
+              , go numS
+              , go numWU
+              , go numUB
+              , go numBR
+              , go numRG
+              , go numGW
+              , go numWB
+              , go numUR
+              , go numBG
+              , go numRW
+              , go numGU
+              , go numW2
+              , go numU2
+              , go numB2
+              , go numR2
+              , go numG2
+              , go numC2
+              , go numPW
+              , go numPU
+              , go numPB
+              , go numPR
+              , go numPG
+              , go numPC
+              ]
+            manas = M.join manas'
+            sManas = case manas of
+              [] -> "0"
+              [m] -> m
+              _ -> "(" ++ List.intercalate "," manas ++ ")"
+        pure $ pure $ fromString $ "toManaCost " ++ sManas
     _ -> do
       sW <- parens <$> showMana w
       sU <- parens <$> showMana u
@@ -1293,9 +1423,7 @@ showManaCost cost = yesParens do
       sR <- parens <$> showMana r
       sG <- parens <$> showMana g
       sC <- parens <$> showMana c
-      sX <- parens <$> showMana x
-      sS <- parens <$> showMana s
-      sBG <- parens <$> showMana bg
+      sDyn <- dollar <$> showDynamicManaCost dyn
       pure $
         pure (fromString "ManaCost' ")
           <> sW
@@ -1309,12 +1437,7 @@ showManaCost cost = yesParens do
           <> sG
           <> pure " "
           <> sC
-          <> pure " "
-          <> sX
-          <> pure " "
-          <> sS
-          <> pure " "
-          <> sBG
+          <> sDyn
 
 showManaPool :: ManaPool snow -> EnvM ParenItems
 showManaPool pool = yesParens do
@@ -1327,52 +1450,31 @@ showManaPool pool = yesParens do
         , poolC = c
         } = pool
       lits =
-        sequence
-          [ literalMana w
-          , literalMana u
-          , literalMana b
-          , literalMana r
-          , literalMana g
-          , literalMana c
-          ]
+        ( litMana w
+        , litMana u
+        , litMana b
+        , litMana r
+        , litMana g
+        , litMana c
+        )
   case lits of
-    Just [litW, litU, litB, litR, litG, litC] -> do
+    (litW, litU, litB, litR, litG, litC) -> do
       let numW = (W, litW)
           numU = (U, litU)
           numB = (B, litB)
           numR = (R, litR)
           numG = (G, litG)
           numC = (C, litC)
-          go (sym, num) = case num of
-            0 -> Nothing
-            1 -> Just $ show sym
-            _ -> Just $ "(" ++ show sym ++ "," ++ show num ++ ")"
+          go (sym, num)
+            | num == 0 = []
+            | num < 10 = replicate num $ show sym
+            | otherwise = ["(" ++ show sym ++ "," ++ show num ++ ")"]
           manas' = [go numW, go numU, go numB, go numR, go numG, go numC]
-          manas = catMaybes manas'
+          manas = M.join manas'
           sManas = case manas of
             [m] -> m
             _ -> "(" ++ List.intercalate "," manas ++ ")"
       pure $ pure $ fromString $ "toManaPool " ++ sManas
-    _ -> do
-      sW <- parens <$> showMana w
-      sU <- parens <$> showMana u
-      sB <- parens <$> showMana b
-      sR <- parens <$> showMana r
-      sG <- parens <$> showMana g
-      sC <- parens <$> showMana c
-      pure $
-        pure (fromString "ManaPool ")
-          <> sW
-          <> pure " "
-          <> sU
-          <> pure " "
-          <> sB
-          <> pure " "
-          <> sR
-          <> pure " "
-          <> sG
-          <> pure " "
-          <> sC
 
 showNatList :: forall u n x. IsUser u => (x -> EnvM ParenItems) -> NatList u n x -> EnvM ParenItems
 showNatList showX = \case

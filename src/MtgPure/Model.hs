@@ -1,3 +1,5 @@
+{-# LANGUAGE Safe #-}
+
 module MtgPure.Model (
   module MtgPure.Model.AbilityType,
   module MtgPure.Model.Artifact,

@@ -1,3 +1,4 @@
+{-# LANGUAGE Safe #-}
 {-# OPTIONS_GHC -Wno-type-defaults #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
@@ -20,6 +21,7 @@ import safe MtgPure.Cards (
   backlash,
   bayou,
   birdToken,
+  birdsOfParadise,
   blackLotus,
   blaze,
   bloodMoon,
@@ -88,6 +90,7 @@ import safe MtgPure.Cards (
   soldierToken,
   spinedThopter,
   squallDrifter,
+  squallLine,
   stifle,
   stoneRain,
   stoneThrowingDevils,
@@ -122,6 +125,7 @@ allCards =
   , toCard arcticTreeline
   , toCard backlash
   , toCard bayou
+  , toCard birdsOfParadise
   , toCard blackLotus
   , toCard blaze
   , toCard bloodMoon
@@ -189,6 +193,7 @@ allCards =
   , toCard snuffOut
   , toCard spinedThopter
   , toCard squallDrifter
+  , toCard squallLine
   , toCard stifle
   , toCard stoneRain
   , toCard stoneThrowingDevils

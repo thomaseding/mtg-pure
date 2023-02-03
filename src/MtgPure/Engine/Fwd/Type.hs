@@ -1,3 +1,4 @@
+{-# LANGUAGE Safe #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Avoid lambda" #-}
@@ -50,6 +51,7 @@ import safe MtgPure.Model.Recursive (
   Elect,
   Requirement,
  )
+import safe MtgPure.Model.Variable (VariableId)
 import safe MtgPure.Model.Zone (Zone (..))
 import safe MtgPure.Model.ZoneObject.ZoneObject (IsOTN, IsZO, ZO)
 
@@ -91,6 +93,7 @@ data Fwd' ex st m where
     , fwd_getPlayerWithPriority :: Magic' ex st 'Public 'RO m (Maybe (Object 'OTPlayer))
     , fwd_indexToAbility :: forall zone ot. IsZO zone ot => AbsoluteActivatedAbilityIndex -> Magic' ex st 'Private 'RO m (Maybe (SomeActivatedAbility zone ot))
     , fwd_newObjectId :: Magic' ex st 'Private 'RW m ObjectId
+    , fwd_newVariableId :: Magic' ex st 'Private 'RW m VariableId
     , fwd_ownerOf :: forall zone ot. IsZO zone ot => ZO zone ot -> Magic' ex st 'Private 'RO m (Object 'OTPlayer)
     , fwd_pay :: forall ot. Object 'OTPlayer -> Cost ot -> Magic' ex st 'Private 'RW m Legality
     , fwd_performElections :: forall ot p el x. ZO 'ZStack OT0 -> (el -> Magic' ex st 'Private 'RW m (Maybe x)) -> Elect p el ot -> Magic' ex st 'Private 'RW m (Maybe x)

@@ -1,0 +1,12 @@
+All Is Dust
+Forest
+Island
+Mountain
+Plains
+Snow-Covered Forest
+Snow-Covered Island
+Snow-Covered Mountain
+Snow-Covered Plains
+Snow-Covered Swamp
+Swamp
+Wastes

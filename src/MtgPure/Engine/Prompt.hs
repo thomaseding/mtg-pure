@@ -1,3 +1,4 @@
+{-# LANGUAGE Safe #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Avoid lambda" #-}
@@ -42,6 +43,7 @@ module MtgPure.Engine.Prompt (
 import safe Control.Monad.Util (Attempt)
 import safe Data.Kind (Type)
 import safe Data.List.NonEmpty (NonEmpty)
+import safe Data.Nat (Fin, IsNat, NatList)
 import safe Data.Typeable (Typeable, cast)
 import safe MtgPure.Engine.Monad (CallFrameInfo)
 import safe MtgPure.Engine.Orphans.ZO ()
@@ -173,6 +175,7 @@ data Prompt' (opaqueGameState :: (Type -> Type) -> Type) (m :: Type -> Type) (ma
   , exceptionZoneObjectDoesNotExist :: forall zone ot. IsZO zone ot => ZO zone ot -> m ()
   , promptChooseAttackers :: Attempt -> opaqueGameState m -> Object 'OTPlayer -> magic [DeclaredAttacker]
   , promptChooseBlockers :: Attempt -> opaqueGameState m -> Object 'OTPlayer -> NonEmpty DeclaredAttacker -> magic [DeclaredBlocker]
+  , promptChooseOption :: forall user n elem. (Typeable user, IsNat n) => opaqueGameState m -> Object 'OTPlayer -> NatList user n elem -> m (Fin user n)
   , promptDebugMessage :: String -> m ()
   , promptGetStartingPlayer :: Attempt -> PlayerCount -> magic PlayerIndex
   , promptLogCallPop :: opaqueGameState m -> CallFrameInfo -> m ()

@@ -1,3 +1,4 @@
+{-# LANGUAGE Safe #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Avoid lambda" #-}
@@ -51,6 +52,7 @@ import safe MtgPure.Model.Player (Player (..))
 import safe MtgPure.Model.Sideboard (Sideboard (..))
 import safe MtgPure.Model.Stack (Stack (..))
 import safe MtgPure.Model.Step (Step (..))
+import MtgPure.Model.Variable (VariableId' (..))
 
 playGame :: Monad m => GameInput m -> m (Maybe (GameResult m))
 playGame input = case mkGameState fwdImpl input of
@@ -113,6 +115,7 @@ mkGameState fwd input = case playerObjects of
         , magicManaBurn = False
         , magicNextObjectDiscriminant = (1 +) <$> DefaultObjectDiscriminant
         , magicNextObjectId = ObjectId $ 1 + playerCount
+        , magicNextVariableId = VariableId 1
         , magicOwnershipMap = Map.fromList $ map (\o -> (getObjectId o, o)) playerObjects
         , magicPermanents = mempty
         , magicPhaseStep = PSBeginningPhase UntapStep

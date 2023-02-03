@@ -1,3 +1,4 @@
+{-# LANGUAGE Safe #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Avoid lambda" #-}
@@ -47,6 +48,7 @@ import safe Data.Kind (Type)
 import safe qualified Data.List as List
 import safe qualified Data.List.NonEmpty as NonEmpty
 import safe qualified Data.Map.Strict as Map
+import safe Data.Nat (Fin (..))
 import safe qualified Data.Stream as Stream
 import safe Data.Typeable (Typeable)
 import safe Data.Void (Void)
@@ -105,6 +107,7 @@ import safe MtgPure.Model.Recursive (
 import safe MtgPure.Model.Recursive.Show ()
 import safe MtgPure.Model.Sideboard (Sideboard)
 import safe MtgPure.Model.Stack (Stack (..))
+import safe MtgPure.Model.Variable (VariableId)
 import safe MtgPure.Model.Zone (Zone (..))
 import safe MtgPure.Model.ZoneObject.ZoneObject (IsZO, ZO)
 
@@ -146,6 +149,7 @@ data GameState (m :: Type -> Type) where
     , magicManaBurn :: Bool
     , magicNextObjectDiscriminant :: ObjectDiscriminant
     , magicNextObjectId :: ObjectId
+    , magicNextVariableId :: VariableId
     , magicOwnershipMap :: Map.Map ObjectId (Object 'OTPlayer)
     , magicPermanents :: Map.Map (ZO 'ZBattlefield OT0) Permanent
     , magicPhaseStep :: PhaseStep
@@ -248,6 +252,7 @@ headlessPrompt =
     , exceptionZoneObjectDoesNotExist = \_ -> pure ()
     , promptChooseAttackers = \_ _ _ -> pure []
     , promptChooseBlockers = \_ _ _ _ -> pure []
+    , promptChooseOption = \_ _ _ -> pure FZ
     , promptDebugMessage = \_ -> pure ()
     , promptGetStartingPlayer = \_ _ -> pure $ PlayerIndex 0
     , promptLogCallPop = \_ _ -> pure ()

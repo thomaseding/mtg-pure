@@ -5,7 +5,7 @@ Purely functional Haskell "Magic: The Gathering" card model and game engine.
 
 ### About:
 
- This is a showcase of how to make an elegant purely functional "Magic: The Gathering" DSL model and engine. [MtgPure](https://github.com/thomaseding/mtg-pure) is my advancement from a previous Haskell DSL I made years ago for the card game Hearthstone, [Hearthshroud](https://github.com/thomaseding/hearthshroud). While there are superficial similarities between MtgPure and Hearthshroud's encodings, Magic is significantly more complex than Hearthstone. This new encoding is much more refined and generic to handle all sorts of complex and outlier Magic cards.
+ [MtgPure](https://github.com/thomaseding/mtg-pure) is a showcase of how to make an elegant purely functional "Magic: The Gathering" DSL model and rules engine.
 
 ---
 
@@ -15,9 +15,10 @@ Purely functional Haskell "Magic: The Gathering" card model and game engine.
 - Card model is a deep embedding.
 - Card model is algebraic and recursive.
 - Cards type-check if and only if they are valid cards. (Barring a few exceptions such as bottom(⊥) appearing in card definitions.) Examples: creatures in graveyards can't be dealt damage; non-player objects can't draw cards, etc.
-- Card model is expressive enough to replicate its souce code through introspection.
+- Card model is expressive enough to replicate its source code through introspection.
 - Cards can be used in arbitrary game formats without change.
 - Formal changes to game rules should not require re-modelling cards. (Cards may be rewritten if they get errata.)
+- Model can encode complex and outlier interactions without brute-force special casing. For example, the model will not contain stuff such as `ScrambleverseEffect`.
 
 ---
 
@@ -38,11 +39,11 @@ Purely functional Haskell "Magic: The Gathering" card model and game engine.
 
 ### Quickstart Interesting Files For Engine
 
-- [`src/MtgPure/Client/Console.hs`](src/MtgPure/Client/Console.hs)
+- [`src/MtgPure/Client/Terminal.hs`](src/MtgPure/Client/Terminal.hs)
 - [`src/MtgPure/Engine/Fwd/Api.hs`](src/MtgPure/Engine/Fwd/Api.hs)
 - [`src/MtgPure/Engine/Fwd/Impl.hs`](src/MtgPure/Engine/Fwd/Impl.hs)
 - [`src/MtgPure/Engine/State.hs`](src/MtgPure/Engine/State.hs)
-- [`src/MtgPure/Test/Game/Shock.hs`](src/MtgPure/Test/Game/Shock.hs)
+- [`src/Test/Game/Shock.hs`](src/Test/Game/Shock.hs)
 
 ---
 
@@ -67,7 +68,7 @@ False
 Notes:
  - Setting `-Wno-type-defaults` so the `Show` instances for cards don't need to constantly specify `Num` types when `Integer` is good enough for authoring. (Too much noise adding annotations for `Integer` or even `Int` or an alias `I`.)
  - `src/MtgPure/Model/Object/ToObjectN/Instances.hs` is a multi-megabyte file and will take a while to compile, hence the `-fobject-code` flag to cache the result. It is recommended you don't open this file with the Haskell Language Server active unless you want to max out and throttle your computer's RAM.
-- Using `-fobject-code` with `ghci` seems to require quitting and rentering `ghci` in order to get it to pick up the right runtime behavior after making code changes.
+- Using `-fobject-code` with `ghci` seems to require quitting and reentering `ghci` in order to get it to pick up the right runtime behavior after making code changes.
 ---
 
 ### Contributors:
@@ -87,7 +88,7 @@ At this point, I am very unlikely to accept contributions unless I know you and 
 ---
 
 ### Haskell language options:
-- Safe
+- Safe (For the model and rules engine. UI and other stuff needs to interface with Unsafe libraries.)
 - NoIncoherentInstances
 - NoOverlappingInstances (todo: write a script that generates non-overlapping ToManaCost/ToManaPool instances needed to achieve this)
 - NoTemplateHaskell

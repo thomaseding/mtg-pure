@@ -1,4 +1,5 @@
 {-# LANGUAGE ExtendedDefaultRules #-}
+{-# LANGUAGE Safe #-}
 {-# OPTIONS_GHC -Wno-type-defaults #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
@@ -17,6 +18,7 @@ module MtgPure.Cards (
   arcticTreeline,
   backlash,
   bayou,
+  birdsOfParadise,
   blackLotus,
   blaze,
   bloodMoon,
@@ -84,6 +86,7 @@ module MtgPure.Cards (
   snuffOut,
   spinedThopter,
   squallDrifter,
+  squallLine,
   stifle,
   stoneRain,
   stoneThrowingDevils,
@@ -526,6 +529,30 @@ backlash = Card "Backlash" $
 bayou :: Card OTNLand
 bayou = mkDualLand "Bayou" Forest Swamp
 
+birdsOfParadise :: Card OTNCreature
+birdsOfParadise = Card "Birds of Paradise" $
+  YourCreature \_you ->
+    CreatureFacet
+      { creature_colors = toColors G
+      , creature_cost = manaCost G
+      , creature_supertypes = []
+      , creature_creatureTypes = [Bird]
+      , creature_power = Power 0
+      , creature_toughness = Toughness 1
+      , creature_abilities =
+          [ Activated @ 'ZBattlefield $
+              thisObject \this ->
+                controllerOf this \you ->
+                  ElectActivated $
+                    Ability
+                      { activated_cost = tapCost [is this]
+                      , activated_effect =
+                          chooseAnyColor you \color ->
+                            effect $ addManaAnyColor color you 1
+                      }
+          ]
+      }
+
 birdToken :: Token OTNCreature
 birdToken = Token $
   Card "Bird Token" $
@@ -755,10 +782,32 @@ corrosiveGale = Card "Corrosive Gale" $
           , sorcery_creatureTypes = []
           , sorcery_abilities = []
           , sorcery_effect = thisObject \this ->
-              All $ maskeds @OTNCreature [hasAbility \_this -> Static Flying] \targets ->
+              All $ maskeds @OTNCreature [hasAbility \_this -> Static Flying] \victims ->
                 effect $
-                  WithList $ Each targets \victim ->
+                  WithList $ Each victims \victim ->
                     dealDamage this victim x
+          }
+
+squallLine :: Card OTNInstant
+squallLine = Card "Squall Line" $
+  YourInstant \_you ->
+    VariableInt \x ->
+      ElectCard $
+        InstantFacet
+          { instant_colors = toColors G
+          , instant_cost = manaCost (VariableMana @ 'NonSnow @ 'Ty1 x, G, G)
+          , instant_supertypes = []
+          , instant_creatureTypes = []
+          , instant_abilities = []
+          , instant_effect = thisObject \this ->
+              All $ maskeds @OTNCreature [hasAbility \_this -> Static Flying] \creatures ->
+                All $ maskeds @OTNPlayer [] \players ->
+                  effect
+                    [ WithList $ Each creatures \victim ->
+                        dealDamage this victim x
+                    , WithList $ Each players \victim ->
+                        dealDamage this victim x
+                    ]
           }
 
 damnation :: Card OTNSorcery
@@ -873,7 +922,7 @@ dismember = Card "Dismember" $
                   gainAbility target $
                     Static $
                       StaticContinuous $
-                        effect $ StatDelta target (Power 2) (Toughness 2)
+                        effect $ StatDelta target (Power (-5)) (Toughness (-5))
           }
 
 divination :: Card OTNSorcery
@@ -1318,7 +1367,7 @@ plummet = Card "Plummet" $
           }
 
 pollutedDelta :: Card OTNLand
-pollutedDelta = mkFetchLand "PollutedDelta" Island Swamp
+pollutedDelta = mkFetchLand "Polluted Delta" Island Swamp
 
 porcelainLegionnaire :: Card OTNArtifactCreature
 porcelainLegionnaire = Card "Porcelain Legionnaire" $

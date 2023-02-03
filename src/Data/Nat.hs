@@ -1,7 +1,9 @@
+{-# LANGUAGE Safe #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
+{-# HLINT ignore "Use if" #-}
 
 module Data.Nat (
   IsNat (..),
@@ -10,9 +12,15 @@ module Data.Nat (
   Fin (..),
   natToInt,
   finToInt,
+  intToFin,
+  readMaybeFin,
+  readsPrecFin,
+  showFin,
   ToNat,
 ) where
 
+import safe Control.Exception (assert)
+import safe qualified Data.Char as Char
 import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
 import safe qualified GHC.TypeLits as GHC
@@ -24,16 +32,19 @@ data Nat :: Type where
 
 class (Typeable n) => IsNat (n :: Nat) where
   litNat :: Nat
+  litFin :: Typeable user => Fin user n
 
 instance IsNat 'Z where
   litNat = Z
+  litFin = FZ
 
 instance IsNat n => IsNat ( 'S n) where
   litNat = S (litNat @n)
+  litFin = FS (litFin @n)
 
 data NatList (user :: Type) (n :: Nat) (elem :: Type) where
   -- NOTE: `LZ` has `elem` in it to prevent empty list choices
-  LZ :: forall user elem. elem -> NatList user 'Z elem
+  LZ :: forall user elem. Typeable user => elem -> NatList user 'Z elem
   LS :: (Typeable user, IsNat n) => elem -> NatList user n elem -> NatList user ( 'S n) elem
   deriving (Typeable)
 
@@ -59,6 +70,35 @@ finToInt :: Fin user n -> Int
 finToInt = \case
   FZ -> 0
   FS n -> 1 + finToInt n
+
+intToFin :: forall user (n :: Nat). (Typeable user, IsNat n) => Int -> Maybe (Fin user n)
+intToFin input = intToFinRec input topInt topFin
+ where
+  topFin = litFin @n
+  topNat = litNat @n
+  topInt = natToInt topNat
+
+intToFinRec :: forall user n. IsNat n => Int -> Int -> Fin user n -> Maybe (Fin user n)
+intToFinRec input i curr = case curr of
+  FZ -> assert (i == 0) case input == i of
+    True -> Just curr
+    False -> Nothing
+  FS next -> case input == i of
+    True -> Just curr
+    False -> FS <$> intToFinRec input (i - 1) next
+
+readMaybeFin :: (Typeable user, IsNat n) => String -> Maybe (Fin user n)
+readMaybeFin s = intToFin =<< read s
+
+readsPrecFin :: (Typeable user, IsNat n) => Int -> String -> [(Fin user n, String)]
+readsPrecFin _ s =
+  let (digits, rest) = span Char.isDigit s
+   in case readMaybeFin digits of
+        Nothing -> []
+        Just fin -> [(fin, rest)]
+
+showFin :: Fin user n -> String
+showFin = show . finToInt
 
 type family ToNat (i :: GHC.Nat) = (n :: Nat) | n -> i
 

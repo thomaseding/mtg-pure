@@ -1,3 +1,4 @@
+{-# LANGUAGE Safe #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Avoid lambda" #-}
@@ -40,6 +41,7 @@ import safe MtgPure.Engine.Core (
   getPlayer,
   indexToActivated,
   newObjectId,
+  newVariableId,
   pickOneZO,
   pushGraveyardCard,
   pushHandCard,
@@ -109,6 +111,7 @@ fwdImpl =
     , fwd_getPlayerWithPriority = getPlayerWithPriority
     , fwd_indexToAbility = indexToActivated
     , fwd_newObjectId = newObjectId
+    , fwd_newVariableId = newVariableId
     , fwd_ownerOf = ownerOf
     , fwd_pay = pay
     , fwd_performElections = performElections

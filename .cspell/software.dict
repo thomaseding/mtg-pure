@@ -1,6 +1,12 @@
+chcp
 concat
+inplace
 paren
 parens
+RGBA
 signum
 strs
+struct
+structs
 syms
+virt

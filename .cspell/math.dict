@@ -2,3 +2,5 @@ combinators
 injectivity
 Monoid
 Semigroup
+SRGB
+uncurry

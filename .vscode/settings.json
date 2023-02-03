@@ -24,6 +24,12 @@
             "addWords": true,
             "scope": "workspace"
         },
+        "python": {
+            "name": "python",
+            "path": "${workspaceFolder:mtg-pure}/.cspell/python.dict",
+            "addWords": true,
+            "scope": "workspace"
+        },
         "software": {
             "name": "software",
             "path": "${workspaceFolder:mtg-pure}/.cspell/software.dict",
