@@ -14,7 +14,6 @@
 {-# HLINT ignore "Use when" #-}
 {-# HLINT ignore "Use bimap" #-}
 
--- FIXME: Remove hard-coded paths
 module App.CardGallery (
   main,
   mainAnsiGallery,
@@ -26,6 +25,7 @@ import safe Ansi.Box (
   clearScreenWithoutPaging,
   drawBox,
   withAnsi,
+  withBuffering,
  )
 import Ansi.Old (
   AnsiImage,
@@ -50,6 +50,7 @@ import safe Data.List (isPrefixOf)
 import safe MtgPure.AllCards (allCards)
 import safe MtgPure.Model.CardName (getCardName, unCardName)
 import Script.GenerateGallerySingle.Main (CardAnsiInfo (..), cardNameToAnsis)
+import Script.MtgPureConfig (MtgPureConfig (mtgPure_ansiImageDatabaseDir), readMtgPureConfigFile)
 import safe System.Console.ANSI (
   Color (..),
   ColorIntensity (..),
@@ -59,6 +60,7 @@ import safe System.Console.ANSI (
  )
 import safe qualified System.Directory as D
 import safe System.IO (
+  BufferMode (LineBuffering),
   hFlush,
   stdout,
  )
@@ -70,10 +72,6 @@ import safe System.Keyboard (
  )
 
 --------------------------------------------------------------------------------
-
--- FIXME: Remove hard-coded paths
-ansiDbDir :: FilePath
-ansiDbDir = "F:/mtg/card-ansi"
 
 -- TODO: Magic card back image
 -- TODO: It would be cool to get tapped images too. Also useful for split cards.
@@ -88,7 +86,7 @@ ansiDbDir = "F:/mtg/card-ansi"
 --       arbitrarily-clipped.
 cardNames :: [String]
 cardNames =
-  (!! 0)
+  (!! 7)
     [ {-0-} map (unCardName . getCardName) allCards
     , {-1-} ["Counterspell", "Forest", "Island", "Raging Goblin"]
     , {-2-} ["Island"]
@@ -96,6 +94,7 @@ cardNames =
     , {-4-} take 20 $ map (unCardName . getCardName) allCards
     , {-5-} takeWhile (not . ("P" `isPrefixOf`)) $ map (unCardName . getCardName) allCards
     , {-6-} ["All Is Dust"]
+    , {-7-} ["Pox", "Goblin Lore"]
     ]
 
 --------------------------------------------------------------------------------
@@ -116,22 +115,21 @@ dummyCardInfo =
 
 data GalleryState = GalleryState
   { gallery_ :: ()
+  , galleryMtgPureConfig :: MtgPureConfig
   , galleryTermSize :: IORef (Int, Int)
-  , galleryScannedJson :: Bool
   , galleryCards :: Carousel CardInfo
-  , galleryRegenerateExisting :: Bool
   }
 
 mkGalleryState :: IO GalleryState
 mkGalleryState = do
+  mtgConfig <- readMtgPureConfigFile
   refTermSize <- newIORef (-1, -1)
   pure
     GalleryState
       { gallery_ = ()
+      , galleryMtgPureConfig = mtgConfig
       , galleryTermSize = refTermSize
-      , galleryScannedJson = not False
       , galleryCards = carSingle dummyCardInfo
-      , galleryRegenerateExisting = False
       }
 
 newtype Gallery a = Gallery
@@ -166,9 +164,10 @@ main = mainAnsiGallery
 mainAnsiGallery :: IO ()
 mainAnsiGallery = do
   initKeyboardMain
-  D.createDirectoryIfMissing True ansiDbDir
   hideCursor
   runGallery do
+    ansiDbDir <- Gallery $ State.gets $ mtgPure_ansiImageDatabaseDir . galleryMtgPureConfig
+    M.liftIO $ D.createDirectoryIfMissing True ansiDbDir
     fabricateCardAnsiImages
     runCarousel
     clearScreenWithoutPaging
@@ -178,11 +177,9 @@ fabricateCardAnsiImages :: Gallery ()
 fabricateCardAnsiImages = do
   clearScreenWithoutPaging
   M.liftIO $ hFlush stdout
-  -- st <- Gallery State.get
-  -- let cardNameToAnsiIO name = do
-  --       runGallery' st $ cardNameToAnsi name
-  -- ansiImgs <- M.liftIO $ mapConcurrently cardNameToAnsiIO cardNames
-  ansiInfos <- M.liftIO $ concat <$> mapM cardNameToAnsis cardNames
+  mtgConfig <- Gallery $ State.gets galleryMtgPureConfig
+  ansiInfos <- M.liftIO $ withBuffering stdout LineBuffering do
+    concat <$> mapM (cardNameToAnsis True mtgConfig) cardNames
   clearScreenWithoutPaging
   M.liftIO $ hFlush stdout
   let cards = carFromList $ map mkCardInfo ansiInfos

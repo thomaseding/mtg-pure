@@ -1,0 +1,16 @@
+// This file is found by logic in Scripts/MtgPureConfig.hs
+// This file is found at (*)/mtg-pure.jsonc where (*) is the path is
+// determined in the following order:
+//    1. The environment variable MTG_PURE_DIR
+//    2. "mtg-pure" in the system app data directory
+//    3. ".mtg-pure" in the user home directory
+//    4. The current directory
+//
+{
+  "scryfallUniqueArtworkJson": "F:/mtg/unique-artwork-20230127100241.json", // https://scryfall.com/docs/api/bulk-data
+  "scryfallImageDatabaseDir": "F:/mtg/card-images/scryfall",
+  "scryfallScanForMissingImagesAndDownload": false,
+  "ansiImageDatabaseDir": "F:/mtg/card-ansi",
+  "ansiImageConversionMaxSpawnedProcesses": 12,
+  "": null
+}

@@ -5,7 +5,6 @@
 {-# HLINT ignore "Use const" #-}
 {-# HLINT ignore "Use if" #-}
 
--- FIXME: Remove hard-coded paths
 module Script.GenerateGallerySingle.Main (
   main,
   CardAnsiInfo (..),
@@ -20,27 +19,29 @@ import safe qualified Control.Monad as M
 import safe Data.Time.Clock (diffUTCTime, getCurrentTime)
 import safe Data.Time.Format (defaultTimeLocale, formatTime)
 import safe qualified Data.Traversable as T
-import Script.ScryfallDownloader (CardName, SetName, cardDirectoryOf, discoverCardSetsOf)
+import safe Script.MtgPureConfig (MtgPureConfig (mtgPure_ansiImageDatabaseDir, mtgPure_scryfallImageDatabaseDir), readMtgPureConfigFile)
+import Script.ScryfallDownloader (
+  CardName,
+  DownloadSpecificCards (..),
+  SetName,
+  cardDirectoryOf,
+  discoverCardSetsOf,
+  downloadSpecificCards,
+ )
 import safe qualified System.Directory as D
 import safe System.Environment (getArgs)
 import safe System.Exit (exitFailure)
 import safe qualified System.FilePath as D
 import safe System.IO (BufferMode (..), IOMode (..), hGetContents, hPutStr, hSetBuffering, withBinaryFile)
 
--- FIXME: Remove hard-coded paths
-ansiDbDir :: FilePath
-ansiDbDir = "F:/mtg/card-ansi"
-
--- FIXME: Remove hard-coded paths
-imageDbDir :: FilePath
-imageDbDir = "F:/mtg/card-images/scryfall"
-
 main :: IO ()
 main = mainGenerateGallerySingle
 
+-- TODO: Use GenerateGallerySingle/Args.hs
 data ProgArgs = ProgArgs
   { progArgs_ :: ()
   , progArgs_cardName :: CardName
+  , progArgs_verbose :: Bool
   }
 
 parseProgArgs :: IO ProgArgs
@@ -52,6 +53,7 @@ parseProgArgs = do
         ProgArgs
           { progArgs_ = ()
           , progArgs_cardName = cardName
+          , progArgs_verbose = False
           }
     _ -> do
       putStrLn "Usage: generate-gallery-single.exe <card-name>"
@@ -60,8 +62,10 @@ parseProgArgs = do
 mainGenerateGallerySingle :: IO ()
 mainGenerateGallerySingle = do
   args <- parseProgArgs
+  mtgConfig <- readMtgPureConfigFile
+  let ansiDbDir = mtgPure_ansiImageDatabaseDir mtgConfig
   D.createDirectoryIfMissing True ansiDbDir
-  M.void $ cardNameToAnsis $ progArgs_cardName args
+  M.void $ cardNameToAnsis (progArgs_verbose args) mtgConfig $ progArgs_cardName args
 
 sizedAnsi :: FilePath
 sizedAnsi = show platonicW ++ "x" ++ show platonicH ++ ".ansi"
@@ -74,18 +78,27 @@ data CardAnsiInfo = CardAnsiInfo
   , caiAnsiImage :: AnsiImage
   }
 
-cardNameToAnsis :: CardName -> IO [CardAnsiInfo]
-cardNameToAnsis name = do
-  let imgDir = cardDirectoryOf imageDbDir name Nothing
+cardNameToAnsis :: Bool -> MtgPureConfig -> CardName -> IO [CardAnsiInfo]
+cardNameToAnsis verbose mtgConfig cardName = do
+  let imageDbDir = mtgPure_scryfallImageDatabaseDir mtgConfig
+  let ansiDbDir = mtgPure_ansiImageDatabaseDir mtgConfig
+  let imgDir = cardDirectoryOf imageDbDir cardName Nothing
   print imgDir
-  setNames <- discoverCardSetsOf imageDbDir name
+  downloadSpecificCards
+    DownloadSpecificCards
+      { downloadSpecificCards_cardNames = [cardName]
+      , downloadSpecificCards_skipCardIfAnySetExists = True
+      , downloadSpecificCards_forceDownload = False
+      , downloadSpecificCards_verbose = verbose
+      }
+  setNames <- discoverCardSetsOf imageDbDir cardName
   T.for setNames \setName -> do
-    let ansiPath = cardDirectoryOf ansiDbDir name (Just setName) D.</> sizedAnsi
-    let imgPath = cardDirectoryOf imageDbDir name (Just setName) D.</> "normal.jpg"
+    let ansiPath = cardDirectoryOf ansiDbDir cardName (Just setName) D.</> sizedAnsi
+    let imgPath = cardDirectoryOf imageDbDir cardName (Just setName) D.</> "normal.jpg"
     ansi <- getAnsi ansiPath imgPath
     pure
       CardAnsiInfo
-        { caiCardName = name
+        { caiCardName = cardName
         , caiSetName = setName
         , caiSourceImage = imgPath
         , caiAnsiPath = ansiPath

@@ -20,13 +20,11 @@ import safe Data.Time.Format (defaultTimeLocale, formatTime)
 import safe qualified Data.Traversable as T
 import safe MtgPure.AllCards (allCards)
 import safe MtgPure.Model.CardName (getCardName, unCardName)
-import Script.ScryfallDownloader (downloadSpecificCards)
+import Script.MtgPureConfig (MtgPureConfig (..), readMtgPureConfigFile)
+import Script.ScryfallDownloader (DownloadSpecificCards (..), downloadSpecificCards)
 import safe System.Process (callProcess)
 
 type CardName = String
-
-concurrencyLimit :: Int
-concurrencyLimit = 12
 
 main :: IO ()
 main = mainGenerateGalleryBatched
@@ -41,6 +39,7 @@ data Env = Env
 mainGenerateGalleryBatched :: IO ()
 mainGenerateGalleryBatched = do
   start <- getCurrentTime
+  mtgConfig <- readMtgPureConfigFile
   callProcess "compile-generate-gallery-single.bat" [] -- TODO: abort if this has non-zero exit code
   cardNames <- getCardNames
   pendingCards <- newIORef cardNames
@@ -50,10 +49,17 @@ mainGenerateGalleryBatched = do
           { env_ = ()
           , env_pendingCards = pendingCards
           , env_printMutex = printMutex
-          , env_downloadImages = not False
+          , env_downloadImages = mtgPure_scryfallScanForMissingImagesAndDownload mtgConfig
           }
+  let concurrencyLimit = mtgPure_ansiImageConversionMaxSpawnedProcesses mtgConfig
   M.when (env_downloadImages env) do
-    downloadSpecificCards cardNames
+    downloadSpecificCards
+      DownloadSpecificCards
+        { downloadSpecificCards_cardNames = cardNames
+        , downloadSpecificCards_skipCardIfAnySetExists = True
+        , downloadSpecificCards_forceDownload = False
+        , downloadSpecificCards_verbose = False
+        }
   putStrLn $ "Concurrency limit: " <> show concurrencyLimit
   threads <- T.for [0 .. concurrencyLimit - 1] \_ -> do
     createThread $ threadLoop env

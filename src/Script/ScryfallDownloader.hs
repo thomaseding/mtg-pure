@@ -9,6 +9,7 @@
 module Script.ScryfallDownloader (
   main,
   downloadAllImages,
+  DownloadSpecificCards (..),
   downloadSpecificCards,
   CardName,
   SetName,
@@ -29,16 +30,9 @@ import qualified Data.Set as Set
 import safe qualified Data.Traversable as T
 import qualified Network.HTTP.Simple as H
 import safe Numeric (readHex, showHex)
+import Script.MtgPureConfig (MtgPureConfig (..), readMtgPureConfigFile)
 import safe qualified System.Directory as D
 import safe qualified System.FilePath as D
-
--- FIXME: Remove hard-coded paths
-jsonFile :: FilePath
-jsonFile = "F:/mtg/unique-artwork-20230127100241.json"
-
--- FIXME: Remove hard-coded paths
-imageDbDir :: FilePath
-imageDbDir = "F:/mtg/card-images/scryfall"
 
 type Uri = String
 
@@ -57,6 +51,7 @@ data DownloadConfig = DownloadConfig
   , configGetBorderCrop :: Bool
   , configGetBest :: Bool
   , configCardFilter :: JsonCardInfo -> Bool
+  , configVerbose :: Bool
   }
 
 main :: IO ()
@@ -164,6 +159,7 @@ labelWidth = 12
 
 downloadSize :: DownloadConfig -> GetSize -> JsonCardInfo -> IO ()
 downloadSize config size card = do
+  let verbose = configVerbose config
   let savePathBase = cardDirectoryOf (configSaveDir config) (json_cardName card) (Just $ json_cardSetName card)
   let size' = case size of
         GetBest -> case getBest card of
@@ -197,12 +193,17 @@ downloadSize config size card = do
         D.createDirectoryIfMissing True savePathBase
         checkSkip config savePath
       case skip of
-        True -> putStrLn $ paddedLabel labelWidth "Skipping" savePath
+        True -> do
+          M.when verbose do
+            putStrLn $ paddedLabel labelWidth "Skipping" savePath
         False -> do
+          M.when verbose do
+            putStrLn $ paddedLabel labelWidth "Downloading" uri
           request <- H.parseRequest uri
           response <- H.httpLBS request
           B.writeFile savePath (H.getResponseBody response)
-          putStrLn $ paddedLabel labelWidth "Downloaded" savePath
+          M.when verbose do
+            putStrLn $ paddedLabel labelWidth "Downloaded" savePath
 
 downloadImages :: DownloadConfig -> IO ()
 downloadImages config = do
@@ -260,26 +261,45 @@ getBucketDir name = ab ++ "/" ++ cd
     s -> s
 
 downloadAllImages :: IO ()
-downloadAllImages =
+downloadAllImages = do
+  mtgConfig <- readMtgPureConfigFile
   downloadImages
-    protoConfig
+    (protoConfig mtgConfig)
       { configCardFilter = \_ -> True
       }
 
-downloadSpecificCards :: [CardName] -> IO ()
-downloadSpecificCards names = do
-  downloadImages
-    protoConfig
-      { configCardFilter = \card -> Set.member (json_cardName card) names'
-      }
- where
-  names' = Set.fromList names
+data DownloadSpecificCards = DownloadSpecificCards
+  { downloadSpecificCards_cardNames :: [CardName]
+  , downloadSpecificCards_skipCardIfAnySetExists :: Bool
+  , downloadSpecificCards_forceDownload :: Bool
+  , downloadSpecificCards_verbose :: Bool
+  }
+  deriving ()
 
-protoConfig :: DownloadConfig
-protoConfig =
+downloadSpecificCards :: DownloadSpecificCards -> IO ()
+downloadSpecificCards config = do
+  mtgConfig <- readMtgPureConfigFile
+  let imgDbDir = mtgPure_scryfallImageDatabaseDir mtgConfig
+  let names = downloadSpecificCards_cardNames config
+  names' <- case downloadSpecificCards_forceDownload config of
+    True -> pure names
+    False -> case downloadSpecificCards_skipCardIfAnySetExists config of
+      False -> pure names
+      True -> flip M.filterM names \name -> do
+        cardSets <- discoverCardSetsOf imgDbDir name
+        pure $ null cardSets
+  let names'' = Set.fromList names'
+  downloadImages
+    (protoConfig mtgConfig)
+      { configCardFilter = \card -> Set.member (json_cardName card) names''
+      , configVerbose = downloadSpecificCards_verbose config
+      }
+
+protoConfig :: MtgPureConfig -> DownloadConfig
+protoConfig mtgConfig =
   DownloadConfig
-    { configJsonPath = jsonFile
-    , configSaveDir = imageDbDir
+    { configJsonPath = mtgPure_scryfallUniqueArtworkJson mtgConfig
+    , configSaveDir = mtgPure_scryfallImageDatabaseDir mtgConfig
     , configSkipExisting = True
     , configGetLarge = False
     , configGetNormal = True
@@ -288,6 +308,7 @@ protoConfig =
     , configGetBorderCrop = False
     , configGetBest = False
     , configCardFilter = \_ -> False
+    , configVerbose = False
     }
 
 cardDirectoryOf :: FilePath -> CardName -> Maybe SetName -> FilePath

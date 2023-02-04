@@ -81,6 +81,7 @@ library
        mtl ^>=2.2.2,
        parsec ^>=3.1.14.0,
        no-buffering-workaround ^>=0.1.0.0,
+       parsec ^>=3.1.14.0,
        process ^>=1.6.13.2,
        random ^>=1.2.1.1,
        singletons ^>=3.0.2,

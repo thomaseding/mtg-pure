@@ -1,1 +1,1 @@
-run-ghci.bat -fobject-code %*
+run-ghci.bat -O2 -fobject-code %*

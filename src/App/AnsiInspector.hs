@@ -14,7 +14,6 @@
 {-# HLINT ignore "Use when" #-}
 {-# HLINT ignore "Use bimap" #-}
 
--- FIXME: Remove hard-coded paths
 module App.AnsiInspector (
   main,
   mainAnsiImageDebugger,
@@ -27,6 +26,7 @@ import safe Ansi.Box (
   clearScreenWithoutPaging,
   drawBox,
   withAnsi,
+  withBuffering,
  )
 import Ansi.Old (
   AnsiImage,
@@ -48,6 +48,8 @@ import safe Data.Carousel (
   Carousel,
   carCursor,
   carFromList,
+  carLeft,
+  carRight,
   carSingle,
  )
 import safe qualified Data.Char as Char
@@ -55,6 +57,7 @@ import safe Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import safe Data.List (sortOn)
 import safe Numeric (showHex)
 import Script.GenerateGallerySingle.Main (CardAnsiInfo (..), cardNameToAnsis)
+import Script.MtgPureConfig (MtgPureConfig, readMtgPureConfigFile)
 import safe System.Console.ANSI (
   Color (..),
   ColorIntensity (..),
@@ -65,6 +68,7 @@ import safe System.Console.ANSI (
   setSGRCode,
  )
 import safe System.IO (
+  BufferMode (..),
   hFlush,
   stdout,
  )
@@ -79,13 +83,14 @@ import safe System.Keyboard (
 
 theCardName :: String
 theCardName =
-  (!! 1)
+  (!! 6)
     [ {-0-} "PLACEHOLDER_CARD_NAME"
     , {-1-} "All Is Dust"
     , {-2-} "Counterspell"
     , {-3-} "Forest"
     , {-4-} "Island"
     , {-5-} "Raging Goblin"
+    , {-6-} "Holy Day"
     ]
 
 --------------------------------------------------------------------------------
@@ -110,23 +115,22 @@ dummyCardInfo =
 
 data GalleryState = GalleryState
   { gallery_ :: ()
+  , galleryMtgPureConfig :: MtgPureConfig
   , galleryTermSize :: IORef (Int, Int)
-  , galleryScannedJson :: Bool
   , galleryCards :: Carousel CardInfo
-  , galleryRegenerateExisting :: Bool
   , galleryHighlightedPixel :: (Int, Int)
   }
 
 mkGalleryState :: IO GalleryState
 mkGalleryState = do
+  mtgConfig <- readMtgPureConfigFile
   refTermSize <- newIORef (-1, -1)
   pure
     GalleryState
       { gallery_ = ()
+      , galleryMtgPureConfig = mtgConfig
       , galleryTermSize = refTermSize
-      , galleryScannedJson = not False
       , galleryCards = carSingle dummyCardInfo
-      , galleryRegenerateExisting = False
       , galleryHighlightedPixel = (0, 0)
       }
 
@@ -173,11 +177,9 @@ fabricateCardAnsiImages :: Inspector ()
 fabricateCardAnsiImages = do
   clearScreenWithoutPaging
   M.liftIO $ hFlush stdout
-  -- st <- Gallery State.get
-  -- let cardNameToAnsiIO name = do
-  --       runGallery' st $ cardNameToAnsi name
-  -- ansiImgs <- M.liftIO $ mapConcurrently cardNameToAnsiIO cardNames
-  ansiInfos <- M.liftIO $ concat <$> mapM cardNameToAnsis [theCardName]
+  mtgConfig <- Gallery $ State.gets galleryMtgPureConfig
+  ansiInfos <- M.liftIO $ withBuffering stdout LineBuffering do
+    concat <$> mapM (cardNameToAnsis True mtgConfig) [theCardName]
   let imgPaths = map caiSourceImage ansiInfos
   fullTileGrids <- M.liftIO do
     mapM (debugLoadTileGrid platonicW platonicH) imgPaths
@@ -232,7 +234,10 @@ handleKeyInput = do
   case key of
     KeyArrow arrow -> do
       updateHighLightedPixel arrow
-    KeyChar{} -> pure ()
+    KeyChar c -> case c of
+      '[' -> Gallery $ State.modify' \st -> st{galleryCards = carLeft $ galleryCards st}
+      ']' -> Gallery $ State.modify' \st -> st{galleryCards = carRight $ galleryCards st}
+      _ -> pure ()
 
 mkHighLightedPixelBox :: Inspector Box
 mkHighLightedPixelBox = do

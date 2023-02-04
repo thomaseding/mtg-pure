@@ -2,6 +2,7 @@ rem https://ghc.gitlab.haskell.org/ghc/doc/users_guide/using-warnings.html
 rem https://medium.com/mercury-bank/enable-all-the-warnings-a0517bc081c3
 
 ghci -hidir .output -odir .output^
+ -package parsec^
  -Wall^
  -Werror^
  -Wno-type-defaults^
