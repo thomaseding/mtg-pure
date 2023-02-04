@@ -20,8 +20,19 @@ data RenderedCell = RenderedCell
   , renderedCell_fg :: Rgb
   , renderedCell_bg :: Rgb
   }
+  deriving (Eq, Ord, Show)
 
-type Pos = (Int, Int)
+data ScreenPos = ScreenPos
+  { screenPos_x :: Int
+  , screenPos_y :: Int
+  }
+  deriving (Eq, Show)
+
+instance Ord ScreenPos where
+  compare (ScreenPos x1 y1) (ScreenPos x2 y2) =
+    case compare y1 y2 of
+      EQ -> compare x1 x2
+      other -> other
 
 -- Clipping must be done before this step to allow items behind clipped
 -- items to be rendered. Otherwise it would just be an empty cell with
@@ -29,7 +40,7 @@ type Pos = (Int, Int)
 --
 -- Once in this form, users can prune cells that have not changed
 -- since the last render to the screen.
-type RenderedCells = Map.Map Pos RenderedCell
+type RenderedCells = Map.Map ScreenPos RenderedCell
 
 type FgBg = (Rgb, Rgb)
 
@@ -82,7 +93,7 @@ renderAnsiChar = \case
           grid = renderState_grid st
           grid' =
             Map.insert
-              (x, y)
+              ScreenPos{screenPos_x = x, screenPos_y = y}
               RenderedCell
                 { renderedCell_char = c
                 , renderedCell_fg = renderState_fg st
@@ -115,12 +126,9 @@ renderAnsiChar = \case
 
 --------------------------------------------------------------------------------
 
-type BucketedCellMap = Map.Map FgBg [(Pos, RenderedCell)]
+type BucketedCellMap = Map.Map FgBg [(ScreenPos, RenderedCell)]
 
-type BucketedCells = (FgBg, [(Pos, RenderedCell)])
-
-compareScreenPos :: Pos -> Pos -> Ordering
-compareScreenPos (x1, y1) (x2, y2) = compare (y1, x1) (y2, x2)
+type BucketedCells = (FgBg, [(ScreenPos, RenderedCell)])
 
 -- | Each returned bucket is a list of (pos, renderedCell) pairs, sorted by screen pos.
 -- No duplicate positions are returned across all/any of the buckets.
@@ -129,13 +137,13 @@ compareScreenPos (x1, y1) (x2, y2) = compare (y1, x1) (y2, x2)
 -- even further to really benefit from this, since each cell is likely to have subtly
 -- different colors and thus gets a unique bucket... pointless and perhaps induces more
 -- ANSI overhead than it saves.
-bucketRenderedCellsByFgBg :: Map.Map Pos RenderedCell -> Map.Map FgBg [(Pos, RenderedCell)]
+bucketRenderedCellsByFgBg :: Map.Map ScreenPos RenderedCell -> Map.Map FgBg [(ScreenPos, RenderedCell)]
 bucketRenderedCellsByFgBg = goSort . Map.foldrWithKey goBucket Map.empty
  where
   goBucket pos cell =
     let fgBg = (renderedCell_fg cell, renderedCell_bg cell)
      in Map.insertWith (++) fgBg [(pos, cell)]
-  goSort = Map.map \entries -> flip sortBy entries \(posA, _) (posB, _) -> compareScreenPos posA posB
+  goSort = Map.map \entries -> flip sortBy entries \(posA, _) (posB, _) -> compare posA posB
 
 -- | Returns a list of (fgBg, bucket) pairs, sorted by the screen pos of the first cell in each bucket.
 --
@@ -154,20 +162,23 @@ bucketMapToList = goSort . Map.assocs
         (posB, _) = case entriesB of
           [] -> error "bucketMapToList: empty bucket"
           e : _ -> e
-     in compareScreenPos posA posB
+     in compare posA posB
 
 -- | Returns the final cursor position and the rendered AnsiString
 -- The input is a list of (pos, renderedCell) pairs, sorted by screen pos.
 --
 -- Not necessary, but this is part of an optimization step.
-bucketedCellsToAnsiString :: Pos -> FgBg -> [(Pos, RenderedCell)] -> (Pos, AnsiString)
-bucketedCellsToAnsiString startPos (fg, bg) = colorize . foldr go (startPos, [])
+bucketedCellsToAnsiString :: ScreenPos -> FgBg -> [(ScreenPos, RenderedCell)] -> (ScreenPos, AnsiString)
+bucketedCellsToAnsiString startPos (fg, bg) = colorize . foldr go (startPos, []) . reverse
  where
-  colorize :: (Pos, AnsiString) -> (Pos, AnsiString)
+  colorize :: (ScreenPos, AnsiString) -> (ScreenPos, AnsiString)
   colorize (pos, str) = (pos, AnsiSgr (SgrTrueColorFg fg) : AnsiSgr (SgrTrueColorBg bg) : str)
-  go :: (Pos, RenderedCell) -> (Pos, AnsiString) -> (Pos, AnsiString)
-  go ((x, y), cell) ((x', y'), acc) =
-    let isNextChar = x == x' + 1 && y == y'
+
+  go :: (ScreenPos, RenderedCell) -> (ScreenPos, AnsiString) -> (ScreenPos, AnsiString)
+  go (curr, cell) (prev, acc) =
+    let ScreenPos{screenPos_x = x, screenPos_y = y} = curr
+        ScreenPos{screenPos_x = x', screenPos_y = y'} = prev
+        isNextChar = x == x' + 1 && y == y'
         isNextLine = x == 0 && y == y' + 1
         isPrevLine = x == 0 && y == y' - 1
         isSameLine = y == y'
@@ -188,14 +199,14 @@ bucketedCellsToAnsiString startPos (fg, bg) = colorize . foldr go (startPos, [])
         setCursorXY = if abs relY < y then setRelCursorY else setAbsPosXY
      in if
             | not hasExpectedFgBg -> error "bucketedCellsToAnsiString: unexpected fg/bg"
-            | isNextChar -> ((x, y), char : acc)
-            | isPrevLine && x == 0 -> ((x, y), setPrevLine : char : acc)
-            | isNextLine && x == 0 -> ((x, y), setNextLine : char : acc)
-            | isSameLine -> ((x, y), setCursorX : char : acc)
-            | isSameCol -> ((x, y), setRelCursorY : char : acc) -- NOTE: there is no abs set cursor y w/o x
-            | otherwise -> ((x, y), setCursorXY : char : acc)
+            | isNextChar -> (curr, char : acc)
+            | isPrevLine && x == 0 -> (curr, setPrevLine : char : acc)
+            | isNextLine && x == 0 -> (curr, setNextLine : char : acc)
+            | isSameLine -> (curr, setCursorX : char : acc)
+            | isSameCol -> (curr, setRelCursorY : char : acc) -- NOTE: there is no abs set cursor y w/o x
+            | otherwise -> (curr, setCursorXY : char : acc)
 
-cellToAnsiString :: Pos -> RenderedCell -> (Pos, AnsiString)
+cellToAnsiString :: ScreenPos -> RenderedCell -> (ScreenPos, AnsiString)
 cellToAnsiString startPos cell =
   let fgBg = (renderedCell_fg cell, renderedCell_bg cell)
    in bucketedCellsToAnsiString startPos fgBg [(startPos, cell)]
