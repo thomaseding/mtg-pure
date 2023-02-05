@@ -18,7 +18,7 @@ module Test.Game.StoneRain (
 ) where
 
 import safe MtgPure.Cards (mountain, stoneRain)
-import safe MtgPure.Client.Terminal (TerminalInput (..), playTerminalGame, runTerminal)
+import safe MtgPure.Client.Terminal (TerminalInput (..), fwdImpl, playTerminalGame, runTerminal)
 import safe MtgPure.Model.Deck (Deck (..))
 import safe MtgPure.Model.Recursive (AnyCard (..))
 import safe MtgPure.Model.Sideboard (Sideboard (..))
@@ -34,6 +34,7 @@ mainStoneRain = runTerminal input do
   input =
     TerminalInput
       { terminalInput_ = ()
+      , terminalInput_fwd = fwdImpl
       , terminalInput_replayInputs = replayInputs
       , terminalInput_replayLog = replayLog
       }
