@@ -30,8 +30,10 @@ module MtgPure.Engine.Core (
   getAlivePlayerCount,
   getAPNAP,
   getBasicLandTypes,
+  getIntrinsicManaAbilities,
   getPermanent,
   getPlayer,
+  getTrivialManaAbilities,
   indexToActivated,
   newObjectId,
   newVariableId,
@@ -94,16 +96,18 @@ import safe MtgPure.Engine.State (
   mkOpaqueGameState,
  )
 import safe MtgPure.Model.BasicLandType (BasicLandType)
+import safe MtgPure.Model.Combinators (CanHaveTrivialManaAbility, trivialManaAbility)
 import safe MtgPure.Model.Graveyard (Graveyard (..))
 import safe MtgPure.Model.Hand (Hand (..))
 import safe MtgPure.Model.IsCardList (pushCard)
+import safe MtgPure.Model.IsManaAbility (isTrivialManaAbility)
 import safe MtgPure.Model.Land (Land (..))
 import safe MtgPure.Model.LandType (LandType (..))
 import safe MtgPure.Model.Library (Library (..))
 import safe MtgPure.Model.Object.IndexOT (IndexOT (..))
 import safe MtgPure.Model.Object.IsObjectType (IsObjectType (..))
 import safe MtgPure.Model.Object.OTN (OT0)
-import safe MtgPure.Model.Object.OTNAliases (OTNCard, OTNPermanent)
+import safe MtgPure.Model.Object.OTNAliases (OTNCard, OTNLand, OTNPermanent)
 import safe MtgPure.Model.Object.Object (Object)
 import safe MtgPure.Model.Object.ObjectId (
   ObjectId (..),
@@ -399,6 +403,52 @@ indexToActivated absIndex = logCall 'indexToActivated do
         False -> Nothing
         True -> Just $ abilities !! index
 
+getTrivialManaAbilities ::
+  forall ot m.
+  (CanHaveTrivialManaAbility ot, Monad m) =>
+  ZO 'ZBattlefield ot ->
+  Magic 'Private 'RO m [SomeActivatedAbility 'ZBattlefield ot]
+getTrivialManaAbilities zo = logCall 'getTrivialManaAbilities do
+  nonIntrinsics <- getNonIntrinsicTrivialManaAbilities zo
+  intrinsics <- getIntrinsicManaAbilities zo
+  pure $ List.nub $ nonIntrinsics ++ intrinsics
+
+getNonIntrinsicTrivialManaAbilities ::
+  forall ot m.
+  (CanHaveTrivialManaAbility ot, Monad m) =>
+  ZO 'ZBattlefield ot ->
+  Magic 'Private 'RO m [SomeActivatedAbility 'ZBattlefield ot]
+getNonIntrinsicTrivialManaAbilities zo = logCall 'getNonIntrinsicTrivialManaAbilities do
+  let zoPerm = zo0ToPermanent $ toZO0 zo
+  findPermanent zoPerm
+    <&> List.nub . \case
+      Nothing -> assert False []
+      Just perm -> flip mapMaybe (permanentAbilities perm) \someAbility ->
+        fromSome someAbility \case
+          Activated withThis0 ->
+            let go ::
+                  forall zone ot'.
+                  IsZO zone ot' =>
+                  WithThisActivated zone ot' ->
+                  Maybe (SomeActivatedAbility 'ZBattlefield ot)
+                go withThis1 = case cast withThis1 of
+                  Nothing -> assert False Nothing
+                  Just (withThis2 :: WithThisActivated 'ZBattlefield ot') ->
+                    case isTrivialManaAbility withThis2 of
+                      Nothing -> Nothing
+                      Just{} -> Just $ SomeActivatedAbility zo withThis2
+             in go withThis0
+          _ -> Nothing
+
+getIntrinsicManaAbilities ::
+  (IsZO 'ZBattlefield ot, Monad m) =>
+  ZO 'ZBattlefield ot ->
+  Magic 'Private 'RO m [SomeActivatedAbility 'ZBattlefield ot]
+getIntrinsicManaAbilities zo = do
+  getBasicLandTypes zo <&> \case
+    basicLandTypes -> SomeActivatedAbility zo . trivialManaAbility @OTNLand . Just <$> basicLandTypes
+
+-- | Does not return duplicates.
 getBasicLandTypes :: forall zone ot m. (IsZO zone ot, Monad m) => ZO zone ot -> Magic 'Private 'RO m [BasicLandType]
 getBasicLandTypes zo = logCall 'getBasicLandTypes do
   case singZone @zone of

@@ -1,0 +1,66 @@
+Help for REPL Commands:
+
+Commands:
+  help [<command>] - Display information about the specified command or all commands if no command is provided.
+  quit - Quit the game.
+  examine <object_id> [<ability_index>] - Display detailed information of an object or ability.
+  pass - Pass priority.
+  activateAbility <object_id> <ability_index> <target_id>* - Activate an ability of an object.
+  castSpell <card_id> <target_id>* - Cast a spell.
+  playLand <card_id> - Play a land.
+
+Commands are case-insensitive and can be entered using dots "." in place of spaces.
+
+Some command have a single character aliases. They are as follows:
+  ? help
+  + examine
+  0 pass
+  1 activateAbility
+  2 castSpell
+  3 playLand
+
+IDs:
+  Positive decimal numbers used to uniquely identify objects. This generalizes an genuine MTG "object" (CR 109.1)
+  to include things like players. These are displayed on screen as `[<id>]` next to their corresponding object.
+
+Indices:
+  0-based non-negative decimal numbers used to identify an ability of a card.
+  Specific negative indices with symbol aliases can also be used to activate mana abilities of permanents.
+
+Mana Ability Indices:
+  -1 W - Activates the "T: Add W" ability of a permanent.
+  -2 U - Activates the "T: Add U" ability of a permanent.
+  -3 B - Activates the "T: Add B" ability of a permanent.
+  -4 G - Activates the "T: Add G" ability of a permanent.
+  -5 G - Activates the "T: Add G" ability of a permanent.
+  -6 C - Activates the "T: Add C" ability of a permanent.
+  -7 * - Infers one of the above mana abilities when unambiguous.
+
+"#" can be used to comment out the rest of the line. Useful in replay files.
+
+Examples:
+> examine 4 # Displays detailed information of the object with ID 4.
+> examine 4 0 # Displays detailed information of the first ability of the object with ID 4.
+> activateAbility 7 * # Activates the unique simple mana ability of the permanent with ID 7.
+> activateAbility 7 -1 # Activates the "T: Add W" ability of the permanent with ID 7.
+> activateAbility 7 W # Activates the "T: Add W" ability of the permanent with ID 7.
+> activateAbility 7 0 # Activates the first ability of the permanent with ID 7.
+> activateAbility 7 0 8 # Activates the first ability of the permanent with ID 7 targeting the object with ID 8.
+> activateAbility 7 0 8 9 # Activates the first ability of the permanent with ID 7 targeting the objects with IDs 8 and 9.
+> castSpell 3 5 # Casts the spell with ID 3 targeting the object with ID 5.
+> castSpell 3 5 11 # Casts the spell with ID 3 targeting the objects with IDs 5 and 11.
+
+Commands are designed to be entered efficiently on a numeric keypad. Examples:
+> +.7 # Displays detailed information of the object with ID 7.
+> +.7.0 # Displays detailed information of the first ability of the object with ID 7.
+> 1.7.* # Activates the unique simple mana ability of the permanent with ID 7.
+> 1.7.-1 # Activates the "T: Add W" ability of the permanent with ID 7.
+> 1.7.0 # Activates the first ability of the permanent with ID 7.
+
+Spaces (or dots) are sometimes optional between command arguments. Examples:
+> +7 # Displays detailed information of the object with ID 7.
+> +7.0 # Displays detailed information of the first ability of the object with ID 7.
+> 1.7* # Activates the unique simple mana ability of the permanent with ID 7.
+> 1.7-1 # Activates the "T: Add W" ability of the permanent with ID 7.
+> 1.7w # Activates the "T: Add W" ability of the permanent with ID 7.
+

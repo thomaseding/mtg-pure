@@ -16,8 +16,8 @@ module MtgPure.Model.Combinators (
   AsWithMaskedObject (..),
   AsWithMaskedObjects (..),
   AsWithThis (..),
-  basicManaAbility,
   becomesTapped,
+  CanHaveTrivialManaAbility,
   changeTo,
   chooseAnyColor,
   colored,
@@ -59,8 +59,9 @@ module MtgPure.Model.Combinators (
   ToCard (..),
   ToToken (..),
   ToHybrid (..),
+  trivialManaAbilities,
+  trivialManaAbility,
   tyAp,
-  unlifted_isBasicManaAbility,
   untilEndOfTurn,
 ) where
 
@@ -75,7 +76,7 @@ import safe Data.Inst (
 import safe Data.Kind (Type)
 import safe Data.Nat (Fin, NatList (..), ToNat)
 import safe Data.Proxy (Proxy (..))
-import safe Data.Typeable (Typeable, cast)
+import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.BasicLandType (BasicLandType (..))
 import safe MtgPure.Model.Color (Color (..))
 import safe MtgPure.Model.ColorsLike (ColorsLike (..))
@@ -89,6 +90,7 @@ import safe MtgPure.Model.Mana.Snow (Snow (..))
 import safe MtgPure.Model.Mana.ToManaCost (ToManaCost (..))
 import safe MtgPure.Model.Mana.ToManaPool (ToManaPool (..))
 import safe MtgPure.Model.Object.IsObjectType (IsObjectType)
+import safe MtgPure.Model.Object.LitOTN (LitOTN (litOTN))
 import safe MtgPure.Model.Object.OTN (
   OT1,
   OT2,
@@ -104,6 +106,7 @@ import safe MtgPure.Model.Object.OTNAliases (
   OTNLand,
   OTNPlayer,
  )
+import safe MtgPure.Model.Object.OTN_ (OTN' (..))
 import safe MtgPure.Model.Object.Singleton.Any (CoAny (..))
 import safe MtgPure.Model.Object.Singleton.Card (CoCard (..))
 import safe MtgPure.Model.Object.Singleton.Permanent (CoPermanent (..))
@@ -254,14 +257,53 @@ instance Inst5 IsObjectType a b c d e => AsWithMaskedObjects (OT5 a b c d e) whe
 instance Inst6 IsObjectType a b c d e f => AsWithMaskedObjects (OT6 a b c d e f) where
   maskeds = Maskeds6
 
-class IsZO zone ot => AsWithThis ot zone liftOT ots | ot zone liftOT -> ots, ots -> ot zone where
-  thisObject :: (ots -> liftOT ot) -> WithThis zone liftOT ot
+type family ThisFromOTN zone ot where
+  ThisFromOTN zone (OT1 a) = ZO zone (OT1 a)
+  ThisFromOTN zone (OT2 a b) = (ZO zone (OT1 a), ZO zone (OT1 b))
+  ThisFromOTN zone (OT3 a b c) = (ZO zone (OT1 a), ZO zone (OT1 b), ZO zone (OT1 c))
+  ThisFromOTN zone (OT4 a b c d) = (ZO zone (OT1 a), ZO zone (OT1 b), ZO zone (OT1 c), ZO zone (OT1 d))
+  ThisFromOTN zone (OT5 a b c d e) = (ZO zone (OT1 a), ZO zone (OT1 b), ZO zone (OT1 c), ZO zone (OT1 d), ZO zone (OT1 e))
 
-instance (IsZO zone (OT1 a), Inst1 IsObjectType a) => AsWithThis (OT1 a) zone liftOT (ZO zone (OT1 a)) where
-  thisObject = This1
+type family OT1FromOTN ot where
+  OT1FromOTN (OT1 a) = OT1 a
+  OT1FromOTN (OT2 a b) = OT1 a
+  OT1FromOTN (OT3 a b c) = OT1 a
+  OT1FromOTN (OT4 a b c d) = OT1 a
+  OT1FromOTN (OT5 a b c d e) = OT1 a
 
-instance (IsZO zone (OT2 a b), Inst2 IsObjectType a b) => AsWithThis (OT2 a b) zone liftOT (ZO zone (OT1 a), ZO zone (OT1 b)) where
-  thisObject = This2
+class IsZO zone ot => AsWithThis ot zone where
+  thisObject :: (ThisFromOTN zone ot -> liftOT ot) -> WithThis zone liftOT ot
+  thisObject1 :: (ZO zone (OT1FromOTN ot) -> liftOT ot) -> WithThis zone liftOT ot
+
+instance IsZO zone (OT1 a) => AsWithThis (OT1 a) zone where
+  thisObject = case litOTN @(OT1 a) of
+    OT1 -> This1
+  thisObject1 = case litOTN @(OT1 a) of
+    OT1 -> This1
+
+instance IsZO zone (OT2 a b) => AsWithThis (OT2 a b) zone where
+  thisObject = case litOTN @(OT2 a b) of
+    OT2 -> This2
+  thisObject1 = case litOTN @(OT2 a b) of
+    OT2 -> \goThis1 -> This2 \(a, _) -> goThis1 a
+
+instance IsZO zone (OT3 a b c) => AsWithThis (OT3 a b c) zone where
+  thisObject = case litOTN @(OT3 a b c) of
+    OT3 -> This3
+  thisObject1 = case litOTN @(OT3 a b c) of
+    OT3 -> \goThis1 -> This3 \(a, _, _) -> goThis1 a
+
+instance IsZO zone (OT4 a b c d) => AsWithThis (OT4 a b c d) zone where
+  thisObject = case litOTN @(OT4 a b c d) of
+    OT4 -> This4
+  thisObject1 = case litOTN @(OT4 a b c d) of
+    OT4 -> \goThis1 -> This4 \(a, _, _, _) -> goThis1 a
+
+instance IsZO zone (OT5 a b c d e) => AsWithThis (OT5 a b c d e) zone where
+  thisObject = case litOTN @(OT5 a b c d e) of
+    OT5 -> This5
+  thisObject1 = case litOTN @(OT5 a b c d e) of
+    OT5 -> \goThis1 -> This5 \(a, _, _, _, _) -> goThis1 a
 
 class AsDamage a where
   asDamage :: a -> Damage 'Var
@@ -489,8 +531,8 @@ addManaAnyColor color player amount =
 -- mkToken name = Token coPermanent . mkCard name
 
 hasAbility ::
-  (AsWithThis ot zone Ability ots, IsZO zone ot) =>
-  (ots -> Ability ot) ->
+  (AsWithThis ot zone, IsZO zone ot) =>
+  (ThisFromOTN zone ot -> Ability ot) ->
   Requirement zone ot
 hasAbility = HasAbility . thisObject
 
@@ -534,50 +576,72 @@ searchLibrary ::
   Effect 'OneShot
 searchLibrary = SearchLibrary
 
-mkBasicManaAbility :: BasicLandType -> WithThisActivated 'ZBattlefield OTNLand
-mkBasicManaAbility ty = thisObject \this ->
+type CanHaveTrivialManaAbility ot =
+  ( CoPermanent (OT1FromOTN ot)
+  , CoAny (OT1FromOTN ot)
+  , AsAny (OT1FromOTN ot)
+  , AsWithThis ot 'ZBattlefield
+  )
+
+mkTrivialManaAbility ::
+  forall ot ot1 zo.
+  ot1 ~ OT1FromOTN ot =>
+  zo ~ ZO 'ZBattlefield ot1 =>
+  CanHaveTrivialManaAbility ot =>
+  Maybe BasicLandType ->
+  WithThisActivated 'ZBattlefield ot
+mkTrivialManaAbility mTy = thisObject1 \this ->
   controllerOf this \you ->
-    ElectActivated $
+    ElectActivated
       Ability
         { activated_cost = tapCost [is this]
-        , activated_effect = effect $ AddMana you case ty of
-            Plains -> toManaPool W
-            Island -> toManaPool U
-            Swamp -> toManaPool B
-            Mountain -> toManaPool R
-            Forest -> toManaPool G
+        , activated_effect = effect $ AddMana you case mTy of
+            Just ty -> case ty of
+              Plains -> toManaPool W
+              Island -> toManaPool U
+              Swamp -> toManaPool B
+              Mountain -> toManaPool R
+              Forest -> toManaPool G
+            Nothing -> toManaPool C
         }
 
-plainsManaAbility :: WithThisActivated 'ZBattlefield OTNLand
-plainsManaAbility = mkBasicManaAbility Plains
+plainsManaAbility :: CanHaveTrivialManaAbility ot => WithThisActivated 'ZBattlefield ot
+plainsManaAbility = mkTrivialManaAbility $ Just Plains
 
-islandManaAbility :: WithThisActivated 'ZBattlefield OTNLand
-islandManaAbility = mkBasicManaAbility Island
+islandManaAbility :: CanHaveTrivialManaAbility ot => WithThisActivated 'ZBattlefield ot
+islandManaAbility = mkTrivialManaAbility $ Just Island
 
-swampManaAbility :: WithThisActivated 'ZBattlefield OTNLand
-swampManaAbility = mkBasicManaAbility Swamp
+swampManaAbility :: CanHaveTrivialManaAbility ot => WithThisActivated 'ZBattlefield ot
+swampManaAbility = mkTrivialManaAbility $ Just Swamp
 
-mountainManaAbility :: WithThisActivated 'ZBattlefield OTNLand
-mountainManaAbility = mkBasicManaAbility Mountain
+mountainManaAbility :: CanHaveTrivialManaAbility ot => WithThisActivated 'ZBattlefield ot
+mountainManaAbility = mkTrivialManaAbility $ Just Mountain
 
-forestManaAbility :: WithThisActivated 'ZBattlefield OTNLand
-forestManaAbility = mkBasicManaAbility Forest
+forestManaAbility :: CanHaveTrivialManaAbility ot => WithThisActivated 'ZBattlefield ot
+forestManaAbility = mkTrivialManaAbility $ Just Forest
 
-basicManaAbility :: BasicLandType -> WithThisActivated 'ZBattlefield OTNLand
-basicManaAbility = \case
-  Plains -> plainsManaAbility
-  Island -> islandManaAbility
-  Swamp -> swampManaAbility
-  Mountain -> mountainManaAbility
-  Forest -> forestManaAbility
+wastesManaAbility :: CanHaveTrivialManaAbility ot => WithThisActivated 'ZBattlefield ot
+wastesManaAbility = mkTrivialManaAbility Nothing
 
-allBasicManaAbilities :: [WithThisActivated 'ZBattlefield OTNLand]
-allBasicManaAbilities = map basicManaAbility [minBound ..]
+trivialManaAbility :: CanHaveTrivialManaAbility ot => Maybe BasicLandType -> WithThisActivated 'ZBattlefield ot
+trivialManaAbility = \case
+  Just ty -> case ty of
+    Plains -> plainsManaAbility
+    Island -> islandManaAbility
+    Swamp -> swampManaAbility
+    Mountain -> mountainManaAbility
+    Forest -> forestManaAbility
+  Nothing -> wastesManaAbility
 
-unlifted_isBasicManaAbility :: IsZO zone ot => WithThisActivated zone ot -> Bool
-unlifted_isBasicManaAbility ability = case cast ability of
-  Just landAbility -> landAbility `elem` allBasicManaAbilities
-  Nothing -> False
+trivialManaAbilities :: CanHaveTrivialManaAbility ot => [WithThisActivated 'ZBattlefield ot]
+trivialManaAbilities =
+  [ plainsManaAbility
+  , islandManaAbility
+  , swampManaAbility
+  , mountainManaAbility
+  , forestManaAbility
+  , wastesManaAbility
+  ]
 
 mkBasicLandwalk :: BasicLandType -> Ability OTNCreature
 mkBasicLandwalk = Static . Landwalk . pure . HasLandType . BasicLand

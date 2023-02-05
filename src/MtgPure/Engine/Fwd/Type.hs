@@ -34,6 +34,7 @@ import safe MtgPure.Engine.Prompt (
   SpecialAction,
  )
 import safe MtgPure.Model.BasicLandType (BasicLandType)
+import safe MtgPure.Model.Combinators (CanHaveTrivialManaAbility)
 import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.Object.OTN (OT0)
 import safe MtgPure.Model.Object.OTNAliases (OTNCard, OTNPermanent)
@@ -88,9 +89,11 @@ data Fwd' ex st m where
     , fwd_getAPNAP :: forall v. Magic' ex st v 'RO m (Stream.Stream (Object 'OTPlayer))
     , fwd_getBasicLandTypes :: forall zone ot. IsZO zone ot => ZO zone ot -> Magic' ex st 'Private 'RO m [BasicLandType]
     , fwd_getHasPriority :: Object 'OTPlayer -> Magic' ex st 'Public 'RO m Bool
+    , fwd_getIntrinsicManaAbilities :: forall ot. CanHaveTrivialManaAbility ot => ZO 'ZBattlefield ot -> Magic' ex st 'Private 'RO m [SomeActivatedAbility 'ZBattlefield ot]
     , fwd_getPermanent :: ZO 'ZBattlefield OTNPermanent -> Magic' ex st 'Private 'RO m Permanent
     , fwd_getPlayer :: Object 'OTPlayer -> Magic' ex st 'Private 'RO m Player
     , fwd_getPlayerWithPriority :: Magic' ex st 'Public 'RO m (Maybe (Object 'OTPlayer))
+    , fwd_getTrivialManaAbilities :: forall ot. CanHaveTrivialManaAbility ot => ZO 'ZBattlefield ot -> Magic' ex st 'Private 'RO m [SomeActivatedAbility 'ZBattlefield ot]
     , fwd_indexToAbility :: forall zone ot. IsZO zone ot => AbsoluteActivatedAbilityIndex -> Magic' ex st 'Private 'RO m (Maybe (SomeActivatedAbility zone ot))
     , fwd_newObjectId :: Magic' ex st 'Private 'RW m ObjectId
     , fwd_newVariableId :: Magic' ex st 'Private 'RW m VariableId

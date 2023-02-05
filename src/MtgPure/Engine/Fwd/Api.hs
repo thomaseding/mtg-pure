@@ -48,9 +48,11 @@ module MtgPure.Engine.Fwd.Api (
   getAPNAP,
   getBasicLandTypes,
   getHasPriority,
+  getIntrinsicManaAbilities,
   getPermanent,
   getPlayer,
   getPlayerWithPriority,
+  getTrivialManaAbilities,
   indexToActivated,
   modifyPlayer,
   newObjectId,
@@ -117,6 +119,7 @@ import safe MtgPure.Engine.State (
   logCall,
  )
 import safe MtgPure.Model.BasicLandType (BasicLandType)
+import safe MtgPure.Model.Combinators (CanHaveTrivialManaAbility)
 import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.Object.OTN (OT0)
 import safe MtgPure.Model.Object.OTNAliases (OTNCard, OTNPermanent)
@@ -377,6 +380,9 @@ getBasicLandTypes = fwd1 fwd_getBasicLandTypes
 getHasPriority :: Monad m => Object 'OTPlayer -> Magic 'Public 'RO m Bool
 getHasPriority = fwd1 fwd_getHasPriority
 
+getIntrinsicManaAbilities :: (CanHaveTrivialManaAbility ot, Monad m) => ZO 'ZBattlefield ot -> Magic 'Private 'RO m [SomeActivatedAbility 'ZBattlefield ot]
+getIntrinsicManaAbilities = fwd1 fwd_getIntrinsicManaAbilities
+
 getPermanent :: Monad m => ZO 'ZBattlefield OTNPermanent -> Magic 'Private 'RO m Permanent
 getPermanent = fwd1 fwd_getPermanent
 
@@ -385,6 +391,9 @@ getPlayer = fwd1 fwd_getPlayer
 
 getPlayerWithPriority :: Monad m => Magic 'Public 'RO m (Maybe (Object 'OTPlayer))
 getPlayerWithPriority = fwd0 fwd_getPlayerWithPriority
+
+getTrivialManaAbilities :: (CanHaveTrivialManaAbility ot, Monad m) => ZO 'ZBattlefield ot -> Magic 'Private 'RO m [SomeActivatedAbility 'ZBattlefield ot]
+getTrivialManaAbilities = fwd1 fwd_getTrivialManaAbilities
 
 indexToActivated :: (IsZO zone ot, Monad m) => AbsoluteActivatedAbilityIndex -> Magic 'Private 'RO m (Maybe (SomeActivatedAbility zone ot))
 indexToActivated = fwd1 fwd_indexToAbility

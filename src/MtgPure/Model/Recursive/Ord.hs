@@ -2007,6 +2007,81 @@ ordWithThis ordM = \case
                 lifted2 = cont2 (objNa, objNb)
             ordM lifted1 lifted2
        in go cont1 cont2
+  This3 cont1 -> \case
+    This3 cont2 ->
+      let go ::
+            forall a b c ota otb otc.
+            ota ~ OT1 a =>
+            otb ~ OT1 b =>
+            otc ~ OT1 c =>
+            Inst3 IsObjectType a b c =>
+            ((ZO zone ota, ZO zone otb, ZO zone otc) -> liftOT ot) ->
+            ((ZO zone ota, ZO zone otb, ZO zone otc) -> liftOT ot) ->
+            EnvM Ordering
+          go cont1 cont2 = do
+            objNa' <- newObjectN @a O1
+            objNb' <- newObjectN @b O1
+            objNc' <- newObjectN @c O1
+            let objNa = toZone objNa'
+                objNb = toZone objNb'
+                objNc = toZone objNc'
+                lifted1 = cont1 (objNa, objNb, objNc)
+                lifted2 = cont2 (objNa, objNb, objNc)
+            ordM lifted1 lifted2
+       in go cont1 cont2
+  This4 cont1 -> \case
+    This4 cont2 ->
+      let go ::
+            forall a b c d ota otb otc otd.
+            ota ~ OT1 a =>
+            otb ~ OT1 b =>
+            otc ~ OT1 c =>
+            otd ~ OT1 d =>
+            Inst4 IsObjectType a b c d =>
+            ((ZO zone ota, ZO zone otb, ZO zone otc, ZO zone otd) -> liftOT ot) ->
+            ((ZO zone ota, ZO zone otb, ZO zone otc, ZO zone otd) -> liftOT ot) ->
+            EnvM Ordering
+          go cont1 cont2 = do
+            objNa' <- newObjectN @a O1
+            objNb' <- newObjectN @b O1
+            objNc' <- newObjectN @c O1
+            objNd' <- newObjectN @d O1
+            let objNa = toZone objNa'
+                objNb = toZone objNb'
+                objNc = toZone objNc'
+                objNd = toZone objNd'
+                lifted1 = cont1 (objNa, objNb, objNc, objNd)
+                lifted2 = cont2 (objNa, objNb, objNc, objNd)
+            ordM lifted1 lifted2
+       in go cont1 cont2
+  This5 cont1 -> \case
+    This5 cont2 ->
+      let go ::
+            forall a b c d e ota otb otc otd ote.
+            ota ~ OT1 a =>
+            otb ~ OT1 b =>
+            otc ~ OT1 c =>
+            otd ~ OT1 d =>
+            ote ~ OT1 e =>
+            Inst5 IsObjectType a b c d e =>
+            ((ZO zone ota, ZO zone otb, ZO zone otc, ZO zone otd, ZO zone ote) -> liftOT ot) ->
+            ((ZO zone ota, ZO zone otb, ZO zone otc, ZO zone otd, ZO zone ote) -> liftOT ot) ->
+            EnvM Ordering
+          go cont1 cont2 = do
+            objNa' <- newObjectN @a O1
+            objNb' <- newObjectN @b O1
+            objNc' <- newObjectN @c O1
+            objNd' <- newObjectN @d O1
+            objNe' <- newObjectN @e O1
+            let objNa = toZone objNa'
+                objNb = toZone objNb'
+                objNc = toZone objNc'
+                objNd = toZone objNd'
+                objNe = toZone objNe'
+                lifted1 = cont1 (objNa, objNb, objNc, objNd, objNe)
+                lifted2 = cont2 (objNa, objNb, objNc, objNd, objNe)
+            ordM lifted1 lifted2
+       in go cont1 cont2
  where
   reqs1 = []
   reqs2 = []

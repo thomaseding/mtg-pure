@@ -65,7 +65,7 @@ import safe MtgPure.Engine.State (
  )
 import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.IsCardList (containsCard)
-import safe MtgPure.Model.IsManaAbility (IsManaAbility (..))
+import safe MtgPure.Model.IsManaAbility (isManaAbility)
 import safe MtgPure.Model.Object.IsObjectType (IsObjectType (..))
 import safe MtgPure.Model.Object.OTN (OT0, OT1, OTN)
 import safe MtgPure.Model.Object.OTNAliases (
@@ -428,6 +428,12 @@ activateAbility oPlayer = logCall 'activateAbility \case
             goThisToElectAbility thisToElectActivated (lensedThis thisId)
           This2 thisToElectActivated -> do
             goThisToElectAbility thisToElectActivated (lensedThis thisId, lensedThis thisId)
+          This3 thisToElectActivated -> do
+            goThisToElectAbility thisToElectActivated (lensedThis thisId, lensedThis thisId, lensedThis thisId)
+          This4 thisToElectActivated -> do
+            goThisToElectAbility thisToElectActivated (lensedThis thisId, lensedThis thisId, lensedThis thisId, lensedThis thisId)
+          This5 thisToElectActivated -> do
+            goThisToElectAbility thisToElectActivated (lensedThis thisId, lensedThis thisId, lensedThis thisId, lensedThis thisId, lensedThis thisId)
 
         goThisToElectAbility ::
           (this -> Elect 'Pre (ActivatedAbility zone ot) ot) ->
@@ -500,6 +506,15 @@ playPendingOneShot _zoStack cost withThisElectEffect cont = logCall 'playPending
     This2 thisToElectEffect -> do
       thisId <- newObjectId
       goElectEffect $ thisToElectEffect (lensedThis thisId, lensedThis thisId)
+    This3 thisToElectEffect -> do
+      thisId <- newObjectId
+      goElectEffect $ thisToElectEffect (lensedThis thisId, lensedThis thisId, lensedThis thisId)
+    This4 thisToElectEffect -> do
+      thisId <- newObjectId
+      goElectEffect $ thisToElectEffect (lensedThis thisId, lensedThis thisId, lensedThis thisId, lensedThis thisId)
+    This5 thisToElectEffect -> do
+      thisId <- newObjectId
+      goElectEffect $ thisToElectEffect (lensedThis thisId, lensedThis thisId, lensedThis thisId, lensedThis thisId, lensedThis thisId)
 
   goElectEffect = cont cost . Just . Pending
 

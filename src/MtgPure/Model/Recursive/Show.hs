@@ -63,6 +63,9 @@ import safe MtgPure.Model.Object.IsObjectType (IsObjectType (..))
 import safe MtgPure.Model.Object.OTN (
   OT1,
   OT2,
+  OT3,
+  OT4,
+  OT5,
   OTN,
  )
 import safe MtgPure.Model.Object.OTNAliases (
@@ -399,7 +402,7 @@ getObjectName :: Object a -> EnvM Item
 getObjectName (Object _ (UntypedObject _ i)) = EnvM do
   gens <- State.gets objectGenerations
   case Map.lookup i gens of
-    Nothing -> error "impossible"
+    Nothing -> pure $ ObjectItem i (-1) -- Object is an unbound variable. Can happen when walking past a variable binding before showing the rest of the tree.
     Just g -> pure $ ObjectItem i g
 
 newtype ObjectIdState = ObjectIdState ObjectId
@@ -455,7 +458,7 @@ lenseList = \case
 
 getObjectNamePrefix :: ObjectId -> EnvM String
 getObjectNamePrefix i = EnvM do
-  State.gets (Map.findWithDefault "impossible" i . objectNames)
+  State.gets (Map.findWithDefault "unboundVariable" i . objectNames)
 
 showListM :: (a -> EnvM ParenItems) -> [a] -> EnvM ParenItems
 showListM f xs = noParens do
@@ -1590,7 +1593,7 @@ showObjectNImpl objNRef prefix obj = do
   let i = objectToId obj
   sObj <- showObject obj
   EnvM (State.gets $ Map.lookup i . originalObjectRep) >>= \case
-    Nothing -> error "impossible"
+    Nothing -> noParens $ pure sObj -- Object is an unbound variable. Can happen when walking past a variable binding before showing the rest of the tree.
     Just originalRep -> case originalRep == objNRef of
       False -> yesParens $ pure $ pure prefix <> pure " " <> sObj
       True -> noParens $ pure sObj
@@ -2125,6 +2128,105 @@ showWithThis showM memo = \case
               <> sObjNa
               <> pure ", "
               <> sObjNb
+              <> pure ") -> "
+              <> sElect
+     in go cont
+  This3 cont ->
+    let go ::
+          forall a b c.
+          (IsOTN (OT3 a b c), Inst3 IsObjectType a b c) =>
+          ((ZO zone (OT1 a), ZO zone (OT1 b), ZO zone (OT1 c)) -> liftOT (OT3 a b c)) ->
+          EnvM ParenItems
+        go cont' = yesParens do
+          sTy <- parens <$> showTypeOf (Proxy @ot)
+          (objNa, snap) <- newObjectN @a O1 memo
+          (objNb, _) <- newObjectN @b O1 memo
+          (objNc, _) <- newObjectN @c O1 memo
+          sObjNa <- parens <$> showObjectN @zone objNa
+          sObjNb <- parens <$> showObjectN @zone objNb
+          sObjNc <- parens <$> showObjectN @zone objNc
+          let elect = cont' (toZone objNa, toZone objNb, toZone objNc)
+          sElect <- dropParens <$> showM elect
+          restoreObject snap
+          pure $
+            pure "thisObject @"
+              <> sTy
+              <> pure " $ \\("
+              <> sObjNa
+              <> pure ", "
+              <> sObjNb
+              <> pure ", "
+              <> sObjNc
+              <> pure ") -> "
+              <> sElect
+     in go cont
+  This4 cont ->
+    let go ::
+          forall a b c d.
+          (IsOTN (OT4 a b c d), Inst4 IsObjectType a b c d) =>
+          ((ZO zone (OT1 a), ZO zone (OT1 b), ZO zone (OT1 c), ZO zone (OT1 d)) -> liftOT (OT4 a b c d)) ->
+          EnvM ParenItems
+        go cont' = yesParens do
+          sTy <- parens <$> showTypeOf (Proxy @ot)
+          (objNa, snap) <- newObjectN @a O1 memo
+          (objNb, _) <- newObjectN @b O1 memo
+          (objNc, _) <- newObjectN @c O1 memo
+          (objNd, _) <- newObjectN @d O1 memo
+          sObjNa <- parens <$> showObjectN @zone objNa
+          sObjNb <- parens <$> showObjectN @zone objNb
+          sObjNc <- parens <$> showObjectN @zone objNc
+          sObjNd <- parens <$> showObjectN @zone objNd
+          let elect = cont' (toZone objNa, toZone objNb, toZone objNc, toZone objNd)
+          sElect <- dropParens <$> showM elect
+          restoreObject snap
+          pure $
+            pure "thisObject @"
+              <> sTy
+              <> pure " $ \\("
+              <> sObjNa
+              <> pure ", "
+              <> sObjNb
+              <> pure ", "
+              <> sObjNc
+              <> pure ", "
+              <> sObjNd
+              <> pure ") -> "
+              <> sElect
+     in go cont
+  This5 cont ->
+    let go ::
+          forall a b c d e.
+          (IsOTN (OT5 a b c d e), Inst5 IsObjectType a b c d e) =>
+          ((ZO zone (OT1 a), ZO zone (OT1 b), ZO zone (OT1 c), ZO zone (OT1 d), ZO zone (OT1 e)) -> liftOT (OT5 a b c d e)) ->
+          EnvM ParenItems
+        go cont' = yesParens do
+          sTy <- parens <$> showTypeOf (Proxy @ot)
+          (objNa, snap) <- newObjectN @a O1 memo
+          (objNb, _) <- newObjectN @b O1 memo
+          (objNc, _) <- newObjectN @c O1 memo
+          (objNd, _) <- newObjectN @d O1 memo
+          (objNe, _) <- newObjectN @e O1 memo
+          sObjNa <- parens <$> showObjectN @zone objNa
+          sObjNb <- parens <$> showObjectN @zone objNb
+          sObjNc <- parens <$> showObjectN @zone objNc
+          sObjNd <- parens <$> showObjectN @zone objNd
+          sObjNe <- parens <$> showObjectN @zone objNe
+          let elect = cont' (toZone objNa, toZone objNb, toZone objNc, toZone objNd, toZone objNe)
+          sElect <- dropParens <$> showM elect
+          restoreObject snap
+          pure $
+            pure "thisObject @"
+              <> sTy
+              <> pure " $ \\("
+              <> sObjNa
+              <> pure ", "
+              <> sObjNb
+              <> pure ", "
+              <> sObjNc
+              <> pure ", "
+              <> sObjNd
+              <> pure ", "
+              <> sObjNe
               <> pure ") -> "
               <> sElect
      in go cont

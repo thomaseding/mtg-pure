@@ -28,21 +28,26 @@ import safe qualified Control.Monad.Trans as M
 import safe Control.Monad.Trans.Except (ExceptT, runExceptT, throwE)
 import safe Control.Monad.Util (Attempt, Attempt' (..))
 import safe qualified Data.Char as Char
-import safe Data.Kind (Type)
+import safe qualified Data.List as List
 import safe Data.List.NonEmpty (NonEmpty (..))
 import safe qualified Data.List.NonEmpty as NonEmpty
 import safe qualified Data.Map.Strict as Map
 import safe Data.Monoid (First (..))
 import safe Data.Nat (Fin, NatList)
-import safe Data.Read.Sep (Tuple (..), TupleList (..))
-import safe Data.Read.Symbol (CI, CS, Many1, Or)
 import safe qualified Data.Set as Set
 import safe qualified Data.Traversable as T
+import safe MtgPure.Client.Terminal.CommandInput (
+  CommandAbilityIndex (..),
+  CommandInput (..),
+  defaultCommandAliases,
+  runParseCommandInput,
+ )
 import safe MtgPure.Engine.Fwd.Api (
   eachLogged_,
   getAlivePlayers,
-  getBasicLandTypes,
+  getIntrinsicManaAbilities,
   getPlayer,
+  getTrivialManaAbilities,
   indexToActivated,
   toZO,
  )
@@ -68,11 +73,10 @@ import safe MtgPure.Engine.State (
   OpaqueGameState,
   queryMagic,
  )
-import safe MtgPure.Model.BasicLandType (BasicLandType (..))
 import safe MtgPure.Model.CardName (CardName (..), HasCardName (..))
-import safe MtgPure.Model.Combinators (basicManaAbility)
 import safe MtgPure.Model.Deck (Deck (..))
 import safe MtgPure.Model.Hand (Hand (..))
+import safe MtgPure.Model.IsManaAbility (isTrivialManaAbility)
 import safe MtgPure.Model.Library (Library (..))
 import safe MtgPure.Model.Mana.ManaCost (DynamicManaCost (..))
 import safe MtgPure.Model.Mana.ManaPool (CompleteManaPool, ManaPayment (..))
@@ -82,6 +86,7 @@ import safe MtgPure.Model.Mulligan (Mulligan (..))
 import safe MtgPure.Model.Object.OTNAliases (
   OTNAny,
   OTNCard,
+  OTNPermanent,
  )
 import safe MtgPure.Model.Object.Object (Object (..))
 import safe MtgPure.Model.Object.ObjectId (ObjectId (..), getObjectId)
@@ -96,7 +101,6 @@ import safe MtgPure.Model.Zone (IsZone, Zone (..))
 import safe MtgPure.Model.ZoneObject.Convert (toZO0, toZO1, zo0ToSpell)
 import safe MtgPure.Model.ZoneObject.ZoneObject (IsZO, ZO)
 import safe qualified System.IO as IO
-import safe Text.Read (readMaybe)
 
 data Quit = Quit
 
@@ -219,116 +223,6 @@ terminalPickZo _attempt _opaque _p zos = case zos of
     liftIO $ print ("picked", zo, "from", NonEmpty.toList zos)
     pure zo
 
-data CommandAbilityIndex :: Type where
-  CIAbilityIndex :: Int -> CommandAbilityIndex
-  CIImplicitAbility :: BasicLandType -> CommandAbilityIndex
-  CIInferImplicitAbility :: CommandAbilityIndex
-
-instance Show CommandAbilityIndex where
-  show = \case
-    CIAbilityIndex n -> show n
-    CIImplicitAbility landType -> case landType of
-      Plains -> "W"
-      Island -> "U"
-      Swamp -> "B"
-      Mountain -> "R"
-      Forest -> "G"
-    CIInferImplicitAbility -> "*"
-
-type AsW = Tuple Sep (Or (CI "W") (CS "-1"), ())
-
-type AsU = Tuple Sep (Or (CI "U") (CS "-2"), ())
-
-type AsB = Tuple Sep (Or (CI "B") (CS "-3"), ())
-
-type AsR = Tuple Sep (Or (CI "R") (CS "-4"), ())
-
-type AsG = Tuple Sep (Or (CI "G") (CS "-5"), ())
-
-type AsI = Tuple Sep (Or (CI "*") (CS "-6"), ())
-
-instance Read CommandAbilityIndex where
-  readsPrec _ s = case s of
-    (reads @AsW -> [(Tuple1 _, rest)]) -> [(CIImplicitAbility Plains, rest)]
-    (reads @AsU -> [(Tuple1 _, rest)]) -> [(CIImplicitAbility Island, rest)]
-    (reads @AsB -> [(Tuple1 _, rest)]) -> [(CIImplicitAbility Swamp, rest)]
-    (reads @AsR -> [(Tuple1 _, rest)]) -> [(CIImplicitAbility Mountain, rest)]
-    (reads @AsG -> [(Tuple1 _, rest)]) -> [(CIImplicitAbility Forest, rest)]
-    (reads @AsI -> [(Tuple1 _, rest)]) -> [(CIInferImplicitAbility, rest)]
-    _ -> case reads s of
-      [(n, rest)] -> case n >= 0 of
-        True -> [(CIAbilityIndex n, rest)]
-        False -> []
-      _ -> []
-
-data CommandInput :: Type where
-  CIQuit :: CommandInput
-  CIConcede :: CommandInput
-  CIAskAgain :: CommandInput
-  CIHelp :: Maybe Int -> CommandInput
-  CIPass :: CommandInput
-  CIActivateAbility :: ObjectId -> CommandAbilityIndex -> [ObjectId] -> CommandInput
-  CICastSpell :: ObjectId -> [ObjectId] -> CommandInput
-  CIPlayLand :: ObjectId -> [ObjectId] -> CommandInput
-
-instance Show CommandInput where
-  show = \case
-    CIQuit -> "Quit"
-    CIConcede -> "Concede"
-    CIAskAgain -> "AskAgain"
-    CIHelp Nothing -> "Help"
-    CIHelp (Just n) -> "Help " ++ show n
-    CIPass -> "Pass"
-    CIActivateAbility objectId abilityIndex extras -> "ActivateAbility " ++ showId objectId ++ " " ++ show abilityIndex ++ showExtras extras
-    CICastSpell spellId extras -> "CastSpell " ++ showId spellId ++ showExtras extras
-    CIPlayLand landId extras -> "PlayLand " ++ showId landId ++ showExtras extras
-   where
-    showId = show . unObjectId
-    showExtras = \case
-      [] -> ""
-      xs -> " " ++ unwords (map showId xs)
-
-type Sep = Many1 (CS " ")
-
-type AsQuit = Tuple Sep (CI "quit", ())
-
-type AsConcede = Tuple Sep (CI "concede", ())
-
-type AsHelp0 = Tuple Sep (Or (CI "help") (CS "?"), ())
-
-type AsHelp1 = Tuple Sep (Or (CI "help") (CS "?"), Int, ())
-
-type AsPass = Tuple Sep (Or (CI "pass") (CS "0"), ())
-
-type AsActivateAbility = TupleList Sep (Or (CI "activateAbility") (CS "1"), Int, CommandAbilityIndex, ()) Int
-
-type AsCastSpell = TupleList Sep (Or (CI "castSpell") (CS "2"), Int, ()) Int
-
-type AsPlayLand = TupleList Sep (Or (CI "playLand") (CS "3"), Int, ()) Int
-
-instance Read CommandInput where
-  readsPrec _ str = case massageString str of
-    (reads @AsQuit -> [(Tuple1 _, rest)]) -> [(CIQuit, rest)]
-    (reads @AsConcede -> [(Tuple1 _, rest)]) -> [(CIConcede, rest)]
-    (reads @AsHelp0 -> [(Tuple1 _, rest)]) -> [(CIHelp Nothing, rest)]
-    (reads @AsHelp1 -> [(Tuple2 _ n, rest)]) -> [(CIHelp $ Just n, rest)]
-    (reads @AsPass -> [(Tuple1 _, rest)]) -> [(CIPass, rest)]
-    (reads @AsActivateAbility -> [(TupleList3 _ objectId abilityIndex extras, rest)]) ->
-      [(CIActivateAbility (ObjectId objectId) abilityIndex $ map ObjectId extras, rest)]
-    (reads @AsCastSpell -> [(TupleList2 _ spellId extras, rest)]) ->
-      [(CICastSpell (ObjectId spellId) $ map ObjectId extras, rest)]
-    (reads @AsPlayLand -> [(TupleList2 _ landId extras, rest)]) ->
-      [(CIPlayLand (ObjectId landId) $ map ObjectId extras, rest)]
-    _ -> []
-   where
-    massageString = map massageChar . takeWhile (not . isComment)
-    massageChar = \case
-      '.' -> ' '
-      c -> Char.toLower c
-    isComment = \case
-      ';' -> True
-      _ -> False
-
 parseCommandInput :: CommandInput -> Magic 'Public 'RO Terminal (PriorityAction ())
 parseCommandInput = \case
   CIQuit -> quit
@@ -339,12 +233,82 @@ parseCommandInput = \case
   CIPlayLand landId extraIds -> playLand landId extraIds
   CIAskAgain -> askAgain
   CIHelp _ -> help
+  CIExamineAbility objId abilityIndex -> undefined objId abilityIndex
+  CIExamineObject objId -> undefined objId
 
 askAgain :: Magic 'Public 'RO Terminal (PriorityAction ())
 askAgain = pure $ AskPriorityActionAgain Nothing
 
 help :: Magic 'Public 'RO Terminal (PriorityAction ())
-help = error "Help is not implemented yet"
+help = M.liftIO do
+  clearScreen
+  putStrLn "Help for REPL Commands:"
+  putStrLn ""
+  putStrLn "Commands:"
+  putStrLn "  help [<command>] - Display information about the specified command or all commands if no command is provided."
+  putStrLn "  quit - Quit the game."
+  putStrLn "  examine <object_id> [<ability_index>] - Display detailed information of an object or ability."
+  putStrLn "  pass - Pass priority."
+  putStrLn "  activateAbility <object_id> <ability_index> <target_id>* - Activate an ability of an object."
+  putStrLn "  castSpell <card_id> <target_id>* - Cast a spell."
+  putStrLn "  playLand <card_id> - Play a land."
+  putStrLn ""
+  putStrLn "Commands are case-insensitive and can be entered using dots \".\" in place of spaces."
+  putStrLn ""
+  putStrLn "Some command have a single character aliases. They are as follows:"
+  putStrLn "  ? help"
+  putStrLn "  + examine"
+  putStrLn "  0 pass"
+  putStrLn "  1 activateAbility"
+  putStrLn "  2 castSpell"
+  putStrLn "  3 playLand"
+  putStrLn ""
+  putStrLn "IDs:"
+  putStrLn "  Positive decimal numbers used to uniquely identify objects. This generalizes an genuine MTG \"object\" (CR 109.1)"
+  putStrLn "  to include things like players. These are displayed on screen as `[<id>]` next to their corresponding object."
+  putStrLn ""
+  putStrLn "Indices:"
+  putStrLn "  0-based non-negative decimal numbers used to identify an ability of a card."
+  putStrLn "  Specific negative indices with symbol aliases can also be used to activate mana abilities of permanents."
+  putStrLn ""
+  putStrLn "Mana Ability Indices:"
+  putStrLn "  -1 W - Activates the \"T: Add W\" ability of a permanent."
+  putStrLn "  -2 U - Activates the \"T: Add U\" ability of a permanent."
+  putStrLn "  -3 B - Activates the \"T: Add B\" ability of a permanent."
+  putStrLn "  -4 G - Activates the \"T: Add G\" ability of a permanent."
+  putStrLn "  -5 G - Activates the \"T: Add G\" ability of a permanent."
+  putStrLn "  -6 C - Activates the \"T: Add C\" ability of a permanent."
+  putStrLn "  -7 * - Infers one of the above mana abilities when unambiguous."
+  putStrLn ""
+  putStrLn "\"#\" can be used to comment out the rest of the line. Useful in replay files."
+  putStrLn ""
+  putStrLn "Examples:"
+  putStrLn "> examine 4 # Displays detailed information of the object with ID 4."
+  putStrLn "> examine 4 0 # Displays detailed information of the first ability of the object with ID 4."
+  putStrLn "> activateAbility 7 * # Activates the unique simple mana ability of the permanent with ID 7."
+  putStrLn "> activateAbility 7 -1 # Activates the \"T: Add W\" ability of the permanent with ID 7."
+  putStrLn "> activateAbility 7 W # Activates the \"T: Add W\" ability of the permanent with ID 7."
+  putStrLn "> activateAbility 7 0 # Activates the first ability of the permanent with ID 7."
+  putStrLn "> activateAbility 7 0 8 # Activates the first ability of the permanent with ID 7 targeting the object with ID 8."
+  putStrLn "> activateAbility 7 0 8 9 # Activates the first ability of the permanent with ID 7 targeting the objects with IDs 8 and 9."
+  putStrLn "> castSpell 3 5 # Casts the spell with ID 3 targeting the object with ID 5."
+  putStrLn "> castSpell 3 5 11 # Casts the spell with ID 3 targeting the objects with IDs 5 and 11."
+  putStrLn ""
+  putStrLn "Commands are designed to be entered efficiently on a numeric keypad. Examples:"
+  putStrLn "> +.7 # Displays detailed information of the object with ID 7."
+  putStrLn "> +.7.0 # Displays detailed information of the first ability of the object with ID 7."
+  putStrLn "> 1.7.* # Activates the unique simple mana ability of the permanent with ID 7."
+  putStrLn "> 1.7.-1 # Activates the \"T: Add W\" ability of the permanent with ID 7."
+  putStrLn "> 1.7.0 # Activates the first ability of the permanent with ID 7."
+  putStrLn ""
+  putStrLn "Spaces (or dots) are sometimes optional between command arguments. Examples:"
+  putStrLn "> +7 # Displays detailed information of the object with ID 7."
+  putStrLn "> +7.0 # Displays detailed information of the first ability of the object with ID 7."
+  putStrLn "> 1.7* # Activates the unique simple mana ability of the permanent with ID 7."
+  putStrLn "> 1.7-1 # Activates the \"T: Add W\" ability of the permanent with ID 7."
+  putStrLn "> 1.7w # Activates the \"T: Add W\" ability of the permanent with ID 7."
+  M.void getLine
+  pure $ AskPriorityActionAgain Nothing
 
 quit :: Magic 'Public 'RO Terminal (PriorityAction ())
 quit = M.lift $ Terminal $ throwE Quit
@@ -357,31 +321,46 @@ passPriority = pure PassPriority
 
 activateAbility :: ObjectId -> CommandAbilityIndex -> [ObjectId] -> Magic 'Public 'RO Terminal (PriorityAction ())
 activateAbility objId abilityIndex _extraIds = do
-  mZo <- internalFromPrivate $ toZO @ 'ZBattlefield @OTNAny objId
-  case mZo of
-    Nothing -> tryAgain
-    Just zo -> case abilityIndex of
-      CIAbilityIndex relIndex -> do
-        let index = AbsoluteActivatedAbilityIndex objId $ RelativeAbilityIndex relIndex
-        mAction <-
-          mconcat . map First
-            <$> sequence
-              [ goIndex @ 'ZBattlefield index
-              -- , goIndex @ 'ZExile index
-              -- , goIndex @ 'ZGraveyard index
-              -- , goIndex @ 'ZHand index
-              -- , goIndex @ 'ZLibrary index
-              -- , goIndex @ 'ZStack index
-              ]
-        case getFirst mAction of
-          Just action -> pure action
-          Nothing -> tryAgain
-      CIImplicitAbility ty -> do
-        pure $ PriorityAction $ ActivateAbility $ SomeActivatedAbility zo $ basicManaAbility ty
-      CIInferImplicitAbility -> do
-        tys <- internalFromPrivate $ getBasicLandTypes zo
-        case tys of
-          [ty] -> pure $ PriorityAction $ ActivateAbility $ SomeActivatedAbility zo $ basicManaAbility ty
+  mZoAny <- internalFromPrivate $ toZO @ 'ZBattlefield @OTNAny objId
+  mZoPerm <- internalFromPrivate $ toZO @ 'ZBattlefield @OTNPermanent objId
+  case abilityIndex of
+    CIAbilityIndex relIndex -> do
+      case mZoAny of
+        Nothing -> askAgain
+        Just _zoAny -> do
+          let index = AbsoluteActivatedAbilityIndex objId $ RelativeAbilityIndex relIndex
+          mAction <-
+            mconcat . map First
+              <$> sequence
+                [ goIndex @ 'ZBattlefield index
+                -- , goIndex @ 'ZExile index
+                -- , goIndex @ 'ZGraveyard index
+                -- , goIndex @ 'ZHand index
+                -- , goIndex @ 'ZLibrary index
+                -- , goIndex @ 'ZStack index
+                ]
+          case getFirst mAction of
+            Just action -> pure action
+            Nothing -> askAgain
+    CIManaAbility ty -> case mZoPerm of
+      Nothing -> askAgain
+      Just zoPerm -> do
+        -- TODO: This code should just assume the ability exists since the engine
+        -- should eventually be able to vet if the ability exists or not.
+        abilities <- internalFromPrivate $ getIntrinsicManaAbilities zoPerm
+        let cond (SomeActivatedAbility _zo ability) = isTrivialManaAbility ability == Just ty
+        case List.find cond abilities of
+          Just ability -> pure $ PriorityAction $ ActivateAbility ability
+          Nothing -> askAgain
+    CIInferManaAbility -> case mZoPerm of
+      Nothing -> askAgain
+      Just zoPerm -> do
+        abilities <- internalFromPrivate $ getTrivialManaAbilities zoPerm
+        -- TODO: Filter out fungible trivial mana abilities before casing.
+        -- An example would be if a LLanowar Elves became a Forest in addition to
+        -- being a creature. Here it would have two fungible mana abilities.
+        case abilities of
+          [ability] -> pure $ PriorityAction $ ActivateAbility ability
           _ -> tryAgain
  where
   tryAgain :: Magic 'Public 'RO Terminal (PriorityAction ())
@@ -422,25 +401,10 @@ terminalPriorityAction attempt opaque oPlayer = M.lift do
     liftIO case attempt of
       Attempt 0 -> pure ()
       Attempt n -> putStrLn $ "Retrying[" ++ show n ++ "]..."
-    M.liftIO do
-      putStrLn ""
-      putStrLn "---- LEGEND ----"
-      putStrLn ""
-      putStrLn "<abilityIndex> is the 0-based index of the ability in the list of abilities of an object."
-      putStrLn "The <abilityIndex> of implicit mana abilities are -1 to -6, respectively: W, U, B, R, G, *"
-      putStrLn "  where * infers the mana ability when it is unambiguous."
-      putStrLn ""
-      putStrLn " quit"
-      putStrLn " help"
-      putStrLn " pass"
-      putStrLn " activateAbility <objectId> <abilityIndex>"
-      putStrLn " castSpell <spellId>"
-      putStrLn " playLand <landId>"
-      putStrLn ""
     text <- M.lift $ prompt $ "PriorityAction: " ++ show oPlayer ++ ": "
-    let commandInput = case readMaybe text of
-          Nothing -> CIAskAgain
-          Just x -> x
+    let commandInput = case runParseCommandInput defaultCommandAliases text of
+          Left _err -> CIAskAgain
+          Right x -> x
     action <- parseCommandInput commandInput
     pure (action, commandInput)
   Terminal (State.gets terminal_replayLog) >>= \case
@@ -600,7 +564,8 @@ logDetailed =
 data IgnoreBehavior = IgnoreAll -- IgnoreNested
 
 logIgnore :: String -> Maybe IgnoreBehavior
-logIgnore = const (Just IgnoreAll) -- flip Map.lookup logIgnoreMap
+--logIgnore = flip Map.lookup _logIgnoreMap
+logIgnore = const (Just IgnoreAll)
 
 _logIgnoreMap :: Map.Map String IgnoreBehavior
 _logIgnoreMap =

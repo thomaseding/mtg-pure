@@ -504,6 +504,7 @@ instance ConsIndex (Cost ot) where
 ----------------------------------------
 
 data Effect (ef :: EffectType) :: Type where
+  -- TODO: Need 'Var version of ManaPool for add X mana effects.
   AddMana :: ZOPlayer -> ManaPool 'NonSnow -> Effect 'OneShot -- NOTE: Engine will reinterpret as Snow when source is Snow.
   AddToBattlefield :: (CoPermanent ot, IsOTN ot) => ZOPlayer -> Token ot -> Effect 'OneShot
   CantBeRegenerated :: ZOCreature -> Effect 'Continuous
@@ -1170,6 +1171,11 @@ instance ConsIndex (WithMaskedObjects zone liftOT ot) where
 
 ----------------------------------------
 
+-- NOTE: At the moment there don't exist any cards with more than 3 facets. That said, extending
+-- to This4 and This5, we get OTNPermanent support, which is useful. It lets the engine do some
+-- things by only specifying OTNPermanent and not all the combinations of OT's that constitute
+-- OTNPermanent. Currently this is leveraged to by the UI through `getIntrinsicManaAbilities` to
+-- discover the mana abilities of permanents without caring too much about the specific type.
 data WithThis (zone :: Zone) (liftOT :: Type -> Type) (ot :: Type) :: Type where
   This1 ::
     (IsOTN (OT1 a), Inst1 IsObjectType a) =>
@@ -1182,12 +1188,27 @@ data WithThis (zone :: Zone) (liftOT :: Type -> Type) (ot :: Type) :: Type where
     --       Prolly can also add ToObjectN instances (cool!).
     ((ZO zone (OT1 a), ZO zone (OT1 b)) -> liftOT (OT2 a b)) ->
     WithThis zone liftOT (OT2 a b)
+  This3 ::
+    (IsOTN (OT3 a b c), Inst3 IsObjectType a b c) =>
+    ((ZO zone (OT1 a), ZO zone (OT1 b), ZO zone (OT1 c)) -> liftOT (OT3 a b c)) ->
+    WithThis zone liftOT (OT3 a b c)
+  This4 ::
+    (IsOTN (OT4 a b c d), Inst4 IsObjectType a b c d) =>
+    ((ZO zone (OT1 a), ZO zone (OT1 b), ZO zone (OT1 c), ZO zone (OT1 d)) -> liftOT (OT4 a b c d)) ->
+    WithThis zone liftOT (OT4 a b c d)
+  This5 ::
+    (IsOTN (OT5 a b c d e), Inst5 IsObjectType a b c d e) =>
+    ((ZO zone (OT1 a), ZO zone (OT1 b), ZO zone (OT1 c), ZO zone (OT1 d), ZO zone (OT1 e)) -> liftOT (OT5 a b c d e)) ->
+    WithThis zone liftOT (OT5 a b c d e)
   deriving (Typeable)
 
 instance ConsIndex (WithThis zone liftOT ot) where
   consIndex = \case
     This1{} -> 1
     This2{} -> 2
+    This3{} -> 3
+    This4{} -> 4
+    This5{} -> 5
 
 type WithThisActivated zone ot = WithThis zone (Elect 'Pre (ActivatedAbility zone ot)) ot
 

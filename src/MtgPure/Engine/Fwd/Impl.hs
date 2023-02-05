@@ -37,8 +37,10 @@ import safe MtgPure.Engine.Core (
   getAlivePlayerCount,
   getAlivePlayers,
   getBasicLandTypes,
+  getIntrinsicManaAbilities,
   getPermanent,
   getPlayer,
+  getTrivialManaAbilities,
   indexToActivated,
   newObjectId,
   newVariableId,
@@ -106,9 +108,11 @@ fwdImpl =
     , fwd_getAPNAP = getAPNAP
     , fwd_getBasicLandTypes = getBasicLandTypes
     , fwd_getHasPriority = getHasPriority
+    , fwd_getIntrinsicManaAbilities = getIntrinsicManaAbilities
     , fwd_getPermanent = getPermanent
     , fwd_getPlayer = getPlayer
     , fwd_getPlayerWithPriority = getPlayerWithPriority
+    , fwd_getTrivialManaAbilities = getTrivialManaAbilities
     , fwd_indexToAbility = indexToActivated
     , fwd_newObjectId = newObjectId
     , fwd_newVariableId = newVariableId
