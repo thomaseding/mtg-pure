@@ -145,6 +145,7 @@ import safe MtgPure.Model.Recursive (
   WithThisTriggered,
   YourCardFacet (..),
  )
+import safe MtgPure.Model.Supertype (Supertype (..))
 import safe MtgPure.Model.TimePoint (TimePoint (..))
 import safe MtgPure.Model.Toughness (Toughness)
 import safe MtgPure.Model.Variable (
@@ -555,11 +556,11 @@ showCardImpl consName (getCardName -> CardName name) cont = yesParens do
 -- FIXME: supertypes
 showCardFacet :: CardFacet ot -> EnvM ParenItems
 showCardFacet = \case
-  ArtifactFacet colors cost _sups artTypes creatTypes abilities -> yesParens do
+  ArtifactFacet colors cost sups artTypes abilities -> yesParens do
     sColors <- parens <$> showColors colors
     sCost <- parens <$> showCost cost
+    sSups <- parens <$> showSupertypes sups
     sArtTypes <- parens <$> showArtifactTypes artTypes
-    sCreatTypes <- parens <$> showCreatureTypes creatTypes
     sAbilities <- dollar <$> showAbilities abilities
     pure $
       pure "ArtifactFacet "
@@ -567,14 +568,15 @@ showCardFacet = \case
         <> pure " "
         <> sCost
         <> pure " "
-        <> sArtTypes
+        <> sSups
         <> pure " "
-        <> sCreatTypes
+        <> sArtTypes
         <> sAbilities
-  ArtifactCreatureFacet colors cost _sups artTypes creatTypes power toughness artAbils creatAbils bothAbils ->
+  ArtifactCreatureFacet colors cost sups artTypes creatTypes power toughness artAbils creatAbils bothAbils ->
     yesParens do
       sColors <- parens <$> showColors colors
       sCost <- parens <$> showCost cost
+      sSups <- parens <$> showSupertypes sups
       sArtTypes <- parens <$> showArtifactTypes artTypes
       sCreatTypes <- parens <$> showCreatureTypes creatTypes
       sPower <- parens <$> showPower power
@@ -588,6 +590,8 @@ showCardFacet = \case
           <> pure " "
           <> sCost
           <> pure " "
+          <> sSups
+          <> pure " "
           <> sArtTypes
           <> pure " "
           <> sCreatTypes
@@ -600,19 +604,19 @@ showCardFacet = \case
           <> pure " "
           <> sCreatAbils
           <> sBothAbils
-  ArtifactLandFacet _sups artTypes creatTypes landTypes artAbils landAbils bothAbils ->
+  ArtifactLandFacet sups artTypes landTypes artAbils landAbils bothAbils ->
     yesParens do
+      sSups <- parens <$> showSupertypes sups
       sArtTypes <- parens <$> showArtifactTypes artTypes
-      sCreatTypes <- parens <$> showCreatureTypes creatTypes
       sLandTypes <- parens <$> showLandTypes landTypes
       sArtAbils <- parens <$> showAbilities artAbils
       sLandAbils <- parens <$> showAbilities landAbils
       sBothAbils <- dollar <$> showAbilities bothAbils
       pure $
         pure "ArtifactLandFacet "
-          <> sArtTypes
+          <> sSups
           <> pure " "
-          <> sCreatTypes
+          <> sArtTypes
           <> pure " "
           <> sLandTypes
           <> pure " "
@@ -620,10 +624,11 @@ showCardFacet = \case
           <> pure " "
           <> sLandAbils
           <> sBothAbils
-  CreatureFacet colors cost _sups creatureTypes power toughness abilities ->
+  CreatureFacet colors cost sups creatureTypes power toughness abilities ->
     yesParens do
       sColors <- parens <$> showColors colors
       sCost <- parens <$> showCost cost
+      sSups <- parens <$> showSupertypes sups
       sCreatureTypes <- parens <$> showCreatureTypes creatureTypes
       sPower <- parens <$> showPower power
       sToughness <- parens <$> showToughness toughness
@@ -634,16 +639,18 @@ showCardFacet = \case
           <> pure " "
           <> sCost
           <> pure " "
+          <> sSups
+          <> pure " "
           <> sCreatureTypes
           <> pure " "
           <> sPower
           <> pure " "
           <> sToughness
           <> sAbilities
-  EnchantmentFacet colors cost _sups creatTypes enchantTypes abilities -> yesParens do
+  EnchantmentFacet colors cost sups enchantTypes abilities -> yesParens do
     sColors <- parens <$> showColors colors
     sCost <- parens <$> showCost cost
-    sCreatTypes <- parens <$> showCreatureTypes creatTypes
+    sSups <- parens <$> showSupertypes sups
     sEnchantTypes <- parens <$> showEnchantmentTypes enchantTypes
     sAbilities <- dollar <$> showAbilities abilities
     pure $
@@ -651,14 +658,15 @@ showCardFacet = \case
         <> pure " "
         <> sCost
         <> pure " "
-        <> sCreatTypes
+        <> sSups
         <> pure " "
         <> sEnchantTypes
         <> sAbilities
-  EnchantmentCreatureFacet colors cost _sups creatTypes enchantTypes power toughness creatAbils enchAbils bothAbils ->
+  EnchantmentCreatureFacet colors cost sups creatTypes enchantTypes power toughness creatAbils enchAbils bothAbils ->
     yesParens do
       sColors <- parens <$> showColors colors
       sCost <- parens <$> showCost cost
+      sSups <- parens <$> showSupertypes sups
       sCreatTypes <- parens <$> showCreatureTypes creatTypes
       sEnchantTypes <- parens <$> showEnchantmentTypes enchantTypes
       sPower <- parens <$> showPower power
@@ -672,6 +680,8 @@ showCardFacet = \case
           <> pure " "
           <> sCost
           <> pure " "
+          <> sSups
+          <> pure " "
           <> sCreatTypes
           <> pure " "
           <> sEnchantTypes
@@ -684,16 +694,22 @@ showCardFacet = \case
           <> pure " "
           <> sEnchAbils
           <> sBothAbils
-  InstantFacet colors cost _sups creatTypes abilities oneShot -> do
-    showOneShot "InstantFacet " colors cost creatTypes abilities oneShot
-  LandFacet _sups creatTypes landTypes abilities -> yesParens do
-    sCreatTypes <- parens <$> showCreatureTypes creatTypes
+  InstantFacet colors cost sups abilities oneShot -> do
+    showOneShot "InstantFacet " colors cost sups abilities oneShot
+  LandFacet sups landTypes abilities -> yesParens do
+    sSups <- parens <$> showSupertypes sups
     sLandTypes <- parens <$> showLandTypes landTypes
     sAbilities <- dollar <$> showAbilities abilities
-    pure $ pure "LandFacet " <> sCreatTypes <> pure " " <> sLandTypes <> sAbilities
-  PlaneswalkerFacet colors cost _sups loyalty abilities -> yesParens do
+    pure $
+      pure "LandFacet "
+        <> sSups
+        <> pure " "
+        <> sLandTypes
+        <> sAbilities
+  PlaneswalkerFacet colors cost sups loyalty abilities -> yesParens do
     sColors <- parens <$> showColors colors
     sCost <- parens <$> showCost cost
+    sSups <- parens <$> showSupertypes sups
     sLoyalty <- parens <$> showLoyalty loyalty
     sAbilities <- dollar <$> showAbilities abilities
     pure $
@@ -702,10 +718,12 @@ showCardFacet = \case
         <> pure " "
         <> sCost
         <> pure " "
+        <> sSups
+        <> pure " "
         <> sLoyalty
         <> sAbilities
-  SorceryFacet colors cost _sups creatTypes abilities oneShot -> do
-    showOneShot "SorceryFacet " colors cost creatTypes abilities oneShot
+  SorceryFacet colors cost sups abilities oneShot -> do
+    showOneShot "SorceryFacet " colors cost sups abilities oneShot
  where
   showOneShot ::
     forall a ot.
@@ -714,14 +732,14 @@ showCardFacet = \case
     Item ->
     Colors ->
     Cost ot ->
-    [CreatureType] ->
+    [Supertype ot] ->
     [Ability ot] ->
     WithThisOneShot ot ->
     EnvM ParenItems
-  showOneShot def colors cost creatTypes abilities oneShot = yesParens do
+  showOneShot def colors cost sups abilities oneShot = yesParens do
     sColors <- parens <$> showColors colors
     sCost <- parens <$> showCost cost
-    sCreatTypes <- parens <$> showCreatureTypes creatTypes
+    sSups <- parens <$> showSupertypes sups
     sAbilities <- parens <$> showAbilities abilities
     sOneShot <- dollar <$> showWithThis showElect "this" oneShot
     pure $
@@ -730,7 +748,7 @@ showCardFacet = \case
         <> pure " "
         <> sCost
         <> pure " "
-        <> sCreatTypes
+        <> sSups
         <> pure " "
         <> sAbilities
         <> sOneShot
@@ -1939,6 +1957,23 @@ showStaticAbility = \case
     pure $ pure "Suspend " <> sTime <> sCost
   Trample -> noParens do
     pure $ pure "Trample"
+
+showSupertypes :: [Supertype ot] -> EnvM ParenItems
+showSupertypes = showListM showSupertype
+
+showSupertype :: Supertype ot -> EnvM ParenItems
+showSupertype = \case
+  Basic -> noParens do
+    pure $ pure "Basic"
+  Legendary -> noParens do
+    pure $ pure "Legendary"
+  Snow -> noParens do
+    pure $ pure "Snow"
+  Tribal tys -> yesParens do
+    sTys <- dollar <$> showCreatureTypes tys
+    pure $ pure "Tribal" <> sTys
+  World -> noParens do
+    pure $ pure "World"
 
 showTimePoint :: TimePoint p -> EnvM ParenItems
 showTimePoint = yesParens . pure . pure . fromString . show

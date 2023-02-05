@@ -483,14 +483,13 @@ ordCard x = case x of
 
 ordCardFacet :: CardFacet ot -> CardFacet ot -> EnvM Ordering
 ordCardFacet = \case
-  ArtifactFacet colors1 cost1 sups1 artTypes1 creatTypes1 abilities1 -> \case
-    ArtifactFacet colors2 cost2 sups2 artTypes2 creatTypes2 abilities2 ->
+  ArtifactFacet colors1 cost1 sups1 artTypes1 abilities1 -> \case
+    ArtifactFacet colors2 cost2 sups2 artTypes2 abilities2 ->
       seqM
         [ ordColors colors1 colors2
         , ordCost cost1 cost2
         , pure $ compare sups1 sups2
         , pure $ compare artTypes1 artTypes2
-        , pure $ compare creatTypes1 creatTypes2
         , ordAbilities abilities1 abilities2
         ]
   ArtifactCreatureFacet colors1 cost1 sups1 artTypes1 creatTypes1 power1 toughness1 artAbils1 creatAbils1 bothAbils1 ->
@@ -508,13 +507,12 @@ ordCardFacet = \case
           , ordAbilities creatAbils1 creatAbils2
           , ordAbilities bothAbils1 bothAbils2
           ]
-  ArtifactLandFacet sups1 artTypes1 creatTypes1 landTypes1 artAbils1 landAbils1 bothAbils1 ->
+  ArtifactLandFacet sups1 artTypes1 landTypes1 artAbils1 landAbils1 bothAbils1 ->
     \case
-      ArtifactLandFacet sups2 artTypes2 creatTypes2 landTypes2 artAbils2 landAbils2 bothAbils2 ->
+      ArtifactLandFacet sups2 artTypes2 landTypes2 artAbils2 landAbils2 bothAbils2 ->
         seqM
           [ pure $ compare sups1 sups2
           , pure $ compare artTypes1 artTypes2
-          , pure $ compare creatTypes1 creatTypes2
           , pure $ compare landTypes1 landTypes2
           , ordAbilities artAbils1 artAbils2
           , ordAbilities landAbils1 landAbils2
@@ -531,13 +529,12 @@ ordCardFacet = \case
         , pure $ compare toughness1 toughness2
         , ordAbilities abilities1 abilities2
         ]
-  EnchantmentFacet colors1 cost1 sups1 creatTypes1 enchantTypes1 abilities1 -> \case
-    EnchantmentFacet colors2 cost2 sups2 creatTypes2 enchantTypes2 abilities2 ->
+  EnchantmentFacet colors1 cost1 sups1 enchantTypes1 abilities1 -> \case
+    EnchantmentFacet colors2 cost2 sups2 enchantTypes2 abilities2 ->
       seqM
         [ ordColors colors1 colors2
         , ordCost cost1 cost2
         , pure $ compare sups1 sups2
-        , pure $ compare creatTypes1 creatTypes2
         , ordEnchantmentTypes enchantTypes1 enchantTypes2
         , ordAbilities abilities1 abilities2
         ]
@@ -556,21 +553,19 @@ ordCardFacet = \case
           , ordAbilities enchAbils1 enchAbils2
           , ordAbilities bothAbils1 bothAbils2
           ]
-  InstantFacet colors1 cost1 sups1 creatTypes1 abilities1 effect1 -> \case
-    InstantFacet colors2 cost2 sups2 creatTypes2 abilities2 effect2 ->
+  InstantFacet colors1 cost1 sups1 abilities1 effect1 -> \case
+    InstantFacet colors2 cost2 sups2 abilities2 effect2 ->
       seqM
         [ ordColors colors1 colors2
         , ordCost cost1 cost2
         , pure $ compare sups1 sups2
-        , pure $ compare creatTypes1 creatTypes2
         , ordAbilities abilities1 abilities2
         , ordWithThis ordElectEl effect1 effect2
         ]
-  LandFacet sups1 creatTypes1 landTypes1 abilities1 -> \case
-    LandFacet sups2 creatTypes2 landTypes2 abilities2 ->
+  LandFacet sups1 landTypes1 abilities1 -> \case
+    LandFacet sups2 landTypes2 abilities2 ->
       seqM
         [ pure $ compare sups1 sups2
-        , pure $ compare creatTypes1 creatTypes2
         , pure $ compare landTypes1 landTypes2
         , ordAbilities abilities1 abilities2
         ]
@@ -583,13 +578,12 @@ ordCardFacet = \case
         , pure $ compare loyalty1 loyalty2
         , ordAbilities abilities1 abilities2
         ]
-  SorceryFacet colors1 cost1 sup1 creatTypes1 abilities1 effect1 -> \case
-    SorceryFacet colors2 cost2 sup2 creatTypes2 abilities2 effect2 ->
+  SorceryFacet colors1 cost1 sup1 abilities1 effect1 -> \case
+    SorceryFacet colors2 cost2 sup2 abilities2 effect2 ->
       seqM
         [ ordColors colors1 colors2
         , ordCost cost1 cost2
         , pure $ compare sup1 sup2
-        , pure $ compare creatTypes1 creatTypes2
         , ordAbilities abilities1 abilities2
         , ordWithThis ordElectEl effect1 effect2
         ]

@@ -320,7 +320,6 @@ data CardFacet (ot :: Type) :: Type where
     , artifact_cost :: Cost OTNArtifact
     , artifact_supertypes :: [Supertype OTNArtifact]
     , artifact_artifactTypes :: [ArtifactType]
-    , artifact_creatureTypes :: [CreatureType]
     , artifact_abilities :: [Ability OTNArtifact]
     } ->
     CardFacet OTNArtifact
@@ -340,7 +339,6 @@ data CardFacet (ot :: Type) :: Type where
   ArtifactLandFacet ::
     { artifactLand_supertypes :: [Supertype OTNArtifactLand]
     , artifactLand_artifactTypes :: [ArtifactType]
-    , artifactLand_creatureTypes :: [CreatureType]
     , artifactLand_landTypes :: [LandType]
     , artifactLand_artifactAbilities :: [Ability OTNArtifact]
     , artifactLand_landAbilities :: [Ability OTNLand]
@@ -361,7 +359,6 @@ data CardFacet (ot :: Type) :: Type where
     { enchantment_colors :: Colors
     , enchantment_cost :: Cost OTNEnchantment
     , enchantment_supertypes :: [Supertype OTNEnchantment]
-    , enchantment_creatureTypes :: [CreatureType]
     , enchantment_enchantmentTypes :: [EnchantmentType OTNEnchantment]
     , enchantment_abilities :: [Ability OTNEnchantment]
     } ->
@@ -383,7 +380,6 @@ data CardFacet (ot :: Type) :: Type where
     { instant_colors :: Colors
     , instant_cost :: Cost OTNInstant
     , instant_supertypes :: [Supertype OTNInstant]
-    , instant_creatureTypes :: [CreatureType]
     , -- instant_oneShotTypes :: [OneShotType] e.g. Arcane
       instant_abilities :: [Ability OTNInstant]
     , instant_effect :: WithThisOneShot OTNInstant
@@ -391,7 +387,6 @@ data CardFacet (ot :: Type) :: Type where
     CardFacet OTNInstant
   LandFacet ::
     { land_supertypes :: [Supertype OTNLand]
-    , land_creatureTypes :: [CreatureType]
     , land_landTypes :: [LandType]
     , land_abilities :: [Ability OTNLand]
     } ->
@@ -408,7 +403,6 @@ data CardFacet (ot :: Type) :: Type where
     { sorcery_colors :: Colors
     , sorcery_cost :: Cost OTNSorcery
     , sorcery_supertypes :: [Supertype OTNSorcery]
-    , sorcery_creatureTypes :: [CreatureType]
     , -- instant_oneShotTypes :: [OneShotType] e.g. Arcane
       sorcery_abilities :: [Ability OTNSorcery]
     , sorcery_effect :: WithThisOneShot OTNSorcery

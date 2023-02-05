@@ -10,6 +10,7 @@ module MtgPure.Model.Object.Singleton.NonCreatureCard (
   IsNonCreatureCardType (..),
   NonCreatureCardVisitor (..),
   visitNonCreature',
+  CoNonCreatureCard (..),
 ) where
 
 import safe Data.Inst (Inst2, Inst3)
@@ -32,7 +33,7 @@ import safe MtgPure.Model.Object.OTNAliases (
   OTNSorcery,
  )
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
-import safe MtgPure.Model.ZoneObject.ZoneObject (ZO)
+import safe MtgPure.Model.ZoneObject.ZoneObject (IsOTN, ZO)
 
 data NonCreatureCardType
   = NCTArtifact
@@ -110,3 +111,30 @@ instance IsNonCreatureCardType 'OTSorcery where
   singNonCreatureCardType _ = NCTSorcery
   singNonCreatureCard _ = WNonCreatureSorcery
   visitNonCreatureCard v _ = visitNCSorcery v
+
+class IsOTN ot => CoNonCreatureCard ot where
+  coNonCreatureCard :: WNonCreatureCard ot
+
+instance CoNonCreatureCard OTNArtifact where
+  coNonCreatureCard = WNonCreatureArtifact
+
+instance CoNonCreatureCard OTNEnchantment where
+  coNonCreatureCard = WNonCreatureEnchantment
+
+instance CoNonCreatureCard OTNInstant where
+  coNonCreatureCard = WNonCreatureInstant
+
+instance CoNonCreatureCard OTNLand where
+  coNonCreatureCard = WNonCreatureLand
+
+instance CoNonCreatureCard OTNPlaneswalker where
+  coNonCreatureCard = WNonCreaturePlaneswalker
+
+instance CoNonCreatureCard OTNSorcery where
+  coNonCreatureCard = WNonCreatureSorcery
+
+instance Inst2 IsNonCreatureCardType a b => CoNonCreatureCard (OT2 a b) where
+  coNonCreatureCard = WNonCreatureCard2 :: WNonCreatureCard (OT2 a b)
+
+instance Inst3 IsNonCreatureCardType a b c => CoNonCreatureCard (OT3 a b c) where
+  coNonCreatureCard = WNonCreatureCard3 :: WNonCreatureCard (OT3 a b c)

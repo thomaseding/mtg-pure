@@ -261,7 +261,6 @@ mkBasicImpl supertypes name ty = Card name $
   YourLand \_you ->
     LandFacet
       { land_supertypes = supertypes
-      , land_creatureTypes = []
       , land_landTypes = [BasicLand ty]
       , land_abilities = []
       }
@@ -281,7 +280,6 @@ mkDualTapImpl supertypes name ty1 ty2 = Card name $
   YourLand \_you ->
     LandFacet
       { land_supertypes = supertypes
-      , land_creatureTypes = []
       , land_landTypes = [BasicLand ty1, BasicLand ty2]
       , land_abilities = [Static $ Enters EntersTapped]
       }
@@ -300,7 +298,6 @@ mkTapLandImpl supertypes name sym1 sym2 = Card name $
   YourLand \_you ->
     LandFacet
       { land_supertypes = supertypes
-      , land_creatureTypes = []
       , land_landTypes = []
       , land_abilities =
           [ Activated @ 'ZBattlefield $
@@ -335,7 +332,6 @@ mkDualLand name ty1 ty2 = Card name $
   YourLand \_you ->
     LandFacet
       { land_supertypes = []
-      , land_creatureTypes = []
       , land_landTypes = [BasicLand ty1, BasicLand ty2]
       , land_abilities = []
       }
@@ -350,7 +346,6 @@ mkHybridFilterLand name sym1 sym2 = Card name $
   YourLand \_you ->
     LandFacet
       { land_supertypes = []
-      , land_creatureTypes = []
       , land_landTypes = []
       , land_abilities =
           [ Activated @ 'ZBattlefield $
@@ -385,7 +380,6 @@ mkFetchLand name ty1 ty2 = Card name $
   YourLand \_you ->
     LandFacet
       { land_supertypes = []
-      , land_creatureTypes = []
       , land_landTypes = []
       , land_abilities =
           [ Activated @ 'ZBattlefield $
@@ -416,7 +410,6 @@ mkMox name sym = Card name $
       , artifact_cost = manaCost 0
       , artifact_supertypes = []
       , artifact_artifactTypes = []
-      , artifact_creatureTypes = []
       , artifact_abilities =
           [ Activated @ 'ZBattlefield $
               thisObject \this ->
@@ -444,7 +437,6 @@ acceptableLosses = Card "Acceptable Losses" $
                 , DiscardRandomCost 1
                 ]
           , sorcery_supertypes = []
-          , sorcery_creatureTypes = []
           , sorcery_abilities = []
           , sorcery_effect = thisObject \this ->
               effect $ dealDamage this target 5
@@ -458,7 +450,6 @@ allIsDust = Card "All Is Dust" $
         { sorcery_colors = toColors ()
         , sorcery_cost = manaCost 7
         , sorcery_supertypes = []
-        , sorcery_creatureTypes = [Eldrazi]
         , sorcery_abilities = []
         , sorcery_effect = thisObject \_this ->
             All $ maskeds [] \players ->
@@ -487,7 +478,6 @@ ancestralRecall = Card "Ancestral Recall" $
         { instant_colors = toColors U
         , instant_cost = noCost
         , instant_supertypes = []
-        , instant_creatureTypes = []
         , instant_abilities = []
         , instant_effect = thisObject \_this ->
             effect $ DrawCards you 3
@@ -502,7 +492,6 @@ ancestralVision = Card "Ancestral Vision" $
           { sorcery_colors = toColors U
           , sorcery_cost = noCost
           , sorcery_supertypes = []
-          , sorcery_creatureTypes = []
           , sorcery_abilities = [Static $ Suspend 4 $ Cost $ manaCost U]
           , sorcery_effect = thisObject \_this ->
               effect $ DrawCards target 3
@@ -518,7 +507,6 @@ backlash = Card "Backlash" $
             { instant_colors = toColors (B, R)
             , instant_cost = manaCost (1, B, R)
             , instant_supertypes = []
-            , instant_creatureTypes = []
             , instant_abilities = []
             , instant_effect = thisObject \_this ->
                 VariableFromPower target \power ->
@@ -575,7 +563,6 @@ blackLotus = Card "Black Lotus" $
       , artifact_cost = manaCost 0
       , artifact_supertypes = []
       , artifact_artifactTypes = []
-      , artifact_creatureTypes = []
       , artifact_abilities =
           [ Activated @ 'ZBattlefield $
               thisObject \this ->
@@ -604,7 +591,6 @@ blaze = Card "Blaze" $
             { sorcery_colors = toColors R
             , sorcery_cost = manaCost (VariableMana @ 'NonSnow @ 'Ty1 x, R)
             , sorcery_supertypes = []
-            , sorcery_creatureTypes = []
             , sorcery_abilities = []
             , sorcery_effect = thisObject \this ->
                 effect $ dealDamage this target x
@@ -617,7 +603,6 @@ bloodMoon = Card "Blood Moon" $
       { enchantment_colors = toColors R
       , enchantment_cost = manaCost (2, R)
       , enchantment_supertypes = []
-      , enchantment_creatureTypes = []
       , enchantment_enchantmentTypes = []
       , enchantment_abilities =
           [ Static $
@@ -663,7 +648,6 @@ braidwoodCup = Card "Braidwood Cup" $
       , artifact_cost = manaCost 3
       , artifact_supertypes = []
       , artifact_artifactTypes = []
-      , artifact_creatureTypes = []
       , artifact_abilities =
           [ Activated @ 'ZBattlefield $
               thisObject \this ->
@@ -685,7 +669,6 @@ counterspell = Card "Counterspell" $
           { instant_colors = toColors U
           , instant_cost = manaCost (U, U)
           , instant_supertypes = []
-          , instant_creatureTypes = []
           , instant_abilities = []
           , instant_effect = thisObject \_this ->
               effect $ counterSpell target
@@ -696,7 +679,6 @@ cityOfBrass = Card "City of Brass" $
   YourLand \_you ->
     LandFacet
       { land_supertypes = []
-      , land_creatureTypes = []
       , land_landTypes = []
       , land_abilities =
           [ Triggered $
@@ -727,7 +709,6 @@ cleanse = Card "Cleanse" $
         { sorcery_colors = toColors W
         , sorcery_cost = manaCost (2, W, W)
         , sorcery_supertypes = []
-        , sorcery_creatureTypes = []
         , sorcery_abilities = []
         , sorcery_effect = thisObject \_this ->
             All $ maskeds @OTNCreature [ofColors B] \creatures ->
@@ -743,7 +724,6 @@ conversion = Card "Conversion" $
       { enchantment_colors = toColors W
       , enchantment_cost = manaCost (2, W, W)
       , enchantment_supertypes = []
-      , enchantment_creatureTypes = []
       , enchantment_enchantmentTypes = []
       , enchantment_abilities =
           [ Triggered $
@@ -779,7 +759,6 @@ corrosiveGale = Card "Corrosive Gale" $
           { sorcery_colors = toColors G
           , sorcery_cost = manaCost (VariableMana @ 'NonSnow @ 'Ty1 x, PG)
           , sorcery_supertypes = []
-          , sorcery_creatureTypes = []
           , sorcery_abilities = []
           , sorcery_effect = thisObject \this ->
               All $ maskeds @OTNCreature [hasAbility \_this -> Static Flying] \victims ->
@@ -797,7 +776,6 @@ squallLine = Card "Squall Line" $
           { instant_colors = toColors G
           , instant_cost = manaCost (VariableMana @ 'NonSnow @ 'Ty1 x, G, G)
           , instant_supertypes = []
-          , instant_creatureTypes = []
           , instant_abilities = []
           , instant_effect = thisObject \this ->
               All $ maskeds @OTNCreature [hasAbility \_this -> Static Flying] \creatures ->
@@ -818,7 +796,6 @@ damnation = Card "Damnation" $
         { sorcery_colors = toColors B
         , sorcery_cost = manaCost (2, B, B)
         , sorcery_supertypes = []
-        , sorcery_creatureTypes = []
         , sorcery_abilities = []
         , sorcery_effect = thisObject \_this ->
             All $ maskeds @OTNCreature [] \creatures ->
@@ -838,7 +815,6 @@ darkRitual = Card "Dark Ritual" $
         { instant_colors = toColors B
         , instant_cost = manaCost B
         , instant_supertypes = []
-        , instant_creatureTypes = []
         , instant_abilities = []
         , instant_effect = thisObject \_this ->
             effect $ AddMana you $ toManaPool (B, B, B)
@@ -914,7 +890,6 @@ dismember = Card "Dismember" $
           { instant_colors = toColors B
           , instant_cost = manaCost (1, PB, PB)
           , instant_supertypes = []
-          , instant_creatureTypes = []
           , instant_abilities = []
           , instant_effect = thisObject \_this ->
               effect $
@@ -933,7 +908,6 @@ divination = Card "Divination" $
         { sorcery_colors = toColors U
         , sorcery_cost = manaCost (2, U)
         , sorcery_supertypes = []
-        , sorcery_creatureTypes = []
         , sorcery_abilities = []
         , sorcery_effect = thisObject \_this ->
             effect $ DrawCards you 2
@@ -981,7 +955,6 @@ fling = Card "Fling" $
                   , sacrificeCost [is sacChoice]
                   ]
             , instant_supertypes = []
-            , instant_creatureTypes = []
             , instant_abilities = []
             , instant_effect = thisObject \_this ->
                 VariableFromPower sacChoice \power ->
@@ -1027,7 +1000,6 @@ giantGrowth = Card "Giant Growth" $
           { instant_colors = toColors G
           , instant_cost = manaCost G
           , instant_supertypes = []
-          , instant_creatureTypes = []
           , instant_abilities = []
           , instant_effect = thisObject \_this ->
               effect $
@@ -1076,7 +1048,6 @@ gutShot = Card "Gut Shot" $
           { instant_colors = toColors R
           , instant_cost = manaCost PR
           , instant_supertypes = []
-          , instant_creatureTypes = []
           , instant_abilities = []
           , instant_effect = thisObject \this ->
               effect $ dealDamage this target 1
@@ -1108,7 +1079,6 @@ holyStrength = Card "Holy Strength" $
       { enchantment_colors = toColors W
       , enchantment_cost = manaCost W
       , enchantment_supertypes = []
-      , enchantment_creatureTypes = []
       , enchantment_enchantmentTypes =
           [ Aura $
               Enchant $ linked [] \enchanted ->
@@ -1170,7 +1140,6 @@ lavaAxe = Card "Lava Axe" $
           { sorcery_colors = toColors R
           , sorcery_cost = manaCost (4, R)
           , sorcery_supertypes = []
-          , sorcery_creatureTypes = []
           , sorcery_abilities = []
           , sorcery_effect = thisObject \this ->
               effect $ dealDamage this target 5
@@ -1185,7 +1154,6 @@ lightningBolt = Card "Lightning Bolt" $
           { instant_colors = toColors R
           , instant_cost = manaCost R
           , instant_supertypes = []
-          , instant_creatureTypes = []
           , instant_abilities = []
           , instant_effect = thisObject \this ->
               effect $ dealDamage this target 3
@@ -1200,7 +1168,6 @@ manaLeak = Card "Mana Leak" $
           { instant_colors = toColors U
           , instant_cost = manaCost (1, U)
           , instant_supertypes = []
-          , instant_creatureTypes = []
           , instant_abilities = []
           , instant_effect = thisObject \_this ->
               controllerOf spell \controller ->
@@ -1248,7 +1215,6 @@ mouthOfRonom = Card "Mouth of Ronom" $
   YourLand \_you ->
     LandFacet
       { land_supertypes = [Ty.Snow]
-      , land_creatureTypes = []
       , land_landTypes = []
       , land_abilities =
           [ Activated @ 'ZBattlefield $
@@ -1300,7 +1266,6 @@ mutagenicGrowth = Card "Mutagenic Growth" $
           { instant_colors = toColors G
           , instant_cost = manaCost PG
           , instant_supertypes = []
-          , instant_creatureTypes = []
           , instant_abilities = []
           , instant_effect = thisObject \_this ->
               effect $
@@ -1360,7 +1325,6 @@ plummet = Card "Plummet" $
           { instant_colors = toColors G
           , instant_cost = manaCost (1, G)
           , instant_supertypes = []
-          , instant_creatureTypes = []
           , instant_abilities = []
           , instant_effect = thisObject \_this ->
               effect $ destroy target
@@ -1444,7 +1408,6 @@ shatter = Card "Shatter" $
           { instant_colors = toColors R
           , instant_cost = manaCost (1, R)
           , instant_supertypes = []
-          , instant_creatureTypes = []
           , instant_abilities = []
           , instant_effect = thisObject \_this ->
               effect $ destroy target
@@ -1459,7 +1422,6 @@ shock = Card "Shock" $
           { instant_colors = toColors R
           , instant_cost = manaCost R
           , instant_supertypes = []
-          , instant_creatureTypes = []
           , instant_abilities = []
           , instant_effect = thisObject \this ->
               effect $ dealDamage this target 2
@@ -1474,7 +1436,6 @@ sinkhole = Card "Sinkhole" $
           { sorcery_colors = toColors B
           , sorcery_cost = manaCost (B, B)
           , sorcery_supertypes = []
-          , sorcery_creatureTypes = []
           , sorcery_abilities = []
           , sorcery_effect = thisObject \_this ->
               effect $ destroy target
@@ -1521,7 +1482,6 @@ snuffOut = Card "Snuff Out" $
                             LZ @() $ PayLife 4
                       }
               , instant_supertypes = []
-              , instant_creatureTypes = []
               , instant_abilities = []
               , instant_effect = thisObject \_this ->
                   effect
@@ -1612,7 +1572,6 @@ stifle = Card "Stifle" $
           { instant_colors = toColors U
           , instant_cost = manaCost U
           , instant_supertypes = []
-          , instant_creatureTypes = []
           , instant_abilities = []
           , instant_effect = thisObject \_this ->
               effect $ counterAbility target
@@ -1627,7 +1586,6 @@ stoneRain = Card "Stone Rain" $
           { sorcery_colors = toColors R
           , sorcery_cost = manaCost (2, R)
           , sorcery_supertypes = []
-          , sorcery_creatureTypes = []
           , sorcery_abilities = []
           , sorcery_effect = thisObject \_this ->
               effect $ destroy target
@@ -1665,7 +1623,6 @@ swanSong = Card "Swan Song" $
             { instant_colors = toColors U
             , instant_cost = manaCost U
             , instant_supertypes = []
-            , instant_creatureTypes = []
             , instant_abilities = []
             , instant_effect = thisObject \_this ->
                 effect
@@ -1729,7 +1686,6 @@ unholyStrength = Card "Unholy Strength" $
       { enchantment_colors = toColors B
       , enchantment_cost = manaCost B
       , enchantment_supertypes = []
-      , enchantment_creatureTypes = []
       , enchantment_enchantmentTypes =
           [ Aura $
               Enchant $ linked [] \enchanted ->
@@ -1747,7 +1703,6 @@ vindicate = Card "Vindicate" $
           { sorcery_colors = toColors (W, B)
           , sorcery_cost = manaCost (1, W, B)
           , sorcery_supertypes = []
-          , sorcery_creatureTypes = []
           , sorcery_abilities = []
           , sorcery_effect = thisObject \_this ->
               effect $ destroy target
@@ -1775,7 +1730,6 @@ wastes = Card "Wastes" $
   YourLand \_you ->
     LandFacet
       { land_supertypes = [Ty.Basic]
-      , land_creatureTypes = []
       , land_landTypes = []
       , land_abilities =
           [ Activated @ 'ZBattlefield $
@@ -1801,7 +1755,6 @@ wear_tear = SplitCard wear tear [Static Fuse]
             { instant_colors = toColors R
             , instant_cost = manaCost (1, R)
             , instant_supertypes = []
-            , instant_creatureTypes = []
             , instant_abilities = []
             , instant_effect = thisObject \_this ->
                 effect $ destroy target
@@ -1815,7 +1768,6 @@ wear_tear = SplitCard wear tear [Static Fuse]
             { instant_colors = toColors W
             , instant_cost = manaCost W
             , instant_supertypes = []
-            , instant_creatureTypes = []
             , instant_abilities = []
             , instant_effect = thisObject \_this ->
                 effect $ destroy target
@@ -1863,7 +1815,6 @@ wrathOfGod = Card "Wrath of God" $
         { sorcery_colors = toColors W
         , sorcery_cost = manaCost (2, W, W)
         , sorcery_supertypes = []
-        , sorcery_creatureTypes = []
         , sorcery_abilities = []
         , sorcery_effect = thisObject \_this ->
             All $ maskeds @OTNCreature [] \creatures ->
