@@ -73,6 +73,7 @@ data CommandInput :: Type where
   CIHelp :: Maybe String -> CommandInput
   CIExamineAbility :: ObjectId -> CommandAbilityIndex -> CommandInput
   CIExamineObject :: ObjectId -> CommandInput
+  -- | TODO: Augment this to allow passing to a phase or step.
   CIPass :: CommandInput
   CIActivateAbility :: ObjectId -> CommandAbilityIndex -> [ObjectId] -> CommandInput
   CICastSpell :: ObjectId -> [ObjectId] -> CommandInput
@@ -169,7 +170,7 @@ defaultCommandAliases = case mValidated of
       CommandAliases
         { caQuit = ["quit"]
         , caConcede = ["concede"]
-        , caHelp = ["help", "?"]
+        , caHelp = ["help", "h", "?", "--help", "-h", "-?", "/help", "/h", "/?"]
         , caExamine = ["examine", "look", "+"]
         , caPass = ["pass", "p", "0"]
         , caActivateAbility = ["activateAbility", "activate", "1"]
@@ -196,17 +197,29 @@ dotSpaceAfterDigit s = case reverse s of
     True -> dotSpace
     False -> pure ()
 
+dotSpaceAfterAlphaNum :: String -> Parser ()
+dotSpaceAfterAlphaNum s = case reverse s of
+  [] -> parserFail "dotSpaceAfterAlphaNum: empty string"
+  c : _ -> case Char.isAlphaNum c of
+    True -> dotSpace
+    False -> pure ()
+
+parseCommandHeader' :: [String] -> Parser String
+parseCommandHeader' headers = do
+  choice $ map (try . ciString) headers
+
 parseCommandHeader :: [String] -> Parser ()
 parseCommandHeader headers = do
-  s <- choice $ map (try . ciString) headers
+  s <- parseCommandHeader' headers
   dotSpaceAfterDigit s
 
 parseCompositeHelp :: CommandAliases -> Parser CommandInput
 parseCompositeHelp ca = do
-  parseCommandHeader $ caHelp ca
+  s <- parseCommandHeader' $ caHelp ca
+  dotSpaceAfterAlphaNum s
   dotSpaces
-  s <- many1 $ satisfy Char.isAlphaNum
-  pure $ CIHelp $ Just s
+  topic <- many1 $ satisfy Char.isAlphaNum
+  pure $ CIHelp $ Just topic
 
 parseSimpleHelp :: CommandAliases -> Parser CommandInput
 parseSimpleHelp ca = do

@@ -74,7 +74,7 @@ import safe MtgPure.Engine.State (
   queryMagic,
  )
 import safe MtgPure.Model.Deck (Deck (..))
-import safe MtgPure.Model.IsManaAbility (isTrivialManaAbility)
+import safe MtgPure.Model.Mana.IsManaAbility (isTrivialManaAbility)
 import safe MtgPure.Model.Mana.ManaCost (DynamicManaCost (..))
 import safe MtgPure.Model.Mana.ManaPool (CompleteManaPool, ManaPayment (..))
 import safe MtgPure.Model.Mana.ManaSymbol (ManaSymbol (..))
@@ -177,6 +177,7 @@ help = M.liftIO do
   putStrLn "  playLand <card_id> - Play a land."
   putStrLn ""
   putStrLn "Commands are case-insensitive and can be entered using dots \".\" in place of spaces."
+  putStrLn "\"#\" can be used to comment out the rest of a command. Useful in replay files."
   putStrLn ""
   putStrLn "Some command have a single character aliases. They are as follows:"
   putStrLn "  ? help"
@@ -202,8 +203,6 @@ help = M.liftIO do
   putStrLn "  -5 G - Activates the \"T: Add G\" ability of a permanent."
   putStrLn "  -6 C - Activates the \"T: Add C\" ability of a permanent."
   putStrLn "  -7 * - Infers one of the above mana abilities when unambiguous."
-  putStrLn ""
-  putStrLn "\"#\" can be used to comment out the rest of the line. Useful in replay files."
   putStrLn ""
   putStrLn "Examples:"
   putStrLn "> examine 4 # Displays detailed information of the object with ID 4."
@@ -231,7 +230,7 @@ help = M.liftIO do
   putStrLn "> 1.7-1 # Activates the \"T: Add W\" ability of the permanent with ID 7."
   putStrLn "> 1.7w # Activates the \"T: Add W\" ability of the permanent with ID 7."
   M.void getLine
-  pure $ AskPriorityActionAgain Nothing
+  pure $ AskPriorityActionAgain $ Just $ Attempt 0
 
 quit :: Magic 'Public 'RO Terminal (PriorityAction ())
 quit = M.lift quitTerminal
@@ -321,7 +320,7 @@ terminalPriorityAction attempt opaque oPlayer = M.lift do
     liftIO case attempt of
       Attempt 0 -> pure ()
       Attempt n -> putStrLn $ "Retrying[" ++ show n ++ "]..."
-    text <- M.lift $ prompt $ "PriorityAction: " ++ show oPlayer ++ ": "
+    text <- M.lift $ prompt "> "
     let commandInput = case runParseCommandInput defaultCommandAliases text of
           Left _err -> CIAskAgain
           Right x -> x

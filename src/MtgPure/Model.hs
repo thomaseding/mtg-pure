@@ -23,13 +23,13 @@ module MtgPure.Model (
   module MtgPure.Model.Graveyard,
   module MtgPure.Model.Hand,
   module MtgPure.Model.IsCardList,
-  module MtgPure.Model.IsManaAbility,
   module MtgPure.Model.LandType,
   module MtgPure.Model.Library,
   module MtgPure.Model.Life,
   module MtgPure.Model.Loyalty,
   module MtgPure.Model.Mana.CountMana,
   module MtgPure.Model.Mana.HasManaSymbol,
+  module MtgPure.Model.Mana.IsManaAbility,
   module MtgPure.Model.Mana.Mana,
   module MtgPure.Model.Mana.ManaCost,
   module MtgPure.Model.Mana.ManaPool,
@@ -113,13 +113,13 @@ import safe MtgPure.Model.Enchantment
 import safe MtgPure.Model.Graveyard
 import safe MtgPure.Model.Hand
 import safe MtgPure.Model.IsCardList
-import safe MtgPure.Model.IsManaAbility
 import safe MtgPure.Model.LandType
 import safe MtgPure.Model.Library
 import safe MtgPure.Model.Life
 import safe MtgPure.Model.Loyalty
 import safe MtgPure.Model.Mana.CountMana
 import safe MtgPure.Model.Mana.HasManaSymbol
+import safe MtgPure.Model.Mana.IsManaAbility
 import safe MtgPure.Model.Mana.Mana
 import safe MtgPure.Model.Mana.ManaCost
 import safe MtgPure.Model.Mana.ManaPool

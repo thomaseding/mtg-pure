@@ -5,7 +5,7 @@
 {-# HLINT ignore "Use const" #-}
 {-# HLINT ignore "Use if" #-}
 
-module MtgPure.Model.IsManaAbility (
+module MtgPure.Model.Mana.IsManaAbility (
   IsManaAbility,
   isManaAbility,
   isTrivialManaAbility,

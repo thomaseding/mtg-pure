@@ -65,7 +65,7 @@ import safe MtgPure.Engine.State (
  )
 import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.IsCardList (containsCard)
-import safe MtgPure.Model.IsManaAbility (isManaAbility)
+import safe MtgPure.Model.Mana.IsManaAbility (isManaAbility)
 import safe MtgPure.Model.Object.IsObjectType (IsObjectType (..))
 import safe MtgPure.Model.Object.OTN (OT0, OT1, OTN)
 import safe MtgPure.Model.Object.OTNAliases (

@@ -10,6 +10,7 @@ Commands:
   playLand <card_id> - Play a land.
 
 Commands are case-insensitive and can be entered using dots "." in place of spaces.
+"#" can be used to comment out the rest of a command. Useful in replay files.
 
 Some command have a single character aliases. They are as follows:
   ? help
@@ -35,8 +36,6 @@ Mana Ability Indices:
   -5 G - Activates the "T: Add G" ability of a permanent.
   -6 C - Activates the "T: Add C" ability of a permanent.
   -7 * - Infers one of the above mana abilities when unambiguous.
-
-"#" can be used to comment out the rest of the line. Useful in replay files.
 
 Examples:
 > examine 4 # Displays detailed information of the object with ID 4.

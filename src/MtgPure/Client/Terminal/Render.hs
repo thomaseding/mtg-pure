@@ -25,17 +25,20 @@ import safe Ansi.Box (
  )
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
 import safe qualified Control.Monad.Trans as M
+import safe Data.Functor ((<&>))
+import safe qualified Data.List as List
 import safe qualified Data.Map.Strict as Map
 import safe qualified Data.Maybe as Maybe
 import safe qualified Data.Traversable as T
 import safe MtgPure.Client.Terminal.Monad (Terminal)
 import safe MtgPure.Engine.Fwd.Api (
   allControlledPermanentsOf,
+  findHandCard,
   getAlivePlayers,
   getPermanent,
   getPlayer,
  )
-import safe MtgPure.Engine.Monad (gets, internalFromPrivate)
+import safe MtgPure.Engine.Monad (fromRO, gets, internalFromPrivate)
 import safe MtgPure.Engine.Orphans ()
 import safe MtgPure.Engine.State (GameState (..), Magic, OpaqueGameState, queryMagic)
 import safe MtgPure.Model.CardName (CardName (..), HasCardName, getCardName)
@@ -57,6 +60,7 @@ import safe MtgPure.Model.Permanent (Permanent (..), Tapped (..))
 import safe MtgPure.Model.PhaseStep (prettyPhaseStep)
 import safe MtgPure.Model.Player (Player (..))
 import safe MtgPure.Model.Power (Power (..))
+import safe MtgPure.Model.Recursive (AnyCard)
 import safe MtgPure.Model.Stack (Stack (..))
 import safe MtgPure.Model.Toughness (Toughness (..))
 import safe MtgPure.Model.Variable (Var (..))
@@ -108,10 +112,14 @@ getExiledCardName zo = do
 printGameState :: OpaqueGameState Terminal -> Terminal ()
 printGameState opaque = queryMagic opaque do
   box <- mkEverythingBox
-  M.liftIO $ drawBox 100 40 box
+  let w = 100
+  let h = fromAbsolute $ boxH box
+  M.liftIO $ drawBox w h box
 
 --------------------------------------------------------------------------------
 
+-- TODO: Want collapsible boxes, so users can hide/show zones.
+-- TODO: Want scrollable boxes, so users can scroll through large zones.
 mkEverythingBox :: Magic 'Public 'RO Terminal Box
 mkEverythingBox = do
   turnBox <- mkTurnBox
@@ -124,9 +132,9 @@ mkEverythingBox = do
       { boxText = ""
       , boxClipper = take
       , boxX = Fixed 0
-      , boxY = Fixed 1
+      , boxY = Fixed 0
       , boxW = Ratio 1
-      , boxH = Ratio 1
+      , boxH = Absolute $ 3 + maximum (fromAbsolute . boxH <$> playerBoxes)
       , boxBackground = Nothing
       , boxColorCommands = []
       , boxKidsPre = []
@@ -210,13 +218,14 @@ buildPlayerBox oPlayer = do
   let poolOffset = hudOffset + fromAbsolute (boxH hudBox)
   let poolBox = mkCompleteManaPoolBox poolOffset pool
   let handOffset = poolOffset + fromAbsolute (boxH poolBox)
-  handBox <- mkHandBox handOffset hand
+  handBox <- mkHandBox oPlayer handOffset hand
   let graveyardOffset = handOffset + fromAbsolute (boxH handBox)
   graveyardBox <- mkGraveyardBox graveyardOffset $ playerGraveyard player
   let exileOffset = graveyardOffset + fromAbsolute (boxH graveyardBox)
   exileBox <- mkExileBox exileOffset [] -- TODO
   let permOffset = exileOffset + fromAbsolute (boxH exileBox)
   permBox <- mkBattlefieldBox permOffset perms
+  let totalHeight = permOffset + fromAbsolute (boxH permBox)
   pure
     Box
       { boxText = ""
@@ -227,7 +236,7 @@ buildPlayerBox oPlayer = do
           _ -> error "Only two players supported"
       , boxY = Fixed 3
       , boxW = Ratio 0.5
-      , boxH = Ratio 1
+      , boxH = Absolute totalHeight
       , boxBackground = Nothing
       , boxColorCommands = []
       , boxKidsPre = []
@@ -395,9 +404,9 @@ mkEmptyObjectBox y =
 
 --------------------------------------------------------------------------------
 
-mkHandBox :: Int -> Hand -> Magic 'Public 'RO Terminal Box
-mkHandBox y (Hand cards) = do
-  kids <- T.for (zip [1 ..] cards) $ uncurry mkHandCardBox
+mkHandBox :: Object 'OTPlayer -> Int -> Hand -> Magic 'Public 'RO Terminal Box
+mkHandBox oPlayer y (Hand cards) = do
+  kids <- T.for (zip [1 ..] cards) $ uncurry $ mkHandCardBox oPlayer
   let kids' = case kids of
         [] -> [mkEmptyObjectBox 1]
         _ -> kids
@@ -415,12 +424,46 @@ mkHandBox y (Hand cards) = do
       , boxKidsPost = kids'
       }
 
-mkHandCardBox :: Int -> ZO 'ZHand OTNCard -> Magic 'Public 'RO Terminal Box
-mkHandCardBox y card = do
-  name <- getHandCardName card
+dropWhileNotPrefix :: String -> String -> String
+dropWhileNotPrefix prefix str = case dropWhile (not . List.isPrefixOf prefix) $ List.tails str of
+  [] -> []
+  s : _ -> s
+
+takeBalanced :: String -> String
+takeBalanced = takeBalanced' 0
+
+takeBalanced' :: Int -> String -> String
+takeBalanced' _ [] = []
+takeBalanced' n (c : cs)
+  | c == '(' = c : takeBalanced' (n + 1) cs
+  | c == ')' && n > 0 = c : takeBalanced' (n - 1) cs
+  | c == ')' = []
+  | otherwise = c : takeBalanced' n cs
+
+-- TODO: Use MtgPure/Model/Mana/PrintedManaCost.hs
+hackyGetManaCost :: AnyCard -> Maybe String
+hackyGetManaCost card = case dropWhileNotPrefix "toManaCost" $ show card of
+  "" -> Nothing
+  s -> Just case takeBalanced $ takeWhile (/= ' ') $ drop 11 s of
+    s'@('(' : _) -> s'
+    s' -> '(' : s' <> ")"
+
+mkHandCardBox :: Object 'OTPlayer -> Int -> ZO 'ZHand OTNCard -> Magic 'Public 'RO Terminal Box
+mkHandCardBox oPlayer y zoCard = do
+  card <-
+    internalFromPrivate $
+      fromRO $
+        findHandCard oPlayer zoCard <&> \case
+          Nothing -> error "mkHandCardBox: card not found"
+          Just c -> c
+  name <- getHandCardName zoCard
+  let mCost = hackyGetManaCost card
+  let text = case mCost of
+        Nothing -> name
+        Just cost -> name <> " " <> cost
   pure
     Box
-      { boxText = name
+      { boxText = text
       , boxClipper = take
       , boxX = Fixed 1
       , boxY = Fixed y
