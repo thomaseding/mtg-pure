@@ -44,6 +44,7 @@ Purely functional Haskell "Magic: The Gathering" card model and game engine.
 - [`src/MtgPure/Engine/Fwd/Impl.hs`](src/MtgPure/Engine/Fwd/Impl.hs)
 - [`src/MtgPure/Engine/State.hs`](src/MtgPure/Engine/State.hs)
 - [`src/Test/Game/Shock.hs`](src/Test/Game/Shock.hs)
+- [`src/Test/Game/StoneRain.hs`](src/Test/Game/StoneRain.hs)
 
 ---
 
@@ -64,12 +65,19 @@ MtgPure> island == (Card "Island" $ YourLand $ \_you1 -> LandFacet [] [BasicLand
 True
 MtgPure> island == (Card "Island" $ YourLand $ \_you1 -> LandFacet [] [BasicLand Mountain] [])
 False
+MtgPure> mainStoneRain -- runs Test.Game.StoneRain test demo
 ```
 Notes:
  - Setting `-Wno-type-defaults` so the `Show` instances for cards don't need to constantly specify `Num` types when `Integer` is good enough for authoring. (Too much noise adding annotations for `Integer` or even `Int` or an alias `I`.)
  - `src/MtgPure/Model/Object/ToObjectN/Instances.hs` is a multi-megabyte file and will take a while to compile, hence the `-fobject-code` flag to cache the result. It is recommended you don't open this file with the Haskell Language Server active unless you want to max out and throttle your computer's RAM.
 - Using `-fobject-code` with `ghci` seems to require quitting and reentering `ghci` in order to get it to pick up the right runtime behavior after making code changes.
 ---
+
+### Screenshots:
+
+![Test.Game.StoneRain](https://user-images.githubusercontent.com/6971794/216995312-a11023a6-5ec0-4381-88f8-30e595d9ef95.png)
+
+![App.AnsiInspector](https://user-images.githubusercontent.com/6971794/216997518-b8ee0a7d-cc24-4c4b-8e6c-1a70494f24a4.png)
 
 ### Contributors:
 At this point, I am very unlikely to accept contributions unless I know you and we discussed ahead of time.

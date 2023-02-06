@@ -83,7 +83,7 @@ import safe System.Keyboard (
 
 theCardName :: String
 theCardName =
-  (!! 6)
+  (!! 1)
     [ {-0-} "PLACEHOLDER_CARD_NAME"
     , {-1-} "All Is Dust"
     , {-2-} "Counterspell"
