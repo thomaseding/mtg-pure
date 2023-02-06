@@ -565,7 +565,10 @@ pushZoneCard info oPlayer card = logCall 'pushZoneCard do
   i <- newObjectId
   let zo0 = toZO0 i
       zoCard = zo0ToCard zo0
-  modify \st -> pci_setMagicZoneCards info st $ Map.insert zo0 card $ pci_magicZoneCards info st
+  modify \st ->
+    let st' = pci_setMagicZoneCards info st $ Map.insert zo0 card $ pci_magicZoneCards info st
+        st'' = st'{magicOwnershipMap = Map.insert i oPlayer $ magicOwnershipMap st'}
+     in st''
   setPlayer oPlayer $
     pci_setPlayerZoneCards info player $
       pci_pushZoneCard info zoCard $
@@ -616,7 +619,10 @@ removeZoneCard info oPlayer zoCard = logCall 'removeZoneCard do
     Nothing -> pure Nothing
     Just{} -> do
       mCard <- fromRO $ gets $ Map.lookup (toZO0 zoCard) . pci_magicZoneCards info
-      modify \st -> pci_setMagicZoneCards info st $ Map.delete (toZO0 zoCard) $ pci_magicZoneCards info st
+      modify \st ->
+        let st' = pci_setMagicZoneCards info st $ Map.delete (toZO0 zoCard) $ pci_magicZoneCards info st
+            st'' = st'{magicOwnershipMap = Map.delete (getObjectId zoCard) $ magicOwnershipMap st'}
+         in st''
       player <- fromRO $ getPlayer oPlayer
       setPlayer oPlayer $
         pci_setPlayerZoneCards info player $
@@ -649,7 +655,12 @@ setPermanent zoPerm mPerm = logCall 'setPermanent do
         permMap' = case mPerm of
           Just perm -> Map.insert (toZO0 zoPerm) perm permMap
           Nothing -> Map.delete (toZO0 zoPerm) permMap
-     in st{magicPermanents = permMap'}
+     in st
+          { magicPermanents = permMap'
+          , magicOwnershipMap = case mPerm of
+              Just{} -> magicOwnershipMap st
+              Nothing -> Map.delete (getObjectId zoPerm) $ magicOwnershipMap st
+          }
 
 findPlayer :: Monad m => Object 'OTPlayer -> Magic 'Private 'RO m (Maybe Player)
 findPlayer oPlayer = logCall 'findPlayer $ gets $ Map.lookup oPlayer . magicPlayers

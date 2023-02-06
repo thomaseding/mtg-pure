@@ -134,7 +134,9 @@ resolveOneShot zoStack mCard elect = logCall 'resolveOneShot do
   mResult <- performElections zoStack goEffect elect
   case mCard of
     Nothing -> pure ()
-    Just (OwnedCard oPlayer card) -> M.void $ pushGraveyardCard oPlayer card
+    Just (OwnedCard oPlayer card) -> do
+      modify \st -> st{magicOwnershipMap = Map.delete (getObjectId zoStack) $ magicOwnershipMap st}
+      M.void $ pushGraveyardCard oPlayer card
   pure case mResult of
     Just result -> result
     Nothing -> undefined -- Impossible? If so, may want the return type of performElections be parametrized by the result Pre/Post
@@ -160,6 +162,7 @@ resolvePermanent elected = logCall 'resolvePermanent do
       perm = case cardToPermanent oPlayer card facet of
         Nothing -> error $ show ExpectedCardToBeAPermanentCard
         Just perm' -> perm'
+  modify \st -> st{magicOwnershipMap = Map.insert i oPlayer $ magicOwnershipMap st}
   setPermanent oPerm $ Just perm
  where
   ElectedPermanent

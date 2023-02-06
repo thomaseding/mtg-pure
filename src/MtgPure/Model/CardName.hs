@@ -31,3 +31,6 @@ instance HasCardName CardName where
 
 instance Semigroup CardName where
   CardName a <> CardName b = CardName $ a ++ b
+
+instance (HasCardName a, HasCardName b) => HasCardName (Either a b) where
+  getCardName = either getCardName getCardName

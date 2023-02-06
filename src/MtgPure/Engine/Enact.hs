@@ -27,6 +27,8 @@ import safe MtgPure.Engine.Fwd.Api (
   getAlivePlayers,
   getPermanent,
   getPlayer,
+  ownerOf,
+  pushGraveyardCard,
   pushHandCard,
   removeLibraryCard,
   setPermanent,
@@ -156,8 +158,13 @@ destroy' ::
 destroy' _mSource oPerm = logCall 'destroy' do
   fromRO (findPermanent oPerm) >>= \case
     Nothing -> pure ()
-    Just _perm -> do
+    Just perm -> do
       pure () -- TODO: indestructible
+      case permanentCard perm of
+        Right _anyToken -> pure ()
+        Left anyCard -> do
+          owner <- fromRO $ ownerOf oPerm
+          M.void $ pushGraveyardCard owner anyCard
       setPermanent oPerm Nothing
   pure mempty
 

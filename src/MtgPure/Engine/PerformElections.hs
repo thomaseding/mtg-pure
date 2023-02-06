@@ -176,7 +176,7 @@ ownerOf ::
   Magic 'Private 'RO m (Object 'OTPlayer)
 ownerOf zo = logCall 'ownerOf do
   gets (Map.lookup (getObjectId zo) . magicOwnershipMap) >>= \case
-    Nothing -> error $ show (undefined :: InternalLogicError)
+    Nothing -> error $ "ownerOf: no owner for " <> show zo
     Just owner -> pure owner
 
 electOwnerOf ::

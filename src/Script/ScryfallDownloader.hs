@@ -26,11 +26,11 @@ import safe qualified Data.Char as Char
 import safe qualified Data.Foldable as F
 import safe Data.List (isPrefixOf)
 import safe Data.Maybe (catMaybes, isJust)
-import qualified Data.Set as Set
+import safe qualified Data.Set as Set
 import safe qualified Data.Traversable as T
 import qualified Network.HTTP.Simple as H
 import safe Numeric (readHex, showHex)
-import Script.MtgPureConfig (MtgPureConfig (..), readMtgPureConfigFile)
+import safe Script.MtgPureConfig (MtgPureConfig (..), readMtgPureConfigFile)
 import safe qualified System.Directory as D
 import safe qualified System.FilePath as D
 
@@ -209,13 +209,17 @@ downloadImages :: DownloadConfig -> IO ()
 downloadImages config = do
   -- Lazy byte string because JSON file is large
   jsonData <- B.readFile $ configJsonPath config
+  -- TODO: `checkSkip` should be done here in addition to in `downloadSize` in
+  -- case all the images are skipped. Then we can skip reading the JSON file.
+  -- This requires the config to be passed an optional list of cards to download.
+  -- In this case, best to remove the `configCardFilter` field for uniformity.
   case A.eitherDecode jsonData :: Either String [A.Value] of
     Left err -> putStrLn err
     Right vs -> do
       let saveDir = configSaveDir config
       D.createDirectoryIfMissing True saveDir
       let cards = extractCards vs
-      F.for_ cards $ \card -> do
+      F.for_ cards \card -> do
         downloadSize config GetLarge card
         downloadSize config GetNormal card
         downloadSize config GetSmall card

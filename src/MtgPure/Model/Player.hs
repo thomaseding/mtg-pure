@@ -17,11 +17,16 @@ import safe MtgPure.Model.Hand (Hand)
 import safe MtgPure.Model.Library (Library)
 import safe MtgPure.Model.Life (Life (..))
 import safe MtgPure.Model.Mana.ManaPool (CompleteManaPool)
+import safe MtgPure.Model.Object.Object (Object (..))
+import safe MtgPure.Model.Object.ObjectId (ObjectId (..), UntypedObject (..), pattern DefaultObjectDiscriminant)
+import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
+import MtgPure.Model.Object.SObjectType (SObjectType (SPlayer))
 import safe MtgPure.Model.Sideboard (Sideboard)
 
 data Player :: Type where
   Player ::
-    { playerDrewFromEmptyLibrary :: Bool
+    { playerObject :: Object 'OTPlayer
+    , playerDrewFromEmptyLibrary :: Bool
     , playerGraveyard :: Graveyard
     , playerHand :: Hand
     , playerLandsPlayedThisTurn :: Int
@@ -40,7 +45,8 @@ data Player :: Type where
 emptyPlayer :: Player
 emptyPlayer =
   Player
-    { playerDrewFromEmptyLibrary = False
+    { playerObject = Object SPlayer (UntypedObject DefaultObjectDiscriminant (ObjectId 0))
+    , playerDrewFromEmptyLibrary = False
     , playerGraveyard = mempty
     , playerHand = mempty
     , playerLandsPlayedThisTurn = 0

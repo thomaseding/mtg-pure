@@ -41,18 +41,20 @@ import safe MtgPure.Model.Hand (Hand (..))
 import safe MtgPure.Model.Library (Library (..))
 import safe MtgPure.Model.Life (Life (..))
 import safe MtgPure.Model.Object.IsObjectType (IsObjectType (..))
+import safe MtgPure.Model.Object.Object (Object)
 import safe MtgPure.Model.Object.ObjectId (
   ObjectId (..),
   UntypedObject (..),
   getObjectId,
   pattern DefaultObjectDiscriminant,
  )
+import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.PhaseStep (PhaseStep (..))
 import safe MtgPure.Model.Player (Player (..))
 import safe MtgPure.Model.Sideboard (Sideboard (..))
 import safe MtgPure.Model.Stack (Stack (..))
 import safe MtgPure.Model.Step (Step (..))
-import MtgPure.Model.Variable (VariableId' (..))
+import safe MtgPure.Model.Variable (VariableId' (..))
 
 playGame :: Monad m => GameInput m -> m (Maybe (GameResult m))
 playGame input = case mkGameState fwdImpl input of
@@ -77,10 +79,11 @@ initLibraries = logCall 'initLibraries do
     let Deck cards = playerStartingDeck player
     mapM_ (pushLibraryCard oPlayer) cards
 
-mkPlayer :: GameFormat -> (Deck, Sideboard) -> Player
-mkPlayer format (deck, sideboard) =
+mkPlayer :: GameFormat -> Object 'OTPlayer -> (Deck, Sideboard) -> Player
+mkPlayer format o (deck, sideboard) =
   Player
-    { playerDrewFromEmptyLibrary = False
+    { playerObject = o
+    , playerDrewFromEmptyLibrary = False
     , playerGraveyard = Graveyard []
     , playerHand = Hand []
     , playerLandsPlayedThisTurn = 0
@@ -134,6 +137,7 @@ mkGameState fwd input = case playerObjects of
   format = gameInput_gameFormat input
   decks = gameInput_decks input
   playerCount = length decks
-  players = map (mkPlayer format) decks
-  playerObjects = map (idToObject . UntypedObject DefaultObjectDiscriminant . ObjectId) [1 .. playerCount] -- NOTE: reserving 0 for "null" for UI choice
+  playerIds = ObjectId <$> [1 .. playerCount] -- NOTE: reserving 0 for "null" for UI choice
+  playerObjects = idToObject . UntypedObject DefaultObjectDiscriminant <$> playerIds
+  players = zipWith (mkPlayer format) playerObjects decks
   playerMap = Map.fromList $ zip playerObjects players

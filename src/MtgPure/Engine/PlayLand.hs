@@ -34,6 +34,7 @@ import safe MtgPure.Engine.Monad (
   get,
   gets,
   internalFromPrivate,
+  modify,
  )
 import safe MtgPure.Engine.Orphans ()
 import safe MtgPure.Engine.Prompt (
@@ -178,6 +179,7 @@ playLandZO oPlayer zoLand = logCall 'playLandZO do
               perm = case cardToPermanent oPlayer (AnyCard1 card) facet of
                 Nothing -> error $ show ExpectedCardToBeAPermanentCard
                 Just perm' -> perm'
+          modify \st' -> st'{magicOwnershipMap = Map.insert i oPlayer $ magicOwnershipMap st'}
           setPermanent oLand' $ Just perm
           pure Legal
 

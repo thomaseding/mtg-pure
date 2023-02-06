@@ -314,6 +314,7 @@ activatedAbilitiesOf = fwd1 fwd_activatedAbilitiesOf
 allZOActivatedAbilities :: (IsZO zone ot, Monad m) => Magic 'Private 'RO m [SomeActivatedAbility zone ot]
 allZOActivatedAbilities = fwd0 fwd_allZOActivatedAbilities
 
+-- TODO: This prolly should be Private instead because of things like face-down morph creatures.
 allControlledPermanentsOf ::
   Monad m =>
   Object 'OTPlayer ->

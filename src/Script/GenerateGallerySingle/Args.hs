@@ -12,7 +12,7 @@ module Script.GenerateGallerySingle.Args (
   helpString,
 ) where
 
-import Text.Read (readMaybe)
+import safe Text.Read (readMaybe)
 
 --------------------------------------------------------------------------------
 -- Usage
@@ -24,6 +24,9 @@ import Text.Read (readMaybe)
 -- --output-ansi-path PATH              Path to card ansi. Required.
 -- --ansi-width INT                     Width of ansi in characters. Required.
 -- --ansi-height INT                    Height of ansi in characters. Required.
+-- --rotate INT                         Rotate the image by this many degrees.
+--                                      Currently only supports 0, 90, 180, 270,
+--                                      and 360.
 
 helpString :: String
 helpString =
@@ -36,6 +39,9 @@ helpString =
     , "--output-ansi-path PATH              Path to card ansi. Required."
     , "--ansi-width INT                     Width of ansi in characters. Required."
     , "--ansi-height INT                    Height of ansi in characters. Required."
+    , "--rotate-degrees INT                 Rotate the image by this many degrees."
+    , "                                     Currently only supports 0, 90, 180, 270,"
+    , "                                     and 360."
     ]
 
 data Args = Args
@@ -46,6 +52,7 @@ data Args = Args
   , args_outputAnsiPath :: FilePath
   , args_ansiWidth :: Int
   , args_ansiHeight :: Int
+  , args_rotateDegrees :: Int
   }
 
 data ParseError = ParseError
@@ -64,6 +71,7 @@ emptyArgs =
     , args_outputAnsiPath = ""
     , args_ansiWidth = 0
     , args_ansiHeight = 0
+    , args_rotateDegrees = 0
     }
 
 err :: String -> Either ParseError Args
@@ -89,6 +97,7 @@ parseArgs input = do
     "--output-ansi-path" : path : rest -> go curr{args_outputAnsiPath = path} rest
     "--ansi-width" : (readMaybe -> Just width) : rest -> go curr{args_ansiWidth = width} rest
     "--ansi-height" : (readMaybe -> Just height) : rest -> go curr{args_ansiHeight = height} rest
+    "--rotate-degrees" : (readMaybe -> Just degrees) : rest -> go curr{args_rotateDegrees = degrees} rest
     arg : _ -> err $ "Unknown argument: " ++ arg
 
 validateArgs :: Args -> Either ParseError Args
@@ -98,4 +107,5 @@ validateArgs args
   | args_outputAnsiPath args == "" = err "Invalid --output-ansi-path"
   | args_ansiWidth args <= 0 = err "Invalid --ansi-width"
   | args_ansiHeight args <= 0 = err "Invalid --ansi-height"
+  | args_rotateDegrees args `notElem` [0, 90, 180, 270, 360] = err "Unsupported --rotate-degrees"
   | otherwise = pure args

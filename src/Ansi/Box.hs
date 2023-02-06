@@ -24,6 +24,7 @@ module Ansi.Box (
   ColorCommand (..),
   Box (..),
   toAbsolute,
+  fromAbsolute,
   drawBox,
   drawBoxFast,
   addBorder,
@@ -111,8 +112,12 @@ finallyCleanup :: IO a -> IO a
 finallyCleanup m = do
   m `finally` do
     setSGR [Reset]
-    clearScreenByPaging -- Paging is non-destructive, which is nice when exiting the app.
     showCursor
+    getTerminalSize >>= \case
+      Nothing -> pure ()
+      Just (_w, h) -> do
+        setCursorPosition (h - 1) 0
+    putStrLn ""
     hFlush stdout
 
 parseCodePage :: String -> Maybe Int
@@ -586,6 +591,7 @@ printRenderedTable = mapM_ \row -> do
     _ -> undefined
   putChar '\n'
 
+-- | XXX prolly not fast. very wip and also obsoleted by my ansi compiler
 drawBoxFast :: Int -> Int -> Box -> IO ()
 drawBoxFast w h box = do
   let mapRender = compileBox w h box

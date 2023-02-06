@@ -156,8 +156,8 @@ parseCommandInput = \case
   CIPlayLand landId extraIds -> playLand landId extraIds
   CIAskAgain -> askAgain
   CIHelp _ -> help
-  CIExamineAbility objId abilityIndex -> undefined objId abilityIndex
-  CIExamineObject objId -> undefined objId
+  CIExamineAbility objId abilityIndex -> error "TODO: CIExamineAbility" objId abilityIndex
+  CIExamineObject objId -> error "TODO: CIExamineObject" objId
 
 askAgain :: Magic 'Public 'RO Terminal (PriorityAction ())
 askAgain = pure $ AskPriorityActionAgain Nothing
