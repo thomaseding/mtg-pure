@@ -146,7 +146,7 @@ terminalLogCallPush opaque frame = case name == show 'queryMagic of
             False -> pure ()
             True -> do
               fwd <- getsTerminalState terminal_fwd
-              fwd_printGameState fwd opaque
+              fwd_printGameState fwd opaque Nothing
       _ -> pure ()
  where
   name = callFrameName frame

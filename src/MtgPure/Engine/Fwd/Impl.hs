@@ -48,6 +48,7 @@ import safe MtgPure.Engine.Core (
   pushGraveyardCard,
   pushHandCard,
   pushLibraryCard,
+  queryObjectId,
   removeGraveyardCard,
   removeHandCard,
   removeLibraryCard,
@@ -125,6 +126,7 @@ fwdImpl =
     , fwd_pushGraveyardCard = pushGraveyardCard
     , fwd_pushHandCard = pushHandCard
     , fwd_pushLibraryCard = pushLibraryCard
+    , fwd_queryObjectId = queryObjectId
     , fwd_removeGraveyardCard = removeGraveyardCard
     , fwd_removeHandCard = removeHandCard
     , fwd_removeLibraryCard = removeLibraryCard

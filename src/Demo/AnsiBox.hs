@@ -18,18 +18,30 @@ module Demo.AnsiBox (
   mainAnsiBoxExample,
 ) where
 
+import Ansi.AnsiString (
+  Sgr (..),
+  dullBlack,
+  dullBlue,
+  dullMagenta,
+  dullRed,
+  dullYellow,
+  vividBlack,
+  vividBlue,
+  vividCyan,
+  vividGreen,
+  vividMagenta,
+  vividRed,
+  vividYellow,
+ )
 import safe Ansi.Box (
   Box (..),
-  ColorCommand (..),
   FixedOrRatio (..),
   addPopup,
-  drawBox,
+  drawBoxIO,
   withAnsi,
  )
 import safe qualified Control.Monad as M
 import safe System.Console.ANSI (
-  Color (..),
-  ColorIntensity (..),
   hideCursor,
  )
 import safe System.IO (hFlush, stdout)
@@ -53,13 +65,13 @@ newlineEvery n s =
 mainAnsiBoxExample :: IO ()
 mainAnsiBoxExample = withAnsi do
   hideCursor
-  drawBox 80 30 $ addPopup "This is a really special\nmessage popup" parentBox
+  drawBoxIO 80 30 $ addPopup "This is a really special\nmessage popup" parentBox
   hFlush stdout
   M.void getChar
-  drawBox 80 30 $ addPopup boxChars parentBox
+  drawBoxIO 80 30 $ addPopup boxChars parentBox
   hFlush stdout
   M.void getChar
-  drawBox 80 30 $ addPopup (newlineEvery 20 lineChars) parentBox
+  drawBoxIO 80 30 $ addPopup (newlineEvery 20 lineChars) parentBox
   hFlush stdout
   M.void getChar
 
@@ -74,8 +86,8 @@ parentBox =
     , boxH = Ratio 1
     , boxKidsPre = [topRow, middleRow, bottomRow]
     , boxKidsPost = []
-    , boxColorCommands = [SetFg (Dull, Magenta)]
-    , boxBackground = Just (Dull, Yellow)
+    , boxColorCommands = [SgrTrueColorFg dullMagenta]
+    , boxBackground = Just dullYellow
     }
 
 topRow :: Box
@@ -89,7 +101,7 @@ topRow =
     , boxH = Ratio 0.33
     , boxKidsPre = [box1, box2, box3]
     , boxKidsPost = []
-    , boxColorCommands = [SetBg (Vivid, Blue)]
+    , boxColorCommands = [SgrTrueColorBg vividBlue]
     , boxBackground = Nothing -- Just (Dull, Black)
     }
 
@@ -103,7 +115,7 @@ middleRow =
     , boxW = Ratio 1
     , boxH = Ratio 0.33
     , boxBackground = Nothing
-    , boxColorCommands = [SetBg (Vivid, Cyan)]
+    , boxColorCommands = [SgrTrueColorBg vividCyan]
     , boxKidsPre = [box4, box5]
     , boxKidsPost = []
     }
@@ -117,7 +129,7 @@ bottomRow =
     , boxY = Ratio 0.66
     , boxW = Ratio 1
     , boxH = Auto -- Relative 0.33
-    , boxColorCommands = [SetBg (Vivid, Green)]
+    , boxColorCommands = [SgrTrueColorBg vividGreen]
     , boxBackground = Nothing
     , boxKidsPre = [box6]
     , boxKidsPost = []
@@ -132,8 +144,8 @@ box1 =
     , boxY = Ratio 0
     , boxW = Ratio 0.33
     , boxH = Ratio 1
-    , boxBackground = Just (Dull, Blue)
-    , boxColorCommands = [SetBg (Vivid, Blue)]
+    , boxBackground = Just dullBlue
+    , boxColorCommands = [SgrTrueColorBg vividBlue]
     , boxKidsPre = []
     , boxKidsPost = []
     }
@@ -148,7 +160,7 @@ box2 =
     , boxW = Ratio 0.33
     , boxH = Ratio 1
     , boxColorCommands = []
-    , boxBackground = Just (Vivid, Black)
+    , boxBackground = Just vividBlack
     , boxKidsPre = []
     , boxKidsPost = []
     }
@@ -162,8 +174,8 @@ box3 =
     , boxY = Ratio 0
     , boxW = Auto -- Relative 0.33
     , boxH = Ratio 1
-    , boxColorCommands = [SetFg (Vivid, Blue)]
-    , boxBackground = Just (Vivid, Yellow)
+    , boxColorCommands = [SgrTrueColorFg vividBlue]
+    , boxBackground = Just vividYellow
     , boxKidsPre = []
     , boxKidsPost = []
     }
@@ -177,8 +189,8 @@ box4 =
     , boxY = Ratio 0
     , boxW = Ratio 0.5
     , boxH = Ratio 1
-    , boxColorCommands = [SetFg (Dull, Black)]
-    , boxBackground = Just (Vivid, Red)
+    , boxColorCommands = [SgrTrueColorFg dullBlack]
+    , boxBackground = Just vividRed
     , boxKidsPre = []
     , boxKidsPost = []
     }
@@ -193,7 +205,7 @@ box5 =
     , boxW = Ratio 0.5
     , boxH = Ratio 1
     , boxColorCommands = []
-    , boxBackground = Just (Vivid, Magenta)
+    , boxBackground = Just vividMagenta
     , boxKidsPre = []
     , boxKidsPost = []
     }
@@ -208,7 +220,7 @@ box6 =
     , boxW = Ratio 1
     , boxH = Ratio 1
     , boxColorCommands = []
-    , boxBackground = Just (Dull, Red)
+    , boxBackground = Just dullRed
     , boxKidsPre = []
     , boxKidsPost = []
     }

@@ -10,9 +10,25 @@ module Ansi.AnsiString (
   AnsiChar (..),
   AnsiString,
   AnsiToString (..),
+  isMovementCsi,
+  dullBlack,
+  dullBlue,
+  dullMagenta,
+  dullRed,
+  dullWhite,
+  dullYellow,
+  vividBlack,
+  vividBlue,
+  vividCyan,
+  vividGreen,
+  vividMagenta,
+  vividRed,
+  vividWhite,
+  vividYellow,
 ) where
 
 import safe Control.Exception (assert)
+--import safe Data.String (IsString (..))
 import safe GHC.Word (Word8)
 
 data Rgb = Rgb
@@ -33,16 +49,28 @@ data Csi where
   CsiSetAbsCursorX :: Int -> Csi
   -- | 0-based coordinates. Must be non-negative.
   CsiSetAbsCursorXY :: Int -> Int -> Csi
+  deriving (Eq, Ord, Show)
+
+isMovementCsi :: Csi -> Bool
+isMovementCsi = \case
+  CsiSetNextLine -> True
+  CsiSetPrevLine -> True
+  CsiSetRelCursorX n -> n /= 0
+  CsiSetRelCursorY n -> n /= 0
+  CsiSetAbsCursorX{} -> True
+  CsiSetAbsCursorXY{} -> True
 
 data Sgr where
   SgrReset :: Sgr
   SgrTrueColorFg :: Rgb -> Sgr
   SgrTrueColorBg :: Rgb -> Sgr
+  deriving (Eq, Ord, Show)
 
 data AnsiChar where
   AnsiChar :: Char -> AnsiChar
   AnsiCsi :: Csi -> AnsiChar
   AnsiSgr :: Sgr -> AnsiChar
+  deriving (Eq, Ord, Show)
 
 type AnsiString = [AnsiChar]
 
@@ -87,3 +115,48 @@ instance AnsiToString AnsiChar where
     AnsiChar c -> [c]
     AnsiCsi csi -> ansiToString csi
     AnsiSgr sgr -> ansiToString sgr
+
+instance AnsiToString AnsiString where
+  ansiToString = concatMap ansiToString
+
+dullBlack :: Rgb
+dullBlack = Rgb 0 0 0
+
+dullBlue :: Rgb
+dullBlue = Rgb 0 0 150
+
+dullMagenta :: Rgb
+dullMagenta = Rgb 150 0 150
+
+dullRed :: Rgb
+dullRed = Rgb 150 0 0
+
+dullWhite :: Rgb
+dullWhite = Rgb 150 150 150
+
+dullYellow :: Rgb
+dullYellow = Rgb 0 150 150
+
+vividCyan :: Rgb
+vividCyan = Rgb 80 255 255
+
+vividGreen :: Rgb
+vividGreen = Rgb 0 255 0
+
+vividBlack :: Rgb
+vividBlack = Rgb 150 150 150
+
+vividBlue :: Rgb
+vividBlue = Rgb 0 0 255
+
+vividMagenta :: Rgb
+vividMagenta = Rgb 255 0 255
+
+vividRed :: Rgb
+vividRed = Rgb 255 0 0
+
+vividWhite :: Rgb
+vividWhite = Rgb 255 255 255
+
+vividYellow :: Rgb
+vividYellow = Rgb 0 255 255

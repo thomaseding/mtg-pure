@@ -65,7 +65,7 @@ data Permanent :: Type where
     , permanentCard :: Either AnyCard AnyToken -- SomeCardOrToken OTNPermanent
     , permanentCardFacet :: Some CardFacet OTNPermanent
     , permanentColors :: Colors
-    , permanentController :: Object 'OTPlayer
+    , permanentController :: Object 'OTPlayer -- TODO: Use controller map on game state instead
     , permanentCreature :: Maybe Creature
     , permanentCreatureDamage :: Damage 'NoVar -- 120.6
     , permanentEnchantment :: Maybe Enchantment

@@ -41,6 +41,7 @@ module MtgPure.Engine.Core (
   pushGraveyardCard,
   pushHandCard,
   pushLibraryCard,
+  queryObjectId,
   removeGraveyardCard,
   removeHandCard,
   removeLibraryCard,
@@ -66,7 +67,7 @@ import safe qualified Data.Stream as Stream
 import safe qualified Data.Traversable as T
 import safe Data.Typeable (cast)
 import safe Data.Void (Void)
-import safe MtgPure.Engine.Fwd.Api (eachLogged)
+import safe MtgPure.Engine.Fwd.Api (eachLogged, ownerOf)
 import safe MtgPure.Engine.Legality (Legality (..))
 import safe MtgPure.Engine.Monad (
   fromPublic,
@@ -85,6 +86,7 @@ import safe MtgPure.Engine.Prompt (
   InternalLogicError (..),
   PlayerCount (..),
   Prompt' (..),
+  QueryObjectResult (..),
   RelativeAbilityIndex (..),
   SomeActivatedAbility (..),
  )
@@ -108,7 +110,7 @@ import safe MtgPure.Model.Object.IndexOT (IndexOT (..))
 import safe MtgPure.Model.Object.IsObjectType (IsObjectType (..))
 import safe MtgPure.Model.Object.OTN (OT0)
 import safe MtgPure.Model.Object.OTNAliases (OTNCard, OTNLand, OTNPermanent)
-import safe MtgPure.Model.Object.Object (Object)
+import safe MtgPure.Model.Object.Object (Object (..))
 import safe MtgPure.Model.Object.ObjectId (
   ObjectId (..),
   UntypedObject (..),
@@ -118,6 +120,7 @@ import safe MtgPure.Model.Object.ObjectId (
 import safe MtgPure.Model.Object.ObjectN (ObjectN)
 import safe MtgPure.Model.Object.ObjectN_ (ObjectN' (O0))
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
+import safe MtgPure.Model.Object.SObjectType (SObjectType (..))
 import safe MtgPure.Model.Object.ToObjectN (toObject1, toObjectNAny)
 import safe MtgPure.Model.Permanent (Permanent (..))
 import safe MtgPure.Model.Player (Player (..))
@@ -130,7 +133,7 @@ import safe MtgPure.Model.Recursive (
   YourCardFacet (..),
   fromSome,
  )
-import MtgPure.Model.Variable (VariableId, VariableId' (..))
+import safe MtgPure.Model.Variable (VariableId, VariableId' (..))
 import safe MtgPure.Model.Zone (IsZone (..), SZone (..), Zone (..))
 import safe MtgPure.Model.ZoneObject.Convert (
   ToZO0,
@@ -497,6 +500,88 @@ getBasicLandTypes zo = logCall 'getBasicLandTypes do
       BasicLand ty -> [ty]
       _ -> []
   uniquify = List.nub . List.sort
+
+queryObjectId :: forall m. Monad m => ObjectId -> Magic 'Private 'RO m (Maybe QueryObjectResult)
+queryObjectId i = do
+  oPlayers <- fromPublic getAlivePlayers
+  let goPlayers =
+        catMaybes <$> T.for oPlayers \oPlayer -> do
+          if getObjectId oPlayer == i
+            then do
+              player <- getPlayer oPlayer
+              pure $
+                Just
+                  QueryObjectResult
+                    { qor_ = ()
+                    , qorCard = Nothing
+                    , qorToken = Nothing
+                    , qorController = oPlayer -- TODO mindslaver
+                    , qorOwner = oPlayer
+                    , qorPermanent = Nothing
+                    , qorPlayer = Just player
+                    , qorZone = ZBattlefield
+                    }
+            else pure Nothing
+  let goSimpleZone ::
+        (Object 'OTPlayer -> ZO zone OTNCard -> Magic 'Private 'RO m (Maybe AnyCard)) ->
+        Zone ->
+        ZO zone OTNCard ->
+        Magic 'Private 'RO m [QueryObjectResult]
+      goSimpleZone findCard zone zo =
+        catMaybes <$> T.for oPlayers \oPlayer -> do
+          mCard <- findCard oPlayer zo
+          pure case mCard of
+            Nothing -> Nothing
+            Just{} ->
+              Just
+                QueryObjectResult
+                  { qor_ = ()
+                  , qorCard = mCard
+                  , qorToken = Nothing
+                  , qorController = oPlayer
+                  , qorOwner = oPlayer
+                  , qorPermanent = Nothing
+                  , qorPlayer = Nothing
+                  , qorZone = zone
+                  }
+  let goLibrary = goSimpleZone findLibraryCard ZLibrary zoLibrary
+  let goHand = goSimpleZone findHandCard ZHand zoHand
+  let goGrave = goSimpleZone findGraveyardCard ZGraveyard zoGrave
+  let goBattlefield = do
+        findPermanent zoPerm >>= \case
+          Nothing -> pure []
+          Just perm -> do
+            owner <- ownerOf zoPerm
+            pure
+              [ QueryObjectResult
+                  { qor_ = ()
+                  , qorCard = either Just (const Nothing) $ permanentCard perm
+                  , qorToken = Nothing
+                  , qorController = permanentController perm
+                  , qorOwner = owner
+                  , qorPermanent = Just perm
+                  , qorPlayer = Nothing
+                  , qorZone = ZBattlefield
+                  }
+              ]
+  let goZones = do
+        a <- goPlayers
+        b <- goLibrary
+        c <- goHand
+        d <- goGrave
+        e <- goBattlefield
+        pure case a ++ b ++ c ++ d ++ e of
+          [result] -> Just result
+          _ : _ -> error "impossible"
+          [] -> Nothing
+
+  goZones
+ where
+  oCard = Object SArtifact $ UntypedObject DefaultObjectDiscriminant i
+  zoLibrary = zo0ToCard $ toZO0 oCard
+  zoHand = zo0ToCard $ toZO0 oCard
+  zoGrave = zo0ToCard $ toZO0 oCard
+  zoPerm = zo0ToPermanent $ toZO0 oCard
 
 newObjectId :: Monad m => Magic 'Private 'RW m ObjectId
 newObjectId = logCall 'newObjectId do

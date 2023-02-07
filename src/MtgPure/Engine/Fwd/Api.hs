@@ -66,6 +66,7 @@ module MtgPure.Engine.Fwd.Api (
   pushGraveyardCard,
   pushHandCard,
   pushLibraryCard,
+  queryObjectId,
   removeGraveyardCard,
   removeHandCard,
   removeLibraryCard,
@@ -105,6 +106,7 @@ import safe MtgPure.Engine.Prompt (
   PlayLand,
   PlayerCount (..),
   PriorityAction,
+  QueryObjectResult,
   ResolveElected,
   SomeActivatedAbility,
   SourceZO,
@@ -442,6 +444,9 @@ pushHandCard = fwd2 fwd_pushHandCard
 
 pushLibraryCard :: Monad m => Object 'OTPlayer -> AnyCard -> Magic 'Private 'RW m (ZO 'ZLibrary OTNCard)
 pushLibraryCard = fwd2 fwd_pushLibraryCard
+
+queryObjectId :: Monad m => ObjectId -> Magic 'Private 'RO m (Maybe QueryObjectResult)
+queryObjectId = fwd1 fwd_queryObjectId
 
 removeGraveyardCard :: Monad m => Object 'OTPlayer -> ZO 'ZGraveyard OTNCard -> Magic 'Private 'RW m (Maybe AnyCard)
 removeGraveyardCard = fwd2 fwd_removeGraveyardCard

@@ -10,6 +10,7 @@ module Data.Nat (
   Nat (..),
   NatList (..),
   Fin (..),
+  natListToList,
   natToInt,
   finToInt,
   intToFin,
@@ -61,6 +62,13 @@ data Fin (user :: Type) (n :: Nat) where
   FS :: (Typeable user, IsNat n) => Fin user n -> Fin user ( 'S n)
   deriving (Typeable)
 
+deriving instance Show (Fin user n)
+
+natListToList :: NatList user n elem -> [elem]
+natListToList = \case
+  LZ x -> [x]
+  LS x xs -> x : natListToList xs
+
 natToInt :: Nat -> Int
 natToInt = \case
   Z -> 0
@@ -71,8 +79,11 @@ finToInt = \case
   FZ -> 0
   FS n -> 1 + finToInt n
 
+-- Sample: `fmap finToInt (intToFin 2 :: Maybe (Fin () (ToNat 6)))`
 intToFin :: forall user (n :: Nat). (Typeable user, IsNat n) => Int -> Maybe (Fin user n)
-intToFin input = intToFinRec input topInt topFin
+intToFin input
+  | 0 <= input && input <= topInt = intToFinRec (topInt - input) topInt topFin
+  | otherwise = Nothing
  where
   topFin = litFin @n
   topNat = litNat @n
@@ -81,10 +92,10 @@ intToFin input = intToFinRec input topInt topFin
 intToFinRec :: forall user n. IsNat n => Int -> Int -> Fin user n -> Maybe (Fin user n)
 intToFinRec input i curr = case curr of
   FZ -> assert (i == 0) case input == i of
-    True -> Just curr
+    True -> Just FZ
     False -> Nothing
   FS next -> case input == i of
-    True -> Just curr
+    True -> Just FZ
     False -> FS <$> intToFinRec input (i - 1) next
 
 readMaybeFin :: (Typeable user, IsNat n) => String -> Maybe (Fin user n)

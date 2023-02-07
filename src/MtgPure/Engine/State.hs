@@ -19,6 +19,7 @@ module MtgPure.Engine.State (
   ToPriorityEnd (..),
   --
   mkOpaqueGameState,
+  getOpaqueGameState,
   OpaqueGameState,
   GameState (..),
   GameInput (..),
@@ -225,6 +226,9 @@ type MagicCont v rw bail m a = MagicCont' (GameResult m) (GameState m) v rw bail
 
 mkOpaqueGameState :: GameState m -> OpaqueGameState m
 mkOpaqueGameState = OpaqueGameState
+
+getOpaqueGameState :: Monad m => Magic 'Public 'RO m (OpaqueGameState m)
+getOpaqueGameState = internalFromPrivate $ gets mkOpaqueGameState
 
 queryMagic' :: Monad m => OpaqueGameState m -> Magic 'Public 'RO m a -> m a
 queryMagic' (OpaqueGameState st) = runMagicRO st

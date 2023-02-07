@@ -19,11 +19,12 @@ module App.CardGallery (
   mainAnsiGallery,
 ) where
 
+import safe Ansi.AnsiString (dullBlack)
 import safe Ansi.Box (
   Box (..),
   FixedOrRatio (..),
   clearScreenWithoutPaging,
-  drawBox,
+  drawBoxIO,
   withAnsi,
   withBuffering,
  )
@@ -52,8 +53,6 @@ import safe MtgPure.Model.CardName (getCardName, unCardName)
 import Script.GenerateGallerySingle.Main (CardAnsiInfo (..), cardNameToAnsis)
 import Script.MtgPureConfig (MtgPureConfig (mtgPure_ansiImageDatabaseDir), readMtgPureConfigFile)
 import safe System.Console.ANSI (
-  Color (..),
-  ColorIntensity (..),
   getTerminalSize,
   hideCursor,
   setCursorPosition,
@@ -264,7 +263,7 @@ mkTextBox = do
       , boxY = Absolute $ (platonicH + 1) `div` 2
       , boxW = Absolute 20
       , boxH = Absolute 1
-      , boxBackground = Just (Dull, Black)
+      , boxBackground = Just dullBlack
       , boxColorCommands = []
       , boxKidsPre = []
       , boxKidsPost = []
@@ -302,7 +301,7 @@ printCurrentCard = do
   viewport <- mkViewport
   M.liftIO do
     setCursorPosition 0 0
-    drawBox viewportW viewportH viewport
+    drawBoxIO viewportW viewportH viewport
     hFlush stdout
 
 fixResizeArtifacts :: Gallery ()

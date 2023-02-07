@@ -21,7 +21,7 @@ Some command have a single character aliases. They are as follows:
   3 playLand
 
 IDs:
-  Positive decimal numbers used to uniquely identify objects. This generalizes an genuine MTG "object" (CR 109.1)
+  Decimal numbers used to uniquely identify objects. This generalizes genuine MTG "object"s (CR 109.1)
   to include things like players. These are displayed on screen as `[<id>]` next to their corresponding object.
 
 Indices:
@@ -63,3 +63,7 @@ Spaces (or dots) are sometimes optional between command arguments. Examples:
 > 1.7-1 # Activates the "T: Add W" ability of the permanent with ID 7.
 > 1.7w # Activates the "T: Add W" ability of the permanent with ID 7.
 
+TODO:
+Add a Cursor Mode where the REPL is disengaged. Arrow keys move around to highlight things.
+Can use Enter to do stuff. Pop up submenu boxes recursively as needed. Typing numbers 
+will jump to the best match ID.

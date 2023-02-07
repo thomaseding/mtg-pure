@@ -25,13 +25,13 @@ _fwd0 go = do
   fwd <- getFwd
   go fwd
 
-fwd1 :: (Fwd -> (a -> Terminal z)) -> a -> Terminal z
-fwd1 go a = do
+_fwd1 :: (Fwd -> (a -> Terminal z)) -> a -> Terminal z
+_fwd1 go a = do
   fwd <- getFwd
   go fwd a
 
-_fwd2 :: (Fwd -> (a -> b -> Terminal z)) -> a -> b -> Terminal z
-_fwd2 go a b = do
+fwd2 :: (Fwd -> (a -> b -> Terminal z)) -> a -> b -> Terminal z
+fwd2 go a b = do
   fwd <- getFwd
   go fwd a b
 
@@ -40,5 +40,5 @@ _fwd3 go a b c = do
   fwd <- getFwd
   go fwd a b c
 
-printGameState :: OpaqueGameState Terminal -> Terminal ()
-printGameState = fwd1 fwd_printGameState
+printGameState :: OpaqueGameState Terminal -> Maybe String -> Terminal ()
+printGameState = fwd2 fwd_printGameState

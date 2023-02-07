@@ -18,19 +18,27 @@ module Demo.AnsiMagicBoard (
   mainAnsiBoxMagic,
 ) where
 
+import safe Ansi.AnsiString (
+  Rgb,
+  Sgr (..),
+  dullBlack,
+  dullBlue,
+  dullRed,
+  dullWhite,
+  dullYellow,
+  vividBlue,
+  vividGreen,
+  vividWhite,
+  vividYellow,
+ )
 import safe Ansi.Box (
   Box (..),
-  ColorCommand (..),
   FixedOrRatio (..),
   addPopup,
-  drawBox,
+  drawBoxIO,
   withAnsi,
  )
 import safe qualified Control.Monad as M
-import safe System.Console.ANSI (
-  Color (..),
-  ColorIntensity (..),
- )
 import safe System.IO (hFlush, stdout)
 
 main :: IO ()
@@ -38,7 +46,7 @@ main = mainAnsiBoxMagic
 
 mainAnsiBoxMagic :: IO ()
 mainAnsiBoxMagic = withAnsi do
-  drawBox 90 30 $ addPopup "The\nPopup!" magicBox
+  drawBoxIO 90 30 $ addPopup "The\nPopup!" magicBox
   hFlush stdout
   M.void getLine
 
@@ -180,7 +188,7 @@ manaClipper' n s
     c1 : c2 : cs -> c1 : c2 : '.' : cs
     cs -> cs
 
-mkMana :: (ColorIntensity, Color) -> (ColorIntensity, Color) -> Int -> String -> Box
+mkMana :: Rgb -> Rgb -> Int -> String -> Box
 mkMana fg bg relX text =
   Box
     { boxText = text
@@ -190,28 +198,28 @@ mkMana fg bg relX text =
     , boxW = Fixed $ manaWidth - 1
     , boxH = Ratio 1
     , boxBackground = Nothing
-    , boxColorCommands = [SetFg fg, SetBg bg]
+    , boxColorCommands = [SgrTrueColorFg fg, SgrTrueColorBg bg]
     , boxKidsPre = []
     , boxKidsPost = []
     }
 
 manaC :: Box
-manaC = mkMana (Dull, Black) (Dull, White) 0 "111111111111"
+manaC = mkMana dullBlack dullWhite 0 "111111111111"
 
 manaW :: Box
-manaW = mkMana (Dull, Black) (Vivid, Yellow) 1 "43"
+manaW = mkMana dullBlack vividYellow 1 "43"
 
 manaU :: Box
-manaU = mkMana (Vivid, White) (Dull, Blue) 2 "6783"
+manaU = mkMana vividWhite dullBlue 2 "6783"
 
 manaB :: Box
-manaB = mkMana (Dull, Yellow) (Dull, Black) 3 "1234567"
+manaB = mkMana dullYellow dullBlack 3 "1234567"
 
 manaR :: Box
-manaR = mkMana (Vivid, White) (Dull, Red) 4 "123456"
+manaR = mkMana vividWhite dullRed 4 "123456"
 
 manaG :: Box
-manaG = mkMana (Dull, Black) (Vivid, Green) 5 "12356"
+manaG = mkMana dullBlack vividGreen 5 "12356"
 
 handY :: Int
 handY = playerY + playerHeight
@@ -354,7 +362,7 @@ commandRow =
     , boxY = Fixed commandY
     , boxW = Ratio 1
     , boxH = Fixed commandHeight
-    , boxBackground = Just (Vivid, Blue)
+    , boxBackground = Just vividBlue
     , boxColorCommands = []
     , boxKidsPre = [commandA, commandB]
     , boxKidsPost = []

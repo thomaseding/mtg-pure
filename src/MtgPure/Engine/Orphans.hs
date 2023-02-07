@@ -23,6 +23,7 @@ import safe MtgPure.Engine.Orphans.ZO ()
 import safe MtgPure.Engine.Prompt (
   AnyElected (..),
   Elected (..),
+  QueryObjectResult (..),
  )
 import safe MtgPure.Engine.State (
   GameResult (..),
@@ -344,6 +345,8 @@ deriving instance Show PhaseStep
 deriving instance Show Planeswalker
 
 deriving instance Show Player
+
+deriving instance Show QueryObjectResult
 
 deriving instance Show (Some Ability ot)
 

@@ -16,11 +16,23 @@ module MtgPure.Client.Terminal.Render (
   printGameState,
 ) where
 
+import Ansi.AnsiString (
+  Rgb,
+  Sgr (..),
+  dullBlack,
+  dullBlue,
+  dullRed,
+  dullWhite,
+  dullYellow,
+  vividGreen,
+  vividWhite,
+  vividYellow,
+ )
 import safe Ansi.Box (
   Box (..),
-  ColorCommand (..),
   FixedOrRatio (..),
-  drawBox,
+  addPopup,
+  drawBoxIO,
   fromAbsolute,
  )
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
@@ -67,7 +79,6 @@ import safe MtgPure.Model.Variable (Var (..))
 import safe MtgPure.Model.Zone (Zone (..))
 import safe MtgPure.Model.ZoneObject.Convert (toZO0)
 import safe MtgPure.Model.ZoneObject.ZoneObject (ZO)
-import safe System.Console.ANSI.Types (Color (..), ColorIntensity (..))
 
 --------------------------------------------------------------------------------
 
@@ -109,12 +120,15 @@ getExiledCardName zo = do
     Just anyCard -> pure $ idAndName zo anyCard
 
 -- TODO: Expose sufficient Public API to avoid need for `internalFromPrivate`
-printGameState :: OpaqueGameState Terminal -> Terminal ()
-printGameState opaque = queryMagic opaque do
+printGameState :: OpaqueGameState Terminal -> Maybe String -> Terminal ()
+printGameState opaque mPopup = queryMagic opaque do
   box <- mkEverythingBox
   let w = 100
-  let h = fromAbsolute $ boxH box
-  M.liftIO $ drawBox w h box
+  let h = max (fromAbsolute $ boxH box) $ maybe 0 (\s -> length (lines s) + 4) mPopup
+  let box' = case mPopup of
+        Nothing -> box
+        Just popup -> addPopup popup box
+  M.liftIO $ drawBoxIO w h box'
 
 --------------------------------------------------------------------------------
 
@@ -158,7 +172,7 @@ mkTurnBox = do
       , boxW = Ratio 1
       , boxH = Absolute 1
       , boxBackground = Nothing
-      , boxColorCommands = [SetFg (Vivid, White)]
+      , boxColorCommands = [SgrTrueColorFg vividWhite]
       , boxKidsPre = []
       , boxKidsPost = []
       }
@@ -178,7 +192,7 @@ mkStackBox = do
       , boxW = Ratio 1
       , boxH = Absolute 1
       , boxBackground = Nothing
-      , boxColorCommands = [SetBg (Dull, Blue)]
+      , boxColorCommands = [SgrTrueColorBg dullBlue]
       , boxKidsPre = []
       , boxKidsPost = []
       }
@@ -199,7 +213,7 @@ mkPriorityBox = do
       , boxW = Ratio 1
       , boxH = Absolute 1
       , boxBackground = Nothing
-      , boxColorCommands = [SetBg (Dull, Blue)]
+      , boxColorCommands = [SgrTrueColorBg dullBlue]
       , boxKidsPre = []
       , boxKidsPost = []
       }
@@ -352,7 +366,7 @@ manaClipper' n s
     c1 : c2 : cs -> c1 : c2 : '.' : cs
     cs -> cs
 
-mkManaBox :: (ColorIntensity, Color) -> (ColorIntensity, Color) -> Int -> String -> Box
+mkManaBox :: Rgb -> Rgb -> Int -> String -> Box
 mkManaBox fg bg relX text =
   Box
     { boxText = text
@@ -362,28 +376,28 @@ mkManaBox fg bg relX text =
     , boxW = Fixed $ manaWidth - 1
     , boxH = Absolute 1
     , boxBackground = Nothing
-    , boxColorCommands = [SetFg fg, SetBg bg]
+    , boxColorCommands = [SgrTrueColorFg fg, SgrTrueColorBg bg]
     , boxKidsPre = []
     , boxKidsPost = []
     }
 
 mkManaC :: Mana 'NoVar snow 'TyC -> Box
-mkManaC (Mana x) = mkManaBox (Dull, Black) (Dull, White) 0 $ show x
+mkManaC (Mana x) = mkManaBox dullBlack dullWhite 0 $ show x
 
 mkManaW :: Mana 'NoVar snow 'TyW -> Box
-mkManaW (Mana x) = mkManaBox (Dull, Black) (Vivid, Yellow) 1 $ show x
+mkManaW (Mana x) = mkManaBox dullBlack vividYellow 1 $ show x
 
 mkManaU :: Mana 'NoVar snow 'TyU -> Box
-mkManaU (Mana x) = mkManaBox (Vivid, White) (Dull, Blue) 2 $ show x
+mkManaU (Mana x) = mkManaBox vividWhite dullBlue 2 $ show x
 
 mkManaB :: Mana 'NoVar snow 'TyB -> Box
-mkManaB (Mana x) = mkManaBox (Dull, Yellow) (Dull, Black) 3 $ show x
+mkManaB (Mana x) = mkManaBox dullYellow dullBlack 3 $ show x
 
 mkManaR :: Mana 'NoVar snow 'TyR -> Box
-mkManaR (Mana x) = mkManaBox (Vivid, White) (Dull, Red) 4 $ show x
+mkManaR (Mana x) = mkManaBox vividWhite dullRed 4 $ show x
 
 mkManaG :: Mana 'NoVar snow 'TyG -> Box
-mkManaG (Mana x) = mkManaBox (Dull, Black) (Vivid, Green) 5 $ show x
+mkManaG (Mana x) = mkManaBox dullBlack vividGreen 5 $ show x
 
 --------------------------------------------------------------------------------
 

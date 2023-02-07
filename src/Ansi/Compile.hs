@@ -2,17 +2,21 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Avoid lambda" #-}
+{-# HLINT ignore "Use if" #-}
+{-# HLINT ignore "Use list comprehension" #-}
 
 module Ansi.Compile (
-  -- RenderedCell (..),
-  -- renderAnsiString,
-  module Ansi.Compile,
+  renderAnsiString,
+  efficientAnsi,
+  main,
 ) where
 
-import safe Ansi.AnsiString (AnsiChar (..), AnsiString, Csi (..), Rgb (..), Sgr (..))
+import safe Ansi.AnsiString (AnsiChar (..), AnsiString, AnsiToString (..), Csi (..), Rgb (..), Sgr (..))
+import safe Control.Exception (assert)
 import safe qualified Control.Monad.State.Strict as State
-import safe Data.List (sortBy)
+import safe Data.List (foldl', sortBy)
 import safe qualified Data.Map.Strict as Map
+import Data.Ord (comparing)
 
 -- NOTE: `Reset` is simplified to just setting the default colors
 data RenderedCell = RenderedCell
@@ -44,38 +48,50 @@ type RenderedCells = Map.Map ScreenPos RenderedCell
 
 type FgBg = (Rgb, Rgb)
 
+data RenderInput = RenderInput
+  { renderInput_ :: ()
+  , renderInput_defaultColors :: FgBg
+  , renderInput_startPos :: ScreenPos
+  , renderInput_cursorIsShown :: Bool
+  }
+  deriving (Eq, Ord, Show)
+
 data RenderState = RenderState
-  { renderState_grid :: RenderedCells
+  { renderState_ :: ()
+  , renderState_input :: RenderInput
+  , renderState_grid :: RenderedCells
   , renderState_cursorX :: Int
   , renderState_cursorY :: Int
   , renderState_fg :: Rgb
   , renderState_bg :: Rgb
-  , renderState_defaultFg :: Rgb -- readonly
-  , renderState_defaultBg :: Rgb -- readonly
-  , renderState_showCursor :: Bool
+  , renderState_cursorIsShown :: Bool
   }
+  deriving (Eq, Ord, Show)
 
-emptyRenderState :: FgBg -> RenderState
-emptyRenderState (fg, bg) =
+emptyRenderState :: RenderInput -> RenderState
+emptyRenderState input =
   RenderState
-    { renderState_grid = Map.empty
-    , renderState_cursorX = 0
-    , renderState_cursorY = 0
+    { renderState_ = ()
+    , renderState_input = input
+    , renderState_grid = Map.empty
+    , renderState_cursorX = x
+    , renderState_cursorY = y
     , renderState_fg = fg
     , renderState_bg = bg
-    , renderState_defaultFg = fg
-    , renderState_defaultBg = bg
-    , renderState_showCursor = True
+    , renderState_cursorIsShown = renderInput_cursorIsShown input
     }
+ where
+  (fg, bg) = renderInput_defaultColors input
+  ScreenPos x y = renderInput_startPos input
 
 type RenderM = State.State RenderState
 
-runRenderM :: FgBg -> RenderM a -> a
+runRenderM :: RenderInput -> RenderM a -> a
 runRenderM = flip State.evalState . emptyRenderState
 
-renderAnsiString :: FgBg -> AnsiString -> RenderState
-renderAnsiString fgBg input = runRenderM fgBg do
-  mapM_ renderAnsiChar input
+renderAnsiString :: RenderInput -> AnsiString -> RenderState
+renderAnsiString input str = runRenderM input do
+  mapM_ renderAnsiChar str
   State.get
 
 -- Although this handles newline, Box probably should have already
@@ -103,7 +119,7 @@ renderAnsiChar = \case
        in st
             { renderState_cursorX = if newline then 0 else x + 1
             , renderState_cursorY = y + if newline then 1 else 0
-            , renderState_grid = if newline then grid' else grid
+            , renderState_grid = if newline then grid else grid'
             }
   AnsiCsi csi -> do
     State.modify' \st ->
@@ -118,8 +134,7 @@ renderAnsiChar = \case
     State.modify' \st ->
       case sgr of
         SgrReset ->
-          let fg = renderState_defaultFg st
-              bg = renderState_defaultBg st
+          let (fg, bg) = renderInput_defaultColors $ renderState_input st
            in st{renderState_fg = fg, renderState_bg = bg}
         SgrTrueColorFg rgb -> st{renderState_fg = rgb}
         SgrTrueColorBg rgb -> st{renderState_bg = rgb}
@@ -137,7 +152,7 @@ type BucketedCells = (FgBg, [(ScreenPos, RenderedCell)])
 -- even further to really benefit from this, since each cell is likely to have subtly
 -- different colors and thus gets a unique bucket... pointless and perhaps induces more
 -- ANSI overhead than it saves.
-bucketRenderedCellsByFgBg :: Map.Map ScreenPos RenderedCell -> Map.Map FgBg [(ScreenPos, RenderedCell)]
+bucketRenderedCellsByFgBg :: RenderedCells -> BucketedCellMap
 bucketRenderedCellsByFgBg = goSort . Map.foldrWithKey goBucket Map.empty
  where
   goBucket pos cell =
@@ -145,39 +160,62 @@ bucketRenderedCellsByFgBg = goSort . Map.foldrWithKey goBucket Map.empty
      in Map.insertWith (++) fgBg [(pos, cell)]
   goSort = Map.map \entries -> flip sortBy entries \(posA, _) (posB, _) -> compare posA posB
 
--- | Returns a list of (fgBg, bucket) pairs, sorted by the screen pos of the first cell in each bucket.
+getStartPosOfBucketedCells :: BucketedCells -> ScreenPos
+getStartPosOfBucketedCells (_fgBg, entries) = case entries of
+  [] -> error "empty bucket"
+  entry : _ -> case entry of
+    (pos, _cell) -> pos
+
+-- | Returns a list of (fgBg, bucket) pairs, sorted by some optimizing order.
 --
 -- A super heavy-duty version of this would somehow sort these not necessarily by screen pos,
 -- but in a way that would make differing FgBg buckets adjacent to each other when they share
 -- either the same fg or bg color. This would save on SgrTrueColorFg or SgrTrueColorBg commands
 -- in the final output. But this is probably overkill and not worth the complexity. Plus, it is
 -- likely to lose out on some CSI efficiency.
-bucketMapToList :: BucketedCellMap -> [BucketedCells]
-bucketMapToList = goSort . Map.assocs
+--
+-- TODO: If any of the buckets have the default color, prioritize them to start of list
+bucketMapToList :: RenderInput -> BucketedCellMap -> [BucketedCells]
+bucketMapToList input = sortBy goSort . Map.assocs
  where
-  goSort = sortBy \(_, entriesA) (_, entriesB) ->
-    let (posA, _) = case entriesA of
-          [] -> error "bucketMapToList: empty bucket"
-          e : _ -> e
-        (posB, _) = case entriesB of
-          [] -> error "bucketMapToList: empty bucket"
-          e : _ -> e
-     in compare posA posB
+  (iFg, iBg) = renderInput_defaultColors input
+  scoreDefaultColoring z =
+    let ((fg, bg), _cells) = z
+     in bToI (fg == iFg) + bToI (bg == iBg)
+  goSort x y = case comparing scoreDefaultColoring y x of
+    EQ -> comparing getStartPosOfBucketedCells x y
+    LT -> LT
+    GT -> GT
+
+bToI :: Bool -> Int
+bToI = \case
+  False -> 0
+  True -> 1
 
 -- | Returns the final cursor position and the rendered AnsiString
 -- The input is a list of (pos, renderedCell) pairs, sorted by screen pos.
 --
 -- Not necessary, but this is part of an optimization step.
-bucketedCellsToAnsiString :: ScreenPos -> FgBg -> [(ScreenPos, RenderedCell)] -> (ScreenPos, AnsiString)
-bucketedCellsToAnsiString startPos (fg, bg) = colorize . foldr go (startPos, []) . reverse
+bucketedCellsToAnsiString :: RenderInput -> ScreenPos -> FgBg -> [(ScreenPos, RenderedCell)] -> (ScreenPos, AnsiString)
+bucketedCellsToAnsiString input bucketStartPos (fg, bg) = fixup . foldr go initialAcc . reverse
  where
-  colorize :: (ScreenPos, AnsiString) -> (ScreenPos, AnsiString)
-  colorize (pos, str) = (pos, AnsiSgr (SgrTrueColorFg fg) : AnsiSgr (SgrTrueColorBg bg) : str)
+  fixup (pos, xs) = (pos, reverse xs)
+  inputStartPos = renderInput_startPos input
+  (defaultFg, defaultBg) = renderInput_defaultColors input
+  colorFg =
+    if fg == defaultFg && bucketStartPos == inputStartPos
+      then []
+      else [AnsiSgr $ SgrTrueColorFg fg]
+  colorBg =
+    if bg == defaultBg && bucketStartPos == inputStartPos
+      then []
+      else [AnsiSgr $ SgrTrueColorBg bg]
+  initialAcc = (bucketStartPos, colorBg ++ colorFg)
 
   go :: (ScreenPos, RenderedCell) -> (ScreenPos, AnsiString) -> (ScreenPos, AnsiString)
   go (curr, cell) (prev, acc) =
-    let ScreenPos{screenPos_x = x, screenPos_y = y} = curr
-        ScreenPos{screenPos_x = x', screenPos_y = y'} = prev
+    let ScreenPos{screenPos_x = x, screenPos_y = y} = assert (ScreenPos 0 0 <= curr) curr
+        ScreenPos{screenPos_x = x', screenPos_y = y'} = assert (ScreenPos (-1) 0 <= prev) prev
         isNextChar = x == x' + 1 && y == y'
         isNextLine = x == 0 && y == y' + 1
         isPrevLine = x == 0 && y == y' - 1
@@ -196,17 +234,97 @@ bucketedCellsToAnsiString startPos (fg, bg) = colorize . foldr go (startPos, [])
         setNextLine = AnsiCsi CsiSetNextLine
         setPrevLine = AnsiCsi CsiSetPrevLine
         setCursorX = if abs relX < x then setRelCursorX else setAbsPosX
-        setCursorXY = if abs relY < y then setRelCursorY else setAbsPosXY
+        setCursorY = case abs relY <= y of
+          True -> setRelCursorY -- fast path
+          False -> case length (ansiToString setRelCursorY) < length (ansiToString setAbsPosXY) of
+            True -> setRelCursorY
+            False -> setAbsPosXY
      in if
             | not hasExpectedFgBg -> error "bucketedCellsToAnsiString: unexpected fg/bg"
             | isNextChar -> (curr, char : acc)
-            | isPrevLine && x == 0 -> (curr, setPrevLine : char : acc)
-            | isNextLine && x == 0 -> (curr, setNextLine : char : acc)
-            | isSameLine -> (curr, setCursorX : char : acc)
-            | isSameCol -> (curr, setRelCursorY : char : acc) -- NOTE: there is no abs set cursor y w/o x
-            | otherwise -> (curr, setCursorXY : char : acc)
+            | isPrevLine && x == 0 -> (curr, char : setPrevLine : acc)
+            | isNextLine && x == 0 -> (curr, char : setNextLine : acc)
+            | isSameLine -> (curr, char : setCursorX : acc)
+            | isSameCol -> (curr, char : setCursorY : acc) -- NOTE: there is no abs set cursor y w/o x
+            | otherwise -> (curr, char : setAbsPosXY : acc)
 
-cellToAnsiString :: ScreenPos -> RenderedCell -> (ScreenPos, AnsiString)
-cellToAnsiString startPos cell =
-  let fgBg = (renderedCell_fg cell, renderedCell_bg cell)
-   in bucketedCellsToAnsiString startPos fgBg [(startPos, cell)]
+--------------------------------------------------------------------------------
+
+pruneRenderedCells :: RenderedCells -> RenderedCells -> RenderedCells
+pruneRenderedCells old new = new Map.\\ old
+
+efficientAnsi :: RenderedCells -> RenderInput -> AnsiString -> AnsiString
+efficientAnsi oldGrid input inputAnsi = case Map.null prunedGrid of
+  True -> [setEndPos]
+  False -> setStartPos' ++ ansiStr ++ setEndPos' ++ extras
+ where
+  st = renderAnsiString input inputAnsi
+  (endX, endY) = (renderState_cursorX st, renderState_cursorY st)
+  endPos = ScreenPos endX endY
+  setEndPos = AnsiCsi $ CsiSetAbsCursorXY endX endY
+  newGrid = renderState_grid st
+  prunedGrid = pruneRenderedCells oldGrid newGrid
+  bucketMap = bucketRenderedCellsByFgBg prunedGrid
+  bucketList = bucketMapToList input bucketMap
+  startPos = getStartPosOfBucketedCells case bucketList of
+    [] -> error "empty list"
+    x : _ -> x
+  ScreenPos startX startY = startPos
+  setStartPos = AnsiCsi $ CsiSetAbsCursorXY startX startY
+  setStartPos' = case Map.toList newGrid of
+    [] -> error "empty list"
+    (minCoord, _cell) : _ -> case minCoord == startPos of
+      True -> []
+      False -> [setStartPos]
+  goBucket :: (ScreenPos, [AnsiString]) -> BucketedCells -> (ScreenPos, [AnsiString])
+  goBucket (prevPos, accAnsiStrs) bucket =
+    let (fgBg, positionedCells) = bucket
+        (nextPos, str) = bucketedCellsToAnsiString input prevPos fgBg positionedCells
+     in (nextPos, str : accAnsiStrs)
+  (finalPos, ansiStrs) = foldl' goBucket (ScreenPos (startX - 1) startY, []) bucketList
+  ansiStr = foldl' (flip (++)) [] ansiStrs
+  setEndPos' = case finalPos == endPos of
+    True -> []
+    False -> []
+  extras = case renderState_cursorIsShown st of
+    True -> []
+    False -> error "TODO"
+
+main :: IO ()
+main = do
+  let black = Rgb 0 0 0
+  let white = Rgb 255 255 255
+  let hello =
+        [ AnsiChar 'a'
+        , AnsiChar 'A'
+        , AnsiSgr $ SgrTrueColorFg $ Rgb 3 2 1
+        , AnsiChar 'b'
+        , AnsiChar 'B'
+        , AnsiCsi $ CsiSetAbsCursorXY 7 7
+        , AnsiChar 'c'
+        , AnsiChar 'C'
+        , AnsiCsi $ CsiSetAbsCursorX 0
+        , AnsiChar 'd'
+        , AnsiChar 'D'
+        , AnsiChar '\n'
+        , AnsiChar 'e'
+        , AnsiChar 'E'
+        , AnsiCsi CsiSetNextLine
+        , AnsiChar 'f'
+        , AnsiChar 'F'
+        , AnsiCsi $ CsiSetAbsCursorXY 0 0
+        , AnsiChar '!'
+        , AnsiCsi $ CsiSetRelCursorY 10
+        , AnsiChar 'z'
+        ]
+  let input =
+        RenderInput
+          { renderInput_ = ()
+          , renderInput_defaultColors = (white, black)
+          , renderInput_startPos = ScreenPos 0 0
+          , renderInput_cursorIsShown = True
+          }
+  print hello
+  print $ renderAnsiString input hello
+  let hello' = efficientAnsi mempty input hello
+  print hello'

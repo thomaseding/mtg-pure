@@ -19,12 +19,18 @@ module App.AnsiInspector (
   mainAnsiImageDebugger,
 ) where
 
+import safe Ansi.AnsiString (
+  Sgr (..),
+  dullBlack,
+  dullMagenta,
+  dullYellow,
+  vividWhite,
+ )
 import safe Ansi.Box (
   Box (..),
-  ColorCommand (..),
   FixedOrRatio (..),
   clearScreenWithoutPaging,
-  drawBox,
+  drawBoxIO,
   withAnsi,
   withBuffering,
  )
@@ -59,8 +65,6 @@ import safe Numeric (showHex)
 import Script.GenerateGallerySingle.Main (CardAnsiInfo (..), cardNameToAnsis)
 import Script.MtgPureConfig (MtgPureConfig, readMtgPureConfigFile)
 import safe System.Console.ANSI (
-  Color (..),
-  ColorIntensity (..),
   SGR (..),
   getTerminalSize,
   hideCursor,
@@ -305,8 +309,8 @@ mkSourceTileBox = do
       , boxY = Absolute 0
       , boxW = Absolute $ tileW + 3
       , boxH = Absolute $ tileH + 2
-      , boxBackground = Just (Dull, Yellow)
-      , boxColorCommands = [SetFg (Dull, Black)]
+      , boxBackground = Just dullYellow
+      , boxColorCommands = [SgrTrueColorFg dullBlack]
       , boxKidsPre = []
       , boxKidsPost = [box]
       }
@@ -345,8 +349,8 @@ mkRenderedRgbTileBox = do
       , boxY = Absolute 0
       , boxW = Absolute $ tileW + 3
       , boxH = Absolute $ tileH + 2
-      , boxBackground = Just (Dull, Yellow)
-      , boxColorCommands = [SetFg (Dull, Black)]
+      , boxBackground = Just dullYellow
+      , boxColorCommands = [SgrTrueColorFg dullBlack]
       , boxKidsPre = []
       , boxKidsPost = [box]
       }
@@ -364,7 +368,7 @@ mk4x4CharBox c =
     , boxW = Absolute 4
     , boxH = Absolute 4
     , boxBackground = Nothing
-    , boxColorCommands = [SetBg (Dull, Black), SetFg (Vivid, White)]
+    , boxColorCommands = [SgrTrueColorFg vividWhite, SgrTrueColorBg dullBlack]
     , boxKidsPre = []
     , boxKidsPost = []
     }
@@ -378,7 +382,7 @@ mkBordered4x4CharBox x y c =
     , boxY = Fixed y
     , boxW = Absolute 6
     , boxH = Absolute 6
-    , boxBackground = Just (Dull, Magenta)
+    , boxBackground = Just dullMagenta
     , boxColorCommands = []
     , boxKidsPre = []
     , boxKidsPost = [wrapper]
@@ -409,7 +413,7 @@ mk1x1CharBox c =
     , boxW = Absolute 1
     , boxH = Absolute 1
     , boxBackground = Nothing
-    , boxColorCommands = [SetBg (Dull, Black), SetFg (Vivid, White)]
+    , boxColorCommands = [SgrTrueColorBg dullBlack, SgrTrueColorFg vividWhite]
     , boxKidsPre = []
     , boxKidsPost = []
     }
@@ -423,7 +427,7 @@ mkBordered1x1CharBox x y c =
     , boxY = Fixed y
     , boxW = Absolute 3
     , boxH = Absolute 3
-    , boxBackground = Just (Dull, Magenta)
+    , boxBackground = Just dullMagenta
     , boxColorCommands = []
     , boxKidsPre = []
     , boxKidsPost = [wrapper]
@@ -467,7 +471,7 @@ mkTextBox = do
       , boxY = Absolute 20
       , boxW = Absolute 20
       , boxH = Absolute 2
-      , boxBackground = Just (Dull, Black)
+      , boxBackground = Just dullBlack
       , boxColorCommands = []
       , boxKidsPre = []
       , boxKidsPost =
@@ -508,8 +512,8 @@ mkProtoTileBox = do
       , boxY = Absolute 0
       , boxW = Absolute $ tileW + 3
       , boxH = Absolute $ tileH + 2
-      , boxBackground = Just (Dull, Yellow)
-      , boxColorCommands = [SetFg (Dull, Black)]
+      , boxBackground = Just dullYellow
+      , boxColorCommands = [SgrTrueColorFg dullBlack]
       , boxKidsPre = []
       , boxKidsPost = [box]
       }
@@ -533,7 +537,7 @@ mkRatingsBox = do
       , boxY = Absolute 31
       , boxW = Absolute 40
       , boxH = Absolute 40
-      , boxBackground = Just (Dull, Black)
+      , boxBackground = Just dullBlack
       , boxColorCommands = []
       , boxKidsPre = []
       , boxKidsPost = []
@@ -600,7 +604,7 @@ printCurrentCard = do
   viewport <- mkViewport
   M.liftIO do
     setCursorPosition 0 0
-    drawBox viewportW viewportH viewport
+    drawBoxIO viewportW viewportH viewport
     hFlush stdout
 
 fixResizeArtifacts :: Inspector ()

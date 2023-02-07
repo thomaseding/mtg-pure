@@ -18,6 +18,6 @@ import safe MtgPure.Engine.State (OpaqueGameState)
 data Fwd' m where
   Fwd ::
     { fwd_ :: ()
-    , fwd_printGameState :: OpaqueGameState m -> m ()
+    , fwd_printGameState :: OpaqueGameState m -> Maybe String -> m ()
     } ->
     Fwd' m

@@ -24,6 +24,7 @@ module MtgPure.Engine.Prompt (
   PlayLand,
   PriorityAction (..),
   Prompt' (..),
+  QueryObjectResult (..),
   RelativeAbilityIndex (..),
   SomeActivatedAbility (..),
   SpecialAction (..),
@@ -57,8 +58,10 @@ import safe MtgPure.Model.Object.OTNAliases (OTNCreature, OTNLand, OTNPermanent,
 import safe MtgPure.Model.Object.Object (Object)
 import safe MtgPure.Model.Object.ObjectId (GetObjectId (getUntypedObject), ObjectId)
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
+import safe MtgPure.Model.Permanent (Permanent)
+import safe MtgPure.Model.Player (Player)
 import safe MtgPure.Model.PrePost (PrePost (..))
-import safe MtgPure.Model.Recursive (AnyCard, CardFacet, Cost, Effect, Elect, WithThisActivated)
+import safe MtgPure.Model.Recursive (AnyCard, AnyToken, CardFacet, Cost, Effect, Elect, WithThisActivated)
 import safe MtgPure.Model.Recursive.Ord ()
 import safe qualified MtgPure.Model.Recursive.Ord as O
 import safe MtgPure.Model.Recursive.Show ()
@@ -115,6 +118,17 @@ data DeclaredBlocker = DeclaredBlocker
   , declaredBlocker_attackers :: NonEmpty (ZO 'ZBattlefield OTNCreature)
   }
   deriving (Eq, Ord, Show)
+
+data QueryObjectResult = QueryObjectResult
+  { qor_ :: ()
+  , qorCard :: Maybe AnyCard
+  , qorToken :: Maybe AnyToken
+  , qorController :: Object 'OTPlayer
+  , qorOwner :: Object 'OTPlayer
+  , qorPermanent :: Maybe Permanent
+  , qorPlayer :: Maybe Player
+  , qorZone :: Zone
+  }
 
 data PendingReady (p :: PrePost) (el :: Type) (ot :: Type) where
   Pending :: {unPending :: Elect 'Post el ot} -> Pending el ot

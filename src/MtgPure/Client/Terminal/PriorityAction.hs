@@ -16,6 +16,7 @@ module MtgPure.Client.Terminal.PriorityAction (
   playTerminalGame,
 ) where
 
+import safe Ansi.Box (withHiddenCursor)
 import safe qualified Control.Monad as M
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
 import safe Control.Monad.Trans (MonadIO (..))
@@ -25,6 +26,7 @@ import safe qualified Data.Char as Char
 import safe qualified Data.List as List
 import safe Data.List.NonEmpty (NonEmpty (..))
 import safe qualified Data.List.NonEmpty as NonEmpty
+import safe qualified Data.Maybe as Maybe
 import safe Data.Monoid (First (..))
 import safe Data.Nat (Fin, NatList)
 import safe MtgPure.Client.Terminal.CommandInput (
@@ -41,6 +43,7 @@ import safe MtgPure.Client.Terminal.Monad (
   TerminalState (..),
   clearScreen,
   getsTerminalState,
+  pause,
   prompt,
   quitTerminal,
   terminalLogCallPop,
@@ -50,6 +53,7 @@ import safe MtgPure.Engine.Fwd.Api (
   getIntrinsicManaAbilities,
   getTrivialManaAbilities,
   indexToActivated,
+  queryObjectId,
   toZO,
  )
 import safe MtgPure.Engine.Monad (gets, internalFromPrivate)
@@ -61,6 +65,7 @@ import safe MtgPure.Engine.Prompt (
   PlayerIndex (PlayerIndex),
   PriorityAction (..),
   Prompt' (..),
+  QueryObjectResult (..),
   RelativeAbilityIndex (RelativeAbilityIndex),
   SomeActivatedAbility (..),
   SpecialAction (..),
@@ -71,6 +76,7 @@ import safe MtgPure.Engine.State (
   GameState (..),
   Magic,
   OpaqueGameState,
+  getOpaqueGameState,
   queryMagic,
  )
 import safe MtgPure.Model.Deck (Deck (..))
@@ -88,6 +94,7 @@ import safe MtgPure.Model.Object.Object (Object (..))
 import safe MtgPure.Model.Object.ObjectId (ObjectId (..), getObjectId)
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Object.ToObjectN.Instances ()
+import MtgPure.Model.Permanent (Permanent (..))
 import safe MtgPure.Model.PhaseStep (prettyPhaseStep)
 import safe MtgPure.Model.Recursive.Show ()
 import safe MtgPure.Model.Sideboard (Sideboard (..))
@@ -95,6 +102,14 @@ import safe MtgPure.Model.Variable (Var (..))
 import safe MtgPure.Model.Zone (IsZone, Zone (..))
 import safe MtgPure.Model.ZoneObject.Convert (toZO0, toZO1, zo0ToSpell)
 import safe MtgPure.Model.ZoneObject.ZoneObject (IsZO, ZO)
+import safe System.Console.ANSI (clearLine, setCursorPosition)
+
+chunk :: Int -> [a] -> [[a]]
+chunk n = go
+ where
+  go xs = case splitAt n xs of
+    (ys, []) -> [ys]
+    (ys, zs) -> ys : go zs
 
 playTerminalGame :: [(Deck, Sideboard)] -> Terminal ()
 playTerminalGame decks = do
@@ -156,14 +171,12 @@ parseCommandInput = \case
   CIPlayLand landId extraIds -> playLand landId extraIds
   CIAskAgain -> askAgain
   CIHelp _ -> help
-  CIExamineAbility objId abilityIndex -> error "TODO: CIExamineAbility" objId abilityIndex
-  CIExamineObject objId -> error "TODO: CIExamineObject" objId
-
-askAgain :: Magic 'Public 'RO Terminal (PriorityAction ())
-askAgain = pure $ AskPriorityActionAgain Nothing
+  CIExamineAbility objId abilityIndex -> examineAbility objId abilityIndex
+  CIExamineObject objId -> examineObject objId
 
 help :: Magic 'Public 'RO Terminal (PriorityAction ())
 help = M.liftIO do
+  setCursorPosition 0 0
   clearScreen
   putStrLn "Help for REPL Commands:"
   putStrLn ""
@@ -188,7 +201,7 @@ help = M.liftIO do
   putStrLn "  3 playLand"
   putStrLn ""
   putStrLn "IDs:"
-  putStrLn "  Positive decimal numbers used to uniquely identify objects. This generalizes an genuine MTG \"object\" (CR 109.1)"
+  putStrLn "  Decimal numbers used to uniquely identify objects. This generalizes genuine MTG \"object\"s (CR 109.1)"
   putStrLn "  to include things like players. These are displayed on screen as `[<id>]` next to their corresponding object."
   putStrLn ""
   putStrLn "Indices:"
@@ -232,6 +245,9 @@ help = M.liftIO do
   M.void getLine
   pure $ AskPriorityActionAgain $ Just $ Attempt 0
 
+askAgain :: Magic 'Public 'RO Terminal (PriorityAction ())
+askAgain = pure $ AskPriorityActionAgain Nothing
+
 quit :: Magic 'Public 'RO Terminal (PriorityAction ())
 quit = M.lift quitTerminal
 
@@ -240,6 +256,55 @@ concede = pure Concede
 
 passPriority :: Magic 'Public 'RO Terminal (PriorityAction ())
 passPriority = pure PassPriority
+
+examineObject :: ObjectId -> Magic 'Public 'RO Terminal (PriorityAction ())
+examineObject objId = do
+  mQor <- internalFromPrivate $ queryObjectId objId
+  let chunk' = chunk 90
+  let showCard = \case
+        Nothing -> error "examineObject: no card exists"
+        Just card -> show card
+  let msg = case mQor of
+        Nothing -> "Object does not exist"
+        Just qor -> case qorZone qor of
+          ZStack -> "TODO: examine stack item"
+          ZLibrary -> unlines . chunk' . showCard $ qorCard qor
+          ZHand -> unlines . chunk' . showCard $ qorCard qor
+          ZGraveyard -> unlines . chunk' . showCard $ qorCard qor
+          ZExile -> unlines . chunk' . showCard $ qorCard qor
+          ZBattlefield -> case qorPermanent qor of
+            Nothing -> case qorPlayer qor of
+              Nothing -> error "impossible"
+              Just player -> unlines . chunk' $ show player
+            Just perm ->
+              let card = either show show $ permanentCard perm
+                  goFacet :: Show a => a -> String
+                  goFacet = show
+                  facets =
+                    Maybe.catMaybes
+                      [ goFacet <$> permanentArtifact perm
+                      , goFacet <$> permanentEnchantment perm
+                      , goFacet <$> permanentLand perm
+                      , goFacet <$> permanentCreature perm
+                      , goFacet <$> permanentPlaneswalker perm
+                      ]
+               in List.intercalate "\n\n" $ card : facets
+  let msg' = "Examining [" ++ show (unObjectId objId) ++ "]:\n\n" ++ msg
+  M.liftIO $ withHiddenCursor do
+    clearScreen
+    setCursorPosition 0 0
+    putStrLn msg'
+    pause
+  pure $ AskPriorityActionAgain $ Just $ Attempt 0
+
+examineAbility :: ObjectId -> CommandAbilityIndex -> Magic 'Public 'RO Terminal (PriorityAction ())
+examineAbility _objId _abilityIndex = do
+  let msg = "TODO"
+  opaque <- getOpaqueGameState
+  M.lift $ printGameState opaque $ Just msg
+  M.liftIO clearLine
+  M.liftIO $ withHiddenCursor pause
+  pure $ AskPriorityActionAgain $ Just $ Attempt 0
 
 activateAbility :: ObjectId -> CommandAbilityIndex -> [ObjectId] -> Magic 'Public 'RO Terminal (PriorityAction ())
 activateAbility objId abilityIndex _extraIds = do
@@ -316,7 +381,7 @@ terminalPriorityAction ::
 terminalPriorityAction attempt opaque oPlayer = M.lift do
   (action, commandInput) <- queryMagic opaque do
     M.liftIO clearScreen
-    M.lift $ printGameState opaque
+    M.lift $ printGameState opaque Nothing
     liftIO case attempt of
       Attempt 0 -> pure ()
       Attempt n -> putStrLn $ "Retrying[" ++ show n ++ "]..."
