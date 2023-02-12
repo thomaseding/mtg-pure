@@ -19,7 +19,7 @@ module App.CardGallery (
   mainAnsiGallery,
 ) where
 
-import safe Ansi.AnsiString (dullBlack)
+import safe Ansi.AnsiString (dullBlack, parseAnsi)
 import safe Ansi.Box (
   Box (..),
   FixedOrRatio (..),
@@ -29,10 +29,10 @@ import safe Ansi.Box (
   withBuffering,
  )
 import Ansi.Old (
-  AnsiImage,
   platonicH,
   platonicW,
  )
+import Ansi.TrueColor.Types (AnsiImage)
 import safe qualified Control.Monad as M
 import safe qualified Control.Monad.Trans as M
 import safe qualified Control.Monad.Trans.State.Strict as State
@@ -48,10 +48,11 @@ import safe Data.Carousel (
 import safe qualified Data.Char as Char
 import safe Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import safe Data.List (isPrefixOf)
+import safe Data.String (IsString (..))
 import safe MtgPure.AllCards (allCards)
 import safe MtgPure.Model.CardName (getCardName, unCardName)
 import Script.GenerateGallerySingle.Main (CardAnsiInfo (..), cardNameToAnsis)
-import Script.MtgPureConfig (MtgPureConfig (mtgPure_ansiImageDatabaseDir), readMtgPureConfigFile)
+import safe Script.MtgPureConfig (MtgPureConfig (..), readMtgPureConfigFile)
 import safe System.Console.ANSI (
   getTerminalSize,
   hideCursor,
@@ -189,7 +190,9 @@ mkCardInfo ansiInfo =
   CardInfo
     { cardName = caiCardName ansiInfo
     , cardSetName = caiSetName ansiInfo
-    , cardAnsiImage = caiAnsiImage ansiInfo
+    , cardAnsiImage = case parseAnsi $ caiAnsiImage ansiInfo of
+        Left err -> error err
+        Right ansi -> ansi
     }
 
 runCarousel :: Gallery ()
@@ -257,7 +260,7 @@ mkTextBox = do
   card <- Gallery $ State.gets $ carCursor . galleryCards
   pure
     Box
-      { boxText = cardName card
+      { boxText = fromString $ cardName card
       , boxClipper = const id
       , boxX = Absolute 4
       , boxY = Absolute $ (platonicH + 1) `div` 2
@@ -301,7 +304,7 @@ printCurrentCard = do
   viewport <- mkViewport
   M.liftIO do
     setCursorPosition 0 0
-    drawBoxIO viewportW viewportH viewport
+    M.void $ drawBoxIO viewportW viewportH viewport
     hFlush stdout
 
 fixResizeArtifacts :: Gallery ()

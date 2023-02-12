@@ -24,7 +24,7 @@ import safe Text.Read (readMaybe)
 -- --output-ansi-path PATH              Path to card ansi. Required.
 -- --ansi-width INT                     Width of ansi in characters. Required.
 -- --ansi-height INT                    Height of ansi in characters. Required.
--- --rotate INT                         Rotate the image by this many degrees.
+-- --rotate-degrees INT                 Rotate the image by this many degrees.
 --                                      Currently only supports 0, 90, 180, 270,
 --                                      and 360.
 

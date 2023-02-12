@@ -1,4 +1,3 @@
-{-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE Safe #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
@@ -82,9 +81,9 @@ jsonValue = do
 
 jsonString :: Parsec String () String
 jsonString = do
-  char '"'
+  M.void $ char '"'
   str <- many jsonChar
-  char '"'
+  M.void $ char '"'
   pure str
 
 jsonChar :: Parsec String () Char
@@ -92,7 +91,7 @@ jsonChar = noneOf "\"\\" <|> jsonEscape
 
 jsonEscape :: Parsec String () Char
 jsonEscape = do
-  char '\\'
+  M.void $ char '\\'
   c <- anyChar
   case c of
     '"' -> pure '"'
@@ -157,27 +156,27 @@ jsonNull = M.void $ string "null"
 
 jsonArray :: Parsec String () [SafeValue]
 jsonArray = do
-  char '['
+  M.void $ char '['
   skipSpace
   values <- jsonValue `sepBy` try (skipSpace >> char ',' >> skipSpace)
   skipSpace
-  char ']'
+  M.void $ char ']'
   pure values
 
 jsonObject :: Parsec String () (Map.Map String SafeValue)
 jsonObject = do
-  char '{'
+  M.void $ char '{'
   skipSpace
   pairs <- jsonPair `sepBy` try (skipSpace >> char ',' >> skipSpace)
   skipSpace
-  char '}'
+  M.void $ char '}'
   pure $ Map.fromList pairs
 
 jsonPair :: Parsec String () (String, SafeValue)
 jsonPair = do
   key <- jsonString
   skipSpace
-  char ':'
+  M.void $ char ':'
   skipSpace
   value <- jsonValue
   pure (key, value)

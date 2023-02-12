@@ -19,13 +19,18 @@ module Demo.AnsiMagicBoard (
 ) where
 
 import safe Ansi.AnsiString (
+  AnsiToString (..),
+  Csi (CsiSetAbsCursorXY),
+  Layer (..),
   Rgb,
   Sgr (..),
+  dropAnsi,
   dullBlack,
   dullBlue,
   dullRed,
   dullWhite,
   dullYellow,
+  takeAnsi,
   vividBlue,
   vividGreen,
   vividWhite,
@@ -35,10 +40,12 @@ import safe Ansi.Box (
   Box (..),
   FixedOrRatio (..),
   addPopup,
+  drawBox,
   drawBoxIO,
   withAnsi,
  )
 import safe qualified Control.Monad as M
+import safe Data.String (IsString (..))
 import safe System.IO (hFlush, stdout)
 
 main :: IO ()
@@ -46,7 +53,15 @@ main = mainAnsiBoxMagic
 
 mainAnsiBoxMagic :: IO ()
 mainAnsiBoxMagic = withAnsi do
-  drawBoxIO 90 30 $ addPopup "The\nPopup!" magicBox
+  M.when False $ M.void $ drawBoxIO 90 30 $ addPopup "The\nPopup!" magicBox
+  let rawAnsi = drawBox 90 30 magicBox
+  compiledAnsi <- drawBoxIO 90 30 magicBox
+  putStr $ ansiToString $ CsiSetAbsCursorXY 0 20
+  putStr $ ansiToString SgrReset
+  putStrLn ""
+  print rawAnsi
+  putStrLn ""
+  print compiledAnsi
   hFlush stdout
   M.void getLine
 
@@ -54,14 +69,22 @@ magicBox :: Box
 magicBox =
   Box
     { boxText = ""
-    , boxClipper = take
+    , boxClipper = takeAnsi
     , boxX = Ratio 0
     , boxY = Ratio 0
     , boxW = Ratio 1
     , boxH = Ratio 1
     , boxBackground = Nothing
     , boxColorCommands = []
-    , boxKidsPre = [environRow, playerRow, handRow, graveRow, exileRow, commandRow, battlefieldRow]
+    , boxKidsPre =
+        [ environRow
+        , playerRow
+        , handRow
+        , graveRow
+        , exileRow
+        , commandRow
+        , battlefieldRow
+        ]
     , boxKidsPost = []
     }
 
@@ -75,7 +98,7 @@ environRow :: Box
 environRow =
   Box
     { boxText = "Turn 37 - Day"
-    , boxClipper = take
+    , boxClipper = takeAnsi
     , boxX = Center
     , boxY = Fixed 0
     , boxW = Ratio 1
@@ -96,7 +119,7 @@ playerRow :: Box
 playerRow =
   Box
     { boxText = ""
-    , boxClipper = take
+    , boxClipper = takeAnsi
     , boxX = Fixed 0
     , boxY = Fixed playerY
     , boxW = Ratio 1
@@ -110,8 +133,8 @@ playerRow =
 mkHud :: Double -> String -> Box
 mkHud relX text =
   Box
-    { boxText = text
-    , boxClipper = take
+    { boxText = fromString text
+    , boxClipper = takeAnsi
     , boxX = Ratio relX
     , boxY = Ratio 0
     , boxW = Ratio 0.5
@@ -135,7 +158,7 @@ manaRow :: Int -> String -> Box
 manaRow y desc =
   Box
     { boxText = ""
-    , boxClipper = take
+    , boxClipper = takeAnsi
     , boxX = Fixed 0
     , boxY = Fixed $ y + 1
     , boxW = Ratio 1
@@ -152,8 +175,8 @@ legendWidth = 5
 manaLegend :: String -> Box
 manaLegend desc =
   Box
-    { boxText = desc
-    , boxClipper = take
+    { boxText = fromString desc
+    , boxClipper = takeAnsi
     , boxX = Fixed 0
     , boxY = Fixed 0
     , boxW = Fixed legendWidth
@@ -191,14 +214,14 @@ manaClipper' n s
 mkMana :: Rgb -> Rgb -> Int -> String -> Box
 mkMana fg bg relX text =
   Box
-    { boxText = text
-    , boxClipper = manaClipper
+    { boxText = fromString text
+    , boxClipper = \n -> fromString . manaClipper n . dropAnsi
     , boxX = Fixed $ manaWidth * relX + legendWidth
     , boxY = Ratio 0
     , boxW = Fixed $ manaWidth - 1
     , boxH = Ratio 1
     , boxBackground = Nothing
-    , boxColorCommands = [SgrTrueColorFg fg, SgrTrueColorBg bg]
+    , boxColorCommands = [SgrTrueColor Fg fg, SgrTrueColor Bg bg]
     , boxKidsPre = []
     , boxKidsPost = []
     }
@@ -231,7 +254,7 @@ handRow :: Box
 handRow =
   Box
     { boxText = ""
-    , boxClipper = take
+    , boxClipper = takeAnsi
     , boxX = Ratio 0
     , boxY = Fixed handY
     , boxW = Ratio 1
@@ -245,8 +268,8 @@ handRow =
 mkHand :: Double -> String -> Box
 mkHand relX text =
   Box
-    { boxText = "Hand-" <> text
-    , boxClipper = take
+    { boxText = fromString $ "Hand-" <> text
+    , boxClipper = takeAnsi
     , boxX = Ratio relX
     , boxY = Ratio 0
     , boxW = Ratio 0.5
@@ -273,7 +296,7 @@ graveRow :: Box
 graveRow =
   Box
     { boxText = ""
-    , boxClipper = take
+    , boxClipper = takeAnsi
     , boxX = Ratio 0
     , boxY = Fixed graveY
     , boxW = Ratio 1
@@ -287,8 +310,8 @@ graveRow =
 mkGrave :: Double -> String -> Box
 mkGrave relX text =
   Box
-    { boxText = "Grave-\n" <> text
-    , boxClipper = take
+    { boxText = fromString $ "Grave-\n" <> text
+    , boxClipper = takeAnsi
     , boxX = Ratio relX
     , boxY = Ratio 0
     , boxW = Ratio 0.5
@@ -315,7 +338,7 @@ exileRow :: Box
 exileRow =
   Box
     { boxText = ""
-    , boxClipper = take
+    , boxClipper = takeAnsi
     , boxX = Fixed 0
     , boxY = Fixed exileY
     , boxW = Ratio 1
@@ -329,8 +352,8 @@ exileRow =
 mkExile :: Double -> String -> Box
 mkExile relX text =
   Box
-    { boxText = "Exile-" <> text
-    , boxClipper = take
+    { boxText = fromString $ "Exile-" <> text
+    , boxClipper = takeAnsi
     , boxX = Ratio relX
     , boxY = Ratio 0
     , boxW = Ratio 0.5
@@ -357,7 +380,7 @@ commandRow :: Box
 commandRow =
   Box
     { boxText = ""
-    , boxClipper = take
+    , boxClipper = takeAnsi
     , boxX = Fixed 0
     , boxY = Fixed commandY
     , boxW = Ratio 1
@@ -371,8 +394,8 @@ commandRow =
 mkCommand :: Double -> String -> Box
 mkCommand relX text =
   Box
-    { boxText = "Command-" <> text
-    , boxClipper = take
+    { boxText = fromString $ "Command-" <> text
+    , boxClipper = takeAnsi
     , boxX = Ratio relX
     , boxY = Ratio 0
     , boxW = Ratio 0.5
@@ -396,22 +419,29 @@ battlefieldRow :: Box
 battlefieldRow =
   Box
     { boxText = ""
-    , boxClipper = take
+    , boxClipper = takeAnsi
     , boxX = Ratio 0
     , boxY = Fixed battlefieldY
     , boxW = Ratio 1
     , boxH = Auto
     , boxBackground = Nothing
     , boxColorCommands = []
-    , boxKidsPre = [landsA, artifactsEnchantmentsA, creaturesA, creaturesB, artifactsEnchantmentsB, landsB]
+    , boxKidsPre =
+        [ landsA
+        , artifactsEnchantmentsA
+        , creaturesA
+        , creaturesB
+        , artifactsEnchantmentsB
+        , landsB
+        ]
     , boxKidsPost = []
     }
 
 mkBattlefield :: Double -> String -> Box
 mkBattlefield relX text =
   Box
-    { boxText = text
-    , boxClipper = take
+    { boxText = fromString text
+    , boxClipper = takeAnsi
     , boxX = Ratio relX
     , boxY = Fixed 0
     , boxW = Ratio $ 1 / 6

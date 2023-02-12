@@ -18,13 +18,15 @@ module Demo.AnsiBox (
   mainAnsiBoxExample,
 ) where
 
-import Ansi.AnsiString (
+import safe Ansi.AnsiString (
+  Layer (..),
   Sgr (..),
   dullBlack,
   dullBlue,
   dullMagenta,
   dullRed,
   dullYellow,
+  takeAnsi,
   vividBlack,
   vividBlue,
   vividCyan,
@@ -65,13 +67,13 @@ newlineEvery n s =
 mainAnsiBoxExample :: IO ()
 mainAnsiBoxExample = withAnsi do
   hideCursor
-  drawBoxIO 80 30 $ addPopup "This is a really special\nmessage popup" parentBox
+  M.void $ drawBoxIO 80 30 $ addPopup "This is a really special\nmessage popup" parentBox
   hFlush stdout
   M.void getChar
-  drawBoxIO 80 30 $ addPopup boxChars parentBox
+  M.void $ drawBoxIO 80 30 $ addPopup boxChars parentBox
   hFlush stdout
   M.void getChar
-  drawBoxIO 80 30 $ addPopup (newlineEvery 20 lineChars) parentBox
+  M.void $ drawBoxIO 80 30 $ addPopup (newlineEvery 20 lineChars) parentBox
   hFlush stdout
   M.void getChar
 
@@ -79,14 +81,14 @@ parentBox :: Box
 parentBox =
   Box
     { boxText = "012345678901234              9"
-    , boxClipper = take
+    , boxClipper = takeAnsi
     , boxX = Ratio 0
     , boxY = Ratio 0
     , boxW = Ratio 1
     , boxH = Ratio 1
     , boxKidsPre = [topRow, middleRow, bottomRow]
     , boxKidsPost = []
-    , boxColorCommands = [SgrTrueColorFg dullMagenta]
+    , boxColorCommands = [SgrTrueColor Fg dullMagenta]
     , boxBackground = Just dullYellow
     }
 
@@ -94,14 +96,14 @@ topRow :: Box
 topRow =
   Box
     { boxText = ""
-    , boxClipper = take
+    , boxClipper = takeAnsi
     , boxX = Ratio 0
     , boxY = Ratio 0
     , boxW = Ratio 1
     , boxH = Ratio 0.33
     , boxKidsPre = [box1, box2, box3]
     , boxKidsPost = []
-    , boxColorCommands = [SgrTrueColorBg vividBlue]
+    , boxColorCommands = [SgrTrueColor Bg vividBlue]
     , boxBackground = Nothing -- Just (Dull, Black)
     }
 
@@ -109,13 +111,13 @@ middleRow :: Box
 middleRow =
   Box
     { boxText = ""
-    , boxClipper = take
+    , boxClipper = takeAnsi
     , boxX = Ratio 0
     , boxY = Ratio 0.33
     , boxW = Ratio 1
     , boxH = Ratio 0.33
     , boxBackground = Nothing
-    , boxColorCommands = [SgrTrueColorBg vividCyan]
+    , boxColorCommands = [SgrTrueColor Bg vividCyan]
     , boxKidsPre = [box4, box5]
     , boxKidsPost = []
     }
@@ -124,12 +126,12 @@ bottomRow :: Box
 bottomRow =
   Box
     { boxText = ""
-    , boxClipper = take
+    , boxClipper = takeAnsi
     , boxX = Ratio 0
     , boxY = Ratio 0.66
     , boxW = Ratio 1
     , boxH = Auto -- Relative 0.33
-    , boxColorCommands = [SgrTrueColorBg vividGreen]
+    , boxColorCommands = [SgrTrueColor Bg vividGreen]
     , boxBackground = Nothing
     , boxKidsPre = [box6]
     , boxKidsPost = []
@@ -139,13 +141,13 @@ box1 :: Box
 box1 =
   Box
     { boxText = "Column 1"
-    , boxClipper = take
+    , boxClipper = takeAnsi
     , boxX = Ratio 0
     , boxY = Ratio 0
     , boxW = Ratio 0.33
     , boxH = Ratio 1
     , boxBackground = Just dullBlue
-    , boxColorCommands = [SgrTrueColorBg vividBlue]
+    , boxColorCommands = [SgrTrueColor Bg vividBlue]
     , boxKidsPre = []
     , boxKidsPost = []
     }
@@ -154,7 +156,7 @@ box2 :: Box
 box2 =
   Box
     { boxText = "Column 2"
-    , boxClipper = take
+    , boxClipper = takeAnsi
     , boxX = Ratio 0.33
     , boxY = Ratio 0
     , boxW = Ratio 0.33
@@ -169,12 +171,12 @@ box3 :: Box
 box3 =
   Box
     { boxText = "Column 3"
-    , boxClipper = take
+    , boxClipper = takeAnsi
     , boxX = Ratio 0.66
     , boxY = Ratio 0
     , boxW = Auto -- Relative 0.33
     , boxH = Ratio 1
-    , boxColorCommands = [SgrTrueColorFg vividBlue]
+    , boxColorCommands = [SgrTrueColor Fg vividBlue]
     , boxBackground = Just vividYellow
     , boxKidsPre = []
     , boxKidsPost = []
@@ -184,12 +186,12 @@ box4 :: Box
 box4 =
   Box
     { boxText = "Column 4"
-    , boxClipper = take
+    , boxClipper = takeAnsi
     , boxX = Ratio 0
     , boxY = Ratio 0
     , boxW = Ratio 0.5
     , boxH = Ratio 1
-    , boxColorCommands = [SgrTrueColorFg dullBlack]
+    , boxColorCommands = [SgrTrueColor Fg dullBlack]
     , boxBackground = Just vividRed
     , boxKidsPre = []
     , boxKidsPost = []
@@ -199,7 +201,7 @@ box5 :: Box
 box5 =
   Box
     { boxText = "Column 5"
-    , boxClipper = take
+    , boxClipper = takeAnsi
     , boxX = Ratio 0.5
     , boxY = Ratio 0
     , boxW = Ratio 0.5
@@ -214,7 +216,7 @@ box6 :: Box
 box6 =
   Box
     { boxText = "Column 6"
-    , boxClipper = take
+    , boxClipper = takeAnsi
     , boxX = Ratio 0
     , boxY = Ratio 0
     , boxW = Ratio 1

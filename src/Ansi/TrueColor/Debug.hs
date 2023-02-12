@@ -17,10 +17,17 @@ module Ansi.TrueColor.Debug (
   convertImageToDebugAnsiImage,
 ) where
 
+import safe Ansi.AnsiString (
+  AnsiChar (..),
+  AnsiString (..),
+  Layer (..),
+  Rgb (..),
+  Sgr (..),
+  ToAnsiString (..),
+ )
 import Ansi.TrueColor.Types (AnsiImage, Grid, ImageToGrid (..), Pixel1)
 import Codec.Picture.Types (Image, PixelRGB8 (..))
-import safe Data.Colour.SRGB (sRGB24)
-import safe System.Console.ANSI.Codes (ConsoleLayer (..), SGR (..), setSGRCode)
+import safe Data.List (intercalate)
 
 --------------------------------------------------------------------------------
 
@@ -28,26 +35,31 @@ class ImageToGrid p => PixelToAnsi p where
   pixelToAnsi :: p -> AnsiImage
 
 instance PixelToAnsi PixelRGB8 where
-  pixelToAnsi p = setSGRCode [setFg, setBg] ++ "."
+  pixelToAnsi p = toAnsiString [setFg, setBg] <> toAnsiString '.'
    where
     PixelRGB8 r g b = p
-    setBg = SetRGBColor Background $ sRGB24 r g b
-    setFg = SetRGBColor Foreground $ sRGB24 (255 - r) (255 - g) (255 - b)
+    setBg = SgrTrueColor Bg $ Rgb r g b
+    setFg = SgrTrueColor Fg $ Rgb (255 - r) (255 - g) (255 - b)
 
 instance PixelToAnsi Pixel1 where
-  pixelToAnsi p = setSGRCode [setFg, setBg] ++ "."
+  pixelToAnsi p = toAnsiString [setFg, setBg] <> toAnsiString '.'
    where
     setBg = case p of
-      0 -> SetRGBColor Background $ sRGB24 0 0 0
-      255 -> SetRGBColor Background $ sRGB24 255 255 255
+      0 -> SgrTrueColor Bg $ Rgb 0 0 0
+      255 -> SgrTrueColor Bg $ Rgb 255 255 255
       _ -> error "pixelToAnsi: invalid input"
     setFg = case p of
-      0 -> SetRGBColor Foreground $ sRGB24 255 255 255
-      255 -> SetRGBColor Foreground $ sRGB24 0 0 0
+      0 -> SgrTrueColor Fg $ Rgb 255 255 255
+      255 -> SgrTrueColor Fg $ Rgb 0 0 0
       _ -> error "pixelToAnsi: invalid input"
 
 pixelsToAnsi :: PixelToAnsi p => Grid p -> AnsiImage
-pixelsToAnsi grid = unlines (map (concatMap pixelToAnsi) grid) ++ setSGRCode [Reset]
+pixelsToAnsi grid =
+  AnsiString $
+    intercalate
+      [AnsiChar '\n']
+      (map (concatMap $ unAnsiString . pixelToAnsi) grid)
+      <> [AnsiSgr SgrReset]
 
 convertImageToDebugAnsiImage :: PixelToAnsi p => Image p -> AnsiImage
 convertImageToDebugAnsiImage = pixelsToAnsi . imageToGrid

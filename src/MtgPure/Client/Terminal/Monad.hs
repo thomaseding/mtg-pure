@@ -25,9 +25,10 @@ module MtgPure.Client.Terminal.Monad (
   terminalLogCallPop,
   quitTerminal,
   pause,
-  clearScreen,
 ) where
 
+import safe Ansi.Box (withAnsi)
+import safe Ansi.Compile (RenderedCells)
 import safe Control.Exception (assert)
 import safe qualified Control.Monad as M
 import safe qualified Control.Monad.State.Strict as State
@@ -59,6 +60,7 @@ data TerminalState = TerminalState
   , terminal_logDisabled :: Int
   , terminal_replayInputs :: [String]
   , terminal_replayLog :: Maybe FilePath
+  , terminal_prevGameRender :: RenderedCells
   }
 
 newtype Terminal a = Terminal
@@ -81,7 +83,7 @@ instance State.MonadState TerminalState Terminal where
   put = Terminal . State.put
 
 runTerminal :: TerminalInput -> Terminal () -> IO ()
-runTerminal input m = either (const ()) id <$> runTerminal' input m
+runTerminal input m = withAnsi $ either (const ()) id <$> runTerminal' input m
 
 runTerminal' :: TerminalInput -> Terminal a -> IO (Either Quit a)
 runTerminal' input action = do
@@ -98,6 +100,7 @@ runTerminal' input action = do
       , terminal_logDisabled = 0
       , terminal_replayInputs = terminalInput_replayInputs input
       , terminal_replayLog = terminalInput_replayLog input
+      , terminal_prevGameRender = mempty
       }
 
 quitTerminal :: Terminal a
@@ -111,9 +114,6 @@ getsTerminalState = Terminal . State.gets
 
 pause :: MonadIO m => m ()
 pause = M.void $ liftIO getLine
-
-clearScreen :: IO ()
-clearScreen = putStr "\ESC[2J"
 
 prompt :: String -> Terminal String
 prompt msg = do

@@ -14,7 +14,7 @@ module Data.Carousel (
   carToList,
 ) where
 
-import qualified Data.Array as A
+import safe qualified Data.Array as A
 
 data Carousel a = Carousel (A.Array Int a) Int
 

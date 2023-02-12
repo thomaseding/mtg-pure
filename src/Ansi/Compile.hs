@@ -6,23 +6,37 @@
 {-# HLINT ignore "Use list comprehension" #-}
 
 module Ansi.Compile (
+  ScreenPos (..),
+  RenderInput (..),
+  RenderState (..),
+  RenderedCells,
+  pruneRenderedCells,
+  renderedCellsToAnsi,
   renderAnsiString,
   efficientAnsi,
   main,
 ) where
 
-import safe Ansi.AnsiString (AnsiChar (..), AnsiString, AnsiToString (..), Csi (..), Rgb (..), Sgr (..))
+import safe Ansi.AnsiString (
+  AnsiChar (..),
+  AnsiString (..),
+  AnsiToString (..),
+  Csi (..),
+  Layer (..),
+  Rgb (..),
+  Sgr (..),
+ )
 import safe Control.Exception (assert)
 import safe qualified Control.Monad.State.Strict as State
 import safe Data.List (foldl', sortBy)
 import safe qualified Data.Map.Strict as Map
-import Data.Ord (comparing)
+import safe Data.Ord (comparing)
 
 -- NOTE: `Reset` is simplified to just setting the default colors
 data RenderedCell = RenderedCell
   { renderedCell_char :: Char
-  , renderedCell_fg :: Rgb
-  , renderedCell_bg :: Rgb
+  , renderedCell_fg :: Rgb -- XXX: Might want to support Maybe Rgb for Reset
+  , renderedCell_bg :: Rgb -- XXX: Might want to support Maybe Rgb for Reset
   }
   deriving (Eq, Ord, Show)
 
@@ -38,6 +52,8 @@ instance Ord ScreenPos where
       EQ -> compare x1 x2
       other -> other
 
+-- TODO: try out mutable arrays
+--
 -- Clipping must be done before this step to allow items behind clipped
 -- items to be rendered. Otherwise it would just be an empty cell with
 -- the default colors.
@@ -90,7 +106,7 @@ runRenderM :: RenderInput -> RenderM a -> a
 runRenderM = flip State.evalState . emptyRenderState
 
 renderAnsiString :: RenderInput -> AnsiString -> RenderState
-renderAnsiString input str = runRenderM input do
+renderAnsiString input (AnsiString str) = runRenderM input do
   mapM_ renderAnsiChar str
   State.get
 
@@ -136,8 +152,8 @@ renderAnsiChar = \case
         SgrReset ->
           let (fg, bg) = renderInput_defaultColors $ renderState_input st
            in st{renderState_fg = fg, renderState_bg = bg}
-        SgrTrueColorFg rgb -> st{renderState_fg = rgb}
-        SgrTrueColorBg rgb -> st{renderState_bg = rgb}
+        SgrTrueColor Fg rgb -> st{renderState_fg = rgb}
+        SgrTrueColor Bg rgb -> st{renderState_bg = rgb}
 
 --------------------------------------------------------------------------------
 
@@ -196,23 +212,23 @@ bToI = \case
 -- The input is a list of (pos, renderedCell) pairs, sorted by screen pos.
 --
 -- Not necessary, but this is part of an optimization step.
-bucketedCellsToAnsiString :: RenderInput -> ScreenPos -> FgBg -> [(ScreenPos, RenderedCell)] -> (ScreenPos, AnsiString)
+bucketedCellsToAnsiString :: RenderInput -> ScreenPos -> FgBg -> [(ScreenPos, RenderedCell)] -> (ScreenPos, [AnsiChar])
 bucketedCellsToAnsiString input bucketStartPos (fg, bg) = fixup . foldr go initialAcc . reverse
  where
   fixup (pos, xs) = (pos, reverse xs)
   inputStartPos = renderInput_startPos input
   (defaultFg, defaultBg) = renderInput_defaultColors input
   colorFg =
-    if fg == defaultFg && bucketStartPos == inputStartPos
+    if const False $ fg == defaultFg && bucketStartPos == inputStartPos
       then []
-      else [AnsiSgr $ SgrTrueColorFg fg]
+      else [AnsiSgr $ SgrTrueColor Fg fg]
   colorBg =
-    if bg == defaultBg && bucketStartPos == inputStartPos
+    if const False $ bg == defaultBg && bucketStartPos == inputStartPos
       then []
-      else [AnsiSgr $ SgrTrueColorBg bg]
+      else [AnsiSgr $ SgrTrueColor Bg bg]
   initialAcc = (bucketStartPos, colorBg ++ colorFg)
 
-  go :: (ScreenPos, RenderedCell) -> (ScreenPos, AnsiString) -> (ScreenPos, AnsiString)
+  go :: (ScreenPos, RenderedCell) -> (ScreenPos, [AnsiChar]) -> (ScreenPos, [AnsiChar])
   go (curr, cell) (prev, acc) =
     let ScreenPos{screenPos_x = x, screenPos_y = y} = assert (ScreenPos 0 0 <= curr) curr
         ScreenPos{screenPos_x = x', screenPos_y = y'} = assert (ScreenPos (-1) 0 <= prev) prev
@@ -227,8 +243,8 @@ bucketedCellsToAnsiString input bucketStartPos (fg, bg) = fixup . foldr go initi
         char = AnsiChar case renderedCell_char cell of
           '\n' -> error "bucketedCellsToAnsiString: unexpected newline"
           c -> c
-        setRelCursorX = AnsiCsi $ CsiSetRelCursorX relX
-        setRelCursorY = AnsiCsi $ CsiSetRelCursorY relY
+        setRelCursorX = AnsiCsi $ CsiSetAbsCursorX x -- CsiSetRelCursorX relX
+        setRelCursorY = AnsiCsi $ CsiSetAbsCursorXY x y -- CsiSetRelCursorY relY
         setAbsPosX = AnsiCsi $ CsiSetAbsCursorX x
         setAbsPosXY = AnsiCsi $ CsiSetAbsCursorXY x y
         setNextLine = AnsiCsi CsiSetNextLine
@@ -250,11 +266,35 @@ bucketedCellsToAnsiString input bucketStartPos (fg, bg) = fixup . foldr go initi
 
 --------------------------------------------------------------------------------
 
-pruneRenderedCells :: RenderedCells -> RenderedCells -> RenderedCells
-pruneRenderedCells old new = new Map.\\ old
+renderCellToAnsi :: ScreenPos -> RenderedCell -> AnsiString
+renderCellToAnsi pos cell = AnsiString case renderedCell_char cell of
+  '\n' ->
+    [ AnsiCsi $ CsiSetAbsCursorXY (screenPos_x pos) (screenPos_y pos + 1)
+    ]
+  c ->
+    [ AnsiCsi $ CsiSetAbsCursorXY (screenPos_x pos) (screenPos_y pos)
+    , AnsiSgr $ SgrTrueColor Fg $ renderedCell_fg cell
+    , AnsiSgr $ SgrTrueColor Bg $ renderedCell_bg cell
+    , AnsiChar c
+    ]
 
-efficientAnsi :: RenderedCells -> RenderInput -> AnsiString -> AnsiString
-efficientAnsi oldGrid input inputAnsi = case Map.null prunedGrid of
+renderedCellsToAnsi :: RenderedCells -> AnsiString
+renderedCellsToAnsi grid = mconcat renderedCells
+ where
+  cellList = Map.assocs grid
+  renderedCells = map (uncurry renderCellToAnsi) cellList
+
+--------------------------------------------------------------------------------
+
+pruneRenderedCells :: RenderedCells -> RenderedCells -> RenderedCells
+pruneRenderedCells old new = Map.differenceWith go new old
+ where
+  go new' old' = case new' == old' of
+    True -> Nothing
+    False -> Just new'
+
+efficientAnsi :: RenderedCells -> RenderInput -> AnsiString -> (RenderedCells, AnsiString)
+efficientAnsi oldGrid input inputAnsi = (,) newGrid $ AnsiString case Map.null prunedGrid of
   True -> [setEndPos]
   False -> setStartPos' ++ ansiStr ++ setEndPos' ++ extras
  where
@@ -271,12 +311,10 @@ efficientAnsi oldGrid input inputAnsi = case Map.null prunedGrid of
     x : _ -> x
   ScreenPos startX startY = startPos
   setStartPos = AnsiCsi $ CsiSetAbsCursorXY startX startY
-  setStartPos' = case Map.toList newGrid of
-    [] -> error "empty list"
-    (minCoord, _cell) : _ -> case minCoord == startPos of
-      True -> []
-      False -> [setStartPos]
-  goBucket :: (ScreenPos, [AnsiString]) -> BucketedCells -> (ScreenPos, [AnsiString])
+  setStartPos' = case startPos == renderInput_startPos input of
+    True -> []
+    False -> [setStartPos]
+  goBucket :: (ScreenPos, [[AnsiChar]]) -> BucketedCells -> (ScreenPos, [[AnsiChar]])
   goBucket (prevPos, accAnsiStrs) bucket =
     let (fgBg, positionedCells) = bucket
         (nextPos, str) = bucketedCellsToAnsiString input prevPos fgBg positionedCells
@@ -295,28 +333,29 @@ main = do
   let black = Rgb 0 0 0
   let white = Rgb 255 255 255
   let hello =
-        [ AnsiChar 'a'
-        , AnsiChar 'A'
-        , AnsiSgr $ SgrTrueColorFg $ Rgb 3 2 1
-        , AnsiChar 'b'
-        , AnsiChar 'B'
-        , AnsiCsi $ CsiSetAbsCursorXY 7 7
-        , AnsiChar 'c'
-        , AnsiChar 'C'
-        , AnsiCsi $ CsiSetAbsCursorX 0
-        , AnsiChar 'd'
-        , AnsiChar 'D'
-        , AnsiChar '\n'
-        , AnsiChar 'e'
-        , AnsiChar 'E'
-        , AnsiCsi CsiSetNextLine
-        , AnsiChar 'f'
-        , AnsiChar 'F'
-        , AnsiCsi $ CsiSetAbsCursorXY 0 0
-        , AnsiChar '!'
-        , AnsiCsi $ CsiSetRelCursorY 10
-        , AnsiChar 'z'
-        ]
+        AnsiString
+          [ AnsiChar 'a'
+          , AnsiChar 'A'
+          , AnsiSgr $ SgrTrueColor Fg $ Rgb 3 2 1
+          , AnsiChar 'b'
+          , AnsiChar 'B'
+          , AnsiCsi $ CsiSetAbsCursorXY 7 7
+          , AnsiChar 'c'
+          , AnsiChar 'C'
+          , AnsiCsi $ CsiSetAbsCursorX 0
+          , AnsiChar 'd'
+          , AnsiChar 'D'
+          , AnsiChar '\n'
+          , AnsiChar 'e'
+          , AnsiChar 'E'
+          , AnsiCsi CsiSetNextLine
+          , AnsiChar 'f'
+          , AnsiChar 'F'
+          , AnsiCsi $ CsiSetAbsCursorXY 0 0
+          , AnsiChar '!'
+          , AnsiCsi $ CsiSetRelCursorY 10
+          , AnsiChar 'z'
+          ]
   let input =
         RenderInput
           { renderInput_ = ()

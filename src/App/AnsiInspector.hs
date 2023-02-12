@@ -20,22 +20,37 @@ module App.AnsiInspector (
 ) where
 
 import safe Ansi.AnsiString (
+  AnsiToString (..),
+  Layer (..),
+  Rgb (..),
   Sgr (..),
+  ToAnsiString (..),
+  dropAnsi,
   dullBlack,
   dullMagenta,
   dullYellow,
+  parseAnsi,
+  vividBlue,
   vividWhite,
  )
 import safe Ansi.Box (
   Box (..),
   FixedOrRatio (..),
   clearScreenWithoutPaging,
-  drawBoxIO,
+  drawBox,
   withAnsi,
   withBuffering,
  )
+import safe Ansi.Compile (
+  RenderInput (..),
+  RenderState (..),
+  RenderedCells,
+  ScreenPos (..),
+  pruneRenderedCells,
+  renderAnsiString,
+  renderedCellsToAnsi,
+ )
 import Ansi.Old (
-  AnsiImage,
   platonicH,
   platonicW,
  )
@@ -44,7 +59,16 @@ import Ansi.TrueColor.FindRendering (rateAllRenderings)
 import Ansi.TrueColor.ImageToAnsi (debugLoadRenderedTileGrid, renderedTileToAnsi)
 import Ansi.TrueColor.RenderedTile (RenderedTile (..))
 import Ansi.TrueColor.TileGrid (debugLoadTileGrid)
-import Ansi.TrueColor.Types (FgBg (..), Grid, Tile, TwoColors (..), tileH, tileW, unTcTile)
+import Ansi.TrueColor.Types (
+  AnsiImage,
+  FgBg (..),
+  Grid,
+  Tile,
+  TwoColors (..),
+  tileH,
+  tileW,
+  unTcTile,
+ )
 import Ansi.TrueColor.VirtualChar (VirtualChar (..))
 import Codec.Picture.Types (PixelRGB8 (..))
 import safe qualified Control.Monad as M
@@ -61,15 +85,14 @@ import safe Data.Carousel (
 import safe qualified Data.Char as Char
 import safe Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import safe Data.List (sortOn)
+import safe Data.String (IsString (..))
 import safe Numeric (showHex)
 import Script.GenerateGallerySingle.Main (CardAnsiInfo (..), cardNameToAnsis)
-import Script.MtgPureConfig (MtgPureConfig, readMtgPureConfigFile)
+import safe Script.MtgPureConfig (MtgPureConfig, readMtgPureConfigFile)
 import safe System.Console.ANSI (
-  SGR (..),
   getTerminalSize,
   hideCursor,
   setCursorPosition,
-  setSGRCode,
  )
 import safe System.IO (
   BufferMode (..),
@@ -117,52 +140,54 @@ dummyCardInfo =
     , cardRenderedTileGrid = []
     }
 
-data GalleryState = GalleryState
-  { gallery_ :: ()
-  , galleryMtgPureConfig :: MtgPureConfig
-  , galleryTermSize :: IORef (Int, Int)
-  , galleryCards :: Carousel CardInfo
-  , galleryHighlightedPixel :: (Int, Int)
+data InspectorState = InspectorState
+  { inspector_ :: ()
+  , inspectorMtgPureConfig :: MtgPureConfig
+  , inspectorTermSize :: IORef (Int, Int)
+  , inspectorCards :: Carousel CardInfo
+  , inspectorHighlightedPixel :: (Int, Int)
+  , inspectorPrevCellState :: RenderedCells
   }
 
-mkGalleryState :: IO GalleryState
-mkGalleryState = do
+mkInspectorState :: IO InspectorState
+mkInspectorState = do
   mtgConfig <- readMtgPureConfigFile
   refTermSize <- newIORef (-1, -1)
   pure
-    GalleryState
-      { gallery_ = ()
-      , galleryMtgPureConfig = mtgConfig
-      , galleryTermSize = refTermSize
-      , galleryCards = carSingle dummyCardInfo
-      , galleryHighlightedPixel = (0, 0)
+    InspectorState
+      { inspector_ = ()
+      , inspectorMtgPureConfig = mtgConfig
+      , inspectorTermSize = refTermSize
+      , inspectorCards = carSingle dummyCardInfo
+      , inspectorHighlightedPixel = (0, 0)
+      , inspectorPrevCellState = mempty
       }
 
-newtype Inspector a = Gallery
-  { unGallery :: State.StateT GalleryState IO a
+newtype Inspector a = Inspector
+  { unInspector :: State.StateT InspectorState IO a
   }
 
 instance Functor Inspector where
-  fmap f = Gallery . fmap f . unGallery
+  fmap f = Inspector . fmap f . unInspector
 
 instance Applicative Inspector where
-  pure = Gallery . pure
-  f <*> x = Gallery $ unGallery f <*> unGallery x
+  pure = Inspector . pure
+  f <*> x = Inspector $ unInspector f <*> unInspector x
 
 instance Monad Inspector where
-  x >>= f = Gallery $ unGallery x >>= unGallery . f
+  x >>= f = Inspector $ unInspector x >>= unInspector . f
 
 instance M.MonadIO Inspector where
-  liftIO = Gallery . M.liftIO
+  liftIO = Inspector . M.liftIO
 
-runGallery :: Inspector a -> IO a
-runGallery action = withAnsi do
-  state <- mkGalleryState
-  runGallery' state action
+runInspector :: Inspector a -> IO a
+runInspector action = withAnsi do
+  state <- mkInspectorState
+  runInspector' state action
 
-runGallery' :: GalleryState -> Inspector a -> IO a
-runGallery' state action = do
-  State.evalStateT (unGallery action) state
+runInspector' :: InspectorState -> Inspector a -> IO a
+runInspector' state action = do
+  State.evalStateT (unInspector action) state
 
 main :: IO ()
 main = mainAnsiImageDebugger
@@ -171,7 +196,7 @@ mainAnsiImageDebugger :: IO ()
 mainAnsiImageDebugger = do
   initKeyboardMain
   hideCursor
-  runGallery do
+  runInspector do
     fabricateCardAnsiImages
     runCarousel
     clearScreenWithoutPaging
@@ -181,7 +206,7 @@ fabricateCardAnsiImages :: Inspector ()
 fabricateCardAnsiImages = do
   clearScreenWithoutPaging
   M.liftIO $ hFlush stdout
-  mtgConfig <- Gallery $ State.gets galleryMtgPureConfig
+  mtgConfig <- Inspector $ State.gets inspectorMtgPureConfig
   ansiInfos <- M.liftIO $ withBuffering stdout LineBuffering do
     concat <$> mapM (cardNameToAnsis True mtgConfig) [theCardName]
   let imgPaths = map caiSourceImage ansiInfos
@@ -192,14 +217,16 @@ fabricateCardAnsiImages = do
   clearScreenWithoutPaging
   M.liftIO $ hFlush stdout
   let cards = carFromList $ zipWith3 mkCardInfo ansiInfos fullTileGrids renderedGrids
-  Gallery $ State.modify' \st' -> st'{galleryCards = cards}
+  Inspector $ State.modify' \st' -> st'{inspectorCards = cards}
 
 mkCardInfo :: CardAnsiInfo -> Grid (Tile PixelRGB8) -> Grid RenderedTile -> CardInfo
 mkCardInfo ansiInfo fullTileGrid renderedGrid =
   CardInfo
     { cardName = caiCardName ansiInfo
     , cardSetName = caiSetName ansiInfo
-    , cardAnsiImage = caiAnsiImage ansiInfo
+    , cardAnsiImage = case parseAnsi $ caiAnsiImage ansiInfo of
+        Left err -> error err
+        Right x -> x
     , cardFullTileGrid = fullTileGrid
     , cardRenderedTileGrid = renderedGrid
     }
@@ -218,10 +245,10 @@ updateHighLightedPixel arrow = do
         KeyRight -> (1, 0)
         KeyUp -> (0, -1)
         KeyDown -> (0, 1)
-  curr <- Gallery $ State.gets galleryHighlightedPixel
+  curr <- Inspector $ State.gets inspectorHighlightedPixel
   let curr' = (fst curr + fst delta, snd curr + snd delta)
   let curr'' = clamp (0, 0) (platonicW - 1, (platonicH `div` 2) - 1) curr'
-  Gallery $ State.modify' \st -> st{galleryHighlightedPixel = curr''}
+  Inspector $ State.modify' \st -> st{inspectorHighlightedPixel = curr''}
 
 clamp :: Ord a => (a, a) -> (a, a) -> (a, a) -> (a, a)
 clamp (minX, minY) (maxX, maxY) (x, y) =
@@ -239,13 +266,13 @@ handleKeyInput = do
     KeyArrow arrow -> do
       updateHighLightedPixel arrow
     KeyChar c -> case c of
-      '[' -> Gallery $ State.modify' \st -> st{galleryCards = carLeft $ galleryCards st}
-      ']' -> Gallery $ State.modify' \st -> st{galleryCards = carRight $ galleryCards st}
+      '[' -> Inspector $ State.modify' \st -> st{inspectorCards = carLeft $ inspectorCards st}
+      ']' -> Inspector $ State.modify' \st -> st{inspectorCards = carRight $ inspectorCards st}
       _ -> pure ()
 
 mkHighLightedPixelBox :: Inspector Box
 mkHighLightedPixelBox = do
-  (x, y) <- Gallery $ State.gets galleryHighlightedPixel
+  (x, y) <- Inspector $ State.gets inspectorHighlightedPixel
   pure
     Box
       { boxText = "X"
@@ -255,7 +282,7 @@ mkHighLightedPixelBox = do
       , boxW = Absolute 1
       , boxH = Absolute 1
       , boxBackground = Nothing
-      , boxColorCommands = []
+      , boxColorCommands = const [] [SgrTrueColor Fg $ Rgb 255 0 0]
       , boxKidsPre = []
       , boxKidsPost = []
       }
@@ -263,7 +290,7 @@ mkHighLightedPixelBox = do
 mkCardImageBox :: Inspector Box
 mkCardImageBox = do
   highlight <- mkHighLightedPixelBox
-  card <- Gallery $ State.gets $ carCursor . galleryCards
+  card <- Inspector $ State.gets $ carCursor . inspectorCards
   pure
     Box
       { boxText = cardAnsiImage card
@@ -280,8 +307,8 @@ mkCardImageBox = do
 
 mkSourceTileBox' :: Inspector Box
 mkSourceTileBox' = do
-  card <- Gallery $ State.gets $ carCursor . galleryCards
-  (x, y) <- Gallery $ State.gets galleryHighlightedPixel
+  card <- Inspector $ State.gets $ carCursor . inspectorCards
+  (x, y) <- Inspector $ State.gets inspectorHighlightedPixel
   let tile = cardFullTileGrid card !! y !! x
   let ansi = convertImageToDebugAnsiImage tile
   pure
@@ -303,14 +330,14 @@ mkSourceTileBox = do
   box <- mkSourceTileBox'
   pure
     Box
-      { boxText = "S 01234567" ++ makeVerticalHexString 16
+      { boxText = fromString $ "S 01234567" ++ makeVerticalHexString 16
       , boxClipper = const id
       , boxX = Absolute platonicW
       , boxY = Absolute 0
       , boxW = Absolute $ tileW + 3
       , boxH = Absolute $ tileH + 2
       , boxBackground = Just dullYellow
-      , boxColorCommands = [SgrTrueColorFg dullBlack]
+      , boxColorCommands = [SgrTrueColor Fg dullBlack]
       , boxKidsPre = []
       , boxKidsPost = [box]
       }
@@ -320,8 +347,8 @@ mkSourceTileBox = do
 
 mkRenderedRgbTileBox' :: Inspector Box
 mkRenderedRgbTileBox' = do
-  card <- Gallery $ State.gets $ carCursor . galleryCards
-  (x, y) <- Gallery $ State.gets galleryHighlightedPixel
+  card <- Inspector $ State.gets $ carCursor . inspectorCards
+  (x, y) <- Inspector $ State.gets inspectorHighlightedPixel
   let renderedTile = cardRenderedTileGrid card !! y !! x
   let rgb = convertImageToDebugAnsiImage $ unTcTile $ rtTileRgb renderedTile
   pure
@@ -343,14 +370,14 @@ mkRenderedRgbTileBox = do
   box <- mkRenderedRgbTileBox'
   pure
     Box
-      { boxText = "R 01234567" ++ makeVerticalHexString 16
+      { boxText = fromString $ "R 01234567" ++ makeVerticalHexString 16
       , boxClipper = const id
       , boxX = Absolute $ platonicW + 1 * (tileW + 4)
       , boxY = Absolute 0
       , boxW = Absolute $ tileW + 3
       , boxH = Absolute $ tileH + 2
       , boxBackground = Just dullYellow
-      , boxColorCommands = [SgrTrueColorFg dullBlack]
+      , boxColorCommands = [SgrTrueColor Fg dullBlack]
       , boxKidsPre = []
       , boxKidsPost = [box]
       }
@@ -361,14 +388,14 @@ mkRenderedRgbTileBox = do
 mk4x4CharBox :: Char -> Box
 mk4x4CharBox c =
   Box
-    { boxText = unlines $ replicate 4 $ replicate 4 c
+    { boxText = fromString $ unlines $ replicate 4 $ replicate 4 c
     , boxClipper = const id
     , boxX = Fixed 0
     , boxY = Fixed 0
     , boxW = Absolute 4
     , boxH = Absolute 4
     , boxBackground = Nothing
-    , boxColorCommands = [SgrTrueColorFg vividWhite, SgrTrueColorBg dullBlack]
+    , boxColorCommands = [SgrTrueColor Fg vividWhite, SgrTrueColor Bg dullBlack]
     , boxKidsPre = []
     , boxKidsPost = []
     }
@@ -406,14 +433,14 @@ mkBordered4x4CharBox x y c =
 mk1x1CharBox :: Char -> Box
 mk1x1CharBox c =
   Box
-    { boxText = [c]
+    { boxText = fromString [c]
     , boxClipper = const id
     , boxX = Fixed 0
     , boxY = Fixed 0
     , boxW = Absolute 1
     , boxH = Absolute 1
     , boxBackground = Nothing
-    , boxColorCommands = [SgrTrueColorBg dullBlack, SgrTrueColorFg vividWhite]
+    , boxColorCommands = [SgrTrueColor Bg dullBlack, SgrTrueColor Fg vividWhite]
     , boxKidsPre = []
     , boxKidsPost = []
     }
@@ -450,9 +477,9 @@ mkBordered1x1CharBox x y c =
 
 mkTextBox :: Inspector Box
 mkTextBox = do
-  highlight <- Gallery $ State.gets galleryHighlightedPixel
-  card <- Gallery $ State.gets $ carCursor . galleryCards
-  (x, y) <- Gallery $ State.gets galleryHighlightedPixel
+  highlight <- Inspector $ State.gets inspectorHighlightedPixel
+  card <- Inspector $ State.gets $ carCursor . inspectorCards
+  (x, y) <- Inspector $ State.gets inspectorHighlightedPixel
   let renderedTile = cardRenderedTileGrid card !! y !! x
   let vc = rtVirtChar renderedTile
   let c = vcChar vc
@@ -460,12 +487,13 @@ mkTextBox = do
   pure
     Box
       { boxText =
-          unlines
-            [ cardName card
-            , show highlight
-            , show vc
-            , qc
-            ]
+          fromString $
+            unlines
+              [ cardName card
+              , show highlight
+              , show vc
+              , qc
+              ]
       , boxClipper = const id
       , boxX = Absolute platonicW
       , boxY = Absolute 20
@@ -482,8 +510,8 @@ mkTextBox = do
 
 mkProtoTileBox' :: Inspector Box
 mkProtoTileBox' = do
-  card <- Gallery $ State.gets $ carCursor . galleryCards
-  (x, y) <- Gallery $ State.gets galleryHighlightedPixel
+  card <- Inspector $ State.gets $ carCursor . inspectorCards
+  (x, y) <- Inspector $ State.gets inspectorHighlightedPixel
   let renderedTile = cardRenderedTileGrid card !! y !! x
   let proto = convertImageToDebugAnsiImage $ rtTileProto renderedTile
   --let rgb = convertImageToDebugAnsiImage $ unTcTile $ rtTileRgb renderedTile
@@ -506,14 +534,14 @@ mkProtoTileBox = do
   box <- mkProtoTileBox'
   pure
     Box
-      { boxText = "P 01234567" ++ makeVerticalHexString 16
+      { boxText = fromString $ "P 01234567" ++ makeVerticalHexString 16
       , boxClipper = const id
       , boxX = Absolute $ platonicW + 2 * (tileW + 4)
       , boxY = Absolute 0
       , boxW = Absolute $ tileW + 3
       , boxH = Absolute $ tileH + 2
       , boxBackground = Just dullYellow
-      , boxColorCommands = [SgrTrueColorFg dullBlack]
+      , boxColorCommands = [SgrTrueColor Fg dullBlack]
       , boxKidsPre = []
       , boxKidsPost = [box]
       }
@@ -523,15 +551,15 @@ mkProtoTileBox = do
 
 mkRatingsBox :: Inspector Box
 mkRatingsBox = do
-  card <- Gallery $ State.gets $ carCursor . galleryCards
-  (x, y) <- Gallery $ State.gets galleryHighlightedPixel
+  card <- Inspector $ State.gets $ carCursor . inspectorCards
+  (x, y) <- Inspector $ State.gets inspectorHighlightedPixel
   let fullTile = cardFullTileGrid card !! y !! x
   let renderedTile = cardRenderedTileGrid card !! y !! x
   let FgBg fg bg = rtFgBg renderedTile
   let ratedRenderings = sortOn fst $ rateAllRenderings fullTile $ TwoColors fg bg
   pure
     Box
-      { boxText = unlines $ map prettyRatedRendering ratedRenderings
+      { boxText = fromString $ unlines $ map prettyRatedRendering ratedRenderings
       , boxClipper = const id
       , boxX = Absolute platonicW
       , boxY = Absolute 31
@@ -561,8 +589,8 @@ prettyRatedRendering (rating, renderedTile) =
   vc = rtVirtChar renderedTile
   c = vcChar vc
   quotC = '\'' : c : "'"
-  ac = renderedTileToAnsi renderedTile ++ setSGRCode [Reset]
-  quotAC = '\'' : ac ++ "'"
+  ac = renderedTileToAnsi renderedTile <> toAnsiString SgrReset
+  quotAC = '\'' : dropAnsi ac ++ "'" -- FIXME: don't use dropAnsi
 
 viewportW :: Int
 viewportW = platonicW + 20
@@ -601,15 +629,27 @@ mkViewport = do
 
 printCurrentCard :: Inspector ()
 printCurrentCard = do
-  viewport <- mkViewport
+  prevCells <- Inspector $ State.gets inspectorPrevCellState
+  viewport <- drawBox 0 0 <$> mkViewport
+  let input =
+        RenderInput
+          { renderInput_ = ()
+          , renderInput_defaultColors = (vividBlue, dullBlack)
+          , renderInput_startPos = ScreenPos 0 0
+          , renderInput_cursorIsShown = True
+          }
+  let cells = renderState_grid $ renderAnsiString input viewport
+  let diffCells = pruneRenderedCells prevCells cells
+  let viewport' = renderedCellsToAnsi diffCells
+  Inspector $ State.modify' \st -> st{inspectorPrevCellState = cells}
   M.liftIO do
     setCursorPosition 0 0
-    drawBoxIO viewportW viewportH viewport
+    putStr $ ansiToString viewport'
     hFlush stdout
 
 fixResizeArtifacts :: Inspector ()
 fixResizeArtifacts = do
-  refTermSize <- Gallery $ State.gets galleryTermSize
+  refTermSize <- Inspector $ State.gets inspectorTermSize
   M.liftIO do
     prevSize <- readIORef refTermSize
     getTerminalSize >>= \case

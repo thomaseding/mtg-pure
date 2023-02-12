@@ -16,7 +16,7 @@ module MtgPure.Client.Terminal.PriorityAction (
   playTerminalGame,
 ) where
 
-import safe Ansi.Box (withHiddenCursor)
+import safe Ansi.Box (clearScreenWithoutPaging, withHiddenCursor)
 import safe qualified Control.Monad as M
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
 import safe Control.Monad.Trans (MonadIO (..))
@@ -41,7 +41,6 @@ import safe MtgPure.Client.Terminal.Fwd.Api (
 import safe MtgPure.Client.Terminal.Monad (
   Terminal,
   TerminalState (..),
-  clearScreen,
   getsTerminalState,
   pause,
   prompt,
@@ -177,7 +176,7 @@ parseCommandInput = \case
 help :: Magic 'Public 'RO Terminal (PriorityAction ())
 help = M.liftIO do
   setCursorPosition 0 0
-  clearScreen
+  clearScreenWithoutPaging
   putStrLn "Help for REPL Commands:"
   putStrLn ""
   putStrLn "Commands:"
@@ -291,7 +290,7 @@ examineObject objId = do
                in List.intercalate "\n\n" $ card : facets
   let msg' = "Examining [" ++ show (unObjectId objId) ++ "]:\n\n" ++ msg
   M.liftIO $ withHiddenCursor do
-    clearScreen
+    clearScreenWithoutPaging
     setCursorPosition 0 0
     putStrLn msg'
     pause
@@ -380,7 +379,7 @@ terminalPriorityAction ::
   Magic 'Public 'RO Terminal (PriorityAction ())
 terminalPriorityAction attempt opaque oPlayer = M.lift do
   (action, commandInput) <- queryMagic opaque do
-    M.liftIO clearScreen
+    clearScreenWithoutPaging
     M.lift $ printGameState opaque Nothing
     liftIO case attempt of
       Attempt 0 -> pure ()

@@ -31,6 +31,7 @@ module Ansi.TrueColor.Types (
   TwoColorTile (..),
 ) where
 
+import safe Ansi.AnsiString (AnsiString)
 import Codec.Picture (readJpeg, readPng)
 import Codec.Picture.Types (DynamicImage, Image (..), Pixel8, PixelRGB8 (..))
 import qualified Data.Vector.Storable as VS
@@ -52,7 +53,7 @@ readImage' path = case ext of
 
 type Pixel1 = Pixel8
 
-type AnsiImage = String
+type AnsiImage = AnsiString
 
 -- A tile is a 8x16 image
 type Tile = Image

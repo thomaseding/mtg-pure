@@ -33,11 +33,14 @@ module Ansi.Box (
 
 import safe Ansi.AnsiString (
   AnsiChar (..),
-  AnsiString,
+  AnsiString (..),
   AnsiToString (..),
   Csi (CsiSetAbsCursorXY),
+  Layer (..),
+  Lines (..),
   Rgb,
   Sgr (..),
+  takeAnsi,
  )
 import safe Control.Applicative ((<|>))
 import safe Control.Exception (assert, finally)
@@ -48,6 +51,7 @@ import safe qualified Data.Char as Char
 import safe qualified Data.DList as DList
 import safe qualified Data.Foldable as F
 import safe Data.List (intercalate)
+import safe Data.String (IsString (..))
 import safe System.Console.ANSI (
   clearLine,
   clearScreen,
@@ -78,9 +82,9 @@ type DAnsiString = DList.DList AnsiChar
 type DrawM = Writer.Writer DAnsiString
 
 runDrawM :: DrawM () -> AnsiString
-runDrawM = DList.toList . Writer.execWriter
+runDrawM = AnsiString . DList.toList . Writer.execWriter
 
-tell :: AnsiString -> DrawM ()
+tell :: [AnsiChar] -> DrawM ()
 tell = Writer.tell . DList.fromList
 
 withBuffering :: Handle -> BufferMode -> IO a -> IO a
@@ -129,10 +133,11 @@ finallyCleanup m = do
   m `finally` do
     putStr $ ansiToString SgrReset
     showCursor
-    getTerminalSize >>= \case
-      Nothing -> pure ()
-      Just (_w, h) -> do
-        putStr $ ansiToString $ CsiSetAbsCursorXY 0 (h - 1)
+    M.when False do
+      getTerminalSize >>= \case
+        Nothing -> pure ()
+        Just (_w, h) -> do
+          putStr $ ansiToString $ CsiSetAbsCursorXY 0 (h - 1)
     putStrLn ""
     hFlush stdout
 
@@ -153,7 +158,7 @@ withCodePage codePage action = do
 
 withEnableUnicode :: IO a -> IO a
 withEnableUnicode action = do
-  -- change code page for cmd.exe to support unicode
+  -- This changes code page for cmd.exe to support unicode
   withCodePage 65001 do
     withUtf8 stdout do
       withUtf8 stdin do
@@ -165,8 +170,8 @@ withAnsi action = do
     withBuffering stdin NoBuffering do
       withEnableUnicode do
         finallyCleanup do
-          putStr $ ansiToString SgrReset
-          clearScreen
+          clearScreenByPaging
+          hFlush stdout
           action
 
 data FixedOrRatio
@@ -177,10 +182,9 @@ data FixedOrRatio
   | Center
   | TextDim
 
--- TODO: Use my AnsiString types
 data Box = Box
-  { boxText :: String
-  , boxClipper :: Int -> String -> String
+  { boxText :: AnsiString -- TODO: Make an SgrString and allow that. CSI shouldn't be allowed.
+  , boxClipper :: Int -> AnsiString -> AnsiString
   , boxX :: FixedOrRatio
   , boxY :: FixedOrRatio
   , boxW :: FixedOrRatio
@@ -219,8 +223,8 @@ toAbsolute maxWidth maxHeight absX absY box =
     , boxKidsPre = kidsPre
     , boxKidsPost = kidsPost
     } = box
-  textLines = lines text
-  textWidth = maximum $ 0 : map length textLines
+  textLines = toLines text
+  textWidth = maximum $ 0 : map (length . unAnsiString) textLines
   textHeight = length textLines
   x' = case x of
     Absolute i -> i
@@ -263,8 +267,14 @@ drawBox maxWidth maxHeight box = runDrawM do
 
 drawBoxIO :: Int -> Int -> Box -> IO ()
 drawBoxIO maxWidth maxHeight box = do
+  -- getCursorPosition >>= \case
+  --   Just (0, 0) -> pure ()
+  --   _x -> pure () -- error $ show x
+  putStr $ ansiToString $ CsiSetAbsCursorXY 0 0
   let ansi = drawBox maxWidth maxHeight box
   putStr $ ansiToString ansi
+  putStr $ ansiToString SgrReset
+  putStr $ ansiToString $ CsiSetAbsCursorXY 0 maxHeight
   hFlush stdout
 
 clearBoxViewport :: Int -> Int -> Box -> IO ()
@@ -292,8 +302,9 @@ drawBoxImpl mParentBackground box = do
 
   tell [AnsiCsi $ CsiSetAbsCursorXY x y]
   M.void applyBgColor
-  applySgr
+  tell $ map AnsiSgr colorCommands
   printMultiline
+  tell [AnsiSgr SgrReset]
 
   M.forM_ kidsPost \kid -> do
     M.void applyBgColor
@@ -314,19 +325,16 @@ drawBoxImpl mParentBackground box = do
     , boxKidsPost = kidsPost
     } = box
   mBackground = mBackgroundProto <|> mParentBackground
-  textLines = lines text
+  textLines = toLines text
   applyBgColor = case mBackground of
     Nothing -> pure False
     Just bg -> do
-      tell [AnsiSgr $ SgrTrueColorBg bg]
+      tell [AnsiSgr $ SgrTrueColor Bg bg]
       pure True
-  applySgr = case map AnsiSgr colorCommands of
-    [] -> pure ()
-    s -> tell s
   printMultiline = do
     M.forM_ (zip [0 ..] textLines) \(j, textLine) -> do
       tell [AnsiCsi $ CsiSetAbsCursorXY x (y + j)]
-      tell $ map AnsiChar $ clipper w textLine
+      tell $ unAnsiString $ clipper w textLine
   drawBgWindow = do
     M.forM_ [0 .. h - 1] \j -> do
       tell [AnsiCsi $ CsiSetAbsCursorXY x (y + j)]
@@ -350,8 +358,8 @@ addPopup :: String -> Box -> Box
 addPopup msg =
   addOverlay
     Box
-      { boxText = addBorder msg
-      , boxClipper = take
+      { boxText = fromString $ addBorder msg
+      , boxClipper = takeAnsi
       , boxX = Center
       , boxY = Fixed 0
       , boxW = TextDim

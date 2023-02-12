@@ -11,15 +11,20 @@ module Script.GenerateGallerySingle.Main (
   cardNameToAnsis,
 ) where
 
-import Ansi.Old (ConvertType (..), convertFileImageToAnsi, platonicH, platonicW)
-import Ansi.TrueColor.Types (AnsiImage)
+import Ansi.Old (
+  AnsiImageOld,
+  ConvertType (..),
+  convertFileImageToAnsi,
+  platonicH,
+  platonicW,
+ )
 import Ansi.TrueColor.VirtualChar (decodeDrawingChars, encodeDrawingChar)
 import safe Control.Exception (evaluate)
 import safe qualified Control.Monad as M
 import safe Data.Time.Clock (diffUTCTime, getCurrentTime)
 import safe Data.Time.Format (defaultTimeLocale, formatTime)
 import safe qualified Data.Traversable as T
-import safe Script.MtgPureConfig (MtgPureConfig (mtgPure_ansiImageDatabaseDir, mtgPure_scryfallImageDatabaseDir), readMtgPureConfigFile)
+import safe Script.MtgPureConfig (MtgPureConfig (..), readMtgPureConfigFile)
 import Script.ScryfallDownloader (
   CardName,
   DownloadSpecificCards (..),
@@ -32,7 +37,14 @@ import safe qualified System.Directory as D
 import safe System.Environment (getArgs)
 import safe System.Exit (exitFailure)
 import safe qualified System.FilePath as D
-import safe System.IO (BufferMode (..), IOMode (..), hGetContents, hPutStr, hSetBuffering, withBinaryFile)
+import safe System.IO (
+  BufferMode (..),
+  IOMode (..),
+  hGetContents,
+  hPutStr,
+  hSetBuffering,
+  withBinaryFile,
+ )
 
 main :: IO ()
 main = mainGenerateGallerySingle
@@ -75,7 +87,7 @@ data CardAnsiInfo = CardAnsiInfo
   , caiSetName :: SetName
   , caiSourceImage :: FilePath
   , caiAnsiPath :: FilePath
-  , caiAnsiImage :: AnsiImage
+  , caiAnsiImage :: AnsiImageOld
   }
 
 cardNameToAnsis :: Bool -> MtgPureConfig -> CardName -> IO [CardAnsiInfo]
@@ -105,7 +117,7 @@ cardNameToAnsis verbose mtgConfig cardName = do
         , caiAnsiImage = ansi
         }
 
-readAnsi :: FilePath -> IO AnsiImage
+readAnsi :: FilePath -> IO AnsiImageOld
 readAnsi path = do
   withBinaryFile path ReadMode \h -> do
     hSetBuffering h NoBuffering
@@ -113,13 +125,13 @@ readAnsi path = do
     M.void $ evaluate $ length s -- I verified this is needed.
     pure s
 
-writeAnsi :: FilePath -> AnsiImage -> IO ()
+writeAnsi :: FilePath -> AnsiImageOld -> IO ()
 writeAnsi path ansi = do
   withBinaryFile path WriteMode \h -> do
     hSetBuffering h NoBuffering
     hPutStr h ansi
 
-getAnsi :: FilePath -> FilePath -> IO AnsiImage
+getAnsi :: FilePath -> FilePath -> IO AnsiImageOld
 getAnsi ansiPath imgPath = do
   D.createDirectoryIfMissing True $ D.takeDirectory ansiPath
   ansiExists <- D.doesFileExist ansiPath

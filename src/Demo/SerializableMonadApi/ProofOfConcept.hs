@@ -15,6 +15,7 @@ module Demo.SerializableMonadApi.ProofOfConcept (
   module Demo.SerializableMonadApi.ProofOfConcept,
 ) where
 
+import safe Control.Monad.Identity ()
 import safe qualified Control.Monad.State.Strict as State
 import safe Data.IORef (modifyIORef', newIORef, readIORef)
 import safe Data.Kind (Type)

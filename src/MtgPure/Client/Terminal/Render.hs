@@ -16,14 +16,19 @@ module MtgPure.Client.Terminal.Render (
   printGameState,
 ) where
 
-import Ansi.AnsiString (
+import safe Ansi.AnsiString (
+  AnsiToString (ansiToString),
+  Layer (..),
   Rgb,
   Sgr (..),
+  dropAnsi,
   dullBlack,
   dullBlue,
   dullRed,
   dullWhite,
   dullYellow,
+  takeAnsi,
+  vividBlue,
   vividGreen,
   vividWhite,
   vividYellow,
@@ -32,17 +37,27 @@ import safe Ansi.Box (
   Box (..),
   FixedOrRatio (..),
   addPopup,
-  drawBoxIO,
+  drawBox,
   fromAbsolute,
  )
+import safe Ansi.Compile (
+  RenderInput (..),
+  RenderState (..),
+  ScreenPos (..),
+  pruneRenderedCells,
+  renderAnsiString,
+  renderedCellsToAnsi,
+ )
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
+import qualified Control.Monad.State.Class as State
 import safe qualified Control.Monad.Trans as M
 import safe Data.Functor ((<&>))
 import safe qualified Data.List as List
 import safe qualified Data.Map.Strict as Map
 import safe qualified Data.Maybe as Maybe
+import safe Data.String (IsString (..))
 import safe qualified Data.Traversable as T
-import safe MtgPure.Client.Terminal.Monad (Terminal)
+import safe MtgPure.Client.Terminal.Monad (Terminal, TerminalState (terminal_prevGameRender))
 import safe MtgPure.Engine.Fwd.Api (
   allControlledPermanentsOf,
   findHandCard,
@@ -79,6 +94,8 @@ import safe MtgPure.Model.Variable (Var (..))
 import safe MtgPure.Model.Zone (Zone (..))
 import safe MtgPure.Model.ZoneObject.Convert (toZO0)
 import safe MtgPure.Model.ZoneObject.ZoneObject (ZO)
+import safe System.Console.ANSI (setCursorPosition)
+import safe System.IO (hFlush, stdout)
 
 --------------------------------------------------------------------------------
 
@@ -122,13 +139,29 @@ getExiledCardName zo = do
 -- TODO: Expose sufficient Public API to avoid need for `internalFromPrivate`
 printGameState :: OpaqueGameState Terminal -> Maybe String -> Terminal ()
 printGameState opaque mPopup = queryMagic opaque do
+  prevCells <- M.lift $ State.gets terminal_prevGameRender
   box <- mkEverythingBox
   let w = 100
   let h = max (fromAbsolute $ boxH box) $ maybe 0 (\s -> length (lines s) + 4) mPopup
-  let box' = case mPopup of
+  let decoratedBox = case mPopup of
         Nothing -> box
         Just popup -> addPopup popup box
-  M.liftIO $ drawBoxIO w h box'
+  let input =
+        RenderInput
+          { renderInput_ = ()
+          , renderInput_defaultColors = (vividBlue, dullBlack)
+          , renderInput_startPos = ScreenPos 0 0
+          , renderInput_cursorIsShown = True -- TODO
+          }
+  let viewport = drawBox w h decoratedBox
+  let cells = renderState_grid $ renderAnsiString input viewport
+  let diffCells = pruneRenderedCells prevCells cells
+  let viewport' = renderedCellsToAnsi diffCells
+  M.lift $ State.modify' \st -> st{terminal_prevGameRender = cells}
+  M.liftIO do
+    setCursorPosition 0 0
+    putStr $ ansiToString if True then viewport else viewport' -- TODO
+    hFlush stdout
 
 --------------------------------------------------------------------------------
 
@@ -144,7 +177,7 @@ mkEverythingBox = do
   pure
     Box
       { boxText = ""
-      , boxClipper = take
+      , boxClipper = takeAnsi
       , boxX = Fixed 0
       , boxY = Fixed 0
       , boxW = Ratio 1
@@ -165,14 +198,14 @@ mkTurnBox = do
   let text = "Turn " ++ show turn ++ " - " ++ dayNight ++ " - " ++ phaseStep
   pure
     Box
-      { boxText = text
-      , boxClipper = take
+      { boxText = fromString text
+      , boxClipper = takeAnsi
       , boxX = Center
       , boxY = Fixed 0
       , boxW = Ratio 1
       , boxH = Absolute 1
       , boxBackground = Nothing
-      , boxColorCommands = [SgrTrueColorFg vividWhite]
+      , boxColorCommands = [SgrTrueColor Fg vividWhite]
       , boxKidsPre = []
       , boxKidsPost = []
       }
@@ -185,14 +218,14 @@ mkStackBox = do
   let text = "Stack=" ++ show stack
   pure
     Box
-      { boxText = text
-      , boxClipper = take
+      { boxText = fromString text
+      , boxClipper = takeAnsi
       , boxX = Center
       , boxY = Fixed 1
       , boxW = Ratio 1
       , boxH = Absolute 1
       , boxBackground = Nothing
-      , boxColorCommands = [SgrTrueColorBg dullBlue]
+      , boxColorCommands = [SgrTrueColor Bg dullBlue]
       , boxKidsPre = []
       , boxKidsPost = []
       }
@@ -206,14 +239,14 @@ mkPriorityBox = do
           p : _ -> "[" ++ show (unObjectId $ getObjectId p) ++ "]"
   pure
     Box
-      { boxText = text
-      , boxClipper = take
+      { boxText = fromString text
+      , boxClipper = takeAnsi
       , boxX = Center
       , boxY = Fixed 2
       , boxW = Ratio 1
       , boxH = Absolute 1
       , boxBackground = Nothing
-      , boxColorCommands = [SgrTrueColorBg dullBlue]
+      , boxColorCommands = [SgrTrueColor Bg dullBlue]
       , boxKidsPre = []
       , boxKidsPost = []
       }
@@ -243,7 +276,7 @@ buildPlayerBox oPlayer = do
   pure
     Box
       { boxText = ""
-      , boxClipper = take
+      , boxClipper = takeAnsi
       , boxX = Ratio case i of
           ObjectId 1 -> 0
           ObjectId 2 -> 0.5
@@ -269,8 +302,8 @@ mkPlayerHudBox y player = box
   text = name ++ " Poison=" ++ show poison ++ " Life=" ++ show life ++ " Library=" ++ show library
   box =
     Box
-      { boxText = text
-      , boxClipper = take
+      { boxText = fromString text
+      , boxClipper = takeAnsi
       , boxX = Fixed 0
       , boxY = Fixed y
       , boxW = Ratio 1
@@ -290,7 +323,7 @@ mkCompleteManaPoolBox :: Int -> CompleteManaPool -> Box
 mkCompleteManaPoolBox y pool =
   Box
     { boxText = ""
-    , boxClipper = take
+    , boxClipper = takeAnsi
     , boxX = Fixed 0
     , boxY = Fixed y
     , boxW = Ratio 1
@@ -308,7 +341,7 @@ mkManaPoolBox :: forall snow. IsSnow snow => ManaPool snow -> Int -> Box
 mkManaPoolBox pool y =
   Box
     { boxText = ""
-    , boxClipper = take
+    , boxClipper = takeAnsi
     , boxX = Fixed 0
     , boxY = Fixed y
     , boxW = Ratio 1
@@ -316,7 +349,15 @@ mkManaPoolBox pool y =
     , boxBackground = Nothing
     , boxColorCommands = []
     , boxKidsPre = []
-    , boxKidsPost = [mkManaLegendBox desc, mkManaC c, mkManaW w, mkManaU u, mkManaB b, mkManaR r, mkManaG g]
+    , boxKidsPost =
+        [ mkManaLegendBox desc
+        , mkManaC c
+        , mkManaW w
+        , mkManaU u
+        , mkManaB b
+        , mkManaR r
+        , mkManaG g
+        ]
     }
  where
   ManaPool{poolW = w, poolU = u, poolB = b, poolR = r, poolG = g, poolC = c} = pool
@@ -330,8 +371,8 @@ legendWidth = 5
 mkManaLegendBox :: String -> Box
 mkManaLegendBox desc =
   Box
-    { boxText = desc
-    , boxClipper = take
+    { boxText = fromString desc
+    , boxClipper = takeAnsi
     , boxX = Fixed 0
     , boxY = Fixed 0
     , boxW = Fixed legendWidth
@@ -369,14 +410,14 @@ manaClipper' n s
 mkManaBox :: Rgb -> Rgb -> Int -> String -> Box
 mkManaBox fg bg relX text =
   Box
-    { boxText = text
-    , boxClipper = manaClipper
+    { boxText = fromString text
+    , boxClipper = \n -> fromString . manaClipper n . dropAnsi
     , boxX = Fixed $ manaWidth * relX + legendWidth
     , boxY = Fixed 0
     , boxW = Fixed $ manaWidth - 1
     , boxH = Absolute 1
     , boxBackground = Nothing
-    , boxColorCommands = [SgrTrueColorFg fg, SgrTrueColorBg bg]
+    , boxColorCommands = [SgrTrueColor Fg fg, SgrTrueColor Bg bg]
     , boxKidsPre = []
     , boxKidsPost = []
     }
@@ -405,7 +446,7 @@ mkEmptyObjectBox :: Int -> Box
 mkEmptyObjectBox y =
   Box
     { boxText = "[ ] -"
-    , boxClipper = take
+    , boxClipper = takeAnsi
     , boxX = Fixed 1
     , boxY = Fixed y
     , boxW = Ratio 1
@@ -427,7 +468,7 @@ mkHandBox oPlayer y (Hand cards) = do
   pure
     Box
       { boxText = "Hand"
-      , boxClipper = take
+      , boxClipper = takeAnsi
       , boxX = Fixed 0
       , boxY = Fixed y
       , boxW = Ratio 1
@@ -477,8 +518,8 @@ mkHandCardBox oPlayer y zoCard = do
         Just cost -> name <> " " <> cost
   pure
     Box
-      { boxText = text
-      , boxClipper = take
+      { boxText = fromString text
+      , boxClipper = takeAnsi
       , boxX = Fixed 1
       , boxY = Fixed y
       , boxW = Ratio 1
@@ -500,7 +541,7 @@ mkGraveyardBox y (Graveyard cards) = do
   pure
     Box
       { boxText = "Graveyard"
-      , boxClipper = take
+      , boxClipper = takeAnsi
       , boxX = Fixed 0
       , boxY = Fixed y
       , boxW = Ratio 1
@@ -516,8 +557,8 @@ mkGraveyardCardBox y card = do
   name <- getGraveyardCardName card
   pure
     Box
-      { boxText = name
-      , boxClipper = take
+      { boxText = fromString name
+      , boxClipper = takeAnsi
       , boxX = Fixed 1
       , boxY = Fixed y
       , boxW = Ratio 1
@@ -539,7 +580,7 @@ mkExileBox y cards = do
   pure
     Box
       { boxText = "Exile"
-      , boxClipper = take
+      , boxClipper = takeAnsi
       , boxX = Fixed 0
       , boxY = Fixed y
       , boxW = Ratio 1
@@ -555,8 +596,8 @@ mkExileCardBox y card = do
   name <- getExiledCardName card
   pure
     Box
-      { boxText = name
-      , boxClipper = take
+      { boxText = fromString name
+      , boxClipper = takeAnsi
       , boxX = Fixed 1
       , boxY = Fixed y
       , boxW = Ratio 1
@@ -578,7 +619,7 @@ mkBattlefieldBox y cards = do
   pure
     Box
       { boxText = "Battlefield"
-      , boxClipper = take
+      , boxClipper = takeAnsi
       , boxX = Fixed 0
       , boxY = Fixed y
       , boxW = Ratio 1
@@ -613,8 +654,8 @@ mkBattlefieldCardBox y zoPerm = do
           _ -> " " ++ pt
   pure
     Box
-      { boxText = text
-      , boxClipper = take
+      { boxText = fromString text
+      , boxClipper = takeAnsi
       , boxX = Fixed 1
       , boxY = Fixed y
       , boxW = Ratio 1

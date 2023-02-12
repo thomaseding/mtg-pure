@@ -19,6 +19,14 @@ module Ansi.TrueColor.ImageToAnsi (
   debugLoadRenderedTileGrid,
 ) where
 
+import safe Ansi.AnsiString (
+  AnsiChar (..),
+  AnsiString (..),
+  Layer (..),
+  Rgb (..),
+  Sgr (..),
+  ToAnsiString (..),
+ )
 import Ansi.TrueColor.FindColoring (findBestColoring)
 import Ansi.TrueColor.FindRendering (findBestRendering)
 import Ansi.TrueColor.RenderedTile (RenderedTile (..))
@@ -27,27 +35,30 @@ import Ansi.TrueColor.Types (AnsiImage, FgBg (..), Grid, Tile, readImage)
 import Ansi.TrueColor.VirtualChar (VirtualChar (..))
 import Codec.Picture (convertRGB8)
 import Codec.Picture.Types (Image, PixelRGB8 (..))
-import safe Data.Colour.SRGB (sRGB24)
-import safe System.Console.ANSI.Codes (ConsoleLayer (..), SGR (..), setSGRCode)
+import safe Data.List (intercalate)
 
 --------------------------------------------------------------------------------
 
 renderedTileToAnsi :: RenderedTile -> AnsiImage
-renderedTileToAnsi rt = setSGRCode [setFg, setBg] ++ [vcChar vc]
+renderedTileToAnsi rt = toAnsiString [setFg, setBg] <> toAnsiString (vcChar vc)
  where
   vc = rtVirtChar rt
   coloring = rtFgBg rt
   PixelRGB8 fgR fgG fgB = getFg coloring
   PixelRGB8 bgR bgG bgB = getBg coloring
-  setFg = SetRGBColor fgLayer $ sRGB24 fgR fgG fgB
-  setBg = SetRGBColor bgLayer $ sRGB24 bgR bgG bgB
+  setFg = SgrTrueColor fgLayer $ Rgb fgR fgG fgB
+  setBg = SgrTrueColor bgLayer $ Rgb bgR bgG bgB
   invert = vcInvert vc
   (fgLayer, bgLayer) = case invert of
-    False -> (Foreground, Background)
-    True -> (Background, Foreground)
+    False -> (Fg, Bg)
+    True -> (Bg, Fg)
 
 renderedGridToAnsi :: Grid RenderedTile -> AnsiImage
-renderedGridToAnsi = unlines . map (concatMap renderedTileToAnsi)
+renderedGridToAnsi =
+  AnsiString
+    . intercalate
+      [AnsiChar '\n']
+    . map (concatMap $ unAnsiString . renderedTileToAnsi)
 
 renderTile :: Tile PixelRGB8 -> RenderedTile
 renderTile tile = findBestRendering tile coloring

@@ -1,4 +1,3 @@
-{-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE Safe #-}
 
 module Script.MtgPureConfig (

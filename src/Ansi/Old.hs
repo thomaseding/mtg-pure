@@ -14,7 +14,7 @@
 {-# HLINT ignore "Use when" #-}
 
 module Ansi.Old (
-  AnsiImage,
+  AnsiImageOld,
   ConvertType (..),
   convertFileImageToAnsi,
   convertImageToAnsi,
@@ -22,6 +22,7 @@ module Ansi.Old (
   platonicH,
 ) where
 
+import safe Ansi.AnsiString (AnsiToString (..))
 import Ansi.TrueColor.ImageToAnsi (convertImageToDetailedAnsiImage)
 import Ansi.TrueColor.Types (Grid, bytesToRgbGrid)
 import Codec.Picture (convertRGB8, readJpeg, readPng)
@@ -66,7 +67,7 @@ platonicH :: Int
 
 --------------------------------------------------------------------------------
 
-type AnsiImage = String
+type AnsiImageOld = String
 
 -- XXX: I think that cmd.exe doesn't emulate 256 colors, but does for true color.
 -- Double check this. Emulation impacts drawing performance and litters the terminal
@@ -93,7 +94,7 @@ readImage' path = case ext of
  where
   ext = takeExtension path
 
-convertFileImageToAnsi :: ConvertType -> FilePath -> IO AnsiImage
+convertFileImageToAnsi :: ConvertType -> FilePath -> IO AnsiImageOld
 convertFileImageToAnsi ct path = do
   img <- readImage path
   pure $ convertImageToAnsi ct img
@@ -104,7 +105,7 @@ convertFileImageToAnsi ct path = do
 -- of the other. If the image is not an even number of pixels tall, the last
 -- character row will render the bottom half of its logical pixels as the terminal's
 -- default background color.
-convertImageToAnsi :: ConvertType -> DynamicImage -> AnsiImage
+convertImageToAnsi :: ConvertType -> DynamicImage -> AnsiImageOld
 convertImageToAnsi ct dynImg = (++ setSGRCode [Reset]) case ct of
   PaletteColor -> goTall $ convertImageToPalettePixels dynImg
   TrueColor -> goTall $ convertImageToTrueColorPixels dynImg
@@ -112,8 +113,8 @@ convertImageToAnsi ct dynImg = (++ setSGRCode [Reset]) case ct of
  where
   goTall = convertTallPixelsToAnsi ct . convertPixelsToTall
 
-convertImageToTrueColorDetailedAnsi :: DynamicImage -> AnsiImage
-convertImageToTrueColorDetailedAnsi dynImg = ansiImg
+convertImageToTrueColorDetailedAnsi :: DynamicImage -> AnsiImageOld
+convertImageToTrueColorDetailedAnsi dynImg = ansiToString ansiImg
  where
   rgbImg = convertRGB8 dynImg
   ansiImg = convertImageToDetailedAnsiImage platonicW platonicH rgbImg
@@ -172,7 +173,7 @@ convertPixelsToTall = \case
   row1 : row2 : rows -> zipWith mkTall row1 row2 : convertPixelsToTall rows
   [row] -> [map mkHalf row]
 
-convertTallPixelsToAnsi :: ConvertType -> Grid TallPixel -> AnsiImage
+convertTallPixelsToAnsi :: ConvertType -> Grid TallPixel -> AnsiImageOld
 convertTallPixelsToAnsi ct = concatMap goRow
  where
   goRow :: [TallPixel] -> String
