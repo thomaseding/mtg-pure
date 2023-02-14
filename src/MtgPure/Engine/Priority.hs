@@ -18,6 +18,7 @@ module MtgPure.Engine.Priority (
   getPlayerWithPriority,
 ) where
 
+import safe Control.Exception (assert)
 import safe qualified Control.Monad as M
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
 import safe Control.Monad.Util (Attempt, Attempt' (..))
@@ -145,8 +146,8 @@ askPriorityAction' attempt oPlayer = M.join $ logCall 'askPriorityAction' do
           attempt' = case mAttempt of
             Nothing -> succAttempt
             Just a@(Attempt n) -> case n >= 0 of
-              False -> succAttempt
               True -> a
+              False -> assert False succAttempt
       pure $ askPriorityAction' attempt' oPlayer
 
 -- No need to encode success results, since the continuation is hijacked in such a case.

@@ -19,6 +19,7 @@ module Test.Game.StoneRain (
 
 import safe MtgPure.Cards (mountain, stoneRain)
 import safe MtgPure.Client.Terminal (TerminalInput (..), fwdImpl, playTerminalGame, runTerminal)
+import safe MtgPure.Engine.State (noGameCheats)
 import safe MtgPure.Model.Deck (Deck (..))
 import safe MtgPure.Model.Recursive (AnyCard (..))
 import safe MtgPure.Model.Sideboard (Sideboard (..))
@@ -29,7 +30,7 @@ main = mainStoneRain
 -- NOTE: Still a WIP
 mainStoneRain :: IO ()
 mainStoneRain = runTerminal input do
-  playTerminalGame $ replicate 2 (deck, side)
+  playTerminalGame noGameCheats $ replicate 2 (deck, side)
  where
   input =
     TerminalInput
@@ -44,7 +45,7 @@ deck =
   Deck $
     concat $
       replicate
-        (if False then 1 else 30)
+        30
         [ AnyCard1 mountain
         , AnyCard1 stoneRain
         ]

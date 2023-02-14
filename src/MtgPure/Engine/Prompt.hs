@@ -10,11 +10,13 @@ module MtgPure.Engine.Prompt (
   AbsoluteActivatedAbilityIndex (..),
   ActivateAbility,
   ActivateResult (..),
+  AttackingPlayer (..),
   CardCount (..),
   CardIndex (..),
   CastSpell,
   DeclaredAttacker (..),
   DeclaredBlocker (..),
+  DefendingPlayer (..),
   InternalLogicError (..),
   InvalidCastSpell (..),
   InvalidPlayLand (..),
@@ -179,6 +181,12 @@ data AnyElected (pEffect :: PrePost) :: Type where
   AnyElected :: IsOTN ot => Elected pEffect ot -> AnyElected pEffect
   deriving (Typeable)
 
+newtype AttackingPlayer = AttackingPlayer {unAttackingPlayer :: Object 'OTPlayer}
+  deriving (Eq, Ord, Show)
+
+newtype DefendingPlayer = DefendingPlayer {unDefendingPlayer :: Object 'OTPlayer}
+  deriving (Eq, Ord, Show)
+
 data Prompt' (opaqueGameState :: (Type -> Type) -> Type) (m :: Type -> Type) (magic :: Type -> Type) = Prompt
   { exceptionCantBeginGameWithoutPlayers :: m ()
   , exceptionInvalidCastSpell :: opaqueGameState m -> Object 'OTPlayer -> InvalidCastSpell -> m ()
@@ -187,8 +195,8 @@ data Prompt' (opaqueGameState :: (Type -> Type) -> Type) (m :: Type -> Type) (ma
   , exceptionInvalidShuffle :: CardCount -> [CardIndex] -> m ()
   , exceptionInvalidStartingPlayer :: PlayerCount -> PlayerIndex -> m ()
   , exceptionZoneObjectDoesNotExist :: forall zone ot. IsZO zone ot => ZO zone ot -> m ()
-  , promptChooseAttackers :: Attempt -> opaqueGameState m -> Object 'OTPlayer -> magic [DeclaredAttacker]
-  , promptChooseBlockers :: Attempt -> opaqueGameState m -> Object 'OTPlayer -> NonEmpty DeclaredAttacker -> magic [DeclaredBlocker]
+  , promptChooseAttackers :: Attempt -> opaqueGameState m -> AttackingPlayer -> magic [DeclaredAttacker]
+  , promptChooseBlockers :: Attempt -> opaqueGameState m -> DefendingPlayer -> NonEmpty DeclaredAttacker -> magic [DeclaredBlocker]
   , promptChooseOption :: forall user n elem. (Typeable user, IsNat n) => opaqueGameState m -> Object 'OTPlayer -> NatList user n elem -> m (Fin user n)
   , promptDebugMessage :: String -> m ()
   , promptGetStartingPlayer :: Attempt -> PlayerCount -> magic PlayerIndex

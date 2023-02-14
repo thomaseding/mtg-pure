@@ -82,7 +82,8 @@ initLibraries = logCall 'initLibraries do
 mkPlayer :: GameFormat -> Object 'OTPlayer -> (Deck, Sideboard) -> Player
 mkPlayer format o (deck, sideboard) =
   Player
-    { playerObject = o
+    { player_ = ()
+    , playerCounters = mempty
     , playerDrewFromEmptyLibrary = False
     , playerGraveyard = Graveyard []
     , playerHand = Hand []
@@ -91,6 +92,7 @@ mkPlayer format o (deck, sideboard) =
     , playerLife = life
     , playerLost = False
     , playerMana = mempty
+    , playerObject = o
     , playerStartingDeck = deck
     , playerStartingHandSize = 7
     , playerStartingLife = life
@@ -107,9 +109,11 @@ mkGameState fwd input = case playerObjects of
   oPlayer : _ ->
     Just
       GameState
-        { magicCurrentTurn = 0
-        , magicFwd = fwd
+        { magic_ = ()
+        , magicCurrentTurn = 0
         , magicExiledCards = mempty
+        , magicFwd = fwd
+        , magicGameInput = input
         , magicGraveyardCards = mempty
         , magicHandCards = mempty
         , magicLibraryCards = mempty

@@ -29,7 +29,15 @@ import safe MtgPure.Cards (
   swamp,
   witchEngine,
  )
-import safe MtgPure.Client.Terminal (TerminalInput (..), fwdImpl, playTerminalGame, runTerminal)
+import safe MtgPure.Client.Terminal.Fwd.Impl (fwdImpl)
+import safe MtgPure.Client.Terminal.Monad (
+  TerminalInput (..),
+  runTerminal,
+ )
+import safe MtgPure.Client.Terminal.PriorityAction (
+  playTerminalGame,
+ )
+import safe MtgPure.Engine.State (noGameCheats)
 import safe MtgPure.Model.Deck (Deck (..))
 import safe MtgPure.Model.Recursive (AnyCard (..))
 import safe MtgPure.Model.Sideboard (Sideboard (..))
@@ -40,7 +48,7 @@ main = mainManaAbility
 -- NOTE: Still a WIP
 mainManaAbility :: IO ()
 mainManaAbility = runTerminal input do
-  playTerminalGame [(deck1, side), (deck2, side)]
+  playTerminalGame noGameCheats [(deck1, side), (deck2, side)]
  where
   input =
     TerminalInput

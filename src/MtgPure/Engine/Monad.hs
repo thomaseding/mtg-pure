@@ -53,6 +53,7 @@ import safe Control.Monad.Trans (MonadIO (..), MonadTrans (..))
 import safe Control.Monad.Trans.Except (ExceptT (ExceptT), catchE, runExceptT, throwE, withExceptT)
 import safe Control.Monad.Util (untilJust)
 import safe Data.Function (on)
+import safe Data.Functor ((<&>))
 import safe Data.Kind (Type)
 import safe Data.Maybe (listToMaybe)
 import safe Data.Typeable (Typeable)
@@ -199,7 +200,9 @@ runMagicRW st (MagicRW exceptM) =
       stateM = runAccessM accessM
       callM = State.evalStateT stateM st
       m = State.runStateT callM emptyLogCallState
-   in sanityCheckCallStackState <$> m
+   in m <&> \(ei, logCallSt) -> case ei of
+        Left{} -> ei
+        Right a -> Right $ sanityCheckCallStackState (a, logCallSt)
 
 sanityCheckCallStackState :: (a, LogCallState) -> a
 sanityCheckCallStackState (a, st) = case st == emptyLogCallState of

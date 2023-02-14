@@ -18,7 +18,15 @@ module Test.Game.RagingGoblin (
 ) where
 
 import safe MtgPure.Cards (mountain, ragingGoblin)
-import safe MtgPure.Client.Terminal (TerminalInput (..), fwdImpl, playTerminalGame, runTerminal)
+import safe MtgPure.Client.Terminal.Fwd.Impl (fwdImpl)
+import safe MtgPure.Client.Terminal.Monad (
+  TerminalInput (..),
+  runTerminal,
+ )
+import safe MtgPure.Client.Terminal.PriorityAction (
+  playTerminalGame,
+ )
+import safe MtgPure.Engine.State (noGameCheats)
 import safe MtgPure.Model.Deck (Deck (..))
 import safe MtgPure.Model.Recursive (AnyCard (..))
 import safe MtgPure.Model.Sideboard (Sideboard (..))
@@ -29,7 +37,7 @@ main = mainRagingGoblin
 -- NOTE: Still a WIP
 mainRagingGoblin :: IO ()
 mainRagingGoblin = runTerminal input do
-  playTerminalGame $ replicate 2 (deck, side)
+  playTerminalGame noGameCheats $ replicate 2 (deck, side)
  where
   input =
     TerminalInput
@@ -44,7 +52,7 @@ deck =
   Deck $
     concat $
       replicate
-        (if True then 1 else 30)
+        (if False then 1 else 30)
         [ AnyCard1 mountain
         , AnyCard1 ragingGoblin
         ]

@@ -70,6 +70,7 @@ import safe MtgPure.Engine.Prompt (
   SpecialAction (..),
  )
 import safe MtgPure.Engine.State (
+  GameCheats,
   GameFormat (..),
   GameInput (..),
   GameState (..),
@@ -110,18 +111,20 @@ chunk n = go
     (ys, []) -> [ys]
     (ys, zs) -> ys : go zs
 
-playTerminalGame :: [(Deck, Sideboard)] -> Terminal ()
-playTerminalGame decks = do
+playTerminalGame :: GameCheats -> [(Deck, Sideboard)] -> Terminal ()
+playTerminalGame cheats decks = do
   getsTerminalState terminal_replayLog >>= \case
     Nothing -> pure ()
     Just file -> liftIO $ appendFile file "---------------------\n"
-  result <- playGame $ gameInput decks
+  result <- playGame $ gameInput cheats decks
   liftIO $ print result
 
-gameInput :: [(Deck, Sideboard)] -> GameInput Terminal
-gameInput decks =
+gameInput :: GameCheats -> [(Deck, Sideboard)] -> GameInput Terminal
+gameInput cheats decks =
   GameInput
-    { gameInput_decks = decks
+    { gameInput_ = ()
+    , gameInput_decks = decks
+    , gameInput_gameCheats = cheats
     , gameInput_gameFormat = Vintage
     , gameInput_mulligan = DisableMulligan
     , gameInput_prompt =
@@ -133,8 +136,8 @@ gameInput decks =
           , exceptionInvalidShuffle = \_ _ -> liftIO $ putStrLn "exceptionInvalidShuffle"
           , exceptionInvalidStartingPlayer = \_ _ -> liftIO $ putStrLn "exceptionInvalidStartingPlayer"
           , exceptionZoneObjectDoesNotExist = \zo -> liftIO $ print ("exceptionZoneObjectDoesNotExist", zo)
-          , promptChooseAttackers = \_ _ _ -> pure []
-          , promptChooseBlockers = \_ _ _ _ -> pure []
+          , promptChooseAttackers = \_ _ _ -> pure [] -- TODO
+          , promptChooseBlockers = \_ _ _ _ -> pure [] -- TODO
           , promptChooseOption = terminalChooseOption
           , promptDebugMessage = \msg -> liftIO $ putStrLn $ "DEBUG: " ++ msg
           , promptGetStartingPlayer = \_attempt _count -> pure $ PlayerIndex 0

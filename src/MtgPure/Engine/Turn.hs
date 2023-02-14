@@ -19,6 +19,7 @@ import safe qualified Control.Monad as M
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
 import safe qualified Control.Monad.Trans as M
 import safe Control.Monad.Util (untilJust)
+import safe qualified Data.Foldable as F
 import safe Data.List.NonEmpty (NonEmpty ((:|)))
 import safe qualified Data.List.NonEmpty as NonEmpty
 import safe qualified Data.Map.Strict as Map
@@ -27,6 +28,7 @@ import safe qualified Data.Traversable as T
 import safe Data.Void (Void)
 import safe MtgPure.Engine.Fwd.Api (
   allControlledPermanentsOf,
+  controllerOf,
   eachLogged_,
   enact,
   gainPriority,
@@ -49,24 +51,40 @@ import safe MtgPure.Engine.Monad (
   put,
  )
 import safe MtgPure.Engine.Prompt (
+  AttackingPlayer (AttackingPlayer),
   DeclaredAttacker (..),
   DeclaredBlocker (..),
+  DefendingPlayer (..),
   InternalLogicError (..),
   PlayerCount (..),
   PlayerIndex (..),
   Prompt' (..),
+  SourceZO (..),
  )
-import safe MtgPure.Engine.State (GameState (..), Magic, MagicCont, logCall, mkOpaqueGameState, runMagicCont)
+import safe MtgPure.Engine.State (
+  GameState (..),
+  Magic,
+  MagicCont,
+  logCall,
+  mkOpaqueGameState,
+  runMagicCont,
+ )
+import safe MtgPure.Model.Combinators (dealDamage)
+import safe MtgPure.Model.Creature (Creature (..))
+import safe MtgPure.Model.Damage (Damage' (Damage))
 import safe MtgPure.Model.Object.OTNAliases (OTNCreature, OTNPermanent)
 import safe MtgPure.Model.Object.Object (Object)
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Permanent (Permanent (..), Phased (..))
 import safe MtgPure.Model.PhaseStep (PhaseStep (..))
 import safe MtgPure.Model.Player (Player (..))
+import safe MtgPure.Model.Power (Power (..))
 import safe MtgPure.Model.Recursive (Effect (..))
 import safe MtgPure.Model.Step (Step (..))
+import safe MtgPure.Model.Toughness (Toughness (..))
+import safe MtgPure.Model.Variable (Var (..))
 import safe MtgPure.Model.Zone (Zone (..))
-import safe MtgPure.Model.ZoneObject.Convert (oToZO1)
+import safe MtgPure.Model.ZoneObject.Convert (asPermanent, oToZO1)
 import safe MtgPure.Model.ZoneObject.ZoneObject (ZO)
 
 -- (103)
@@ -81,7 +99,7 @@ startGame = logCall 'startGame do
   pure () -- (103.6) TODO: planechase stuff
 
   -- NOTE: MagicCont is appropriate in order to nicely support cards like [Stasis] and [Time Stop]
-  either id id <$> runMagicCont untapStep
+  either id id <$> runMagicCont startTurn
 
 -- (103.1)
 determineStartingPlayer :: Monad m => Magic 'Private 'RW m ()
@@ -148,18 +166,23 @@ advanceStateForNewTurn = logCall 'advanceStateForNewTurn do
         , magicPlayerOrderTurn = ps
         }
 
--- (502)
+startTurn :: Monad m => MagicCont 'Private 'RW Void m Void
+startTurn = M.join $ logCall 'startTurn do
+  liftCont advanceStateForNewTurn -- XXX: This will need more work for things like [Time Warp]
+  pure untapStep
+
+-- (502.) Untap Step
 untapStep :: Monad m => MagicCont 'Private 'RW Void m Void
 untapStep = M.join $ logCall 'untapStep do
   liftCont do
     setPhaseStep $ PSBeginningPhase UntapStep
-    advanceStateForNewTurn
     oPlayer <- fromPublicRO getActivePlayer
     do
       player <- fromRO $ getPlayer oPlayer
       setPlayer oPlayer player{playerLandsPlayedThisTurn = 0}
     do
       zos <- fromPublicRO $ allControlledPermanentsOf oPlayer
+      eachLogged_ zos removeSummoningSickness
       eachLogged_ zos togglePermanentPhase -- (502.1)
     pure () -- (502.2) TODO: day/night
     do
@@ -181,6 +204,17 @@ togglePermanentPhase oPerm = do
             PhasedOut -> PhasedIn
         }
 
+removeSummoningSickness :: Monad m => ZO 'ZBattlefield OTNPermanent -> Magic 'Private 'RW m ()
+removeSummoningSickness oPerm = do
+  perm <- fromRO $ getPermanent oPerm
+  setPermanent
+    oPerm
+    $ Just
+      perm
+        { permanentSummoningSickness = False
+        }
+
+-- | (503.) Upkeep Step
 upkeepStep :: Monad m => MagicCont 'Private 'RW Void m Void
 upkeepStep = M.join $ logCall 'upkeepStep do
   liftCont do
@@ -189,6 +223,7 @@ upkeepStep = M.join $ logCall 'upkeepStep do
   gainPriority oActive
   pure drawStep
 
+-- | (504.) Draw Step
 drawStep :: Monad m => MagicCont 'Private 'RW Void m Void
 drawStep = M.join $ logCall 'drawStep do
   oActive <- liftCont $ fromPublicRO getActivePlayer
@@ -215,7 +250,7 @@ postcombatMainPhase = M.join $ logCall 'postcombatMainPhase do
   mainPhaseCommon
   pure endStep
 
--- (505)
+-- | (505.) Main Phase
 mainPhaseCommon :: Monad m => MagicCont 'Private 'RW Void m ()
 mainPhaseCommon = logCall 'mainPhaseCommon do
   pure () -- (505.1) Rule just states nomenclature. Nothing special to do
@@ -225,6 +260,7 @@ mainPhaseCommon = logCall 'mainPhaseCommon do
   oActive <- liftCont $ fromPublicRO getActivePlayer
   gainPriority oActive
 
+-- | (507.) Beginning of Combat Step
 beginningOfCombatStep :: Monad m => MagicCont 'Private 'RW Void m Void
 beginningOfCombatStep = M.join $ logCall 'beginningOfCombatStep do
   liftCont $ setPhaseStep $ PSCombatPhase BeginningOfCombatStep
@@ -233,6 +269,7 @@ beginningOfCombatStep = M.join $ logCall 'beginningOfCombatStep do
   gainPriority oActive
   pure declareAttackersStep
 
+-- | (508.) Declare Attackers Step
 declareAttackersStep :: Monad m => MagicCont 'Private 'RW Void m Void
 declareAttackersStep = M.join $ logCall 'declareAttackersStep do
   oActive <- liftCont $ fromPublic $ fromRO getActivePlayer
@@ -242,7 +279,7 @@ declareAttackersStep = M.join $ logCall 'declareAttackersStep do
     opaque <- fromRO $ gets mkOpaqueGameState
     fromPublic $ fromRO do
       untilJust \attempt -> do
-        attackers <- promptChooseAttackers prompt attempt opaque oActive
+        attackers <- promptChooseAttackers prompt attempt opaque $ AttackingPlayer oActive
         pure () -- TODO: validate attackers
         pure () -- TODO: store attackers in game state for Elects and Effects
         pure $ Just attackers
@@ -251,8 +288,8 @@ declareAttackersStep = M.join $ logCall 'declareAttackersStep do
     Just attackers' -> declareBlockersStep attackers'
     Nothing -> endOfCombatStep
 
-getDefendingPlayer :: Monad m => Magic 'Private 'RO m (Object 'OTPlayer)
-getDefendingPlayer = do
+promptForADefendingPlayer :: Monad m => Magic 'Private 'RO m DefendingPlayer
+promptForADefendingPlayer = do
   let isOneVersusOne = True -- TODO: multiplayer
   case isOneVersusOne of
     False -> undefined -- TODO: prompt the active player to choose a defending player
@@ -260,7 +297,7 @@ getDefendingPlayer = do
       active <- fromPublicRO getActivePlayer
       alive <- fromPublicRO getAlivePlayers
       case filter (/= active) alive of
-        defender : _ -> pure defender
+        defender : _ -> pure $ DefendingPlayer defender
         [] -> error $ show GameShouldHaveEndedBecauseThereIsOnlyOnePlayerLeft
 
 type AssignedCombatOrdering = Map.Map (ZO 'ZBattlefield OTNCreature) [ZO 'ZBattlefield OTNCreature]
@@ -303,29 +340,64 @@ attackerToBlockers' blockers = Map.fromListWith (++) $ do
   attacker <- NonEmpty.toList $ declaredBlocker_attackers blocker
   pure (attacker, [declaredBlocker_blocker blocker])
 
+-- | (509.) Declare Blockers Step
 declareBlockersStep :: Monad m => NonEmpty DeclaredAttacker -> MagicCont 'Private 'RW Void m Void
 declareBlockersStep attackers = M.join $ logCall 'declareBlockersStep do
   oActive <- liftCont $ fromPublicRO getActivePlayer
-  ordering <- liftCont do
+  (defendingPlayer, ordering) <- liftCont do
     setPhaseStep $ PSCombatPhase DeclareBlockersStep
     prompt <- fromRO $ gets magicPrompt
     opaque <- fromRO $ gets mkOpaqueGameState
-    oDefender <- fromRO getDefendingPlayer
+    defendingPlayer <- fromRO promptForADefendingPlayer
     blockers <- fromPublic $ fromRO do
       untilJust \attempt -> do
-        blockers <- promptChooseBlockers prompt attempt opaque oDefender attackers
+        blockers <- promptChooseBlockers prompt attempt opaque defendingPlayer attackers
         pure () -- TODO: validate blockers
-        pure () -- TODO: store blockers in game state for Elects and Effects
+        pure () -- TODO: store blockers in game state for Elects and Effects, e.g. [Smite]
         pure $ Just blockers
-    assignCombatDamageOrder attackers blockers
+    ordering <- assignCombatDamageOrder attackers blockers
+    pure (defendingPlayer, ordering)
   gainPriority oActive
-  pure $ combatDamageStep ordering
+  pure $ combatDamageStep defendingPlayer ordering
 
-combatDamageStep :: Monad m => AssignedCombatOrdering -> MagicCont 'Private 'RW Void m Void
-combatDamageStep ordering = M.join $ logCall 'combatDamageStep do
+applyDamageInOrder :: Monad m => DefendingPlayer -> ZO 'ZBattlefield OTNCreature -> [ZO 'ZBattlefield OTNCreature] -> Magic 'Private 'RW m ()
+applyDamageInOrder (DefendingPlayer oDefender) zoSource zoVictims = logCall 'applyDamageInOrder do
+  sourcePerm <- fromRO $ getPermanent $ asPermanent zoSource
+  sourceController <- fromRO $ controllerOf zoSource
+  let go remainingDamage zoVictim = do
+        victimPerm <- fromRO $ getPermanent $ asPermanent zoVictim
+        case permanentCreature victimPerm of
+          Nothing -> error $ show (undefined :: InternalLogicError) -- pre-filtering should have prevented this
+          Just creat -> do
+            let Toughness toughness = creatureToughness creat
+            let amountToVictim = min remainingDamage toughness
+            let damageVictim = dealDamage zoSource zoVictim $ Damage @ 'Var amountToVictim
+            _evs <- enact (Just $ SourceZO zoSource) damageVictim
+            pure $ remainingDamage - amountToVictim
+  case permanentCreature sourcePerm of
+    Nothing -> assert False $ pure () -- XXX: Correct?
+    Just creat -> do
+      pure () -- TODO: prolly need to filter out non-creature victims
+      let hasTrample = False -- TODO
+      let Power totalDamage = creaturePower creat
+      remainingDamage <- M.foldM go totalDamage zoVictims
+      case remainingDamage > 0 && sourceController /= oDefender && hasTrample of
+        False -> pure ()
+        True -> do
+          let damagePlayer = dealDamage zoSource (oToZO1 oDefender) $ Damage @ 'Var remainingDamage
+          _evs <- enact (Just $ SourceZO zoSource) damagePlayer
+          pure ()
+
+-- | (510.) Combat Damage Step
+-- TODO: This isn't rigorous wrt the official rules. Just want to get something working.
+combatDamageStep :: Monad m => DefendingPlayer -> AssignedCombatOrdering -> MagicCont 'Private 'RW Void m Void
+combatDamageStep defendingPlayer ordering = M.join $ logCall 'combatDamageStep do
   liftCont $ setPhaseStep $ PSCombatPhase CombatDamageStep
-  _ <- undefined ordering -- TODO
+  let assocs = Map.assocs ordering
   oActive <- liftCont $ fromPublicRO getActivePlayer
+  liftCont do
+    F.for_ assocs \(zoSource, zoVictims) -> do
+      applyDamageInOrder defendingPlayer zoSource zoVictims
   gainPriority oActive
   pure endOfCombatStep
 
@@ -349,4 +421,4 @@ cleanupStep :: Monad m => MagicCont 'Private 'RW Void m Void
 cleanupStep = M.join $ logCall 'cleanupStep do
   liftCont $ setPhaseStep $ PSEndingPhase CleanupStep
   --_ <- undefined
-  pure untapStep
+  pure startTurn

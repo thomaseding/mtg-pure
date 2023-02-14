@@ -19,6 +19,7 @@ module Test.Game.Shock (
 
 import safe MtgPure.Cards (mountain, shock)
 import safe MtgPure.Client.Terminal (TerminalInput (..), fwdImpl, playTerminalGame, runTerminal)
+import safe MtgPure.Engine.State (GameCheats (..), noGameCheats)
 import safe MtgPure.Model.Deck (Deck (..))
 import safe MtgPure.Model.Recursive (AnyCard (..))
 import safe MtgPure.Model.Sideboard (Sideboard (..))
@@ -29,8 +30,9 @@ main = mainShock
 -- NOTE: Still a WIP
 mainShock :: IO ()
 mainShock = runTerminal input do
-  playTerminalGame $ replicate 2 (deck, side)
+  playTerminalGame cheats $ replicate 2 (deck, side)
  where
+  cheats = noGameCheats{gameCheats_disableLosing = True}
   input =
     TerminalInput
       { terminalInput_ = ()

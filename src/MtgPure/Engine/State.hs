@@ -20,8 +20,11 @@ module MtgPure.Engine.State (
   --
   mkOpaqueGameState,
   getOpaqueGameState,
+  concatGameResults,
   OpaqueGameState,
   GameState (..),
+  GameCheats (..),
+  noGameCheats,
   GameInput (..),
   GameResult (..),
   GameFormat (..),
@@ -50,6 +53,7 @@ import safe qualified Data.List as List
 import safe qualified Data.List.NonEmpty as NonEmpty
 import safe qualified Data.Map.Strict as Map
 import safe Data.Nat (Fin (..))
+import safe qualified Data.Set as Set
 import safe qualified Data.Stream as Stream
 import safe Data.Typeable (Typeable)
 import safe Data.Void (Void)
@@ -139,9 +143,11 @@ data GameState (m :: Type -> Type) where
   -- This would allow the Public API to query game state a given player knows about without leaking hidden information.
   -- Simply knowing that a non-visible ID exists allow players to cheat (clients could spam it and then glean zone information and whatnot).
   GameState ::
-    { magicCurrentTurn :: Int
-    , magicFwd :: Fwd m
+    { magic_ :: ()
+    , magicCurrentTurn :: Int
     , magicExiledCards :: Map.Map (ZO 'ZExile OT0) AnyCard
+    , magicFwd :: Fwd m
+    , magicGameInput :: GameInput m
     , magicGraveyardCards :: Map.Map (ZO 'ZGraveyard OT0) AnyCard
     , magicHandCards :: Map.Map (ZO 'ZHand OT0) AnyCard
     , magicLibraryCards :: Map.Map (ZO 'ZLibrary OT0) AnyCard
@@ -206,8 +212,23 @@ data GameFormat
   = Vintage
   deriving (Eq, Ord, Show, Typeable)
 
+data GameCheats = GameCheats
+  { gameCheats_ :: ()
+  , gameCheats_disableLosing :: Bool
+  }
+  deriving (Eq, Ord, Show, Typeable)
+
+noGameCheats :: GameCheats
+noGameCheats =
+  GameCheats
+    { gameCheats_ = ()
+    , gameCheats_disableLosing = False
+    }
+
 data GameInput m = GameInput
-  { gameInput_decks :: [(Deck, Sideboard)]
+  { gameInput_ :: ()
+  , gameInput_decks :: [(Deck, Sideboard)]
+  , gameInput_gameCheats :: GameCheats
   , gameInput_gameFormat :: GameFormat
   , gameInput_mulligan :: Mulligan
   , gameInput_prompt :: Prompt m
@@ -219,6 +240,27 @@ data GameResult m = GameResult
   , gameLosers :: [PlayerIndex] -- 👎👎👎
   }
   deriving (Typeable)
+
+_gamePlayers :: GameResult m -> [PlayerIndex]
+_gamePlayers result = map PlayerIndex [1 .. numPlayers]
+ where
+  numPlayers = length $ magicPlayers $ gameEndState result
+
+concatGameResults :: GameState m -> [GameResult m] -> GameResult m
+concatGameResults st = \case
+  [] -> error "concatGameResults: empty list"
+  [result] -> result
+  result : results ->
+    let loserSet = Set.fromList $ gameLosers result ++ concatMap gameLosers results
+        losers = Set.toList loserSet
+        winnerSet' = Set.fromList $ gameWinners result ++ concatMap gameWinners results
+        winnerSet = winnerSet' Set.\\ loserSet
+        winners = Set.toList winnerSet
+     in result
+          { gameEndState = st
+          , gameWinners = winners
+          , gameLosers = losers
+          }
 
 type Magic v rw m = Magic' (GameResult m) (GameState m) v rw m
 

@@ -14,8 +14,8 @@ import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.Variable (ForceVars (..), Var (..), Variable (..))
 
 data Damage' (v :: Var) (a :: Type) :: Type where
-  Damage :: a -> Damage' v a
-  VariableDamage :: Variable a -> Damage' 'Var a
+  Damage :: forall v a. a -> Damage' v a
+  VariableDamage :: forall a. Variable a -> Damage' 'Var a
   deriving (Typeable) --  TODO: Make some of these orphans
 
 deriving instance Eq a => Eq (Damage' v a)

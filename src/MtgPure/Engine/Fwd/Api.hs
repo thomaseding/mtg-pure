@@ -323,6 +323,7 @@ allControlledPermanentsOf ::
   Magic 'Public 'RO m [ZO 'ZBattlefield OTNPermanent]
 allControlledPermanentsOf = fwd1 fwd_allControlledPermanentsOf
 
+-- TODO: This prolly should be Private instead because of things like face-down morph creatures.
 allPermanents :: Monad m => Magic 'Public 'RO m [ZO 'ZBattlefield OTNPermanent]
 allPermanents = fwd0 fwd_allPermanents
 

@@ -78,6 +78,10 @@ triggerEvListeners time evs = logCall 'triggerEvListeners do
     F.for_ (Map.elems listeners) \listener -> do
       listener time ev
 
+-- | This triggers registered event listeners automatically in addition to returning the events.
+--
+-- XXX: Does this really need a non-unit return type? I suppose it simplifies ad-hoc event listening
+-- by not requiring localized event listener registration, which might be worth the return type.
 enact :: Monad m => Maybe SourceZO -> Effect 'OneShot -> Magic 'Private 'RW m [Ev]
 enact mSource effect = logCall 'enact do
   evs <- enact' mSource effect
@@ -111,7 +115,7 @@ enact' mSource = logCall 'enact' \case
 addMana' :: Monad m => Maybe SourceZO -> ZOPlayer -> ManaPool 'NonSnow -> Magic 'Private 'RW m [Ev]
 addMana' _mSource oPlayer mana = logCall 'addMana' do
   fromRO (findPlayer $ zo1ToO oPlayer) >>= \case
-    Nothing -> pure () -- Don't complain. This can naturally happen if a player loses before `enact'` resolves.
+    Nothing -> pure () -- Don't complain. This can naturally happen if a player in a multiplayer game loses before `enact'` resolves.
     Just player -> do
       let mana' = playerMana player + mempty{poolNonSnow = mana}
       setPlayer (zo1ToO oPlayer) player{playerMana = mana'}
@@ -123,32 +127,34 @@ dealDamage' ::
   ZOCreaturePlayerPlaneswalker ->
   Damage var ->
   Magic 'Private 'RW m [Ev]
-dealDamage' _oSource oVictim (forceVars -> Damage damage) = logCall 'dealDamage' do
-  fromRO (findPermanent $ zo0ToPermanent $ toZO0 oVictim) >>= \case
-    Nothing -> pure ()
-    Just perm -> do
-      pure () -- TODO: indestructible
-      -- XXX: What happens if damage is dealt to a permanent that is both a creature and a planeswalker?
-      case permanentCreature perm of
-        Nothing -> pure ()
-        Just{} -> do
-          setPermanent
-            (zo0ToPermanent $ toZO0 oVictim)
-            $ Just
-              perm
-                { permanentCreatureDamage = (damage +) <$> permanentCreatureDamage perm
-                }
-      case permanentPlaneswalker perm of
-        Nothing -> pure ()
-        Just{} -> undefined
-  oPlayers <- fromPublicRO getAlivePlayers
-  M.forM_ oPlayers \oPlayer -> case getObjectId oVictim == getObjectId oPlayer of
-    False -> pure ()
-    True -> do
-      player <- fromRO $ getPlayer oPlayer
-      let life = unLife $ playerLife player
-      setPlayer oPlayer player{playerLife = Life $ life - damage}
-  pure mempty
+dealDamage' _oSource oVictim (forceVars -> Damage damage) = logCall 'dealDamage' case damage of
+  0 -> pure mempty -- (120.8)
+  _ -> do
+    fromRO (findPermanent $ zo0ToPermanent $ toZO0 oVictim) >>= \case
+      Nothing -> pure ()
+      Just perm -> do
+        pure () -- TODO: indestructible
+        -- XXX: What happens if damage is dealt to a permanent that is both a creature and a planeswalker?
+        case permanentCreature perm of
+          Nothing -> pure ()
+          Just{} -> do
+            setPermanent
+              (zo0ToPermanent $ toZO0 oVictim)
+              $ Just
+                perm
+                  { permanentCreatureDamage = (damage +) <$> permanentCreatureDamage perm
+                  }
+        case permanentPlaneswalker perm of
+          Nothing -> pure ()
+          Just{} -> undefined
+    oPlayers <- fromPublicRO getAlivePlayers
+    M.forM_ oPlayers \oPlayer -> case getObjectId oVictim == getObjectId oPlayer of
+      False -> pure ()
+      True -> do
+        player <- fromRO $ getPlayer oPlayer
+        let life = unLife $ playerLife player
+        setPlayer oPlayer player{playerLife = Life $ life - damage}
+    pure mempty
 
 destroy' ::
   Monad m =>
