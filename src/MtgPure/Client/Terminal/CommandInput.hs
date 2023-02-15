@@ -14,13 +14,17 @@
 {-# HLINT ignore "Use <$>" #-}
 
 module MtgPure.Client.Terminal.CommandInput (
-  CommandAbilityIndex (..),
-  CommandInput (..),
   CommandAliases (..),
   defaultCommandAliases,
   validateCommandAliases,
   unValidatedCommandAliases,
-  runParseCommandInput,
+  CommandAbilityIndex (..),
+  CIPriorityAction (..),
+  CIAttack (..),
+  CIBlock (..),
+  runParseCIPriorityAction,
+  runParseCIAttack,
+  runParseCIBlock,
 ) where
 
 import safe qualified Control.Monad as M
@@ -66,32 +70,39 @@ instance Show CommandAbilityIndex where
     CIManaAbility Nothing -> "C"
     CIInferManaAbility -> "*"
 
-data CommandInput :: Type where
-  CIQuit :: CommandInput
-  CIConcede :: CommandInput
-  CIAskAgain :: CommandInput
-  CIHelp :: Maybe String -> CommandInput
-  CIExamineAbility :: ObjectId -> CommandAbilityIndex -> CommandInput
-  CIExamineObject :: ObjectId -> CommandInput
-  -- | TODO: Augment this to allow passing to a phase or step.
-  CIPass :: CommandInput
-  CIActivateAbility :: ObjectId -> CommandAbilityIndex -> [ObjectId] -> CommandInput
-  CICastSpell :: ObjectId -> [ObjectId] -> CommandInput
-  CIPlayLand :: ObjectId -> [ObjectId] -> CommandInput
+data CIPriorityAction :: Type where
+  CIActivateAbility :: ObjectId -> CommandAbilityIndex -> [ObjectId] -> CIPriorityAction
+  CIAskAgain :: CIPriorityAction
+  CICastSpell :: ObjectId -> [ObjectId] -> CIPriorityAction
+  CIConcede :: CIPriorityAction
+  CIExamineAbility :: ObjectId -> CommandAbilityIndex -> CIPriorityAction
+  CIExamineObject :: ObjectId -> CIPriorityAction
+  CIHelp :: Maybe String -> CIPriorityAction
+  CIPass :: CIPriorityAction -- TODO: Augment this to allow passing to a phase or step.
+  CIPlayLand :: ObjectId -> [ObjectId] -> CIPriorityAction
+  CIQuit :: CIPriorityAction
 
-instance Show CommandInput where
+data CIAttack :: Type where
+  CIAttack :: [ObjectId] -> CIAttack
+  deriving (Show)
+
+data CIBlock :: Type where
+  CIBlock :: [(ObjectId {-attacker-}, ObjectId {-blocker-})] -> CIBlock
+  deriving (Show)
+
+instance Show CIPriorityAction where
   show = \case
-    CIQuit -> quit
-    CIConcede -> concede
+    CIActivateAbility objectId abilityIndex extras -> activateAbility ++ " " ++ showId objectId ++ " " ++ show abilityIndex ++ showExtras extras
     CIAskAgain -> askAgain
-    CIHelp Nothing -> help
-    CIHelp (Just n) -> help ++ " " ++ show n
+    CICastSpell spellId extras -> castSpell ++ " " ++ showId spellId ++ showExtras extras
+    CIConcede -> concede
     CIExamineAbility objectId abilityIndex -> examine ++ " " ++ showId objectId ++ " " ++ show abilityIndex
     CIExamineObject objectId -> examine ++ " " ++ showId objectId
+    CIHelp (Just n) -> help ++ " " ++ show n
+    CIHelp Nothing -> help
     CIPass -> pass
-    CIActivateAbility objectId abilityIndex extras -> activateAbility ++ " " ++ showId objectId ++ " " ++ show abilityIndex ++ showExtras extras
-    CICastSpell spellId extras -> castSpell ++ " " ++ showId spellId ++ showExtras extras
     CIPlayLand landId extras -> playLand ++ " " ++ showId landId ++ showExtras extras
+    CIQuit -> quit
    where
     showId = show . unObjectId
     showExtras = \case
@@ -103,25 +114,26 @@ instance Show CommandInput where
         "" -> error "CommandInput.show.go: empty string"
         c : cs -> Char.toUpper c : cs
     ca = unValidatedCommandAliases defaultCommandAliases
-    askAgain = "AskAgain"
-    quit = go $ caQuit ca
-    concede = go $ caConcede ca
-    help = go $ caHelp ca
-    examine = go $ caExamine ca
-    pass = go $ caPass ca
     activateAbility = go $ caActivateAbility ca
+    askAgain = "CIAskAgain"
     castSpell = go $ caCastSpell ca
+    concede = go $ caConcede ca
+    examine = go $ caExamine ca
+    help = go $ caHelp ca
+    pass = go $ caPass ca
     playLand = go $ caPlayLand ca
+    quit = go $ caQuit ca
 
 data CommandAliases = CommandAliases
-  { caQuit :: [String]
-  , caConcede :: [String]
-  , caHelp :: [String]
-  , caExamine :: [String]
-  , caPass :: [String]
+  { ca_ :: ()
   , caActivateAbility :: [String]
   , caCastSpell :: [String]
+  , caConcede :: [String]
+  , caExamine :: [String]
+  , caHelp :: [String]
+  , caPass :: [String]
   , caPlayLand :: [String]
+  , caQuit :: [String]
   }
 
 newtype ValidatedCommandAliases = Validated CommandAliases
@@ -137,14 +149,14 @@ isCommandAliasValid = all cond
 areCommandAliasesValid :: CommandAliases -> Bool
 areCommandAliasesValid ca =
   and
-    [ go $ caQuit ca
-    , go $ caConcede ca
-    , go $ caHelp ca
-    , go $ caExamine ca
-    , go $ caPass ca
-    , go $ caActivateAbility ca
+    [ go $ caActivateAbility ca
     , go $ caCastSpell ca
+    , go $ caConcede ca
+    , go $ caExamine ca
+    , go $ caHelp ca
+    , go $ caPass ca
     , go $ caPlayLand ca
+    , go $ caQuit ca
     , unique
     ]
  where
@@ -168,14 +180,15 @@ defaultCommandAliases = case mValidated of
   mValidated =
     validateCommandAliases
       CommandAliases
-        { caQuit = ["quit"]
-        , caConcede = ["concede"]
-        , caHelp = ["help", "h", "?", "--help", "-h", "-?", "/help", "/h", "/?"]
-        , caExamine = ["examine", "look", "+"]
-        , caPass = ["pass", "p", "0"]
+        { ca_ = ()
         , caActivateAbility = ["activateAbility", "activate", "1"]
         , caCastSpell = ["castSpell", "cast", "2"]
+        , caConcede = ["concede"]
+        , caExamine = ["examine", "look", "+"]
+        , caHelp = ["help", "h", "?", "--help", "-h", "-?", "/help", "/h", "/?"]
+        , caPass = ["pass", "p", "0"]
         , caPlayLand = ["playLand", "3"]
+        , caQuit = ["quit"]
         }
 
 ciChar :: Char -> Parser Char
@@ -213,7 +226,7 @@ parseCommandHeader headers = do
   s <- parseCommandHeader' headers
   dotSpaceAfterDigit s
 
-parseCompositeHelp :: CommandAliases -> Parser CommandInput
+parseCompositeHelp :: CommandAliases -> Parser CIPriorityAction
 parseCompositeHelp ca = do
   s <- parseCommandHeader' $ caHelp ca
   dotSpaceAfterAlphaNum s
@@ -221,22 +234,22 @@ parseCompositeHelp ca = do
   topic <- many1 $ satisfy Char.isAlphaNum
   pure $ CIHelp $ Just topic
 
-parseSimpleHelp :: CommandAliases -> Parser CommandInput
+parseSimpleHelp :: CommandAliases -> Parser CIPriorityAction
 parseSimpleHelp ca = do
   parseCommandHeader $ caHelp ca
   pure $ CIHelp Nothing
 
-parseQuit :: CommandAliases -> Parser CommandInput
+parseQuit :: CommandAliases -> Parser CIPriorityAction
 parseQuit ca = do
   parseCommandHeader $ caQuit ca
   pure CIQuit
 
-parseConcede :: CommandAliases -> Parser CommandInput
+parseConcede :: CommandAliases -> Parser CIPriorityAction
 parseConcede ca = do
   parseCommandHeader $ caConcede ca
   pure CIConcede
 
-parseExamine :: CommandAliases -> Parser CommandInput
+parseExamine :: CommandAliases -> Parser CIPriorityAction
 parseExamine ca = do
   parseCommandHeader $ caExamine ca
   dotSpaces
@@ -247,7 +260,7 @@ parseExamine ca = do
     Nothing -> CIExamineObject objectId
     Just abilityIndex -> CIExamineAbility objectId abilityIndex
 
-parsePass :: CommandAliases -> Parser CommandInput
+parsePass :: CommandAliases -> Parser CIPriorityAction
 parsePass ca = do
   parseCommandHeader $ caPass ca
   pure CIPass
@@ -276,7 +289,7 @@ parseAbilityIndex = do
     , CIAbilityIndex . read <$> many1 digit
     ]
 
-parseActivateAbility :: CommandAliases -> Parser CommandInput
+parseActivateAbility :: CommandAliases -> Parser CIPriorityAction
 parseActivateAbility ca = do
   parseCommandHeader $ caActivateAbility ca
   dotSpaces
@@ -286,7 +299,7 @@ parseActivateAbility ca = do
   targetIds <- parseTargets
   pure $ CIActivateAbility objId abilityIndex targetIds
 
-parseCastSpell :: CommandAliases -> Parser CommandInput
+parseCastSpell :: CommandAliases -> Parser CIPriorityAction
 parseCastSpell ca = do
   parseCommandHeader $ caCastSpell ca
   dotSpaces
@@ -294,7 +307,7 @@ parseCastSpell ca = do
   targetIds <- parseTargets
   pure $ CICastSpell objId targetIds
 
-parsePlayLand :: CommandAliases -> Parser CommandInput
+parsePlayLand :: CommandAliases -> Parser CIPriorityAction
 parsePlayLand ca = do
   parseCommandHeader $ caPlayLand ca
   dotSpaces
@@ -307,36 +320,65 @@ parseTargets = many $ try do
   dotSpaces
   ObjectId . read <$> many1 digit
 
-parseCommandInput' :: Parser CommandInput -> Parser CommandInput
-parseCommandInput' parser = try do
+comment :: Parser ()
+comment = do
+  M.void $ char '#'
+  M.void $ many anyChar
+
+parseCommandInput :: Parser a -> Parser a
+parseCommandInput parser = try do
   command <- parser
   dotSpaces
   optional comment
   eof
   pure command
 
-parseCommandInput :: CommandAliases -> Parser CommandInput
-parseCommandInput ca = do
+parseCIPriorityAction :: CommandAliases -> Parser CIPriorityAction
+parseCIPriorityAction ca = do
   choice $
     map
-      parseCommandInput'
-      [ parseCompositeHelp ca
-      , parseSimpleHelp ca
-      , parseQuit ca
+      parseCommandInput
+      [ parseActivateAbility ca
+      , parseCastSpell ca
+      , parseCompositeHelp ca
       , parseConcede ca
       , parseExamine ca
       , parsePass ca
-      , parseActivateAbility ca
-      , parseCastSpell ca
       , parsePlayLand ca
+      , parseQuit ca
+      , parseSimpleHelp ca
       ]
 
-comment :: Parser ()
-comment = do
-  M.void $ char '#'
-  M.void $ many anyChar
+parseCIAttack :: Parser CIAttack
+parseCIAttack = parseCommandInput do
+  dotSpaces
+  attackerIds <- many $ try do
+    dotSpaces
+    ObjectId . read <$> many1 digit
+  pure $ CIAttack attackerIds
 
-runParseCommandInput :: ValidatedCommandAliases -> String -> Either ParseError CommandInput
-runParseCommandInput (Validated ca) s = parse (parseCommandInput ca) "(repl)" s'
+parseCIBlock :: Parser CIBlock
+parseCIBlock = parseCommandInput do
+  dotSpaces
+  attackerBlockerPairs <- many $ try do
+    dotSpaces
+    attackerId <- ObjectId . read <$> many1 digit
+    dotSpaces
+    blockerId <- ObjectId . read <$> many1 digit
+    pure (attackerId, blockerId)
+  pure $ CIBlock attackerBlockerPairs
+
+runParseCIPriorityAction :: ValidatedCommandAliases -> String -> Either ParseError CIPriorityAction
+runParseCIPriorityAction (Validated ca) s = parse (parseCIPriorityAction ca) "(repl)" s'
+ where
+  s' = s ++ " "
+
+runParseCIAttack :: String -> Either ParseError CIAttack
+runParseCIAttack s = parse parseCIAttack "(repl)" s'
+ where
+  s' = s ++ " "
+
+runParseCIBlock :: String -> Either ParseError CIBlock
+runParseCIBlock s = parse parseCIBlock "(repl)" s'
  where
   s' = s ++ " "

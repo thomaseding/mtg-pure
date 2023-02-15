@@ -260,34 +260,6 @@ mainPhaseCommon = logCall 'mainPhaseCommon do
   oActive <- liftCont $ fromPublicRO getActivePlayer
   gainPriority oActive
 
--- | (507.) Beginning of Combat Step
-beginningOfCombatStep :: Monad m => MagicCont 'Private 'RW Void m Void
-beginningOfCombatStep = M.join $ logCall 'beginningOfCombatStep do
-  liftCont $ setPhaseStep $ PSCombatPhase BeginningOfCombatStep
-  pure () -- TODO: in multiplayer, choose defending player
-  oActive <- liftCont $ fromPublicRO getActivePlayer
-  gainPriority oActive
-  pure declareAttackersStep
-
--- | (508.) Declare Attackers Step
-declareAttackersStep :: Monad m => MagicCont 'Private 'RW Void m Void
-declareAttackersStep = M.join $ logCall 'declareAttackersStep do
-  oActive <- liftCont $ fromPublic $ fromRO getActivePlayer
-  attackers <- liftCont $ do
-    setPhaseStep $ PSCombatPhase DeclareAttackersStep
-    prompt <- fromRO $ gets magicPrompt
-    opaque <- fromRO $ gets mkOpaqueGameState
-    fromPublic $ fromRO do
-      untilJust \attempt -> do
-        attackers <- promptChooseAttackers prompt attempt opaque $ AttackingPlayer oActive
-        pure () -- TODO: validate attackers
-        pure () -- TODO: store attackers in game state for Elects and Effects
-        pure $ Just attackers
-  gainPriority oActive
-  pure case NonEmpty.nonEmpty attackers of
-    Just attackers' -> declareBlockersStep attackers'
-    Nothing -> endOfCombatStep
-
 promptForADefendingPlayer :: Monad m => Magic 'Private 'RO m DefendingPlayer
 promptForADefendingPlayer = do
   let isOneVersusOne = True -- TODO: multiplayer
@@ -299,6 +271,36 @@ promptForADefendingPlayer = do
       case filter (/= active) alive of
         defender : _ -> pure $ DefendingPlayer defender
         [] -> error $ show GameShouldHaveEndedBecauseThereIsOnlyOnePlayerLeft
+
+-- | (507.) Beginning of Combat Step
+beginningOfCombatStep :: Monad m => MagicCont 'Private 'RW Void m Void
+beginningOfCombatStep = M.join $ logCall 'beginningOfCombatStep do
+  liftCont $ setPhaseStep $ PSCombatPhase BeginningOfCombatStep
+  defendingPlayer <- liftCont $ fromRO promptForADefendingPlayer
+  oActive <- liftCont $ fromPublicRO getActivePlayer
+  gainPriority oActive
+  pure $ declareAttackersStep defendingPlayer
+
+-- | (508.) Declare Attackers Step
+declareAttackersStep :: Monad m => DefendingPlayer -> MagicCont 'Private 'RW Void m Void
+declareAttackersStep defendingPlayer = M.join $ logCall 'declareAttackersStep do
+  oActive <- liftCont $ fromPublic $ fromRO getActivePlayer
+  attackers <- liftCont $ do
+    setPhaseStep $ PSCombatPhase DeclareAttackersStep
+    prompt <- fromRO $ gets magicPrompt
+    opaque <- fromRO $ gets mkOpaqueGameState
+    fromPublic $ fromRO do
+      untilJust \attempt -> do
+        attackers <- M.lift $ promptChooseAttackers prompt attempt opaque (AttackingPlayer oActive) defendingPlayer
+        pure () -- TODO: validate attackers
+        pure () -- TODO: store attackers in game state for Elects and Effects
+        pure $ Just attackers
+  liftCont $ F.for_ attackers \attacker -> do
+    M.void $ enact Nothing $ Tap $ declaredAttacker_attacker attacker
+  gainPriority oActive
+  pure case NonEmpty.nonEmpty attackers of
+    Just attackers' -> declareBlockersStep defendingPlayer attackers'
+    Nothing -> endOfCombatStep
 
 type AssignedCombatOrdering = Map.Map (ZO 'ZBattlefield OTNCreature) [ZO 'ZBattlefield OTNCreature]
 
@@ -341,22 +343,21 @@ attackerToBlockers' blockers = Map.fromListWith (++) $ do
   pure (attacker, [declaredBlocker_blocker blocker])
 
 -- | (509.) Declare Blockers Step
-declareBlockersStep :: Monad m => NonEmpty DeclaredAttacker -> MagicCont 'Private 'RW Void m Void
-declareBlockersStep attackers = M.join $ logCall 'declareBlockersStep do
+declareBlockersStep :: Monad m => DefendingPlayer -> NonEmpty DeclaredAttacker -> MagicCont 'Private 'RW Void m Void
+declareBlockersStep defendingPlayer attackers = M.join $ logCall 'declareBlockersStep do
   oActive <- liftCont $ fromPublicRO getActivePlayer
-  (defendingPlayer, ordering) <- liftCont do
+  ordering <- liftCont do
     setPhaseStep $ PSCombatPhase DeclareBlockersStep
     prompt <- fromRO $ gets magicPrompt
     opaque <- fromRO $ gets mkOpaqueGameState
-    defendingPlayer <- fromRO promptForADefendingPlayer
     blockers <- fromPublic $ fromRO do
       untilJust \attempt -> do
-        blockers <- promptChooseBlockers prompt attempt opaque defendingPlayer attackers
+        blockers <- M.lift $ promptChooseBlockers prompt attempt opaque (AttackingPlayer oActive) defendingPlayer attackers
         pure () -- TODO: validate blockers
         pure () -- TODO: store blockers in game state for Elects and Effects, e.g. [Smite]
         pure $ Just blockers
     ordering <- assignCombatDamageOrder attackers blockers
-    pure (defendingPlayer, ordering)
+    pure ordering
   gainPriority oActive
   pure $ combatDamageStep defendingPlayer ordering
 
@@ -364,6 +365,7 @@ applyDamageInOrder :: Monad m => DefendingPlayer -> ZO 'ZBattlefield OTNCreature
 applyDamageInOrder (DefendingPlayer oDefender) zoSource zoVictims = logCall 'applyDamageInOrder do
   sourcePerm <- fromRO $ getPermanent $ asPermanent zoSource
   sourceController <- fromRO $ controllerOf zoSource
+  let sourceIsAttacking = sourceController /= oDefender
   let go remainingDamage zoVictim = do
         victimPerm <- fromRO $ getPermanent $ asPermanent zoVictim
         case permanentCreature victimPerm of
@@ -381,7 +383,7 @@ applyDamageInOrder (DefendingPlayer oDefender) zoSource zoVictims = logCall 'app
       let hasTrample = False -- TODO
       let Power totalDamage = creaturePower creat
       remainingDamage <- M.foldM go totalDamage zoVictims
-      case remainingDamage > 0 && sourceController /= oDefender && hasTrample of
+      case remainingDamage > 0 && sourceIsAttacking && (null zoVictims || hasTrample) of
         False -> pure ()
         True -> do
           let damagePlayer = dealDamage zoSource (oToZO1 oDefender) $ Damage @ 'Var remainingDamage

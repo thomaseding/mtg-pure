@@ -23,17 +23,26 @@ import safe Control.Monad.Trans (MonadIO (..))
 import safe qualified Control.Monad.Trans as M
 import safe Control.Monad.Util (Attempt, Attempt' (..))
 import safe qualified Data.Char as Char
+import safe Data.Functor ((<&>))
+import safe Data.List (foldl')
 import safe qualified Data.List as List
 import safe Data.List.NonEmpty (NonEmpty (..))
 import safe qualified Data.List.NonEmpty as NonEmpty
+import safe qualified Data.Map.Strict as Map
+import safe Data.Maybe (catMaybes)
 import safe qualified Data.Maybe as Maybe
 import safe Data.Monoid (First (..))
 import safe Data.Nat (Fin, NatList)
+import safe qualified Data.Traversable as T
 import safe MtgPure.Client.Terminal.CommandInput (
+  CIAttack (..),
+  CIBlock (..),
+  CIPriorityAction (..),
   CommandAbilityIndex (..),
-  CommandInput (..),
   defaultCommandAliases,
-  runParseCommandInput,
+  runParseCIAttack,
+  runParseCIBlock,
+  runParseCIPriorityAction,
  )
 import safe MtgPure.Client.Terminal.Fwd.Api (
   printGameState,
@@ -58,9 +67,13 @@ import safe MtgPure.Engine.Fwd.Api (
 import safe MtgPure.Engine.Monad (gets, internalFromPrivate)
 import safe MtgPure.Engine.PlayGame (playGame)
 import safe MtgPure.Engine.Prompt (
-  AbsoluteActivatedAbilityIndex (AbsoluteActivatedAbilityIndex),
+  AbsoluteActivatedAbilityIndex (..),
+  AttackingPlayer (..),
   CardCount (..),
   CardIndex (..),
+  DeclaredAttacker (..),
+  DeclaredBlocker (..),
+  DefendingPlayer (..),
   PlayerIndex (PlayerIndex),
   PriorityAction (..),
   Prompt' (..),
@@ -94,13 +107,13 @@ import safe MtgPure.Model.Object.Object (Object (..))
 import safe MtgPure.Model.Object.ObjectId (ObjectId (..), getObjectId)
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Object.ToObjectN.Instances ()
-import MtgPure.Model.Permanent (Permanent (..))
+import safe MtgPure.Model.Permanent (Permanent (..))
 import safe MtgPure.Model.PhaseStep (prettyPhaseStep)
 import safe MtgPure.Model.Recursive.Show ()
 import safe MtgPure.Model.Sideboard (Sideboard (..))
 import safe MtgPure.Model.Variable (Var (..))
 import safe MtgPure.Model.Zone (IsZone, Zone (..))
-import safe MtgPure.Model.ZoneObject.Convert (toZO0, toZO1, zo0ToSpell)
+import safe MtgPure.Model.ZoneObject.Convert (oToZO1, toZO0, toZO1, toZO2, zo0ToSpell)
 import safe MtgPure.Model.ZoneObject.ZoneObject (IsZO, ZO)
 import safe System.Console.ANSI (clearLine, setCursorPosition)
 
@@ -136,8 +149,8 @@ gameInput cheats decks =
           , exceptionInvalidShuffle = \_ _ -> liftIO $ putStrLn "exceptionInvalidShuffle"
           , exceptionInvalidStartingPlayer = \_ _ -> liftIO $ putStrLn "exceptionInvalidStartingPlayer"
           , exceptionZoneObjectDoesNotExist = \zo -> liftIO $ print ("exceptionZoneObjectDoesNotExist", zo)
-          , promptChooseAttackers = \_ _ _ -> pure [] -- TODO
-          , promptChooseBlockers = \_ _ _ _ -> pure [] -- TODO
+          , promptChooseAttackers = terminalChooseAttackers
+          , promptChooseBlockers = terminalChooseBlockers
           , promptChooseOption = terminalChooseOption
           , promptDebugMessage = \msg -> liftIO $ putStrLn $ "DEBUG: " ++ msg
           , promptGetStartingPlayer = \_attempt _count -> pure $ PlayerIndex 0
@@ -163,18 +176,18 @@ terminalPickZo _attempt _opaque _p zos = case zos of
     liftIO $ print ("picked", zo, "from", NonEmpty.toList zos)
     pure zo
 
-parseCommandInput :: CommandInput -> Magic 'Public 'RO Terminal (PriorityAction ())
-parseCommandInput = \case
-  CIQuit -> quit
-  CIConcede -> concede
-  CIPass -> passPriority
+parsePriorityAction :: CIPriorityAction -> Magic 'Public 'RO Terminal (PriorityAction ())
+parsePriorityAction = \case
   CIActivateAbility objId abilityIndex extraIds -> activateAbility objId abilityIndex extraIds
-  CICastSpell spellId extraIds -> castSpell spellId extraIds
-  CIPlayLand landId extraIds -> playLand landId extraIds
   CIAskAgain -> askAgain
-  CIHelp _ -> help
+  CICastSpell spellId extraIds -> castSpell spellId extraIds
+  CIConcede -> concede
   CIExamineAbility objId abilityIndex -> examineAbility objId abilityIndex
   CIExamineObject objId -> examineObject objId
+  CIHelp _ -> help
+  CIPass -> passPriority
+  CIPlayLand landId extraIds -> playLand landId extraIds
+  CIQuit -> quit
 
 help :: Magic 'Public 'RO Terminal (PriorityAction ())
 help = M.liftIO do
@@ -387,18 +400,96 @@ terminalPriorityAction attempt opaque oPlayer = M.lift do
     liftIO case attempt of
       Attempt 0 -> pure ()
       Attempt n -> putStrLn $ "Retrying[" ++ show n ++ "]..."
-    text <- M.lift $ prompt "> "
-    let commandInput = case runParseCommandInput defaultCommandAliases text of
+    text <- M.lift $ prompt "priorityAction> "
+    let commandInput = case runParseCIPriorityAction defaultCommandAliases text of
           Left _err -> CIAskAgain
           Right x -> x
-    action <- parseCommandInput commandInput
+    action <- parsePriorityAction commandInput
     pure (action, commandInput)
   getsTerminalState terminal_replayLog >>= \case
     Nothing -> pure ()
     Just file -> do
       info <- getPriorityInfo opaque oPlayer
-      liftIO $ appendFile file $ show commandInput ++ " ; " ++ info ++ "\n"
+      liftIO $ appendFile file $ show commandInput ++ " # " ++ info ++ "\n"
   pure action
+
+terminalChooseAttackers ::
+  Attempt ->
+  OpaqueGameState Terminal ->
+  AttackingPlayer ->
+  DefendingPlayer ->
+  Terminal [DeclaredAttacker]
+terminalChooseAttackers attempt opaque (AttackingPlayer oPlayer) (DefendingPlayer oDefender) = do
+  zoAttackers <- queryMagic opaque do
+    clearScreenWithoutPaging
+    M.lift $ printGameState opaque Nothing
+    liftIO case attempt of
+      Attempt 0 -> pure ()
+      Attempt n -> putStrLn $ "Retrying[" ++ show n ++ "]..."
+    text <- M.lift $ prompt "attack> "
+    case runParseCIAttack text of
+      Left _err -> pure [] -- TODO: ask again
+      Right (CIAttack oAttackers) -> do
+        zos <- fmap catMaybes $ internalFromPrivate $ T.for oAttackers toZO
+        pure case length zos == length oAttackers of
+          True -> zos
+          False -> [] -- TODO: ask again
+  getsTerminalState terminal_replayLog >>= \case
+    Nothing -> pure ()
+    Just file -> do
+      info <- getPriorityInfo opaque oPlayer
+      let strIds = unwords $ map (show . unObjectId . getObjectId) zoAttackers
+      liftIO $ appendFile file $ strIds ++ " # Attack ; " ++ info ++ "\n"
+  let zoVictim = toZO2 $ oToZO1 oDefender
+  pure $
+    zoAttackers <&> \zoAttacker ->
+      DeclaredAttacker
+        { declaredAttacker_attacker = zoAttacker
+        , declaredAttacker_victim = zoVictim
+        }
+
+terminalChooseBlockers ::
+  Attempt ->
+  OpaqueGameState Terminal ->
+  AttackingPlayer ->
+  DefendingPlayer ->
+  NonEmpty DeclaredAttacker ->
+  Terminal [DeclaredBlocker]
+terminalChooseBlockers attempt opaque _attackingPlayer (DefendingPlayer oPlayer) _attackers = do
+  attackersBlockers <- queryMagic opaque do
+    clearScreenWithoutPaging
+    M.lift $ printGameState opaque Nothing
+    liftIO case attempt of
+      Attempt 0 -> pure ()
+      Attempt n -> putStrLn $ "Retrying[" ++ show n ++ "]..."
+    text <- M.lift $ prompt "block> "
+    case runParseCIBlock text of
+      Left _err -> pure [] -- TODO: ask again
+      Right (CIBlock pairs) -> do
+        let oAttackers = map fst pairs
+            oBlockers = map snd pairs
+        zoAttackers <- fmap catMaybes $ internalFromPrivate $ T.for oAttackers toZO
+        zoBlockers <- fmap catMaybes $ internalFromPrivate $ T.for oBlockers toZO
+        let nAttackers = length zoAttackers
+            nBlockers = length zoBlockers
+        case nAttackers == length pairs && nBlockers == length pairs of
+          True -> pure $ zip zoAttackers zoBlockers
+          False -> pure [] -- TODO: ask again
+  getsTerminalState terminal_replayLog >>= \case
+    Nothing -> pure ()
+    Just file -> do
+      info <- getPriorityInfo opaque oPlayer
+      let showIds (a, b) = show (unObjectId $ getObjectId a) ++ " " ++ show (unObjectId $ getObjectId b)
+          strIds = unwords $ map showIds attackersBlockers
+      liftIO $ appendFile file $ strIds ++ " # Block ; " ++ info ++ "\n"
+  let go m (a, b) = Map.insertWith (<>) b (a :| []) m
+      blockerToAttackers = foldl' go Map.empty attackersBlockers
+  pure $
+    Map.toList blockerToAttackers <&> \(zoBlocker, zoAttackers) ->
+      DeclaredBlocker
+        { declaredBlocker_blocker = zoBlocker
+        , declaredBlocker_attackers = zoAttackers
+        }
 
 getPriorityInfo :: OpaqueGameState Terminal -> Object 'OTPlayer -> Terminal String
 getPriorityInfo opaque oPlayer = queryMagic opaque do

@@ -187,6 +187,7 @@ newtype AttackingPlayer = AttackingPlayer {unAttackingPlayer :: Object 'OTPlayer
 newtype DefendingPlayer = DefendingPlayer {unDefendingPlayer :: Object 'OTPlayer}
   deriving (Eq, Ord, Show)
 
+-- TODO: The `magic` variants are all pointless and should be reduced to `m` variants.
 data Prompt' (opaqueGameState :: (Type -> Type) -> Type) (m :: Type -> Type) (magic :: Type -> Type) = Prompt
   { exceptionCantBeginGameWithoutPlayers :: m ()
   , exceptionInvalidCastSpell :: opaqueGameState m -> Object 'OTPlayer -> InvalidCastSpell -> m ()
@@ -195,8 +196,8 @@ data Prompt' (opaqueGameState :: (Type -> Type) -> Type) (m :: Type -> Type) (ma
   , exceptionInvalidShuffle :: CardCount -> [CardIndex] -> m ()
   , exceptionInvalidStartingPlayer :: PlayerCount -> PlayerIndex -> m ()
   , exceptionZoneObjectDoesNotExist :: forall zone ot. IsZO zone ot => ZO zone ot -> m ()
-  , promptChooseAttackers :: Attempt -> opaqueGameState m -> AttackingPlayer -> magic [DeclaredAttacker]
-  , promptChooseBlockers :: Attempt -> opaqueGameState m -> DefendingPlayer -> NonEmpty DeclaredAttacker -> magic [DeclaredBlocker]
+  , promptChooseAttackers :: Attempt -> opaqueGameState m -> AttackingPlayer -> DefendingPlayer -> m [DeclaredAttacker]
+  , promptChooseBlockers :: Attempt -> opaqueGameState m -> AttackingPlayer -> DefendingPlayer -> NonEmpty DeclaredAttacker -> m [DeclaredBlocker]
   , promptChooseOption :: forall user n elem. (Typeable user, IsNat n) => opaqueGameState m -> Object 'OTPlayer -> NatList user n elem -> m (Fin user n)
   , promptDebugMessage :: String -> m ()
   , promptGetStartingPlayer :: Attempt -> PlayerCount -> magic PlayerIndex
