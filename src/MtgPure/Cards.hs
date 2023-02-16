@@ -251,7 +251,7 @@ import safe MtgPure.Model.Recursive (
   pattern CTrue,
  )
 import safe MtgPure.Model.Step (Step (..))
-import safe MtgPure.Model.Supertype (Supertype (Legendary))
+import safe MtgPure.Model.Supertype (Supertype (Legendary, Tribal))
 import safe qualified MtgPure.Model.Supertype as Ty
 import safe MtgPure.Model.TimePoint (TimePoint (..))
 import safe MtgPure.Model.Toughness (Toughness (..))
@@ -452,7 +452,7 @@ allIsDust = Card "All Is Dust" $
       SorceryFacet
         { sorcery_colors = toColors ()
         , sorcery_cost = manaCost 7
-        , sorcery_supertypes = []
+        , sorcery_supertypes = [Tribal [Eldrazi]]
         , sorcery_abilities = []
         , sorcery_effect = thisObject \_this ->
             All $ maskeds [] \players ->

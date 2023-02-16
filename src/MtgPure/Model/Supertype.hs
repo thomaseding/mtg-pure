@@ -19,6 +19,7 @@ data Supertype (ot :: Type) :: Type where
   --Basic :: CoLand ot => Supertype OTNLand
   Legendary :: Supertype ot
   Snow :: Supertype ot
+  -- | TODO: NonEmpty
   Tribal :: CoNonCreatureCard ot => [CreatureType] -> Supertype ot
   World :: Supertype ot
   deriving (Typeable)

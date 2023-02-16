@@ -79,7 +79,7 @@ payLife oPlayer life = logCall 'payLife do
       case life' < 0 of
         True -> pure Illegal
         False -> do
-          setPlayer oPlayer $ player{playerLife = life'}
+          setPlayer oPlayer player{playerLife = life'}
           pure Legal
 
 paySacrificeCost ::
