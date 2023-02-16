@@ -42,6 +42,7 @@ module MtgPure.Model.ZoneObject.Convert (
   zo0ToCard,
   zo0ToPermanent,
   zo0ToSpell,
+  reifyWithThis,
 ) where
 
 import safe Data.Inst (
@@ -200,9 +201,17 @@ import safe MtgPure.Model.Object.ToObjectN.Classes (
   ToObject9 (..),
  )
 import safe MtgPure.Model.Object.VisitObjectN (visitObjectN')
+import safe MtgPure.Model.Recursive (WithThis (..))
 import safe MtgPure.Model.Recursive.Ord ()
 import safe MtgPure.Model.Zone (IsZone (..), SZone (..), Zone (..))
-import safe MtgPure.Model.ZoneObject.ZoneObject (IsOTN, ZO, ZoneObject (..), toZone, zoToObjectN)
+import safe MtgPure.Model.ZoneObject.ZoneObject (
+  IsOTN,
+  IsZO,
+  ZO,
+  ZoneObject (..),
+  toZone,
+  zoToObjectN,
+ )
 
 zo1ToO :: (IsObjectType a, IsZone zone) => ZO zone (OT1 a) -> Object a
 zo1ToO zo = case zoToObjectN zo of
@@ -565,3 +574,18 @@ zo0ToCard = asCard . ZO (singZone @zone) . O1 . Object SLand . getUntypedObject
 
 zo0ToAny :: forall zone. IsZone zone => ZO zone OT0 -> ZO zone OTNAny
 zo0ToAny = asAny . ZO (singZone @zone) . O1 . Object SLand . getUntypedObject
+
+reifyWithThis ::
+  forall zone ot liftOT.
+  IsZO zone ot =>
+  ObjectId ->
+  WithThis zone liftOT ot ->
+  liftOT ot
+reifyWithThis i = \case
+  This1 cont -> cont (toZO1 zo0)
+  This2 cont -> cont (toZO1 zo0, toZO1 zo0)
+  This3 cont -> cont (toZO1 zo0, toZO1 zo0, toZO1 zo0)
+  This4 cont -> cont (toZO1 zo0, toZO1 zo0, toZO1 zo0, toZO1 zo0)
+  This5 cont -> cont (toZO1 zo0, toZO1 zo0, toZO1 zo0, toZO1 zo0, toZO1 zo0)
+ where
+  zo0 = toZO0 @zone i

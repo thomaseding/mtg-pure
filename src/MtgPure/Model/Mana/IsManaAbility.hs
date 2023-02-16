@@ -40,12 +40,12 @@ import safe MtgPure.Model.Recursive (
   WithList (..),
   WithMaskedObject (..),
   WithMaskedObjects (..),
-  WithThis (..),
   WithThisActivated,
   WithThisTriggered,
  )
 import safe MtgPure.Model.Variable (Variable (ReifiedVariable), VariableId' (..))
 import safe MtgPure.Model.Zone (IsZone (..))
+import safe MtgPure.Model.ZoneObject.Convert (reifyWithThis)
 import safe MtgPure.Model.ZoneObject.ZoneObject (IsOTN, IsZO, ZO, ZOPlayer, ZoneObject (ZO))
 
 -- For example cards with abilities that generate mana but are not mana abilities, see:
@@ -114,20 +114,18 @@ proxyThisId = ObjectId (-1)
 proxyYouId :: ObjectId
 proxyYouId = ObjectId (-2)
 
-proxyThis :: forall zone ot. IsZO zone ot => ZO zone ot
-proxyThis = ZO (singZone @zone) oThis
- where
-  oThis = promoteIdToObjectN @ot proxyThisId
-
 proxyYou :: ZOPlayer
 proxyYou = ZO singZone oYou
  where
   oYou = promoteIdToObjectN proxyYouId
 
+dummyObjectId :: ObjectId
+dummyObjectId = ObjectId 0
+
 dummyZO :: forall zone ot. IsZO zone ot => ZO zone ot
 dummyZO = ZO (singZone @zone) oThis
  where
-  oThis = promoteIdToObjectN @ot $ ObjectId 0
+  oThis = promoteIdToObjectN @ot dummyObjectId
 
 mkDummyVar :: a -> Variable a
 mkDummyVar = ReifiedVariable (VariableId 0)
@@ -330,26 +328,12 @@ instance IsManaAbilityImpl ret => IsManaAbilityImpl (WithList ret zone ot) where
   isTrivialManaAbilityImpl _ _ = Nothing
 
 instance IsZO zone ot => IsManaAbilityImpl (WithThisActivated zone ot) where
-  isManaAbilityImpl = \case
-    This1 cont -> isManaAbilityImpl $ cont dummyZO
-    This2 cont -> isManaAbilityImpl $ cont (dummyZO, dummyZO)
-    This3 cont -> isManaAbilityImpl $ cont (dummyZO, dummyZO, dummyZO)
-    This4 cont -> isManaAbilityImpl $ cont (dummyZO, dummyZO, dummyZO, dummyZO)
-    This5 cont -> isManaAbilityImpl $ cont (dummyZO, dummyZO, dummyZO, dummyZO, dummyZO)
+  isManaAbilityImpl = isManaAbilityImpl . reifyWithThis dummyObjectId
   isTrivialManaAbilityImpl = \case
-    StageWithThisActivated -> \case
-      This1 cont -> isTrivialManaAbilityImpl StageControllerOf $ cont proxyThis
-      This2 cont -> isTrivialManaAbilityImpl StageControllerOf $ cont (proxyThis, proxyThis)
-      This3 cont -> isTrivialManaAbilityImpl StageControllerOf $ cont (proxyThis, proxyThis, proxyThis)
-      This4 cont -> isTrivialManaAbilityImpl StageControllerOf $ cont (proxyThis, proxyThis, proxyThis, proxyThis)
-      This5 cont -> isTrivialManaAbilityImpl StageControllerOf $ cont (proxyThis, proxyThis, proxyThis, proxyThis, proxyThis)
+    StageWithThisActivated ->
+      isTrivialManaAbilityImpl StageControllerOf . reifyWithThis proxyThisId
     _ -> const Nothing
 
 instance IsZO zone ot => IsManaAbilityImpl (WithThisTriggered zone ot) where
-  isManaAbilityImpl = \case
-    This1 cont -> isManaAbilityImpl $ cont dummyZO
-    This2 cont -> isManaAbilityImpl $ cont (dummyZO, dummyZO)
-    This3 cont -> isManaAbilityImpl $ cont (dummyZO, dummyZO, dummyZO)
-    This4 cont -> isManaAbilityImpl $ cont (dummyZO, dummyZO, dummyZO, dummyZO)
-    This5 cont -> isManaAbilityImpl $ cont (dummyZO, dummyZO, dummyZO, dummyZO, dummyZO)
+  isManaAbilityImpl = isManaAbilityImpl . reifyWithThis dummyObjectId
   isTrivialManaAbilityImpl _ _ = Nothing

@@ -67,7 +67,7 @@ import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.IsCardList (containsCard)
 import safe MtgPure.Model.Mana.IsManaAbility (isManaAbility)
 import safe MtgPure.Model.Object.IsObjectType (IsObjectType (..))
-import safe MtgPure.Model.Object.OTN (OT0, OT1, OTN)
+import safe MtgPure.Model.Object.OTN (OT0, OTN)
 import safe MtgPure.Model.Object.OTNAliases (
   OTNArtifact,
   OTNArtifactCreature,
@@ -86,7 +86,6 @@ import safe MtgPure.Model.Object.ObjectId (
   getObjectId,
   pattern DefaultObjectDiscriminant,
  )
-import safe MtgPure.Model.Object.ObjectN_ (ObjectN' (O1))
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Object.PromoteIdToObjectN (promoteIdToObjectN)
 import safe MtgPure.Model.Object.ToObjectN.Classes (ToObject2' (..), ToObject6' (..))
@@ -103,14 +102,13 @@ import safe MtgPure.Model.Recursive (
   Elect (..),
   IsSpecificCard (singSpecificCard),
   SpecificCard (..),
-  WithThis (..),
   WithThisActivated,
   WithThisOneShot,
   YourCardFacet (..),
  )
 import safe MtgPure.Model.Stack (Stack (..), StackObject (..))
 import safe MtgPure.Model.Zone (IsZone (..), SZone (..), Zone (..))
-import safe MtgPure.Model.ZoneObject.Convert (AsSpell', asCard, oToZO1, toZO0, zo0ToCard)
+import safe MtgPure.Model.ZoneObject.Convert (AsSpell', asCard, oToZO1, reifyWithThis, toZO0, zo0ToCard)
 import safe MtgPure.Model.ZoneObject.ZoneObject (IsOTN, IsZO, ZO, ZOPlayer, ZoneObject (..))
 
 type Legality' = Maybe ()
@@ -251,9 +249,6 @@ sorceryCastMeta =
     { castMeta_effect = Just sorcery_effect
     , castMeta_cost = sorcery_cost
     }
-
-lensedThis :: (IsZone zone, IsObjectType a) => ObjectId -> ZO zone (OT1 a)
-lensedThis = ZO singZone . O1 . idToObject . UntypedObject DefaultObjectDiscriminant
 
 castSpell :: forall m. Monad m => Object 'OTPlayer -> PriorityAction CastSpell -> Magic 'Private 'RW m Legality
 castSpell oCaster = logCall 'castSpell \case
@@ -423,26 +418,10 @@ activateAbility oPlayer = logCall 'activateAbility \case
           pure IllegalActivation
 
         goWithThisActivated :: Magic 'Private 'RW m ActivateResult
-        goWithThisActivated = case withThisActivated of
-          This1 thisToElectActivated -> do
-            goThisToElectAbility thisToElectActivated (lensedThis thisId)
-          This2 thisToElectActivated -> do
-            goThisToElectAbility thisToElectActivated (lensedThis thisId, lensedThis thisId)
-          This3 thisToElectActivated -> do
-            goThisToElectAbility thisToElectActivated (lensedThis thisId, lensedThis thisId, lensedThis thisId)
-          This4 thisToElectActivated -> do
-            goThisToElectAbility thisToElectActivated (lensedThis thisId, lensedThis thisId, lensedThis thisId, lensedThis thisId)
-          This5 thisToElectActivated -> do
-            goThisToElectAbility thisToElectActivated (lensedThis thisId, lensedThis thisId, lensedThis thisId, lensedThis thisId, lensedThis thisId)
-
-        goThisToElectAbility ::
-          (this -> Elect 'Pre (ActivatedAbility zone ot) ot) ->
-          this ->
-          Magic 'Private 'RW m ActivateResult
-        goThisToElectAbility thisToElectAbility this = logCall' "goThisToElectAbility" do
+        goWithThisActivated = do
           abilityId <- newObjectId
           let zoAbility = toZO0 @ 'ZStack abilityId
-          goElectActivated zoAbility $ thisToElectAbility this
+          goElectActivated zoAbility $ reifyWithThis thisId withThisActivated
 
         goElectActivated :: ZO 'ZStack OT0 -> Elect 'Pre (ActivatedAbility zone ot) ot -> Magic 'Private 'RW m ActivateResult
         goElectActivated zoAbility elect = logCall' "goElectedActivated" do
@@ -489,7 +468,7 @@ activateAbility oPlayer = logCall 'activateAbility \case
 
 playPendingOneShot ::
   forall m ot x.
-  (AndLike x, AndLike (Maybe x)) =>
+  (AndLike x, AndLike (Maybe x), IsZO 'ZStack ot) =>
   Monad m =>
   ZO 'ZStack OT0 ->
   Cost ot ->
@@ -497,25 +476,9 @@ playPendingOneShot ::
   (Cost ot -> Maybe (Pending (Effect 'OneShot) ot) -> Magic 'Private 'RW m (Maybe x)) ->
   Magic 'Private 'RW m (Maybe x)
 playPendingOneShot _zoStack cost withThisElectEffect cont = logCall 'playPendingOneShot do
-  goWithThis withThisElectEffect
+  thisId <- newObjectId
+  goElectEffect $ reifyWithThis thisId withThisElectEffect
  where
-  goWithThis = \case
-    This1 thisToElectEffect -> do
-      thisId <- newObjectId
-      goElectEffect $ thisToElectEffect (lensedThis thisId)
-    This2 thisToElectEffect -> do
-      thisId <- newObjectId
-      goElectEffect $ thisToElectEffect (lensedThis thisId, lensedThis thisId)
-    This3 thisToElectEffect -> do
-      thisId <- newObjectId
-      goElectEffect $ thisToElectEffect (lensedThis thisId, lensedThis thisId, lensedThis thisId)
-    This4 thisToElectEffect -> do
-      thisId <- newObjectId
-      goElectEffect $ thisToElectEffect (lensedThis thisId, lensedThis thisId, lensedThis thisId, lensedThis thisId)
-    This5 thisToElectEffect -> do
-      thisId <- newObjectId
-      goElectEffect $ thisToElectEffect (lensedThis thisId, lensedThis thisId, lensedThis thisId, lensedThis thisId, lensedThis thisId)
-
   goElectEffect = cont cost . Just . Pending
 
 playPendingPermanent ::
