@@ -98,6 +98,7 @@ import safe MtgPure.Cards (
   sunkenRuins,
   swamp,
   swanSong,
+  teferisIsle,
   thermopod,
   thunderingTanadon,
   tresserhornSinks,
@@ -201,6 +202,7 @@ allCards =
   , toCard sunkenRuins
   , toCard swamp
   , toCard swanSong
+  , toCard teferisIsle
   , toCard thermopod
   , toCard thunderingTanadon
   , toCard tresserhornSinks

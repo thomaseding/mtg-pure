@@ -10,6 +10,7 @@
 {-# HLINT ignore "Redundant pure" #-}
 
 module MtgPure.Engine.Core (
+  activatedAbilitiesOf,
   activatedToIndex,
   allControlledPermanentsOf,
   allPermanents,
@@ -24,7 +25,6 @@ module MtgPure.Engine.Core (
   findLibraryCard,
   findPermanent,
   findPlayer,
-  getActivatedAbilitiesOf,
   getActivePlayer,
   getAlivePlayers,
   getAlivePlayerCount,
@@ -50,6 +50,8 @@ module MtgPure.Engine.Core (
   rewindNothing,
   setPermanent,
   setPlayer,
+  staticAbilitiesOf,
+  triggeredAbilitiesOf,
   toZO,
 ) where
 
@@ -89,6 +91,8 @@ import safe MtgPure.Engine.Prompt (
   QueryObjectResult (..),
   RelativeAbilityIndex (..),
   SomeActivatedAbility (..),
+  SomeStaticAbility (..),
+  SomeTriggeredAbility (..),
  )
 import safe MtgPure.Engine.State (
   GameResult (..),
@@ -130,6 +134,8 @@ import safe MtgPure.Model.Recursive (
   Card (..),
   CardFacet (..),
   WithThisActivated,
+  WithThisStatic,
+  WithThisTriggered,
   YourCardFacet (..),
   fromSome,
  )
@@ -316,7 +322,7 @@ allZOActivatedAbilities ::
   Magic 'Private 'RO m [SomeActivatedAbility zone ot]
 allZOActivatedAbilities = logCall 'allZOActivatedAbilities do
   zos <- allZOs @zone @ot
-  concat <$> T.for zos getActivatedAbilitiesOf
+  concat <$> T.for zos activatedAbilitiesOf
 
 doesZoneObjectExist :: forall zone ot m. (IsZO zone ot, Monad m) => ZO zone ot -> Magic 'Private 'RO m Bool
 doesZoneObjectExist zo = logCall 'doesZoneObjectExist do
@@ -345,12 +351,12 @@ doesObjectIdExist i = logCall 'doesObjectIdExist do
   o0 = O0 $ UntypedObject DefaultObjectDiscriminant i
   o1 = toObject1 @OT0 @OTArbitrary o0
 
-getActivatedAbilitiesOf ::
+activatedAbilitiesOf ::
   forall zone ot m.
   (IsZO zone ot, Monad m) =>
   ZO zone ot ->
   Magic 'Private 'RO m [SomeActivatedAbility zone ot]
-getActivatedAbilitiesOf zo = logCall 'getActivatedAbilitiesOf do
+activatedAbilitiesOf zo = logCall 'activatedAbilitiesOf do
   -- XXX: Being lazy at the moment and assuming it's a permanent
   case singZone @zone of
     SZBattlefield -> do
@@ -377,6 +383,70 @@ getActivatedAbilitiesOf zo = logCall 'getActivatedAbilitiesOf do
           , someActivatedAbility = withThis'
           }
 
+staticAbilitiesOf ::
+  forall zone ot m.
+  (IsZO zone ot, Monad m) =>
+  ZO zone ot ->
+  Magic 'Private 'RO m [SomeStaticAbility zone ot]
+staticAbilitiesOf zo = logCall 'staticAbilitiesOf do
+  -- XXX: Being lazy at the moment and assuming it's a permanent
+  case singZone @zone of
+    SZBattlefield -> do
+      let zoPerm = zo0ToPermanent $ toZO0 zo
+      findPermanent zoPerm <&> \case
+        Nothing -> []
+        Just perm -> catMaybes $ flip map (permanentAbilities perm) \ability ->
+          fromSome ability \case
+            Static withThis -> go withThis
+            _ -> Nothing
+    _ -> undefined -- XXX: sung zone
+ where
+  go ::
+    forall zone' ot'.
+    IsZO zone' ot' =>
+    WithThisStatic zone' ot' ->
+    Maybe (SomeStaticAbility zone ot)
+  go withThis = case cast withThis of
+    Nothing -> Nothing
+    Just (withThis' :: WithThisStatic zone ot') ->
+      Just
+        SomeStaticAbility
+          { someStaticZO = zo
+          , someStaticAbility = withThis'
+          }
+
+triggeredAbilitiesOf ::
+  forall zone ot m.
+  (IsZO zone ot, Monad m) =>
+  ZO zone ot ->
+  Magic 'Private 'RO m [SomeTriggeredAbility zone ot]
+triggeredAbilitiesOf zo = logCall 'triggeredAbilitiesOf do
+  -- XXX: Being lazy at the moment and assuming it's a permanent
+  case singZone @zone of
+    SZBattlefield -> do
+      let zoPerm = zo0ToPermanent $ toZO0 zo
+      findPermanent zoPerm <&> \case
+        Nothing -> []
+        Just perm -> catMaybes $ flip map (permanentAbilities perm) \ability ->
+          fromSome ability \case
+            Triggered withThis -> go withThis
+            _ -> Nothing
+    _ -> undefined -- XXX: sung zone
+ where
+  go ::
+    forall zone' ot'.
+    IsZO zone' ot' =>
+    WithThisTriggered zone' ot' ->
+    Maybe (SomeTriggeredAbility zone ot)
+  go withThis = case cast withThis of
+    Nothing -> Nothing
+    Just (withThis' :: WithThisTriggered zone ot') ->
+      Just
+        SomeTriggeredAbility
+          { someTriggeredZO = zo
+          , someTriggeredAbility = withThis'
+          }
+
 activatedToIndex ::
   (IsZO zone ot, Monad m) =>
   SomeActivatedAbility zone ot ->
@@ -384,7 +454,7 @@ activatedToIndex ::
 activatedToIndex ability = logCall 'activatedToIndex do
   let zo = someActivatedZO ability
       i = getObjectId zo
-  abilities <- getActivatedAbilitiesOf zo
+  abilities <- activatedAbilitiesOf zo
   pure case List.elemIndex ability abilities of
     Nothing -> error $ show $ ObjectDoesNotHaveAbility ability
     Just index -> AbsoluteActivatedAbilityIndex i $ RelativeAbilityIndex index
@@ -400,7 +470,7 @@ indexToActivated absIndex = logCall 'indexToActivated do
   case mZo of
     Nothing -> pure Nothing
     Just zo -> do
-      abilities <- getActivatedAbilitiesOf zo
+      abilities <- activatedAbilitiesOf zo
       let len = length abilities
       pure case 0 <= index && index < len of
         False -> Nothing

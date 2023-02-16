@@ -26,9 +26,12 @@ module MtgPure.Engine.Prompt (
   PlayLand,
   PriorityAction (..),
   Prompt' (..),
+  Pause (..),
   QueryObjectResult (..),
   RelativeAbilityIndex (..),
   SomeActivatedAbility (..),
+  SomeStaticAbility (..),
+  SomeTriggeredAbility (..),
   SpecialAction (..),
   PendingReady (..),
   Pending,
@@ -63,7 +66,7 @@ import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Permanent (Permanent)
 import safe MtgPure.Model.Player (Player)
 import safe MtgPure.Model.PrePost (PrePost (..))
-import safe MtgPure.Model.Recursive (AnyCard, AnyToken, CardFacet, Cost, Effect, Elect, WithThisActivated)
+import safe MtgPure.Model.Recursive (AnyCard, AnyToken, CardFacet, Cost, Effect, Elect, WithThisActivated, WithThisStatic, WithThisTriggered)
 import safe MtgPure.Model.Recursive.Ord ()
 import safe qualified MtgPure.Model.Recursive.Ord as O
 import safe MtgPure.Model.Recursive.Show ()
@@ -187,6 +190,9 @@ newtype AttackingPlayer = AttackingPlayer {unAttackingPlayer :: Object 'OTPlayer
 newtype DefendingPlayer = DefendingPlayer {unDefendingPlayer :: Object 'OTPlayer}
   deriving (Eq, Ord, Show)
 
+data Pause = Pause | NoPause
+  deriving (Eq, Ord, Show)
+
 -- TODO: The `magic` variants are all pointless and should be reduced to `m` variants.
 data Prompt' (opaqueGameState :: (Type -> Type) -> Type) (m :: Type -> Type) (magic :: Type -> Type) = Prompt
   { exceptionCantBeginGameWithoutPlayers :: m ()
@@ -199,7 +205,7 @@ data Prompt' (opaqueGameState :: (Type -> Type) -> Type) (m :: Type -> Type) (ma
   , promptChooseAttackers :: Attempt -> opaqueGameState m -> AttackingPlayer -> DefendingPlayer -> m [DeclaredAttacker]
   , promptChooseBlockers :: Attempt -> opaqueGameState m -> AttackingPlayer -> DefendingPlayer -> NonEmpty DeclaredAttacker -> m [DeclaredBlocker]
   , promptChooseOption :: forall user n elem. (Typeable user, IsNat n) => opaqueGameState m -> Object 'OTPlayer -> NatList user n elem -> m (Fin user n)
-  , promptDebugMessage :: String -> m ()
+  , promptDebugMessage :: Pause -> String -> m ()
   , promptGetStartingPlayer :: Attempt -> PlayerCount -> magic PlayerIndex
   , promptLogCallPop :: opaqueGameState m -> CallFrameInfo -> m ()
   , promptLogCallPush :: opaqueGameState m -> CallFrameInfo -> m ()
@@ -255,6 +261,86 @@ ordSomeActivatedAbility x = case x of
               O.seqM
                 [ O.ordZoneObject zo1 zo2
                 , O.ordWithThisActivated withThis1 withThis2
+                ]
+       in go withThis1 withThis2'
+
+data SomeStaticAbility (zone :: Zone) (ot :: Type) :: Type where
+  SomeStaticAbility ::
+    (IsZO zone ot, IsZO zone ot') =>
+    { someStaticZO :: ZO zone ot
+    , someStaticAbility :: WithThisStatic zone ot'
+    } ->
+    SomeStaticAbility zone ot
+
+deriving instance Show (SomeStaticAbility zone ot)
+
+instance Eq (SomeStaticAbility zone ot) where
+  (==) x y = O.runEnvM (ordSomeStaticAbility x y) == EQ
+
+instance Ord (SomeStaticAbility zone ot) where
+  compare x y = O.runEnvM (ordSomeStaticAbility x y)
+
+ordSomeStaticAbility ::
+  forall zone ot.
+  SomeStaticAbility zone ot ->
+  SomeStaticAbility zone ot ->
+  O.EnvM Ordering
+ordSomeStaticAbility x = case x of
+  SomeStaticAbility zo1 withThis1 -> \case
+    SomeStaticAbility zo2 withThis2' ->
+      let go ::
+            forall ot1 ot2.
+            IsZO zone ot1 =>
+            IsZO zone ot2 =>
+            WithThisStatic zone ot1 ->
+            WithThisStatic zone ot2 ->
+            O.EnvM Ordering
+          go _ _ = case cast withThis2' of
+            Nothing -> O.compareOT @ot1 @ot2
+            Just withThis2 ->
+              O.seqM
+                [ O.ordZoneObject zo1 zo2
+                , O.ordWithThisStatic withThis1 withThis2
+                ]
+       in go withThis1 withThis2'
+
+data SomeTriggeredAbility (zone :: Zone) (ot :: Type) :: Type where
+  SomeTriggeredAbility ::
+    (IsZO zone ot, IsZO zone ot') =>
+    { someTriggeredZO :: ZO zone ot
+    , someTriggeredAbility :: WithThisTriggered zone ot'
+    } ->
+    SomeTriggeredAbility zone ot
+
+deriving instance Show (SomeTriggeredAbility zone ot)
+
+instance Eq (SomeTriggeredAbility zone ot) where
+  (==) x y = O.runEnvM (ordSomeTriggeredAbility x y) == EQ
+
+instance Ord (SomeTriggeredAbility zone ot) where
+  compare x y = O.runEnvM (ordSomeTriggeredAbility x y)
+
+ordSomeTriggeredAbility ::
+  forall zone ot.
+  SomeTriggeredAbility zone ot ->
+  SomeTriggeredAbility zone ot ->
+  O.EnvM Ordering
+ordSomeTriggeredAbility x = case x of
+  SomeTriggeredAbility zo1 withThis1 -> \case
+    SomeTriggeredAbility zo2 withThis2' ->
+      let go ::
+            forall ot1 ot2.
+            IsZO zone ot1 =>
+            IsZO zone ot2 =>
+            WithThisTriggered zone ot1 ->
+            WithThisTriggered zone ot2 ->
+            O.EnvM Ordering
+          go _ _ = case cast withThis2' of
+            Nothing -> O.compareOT @ot1 @ot2
+            Just withThis2 ->
+              O.seqM
+                [ O.ordZoneObject zo1 zo2
+                , O.ordWithThisTriggered withThis1 withThis2
                 ]
        in go withThis1 withThis2'
 

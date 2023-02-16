@@ -9,6 +9,7 @@
 {-# HLINT ignore "Use if" #-}
 {-# HLINT ignore "Redundant pure" #-}
 {-# HLINT ignore "Redundant if" #-}
+{-# HLINT ignore "Use &&" #-}
 
 module MtgPure.Engine.Turn (
   startGame,
@@ -31,6 +32,7 @@ import safe MtgPure.Engine.Fwd.Api (
   controllerOf,
   eachLogged_,
   enact,
+  findPermanent,
   gainPriority,
   getActivePlayer,
   getAlivePlayerCount,
@@ -39,6 +41,7 @@ import safe MtgPure.Engine.Fwd.Api (
   getPlayer,
   setPermanent,
   setPlayer,
+  staticAbilitiesOf,
  )
 import safe MtgPure.Engine.Monad (
   fromPublic,
@@ -59,6 +62,7 @@ import safe MtgPure.Engine.Prompt (
   PlayerCount (..),
   PlayerIndex (..),
   Prompt' (..),
+  SomeStaticAbility (..),
   SourceZO (..),
  )
 import safe MtgPure.Engine.State (
@@ -69,23 +73,24 @@ import safe MtgPure.Engine.State (
   mkOpaqueGameState,
   runMagicCont,
  )
-import safe MtgPure.Model.Combinators (dealDamage)
+import safe MtgPure.Model.Combinators (AsWithThis (..), dealDamage)
 import safe MtgPure.Model.Creature (Creature (..))
 import safe MtgPure.Model.Damage (Damage' (Damage))
 import safe MtgPure.Model.Object.OTNAliases (OTNCreature, OTNPermanent)
 import safe MtgPure.Model.Object.Object (Object)
+import safe MtgPure.Model.Object.ObjectId (ObjectId, getObjectId)
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
-import safe MtgPure.Model.Permanent (Permanent (..), Phased (..))
+import safe MtgPure.Model.Permanent (Permanent (..), Phased (..), Tapped (..))
 import safe MtgPure.Model.PhaseStep (PhaseStep (..))
 import safe MtgPure.Model.Player (Player (..))
 import safe MtgPure.Model.Power (Power (..))
-import safe MtgPure.Model.Recursive (Effect (..))
+import safe MtgPure.Model.Recursive (Effect (..), StaticAbility (..), WithThis (..))
 import safe MtgPure.Model.Step (Step (..))
 import safe MtgPure.Model.Toughness (Toughness (..))
 import safe MtgPure.Model.Variable (Var (..))
 import safe MtgPure.Model.Zone (Zone (..))
-import safe MtgPure.Model.ZoneObject.Convert (asPermanent, oToZO1)
-import safe MtgPure.Model.ZoneObject.ZoneObject (ZO)
+import safe MtgPure.Model.ZoneObject.Convert (ToZO0 (toZO0), asPermanent, oToZO1, toZO1)
+import safe MtgPure.Model.ZoneObject.ZoneObject (IsZO, ZO)
 
 -- (103)
 startGame :: Monad m => Magic 'Private 'RW m Void
@@ -191,18 +196,41 @@ untapStep = M.join $ logCall 'untapStep do
     pure () -- (502.4) Rule states that players can't get priority, so nothing to do here.
   pure upkeepStep
 
+-- TODO: Move this to somewhere reusable. Also use it in other modules that already do this.
+reifyWithThis ::
+  forall zone ot liftOT.
+  IsZO zone ot =>
+  ObjectId ->
+  WithThis zone liftOT ot ->
+  liftOT ot
+reifyWithThis i = \case
+  This1 cont -> cont (toZO1 zo0)
+  This2 cont -> cont (toZO1 zo0, toZO1 zo0)
+  This3 cont -> cont (toZO1 zo0, toZO1 zo0, toZO1 zo0)
+  This4 cont -> cont (toZO1 zo0, toZO1 zo0, toZO1 zo0, toZO1 zo0)
+  This5 cont -> cont (toZO1 zo0, toZO1 zo0, toZO1 zo0, toZO1 zo0, toZO1 zo0)
+ where
+  zo0 = toZO0 @zone i
+
 -- TODO: Make this an Effect constructor
 togglePermanentPhase :: Monad m => ZO 'ZBattlefield OTNPermanent -> Magic 'Private 'RW m ()
-togglePermanentPhase oPerm = do
-  perm <- fromRO $ getPermanent oPerm
-  setPermanent
-    oPerm
-    $ Just
-      perm
-        { permanentPhased = case permanentPhased perm of
-            PhasedIn -> PhasedOut
-            PhasedOut -> PhasedIn
-        }
+togglePermanentPhase zoPerm = do
+  perm <- fromRO $ getPermanent zoPerm
+  staticAbils <- fromRO $ staticAbilitiesOf zoPerm
+  let isPhasing = \case
+        SomeStaticAbility _ abil -> case reifyWithThis (getObjectId zoPerm) abil of
+          Phasing -> True
+          _ -> False
+  case any isPhasing staticAbils of
+    False -> pure ()
+    True ->
+      setPermanent zoPerm $
+        Just
+          perm
+            { permanentPhased = case permanentPhased perm of
+                PhasedIn -> PhasedOut
+                PhasedOut -> PhasedIn
+            }
 
 removeSummoningSickness :: Monad m => ZO 'ZBattlefield OTNPermanent -> Magic 'Private 'RW m ()
 removeSummoningSickness oPerm = do
@@ -281,6 +309,53 @@ beginningOfCombatStep = M.join $ logCall 'beginningOfCombatStep do
   gainPriority oActive
   pure $ declareAttackersStep defendingPlayer
 
+canCreatureAttack :: Monad m => ZO 'ZBattlefield OTNCreature -> Magic 'Private 'RO m Bool
+canCreatureAttack zoCreat = logCall 'canCreatureAttack do
+  findPermanent (asPermanent zoCreat) >>= \case
+    Nothing -> pure False
+    Just perm -> do
+      oActive <- fromPublicRO getActivePlayer
+      oController <- fromRO $ controllerOf zoCreat
+      staticAbils <- staticAbilitiesOf zoCreat
+      let haste =
+            SomeStaticAbility
+              { someStaticZO = zoCreat
+              , someStaticAbility = thisObject \_this -> Haste
+              }
+      let defender =
+            SomeStaticAbility
+              { someStaticZO = zoCreat
+              , someStaticAbility = thisObject \_this -> Defender
+              }
+      pure $
+        and
+          [ oActive == oController
+          , permanentTapped perm == Untapped
+          , permanentPhased perm == PhasedIn
+          , not (permanentSummoningSickness perm) || haste `elem` staticAbils
+          , defender `notElem` staticAbils
+          ]
+
+canCreatureBlock :: Monad m => DefendingPlayer -> ZO 'ZBattlefield OTNCreature -> Magic 'Private 'RO m Bool
+canCreatureBlock (DefendingPlayer oDefender) zoCreat = logCall 'canCreatureBlock do
+  findPermanent (asPermanent zoCreat) >>= \case
+    Nothing -> pure False
+    Just perm -> do
+      oController <- fromRO $ controllerOf zoCreat
+      staticAbils <- staticAbilitiesOf zoCreat
+      let cantBlock =
+            SomeStaticAbility
+              { someStaticZO = zoCreat
+              , someStaticAbility = thisObject \_this -> CantBlock
+              }
+      pure $
+        and
+          [ oDefender == oController
+          , permanentTapped perm == Untapped
+          , permanentPhased perm == PhasedIn
+          , cantBlock `notElem` staticAbils
+          ]
+
 -- | (508.) Declare Attackers Step
 declareAttackersStep :: Monad m => DefendingPlayer -> MagicCont 'Private 'RW Void m Void
 declareAttackersStep defendingPlayer = M.join $ logCall 'declareAttackersStep do
@@ -289,12 +364,15 @@ declareAttackersStep defendingPlayer = M.join $ logCall 'declareAttackersStep do
     setPhaseStep $ PSCombatPhase DeclareAttackersStep
     prompt <- fromRO $ gets magicPrompt
     opaque <- fromRO $ gets mkOpaqueGameState
-    fromPublic $ fromRO do
+    fromRO do
       untilJust \attempt -> do
         attackers <- M.lift $ promptChooseAttackers prompt attempt opaque (AttackingPlayer oActive) defendingPlayer
-        pure () -- TODO: validate attackers
-        pure () -- TODO: store attackers in game state for Elects and Effects
-        pure $ Just attackers
+        valid <- and <$> T.for attackers (canCreatureAttack . declaredAttacker_attacker)
+        case valid of
+          False -> pure Nothing
+          True -> do
+            pure () -- TODO: store attackers in game state for Elects and Effects
+            pure $ Just attackers
   liftCont $ F.for_ attackers \attacker -> do
     M.void $ enact Nothing $ Tap $ declaredAttacker_attacker attacker
   gainPriority oActive
@@ -350,12 +428,15 @@ declareBlockersStep defendingPlayer attackers = M.join $ logCall 'declareBlocker
     setPhaseStep $ PSCombatPhase DeclareBlockersStep
     prompt <- fromRO $ gets magicPrompt
     opaque <- fromRO $ gets mkOpaqueGameState
-    blockers <- fromPublic $ fromRO do
+    blockers <- fromRO do
       untilJust \attempt -> do
         blockers <- M.lift $ promptChooseBlockers prompt attempt opaque (AttackingPlayer oActive) defendingPlayer attackers
-        pure () -- TODO: validate blockers
-        pure () -- TODO: store blockers in game state for Elects and Effects, e.g. [Smite]
-        pure $ Just blockers
+        valid <- and <$> T.for blockers (canCreatureBlock defendingPlayer . declaredBlocker_blocker)
+        case valid of
+          False -> pure Nothing
+          True -> do
+            pure () -- TODO: store blockers in game state for Elects and Effects, e.g. [Smite]
+            pure $ Just blockers
     ordering <- assignCombatDamageOrder attackers blockers
     pure ordering
   gainPriority oActive
@@ -380,10 +461,21 @@ applyDamageInOrder (DefendingPlayer oDefender) zoSource zoVictims = logCall 'app
     Nothing -> assert False $ pure () -- XXX: Correct?
     Just creat -> do
       pure () -- TODO: prolly need to filter out non-creature victims
-      let hasTrample = False -- TODO
       let Power totalDamage = creaturePower creat
       remainingDamage <- M.foldM go totalDamage zoVictims
-      case remainingDamage > 0 && sourceIsAttacking && (null zoVictims || hasTrample) of
+      staticAbils <- fromRO $ staticAbilitiesOf zoSource
+      let trample =
+            SomeStaticAbility
+              { someStaticZO = zoSource
+              , someStaticAbility = thisObject \_this -> Trample
+              }
+      let hitPlayer =
+            and
+              [ remainingDamage > 0
+              , sourceIsAttacking
+              , null zoVictims || trample `elem` staticAbils
+              ]
+      case hitPlayer of
         False -> pure ()
         True -> do
           let damagePlayer = dealDamage zoSource (oToZO1 oDefender) $ Damage @ 'Var remainingDamage

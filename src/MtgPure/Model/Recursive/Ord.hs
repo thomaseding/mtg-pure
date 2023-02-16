@@ -19,6 +19,8 @@ module MtgPure.Model.Recursive.Ord (
   --
   ordAbility,
   ordWithThisActivated,
+  ordWithThisStatic,
+  ordWithThisTriggered,
   ordZoneObject,
 ) where
 
@@ -94,6 +96,7 @@ import safe MtgPure.Model.Recursive (
   WithMaskedObjects (..),
   WithThis (..),
   WithThisActivated,
+  WithThisStatic,
   WithThisTriggered,
   YourCardFacet (..),
  )
@@ -171,6 +174,9 @@ instance IsZO zone ot => Eq (WithThis zone Ability ot) where
 instance IsZO zone ot => Eq (WithThisActivated zone ot) where
   (==) x y = runEnvM (ordWithThisActivated x y) == EQ
 
+instance IsZO zone ot => Eq (WithThisStatic zone ot) where
+  (==) x y = runEnvM (ordWithThisStatic x y) == EQ
+
 instance IsZO zone ot => Eq (WithThisTriggered zone ot) where
   (==) x y = runEnvM (ordWithThisTriggered x y) == EQ
 
@@ -241,6 +247,9 @@ instance IsZO zone ot => Ord (WithThis zone Ability ot) where
 
 instance IsZO zone ot => Ord (WithThisActivated zone ot) where
   compare x y = runEnvM (ordWithThisActivated x y)
+
+instance IsZO zone ot => Ord (WithThisStatic zone ot) where
+  compare x y = runEnvM (ordWithThisStatic x y)
 
 instance IsZO zone ot => Ord (WithThisTriggered zone ot) where
   compare x y = runEnvM (ordWithThisTriggered x y)
@@ -388,6 +397,22 @@ ordAbility x = case x of
             IsZone zone2 =>
             IndexOT ot1 =>
             IndexOT ot2 =>
+            WithThisStatic zone1 ot1 ->
+            WithThisStatic zone2 ot2 ->
+            EnvM Ordering
+          go _ _ = case cast ability2 of
+            Nothing -> compareZoneOT @zone1 @zone2 @ot1 @ot2
+            Just ability2 -> ordWithThisStatic ability1 ability2
+       in go ability1 ability2
+    y -> compareIndexM x y
+  StaticWithoutThis ability1 -> \case
+    StaticWithoutThis ability2 ->
+      let go ::
+            forall zone1 zone2 ot1 ot2.
+            IsZone zone1 =>
+            IsZone zone2 =>
+            IndexOT ot1 =>
+            IndexOT ot2 =>
             StaticAbility zone1 ot1 ->
             StaticAbility zone2 ot2 ->
             EnvM Ordering
@@ -395,7 +420,6 @@ ordAbility x = case x of
             Nothing -> compareZoneOT @zone1 @zone2 @ot1 @ot2
             Just ability2 -> ordStaticAbility ability1 ability2
        in go ability1 ability2
-    y -> compareIndexM x y
   Triggered ability1 -> \case
     Triggered ability2 ->
       let go ::
@@ -1785,6 +1809,12 @@ ordStaticAbility x = case x of
   Bestow elect1 enchant1 -> \case
     Bestow elect2 enchant2 -> seqM [ordElectEl elect1 elect2, ordEnchant enchant1 enchant2]
     y -> compareIndexM x y
+  CantBlock -> \case
+    CantBlock -> pure EQ
+    y -> compareIndexM x y
+  Defender -> \case
+    Defender -> pure EQ
+    y -> compareIndexM x y
   Enters entersStatic1 -> \case
     Enters entersStatic2 -> ordEntersStatic entersStatic1 entersStatic2
     y -> compareIndexM x y
@@ -1801,6 +1831,9 @@ ordStaticAbility x = case x of
     y -> compareIndexM x y
   Landwalk reqs1 -> \case
     Landwalk reqs2 -> ordRequirements reqs1 reqs2
+    y -> compareIndexM x y
+  Phasing -> \case
+    Phasing -> pure EQ
     y -> compareIndexM x y
   StaticContinuous elect1 -> \case
     StaticContinuous elect2 -> ordElectEl elect1 elect2
@@ -2082,6 +2115,9 @@ ordWithThis ordM = \case
 
 ordWithThisActivated :: IsZO zone ot => WithThisActivated zone ot -> WithThisActivated zone ot -> EnvM Ordering
 ordWithThisActivated = ordWithThis ordElectEl
+
+ordWithThisStatic :: IsZO zone ot => WithThisStatic zone ot -> WithThisStatic zone ot -> EnvM Ordering
+ordWithThisStatic = ordWithThis ordStaticAbility
 
 ordWithThisTriggered :: IsZO zone ot => WithThisTriggered zone ot -> WithThisTriggered zone ot -> EnvM Ordering
 ordWithThisTriggered = ordWithThis ordTriggeredAbility

@@ -76,6 +76,8 @@ module MtgPure.Engine.Fwd.Api (
   setPermanent,
   setPlayer,
   startGame,
+  staticAbilitiesOf,
+  triggeredAbilitiesOf,
   toZO,
   zosSatisfying,
 ) where
@@ -109,6 +111,8 @@ import safe MtgPure.Engine.Prompt (
   QueryObjectResult,
   ResolveElected,
   SomeActivatedAbility,
+  SomeStaticAbility,
+  SomeTriggeredAbility,
   SourceZO,
   SpecialAction,
  )
@@ -400,7 +404,7 @@ getTrivialManaAbilities :: (CanHaveTrivialManaAbility ot, Monad m) => ZO 'ZBattl
 getTrivialManaAbilities = fwd1 fwd_getTrivialManaAbilities
 
 indexToActivated :: (IsZO zone ot, Monad m) => AbsoluteActivatedAbilityIndex -> Magic 'Private 'RO m (Maybe (SomeActivatedAbility zone ot))
-indexToActivated = fwd1 fwd_indexToAbility
+indexToActivated = fwd1 fwd_indexToActivated
 
 modifyPlayer :: Monad m => Object 'OTPlayer -> (Player -> Player) -> Magic 'Private 'RW m ()
 modifyPlayer o f = do
@@ -473,8 +477,14 @@ setPlayer = fwd2 fwd_setPlayer
 startGame :: Monad m => Magic 'Private 'RW m Void
 startGame = fwd0 fwd_startGame
 
+staticAbilitiesOf :: (IsZO zone ot, Monad m) => ZO zone ot -> Magic 'Private 'RO m [SomeStaticAbility zone ot]
+staticAbilitiesOf = fwd1 fwd_staticAbilitiesOf
+
 toZO :: (IsZO zone ot, Monad m) => ObjectId -> Magic 'Private 'RO m (Maybe (ZO zone ot))
 toZO = fwd1 fwd_toZO
+
+triggeredAbilitiesOf :: (IsZO zone ot, Monad m) => ZO zone ot -> Magic 'Private 'RO m [SomeTriggeredAbility zone ot]
+triggeredAbilitiesOf = fwd1 fwd_triggeredAbilitiesOf
 
 zosSatisfying :: (Monad m, IsZO zone ot) => Requirement zone ot -> Magic 'Private 'RO m [ZO zone ot]
 zosSatisfying = fwd1 fwd_zosSatisfying

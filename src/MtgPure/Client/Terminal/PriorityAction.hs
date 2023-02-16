@@ -74,6 +74,7 @@ import safe MtgPure.Engine.Prompt (
   DeclaredAttacker (..),
   DeclaredBlocker (..),
   DefendingPlayer (..),
+  Pause (..),
   PlayerIndex (PlayerIndex),
   PriorityAction (..),
   Prompt' (..),
@@ -116,6 +117,7 @@ import safe MtgPure.Model.Zone (IsZone, Zone (..))
 import safe MtgPure.Model.ZoneObject.Convert (oToZO1, toZO0, toZO1, toZO2, zo0ToSpell)
 import safe MtgPure.Model.ZoneObject.ZoneObject (IsZO, ZO)
 import safe System.Console.ANSI (clearLine, setCursorPosition)
+import safe qualified System.IO as IO
 
 chunk :: Int -> [a] -> [[a]]
 chunk n = go
@@ -152,7 +154,10 @@ gameInput cheats decks =
           , promptChooseAttackers = terminalChooseAttackers
           , promptChooseBlockers = terminalChooseBlockers
           , promptChooseOption = terminalChooseOption
-          , promptDebugMessage = \msg -> liftIO $ putStrLn $ "DEBUG: " ++ msg
+          , promptDebugMessage = \p msg -> liftIO do
+              putStrLn $ "DEBUG: " ++ msg
+              IO.hFlush IO.stdout
+              M.when (p == Pause) pause
           , promptGetStartingPlayer = \_attempt _count -> pure $ PlayerIndex 0
           , promptLogCallPop = terminalLogCallPop
           , promptLogCallPush = terminalLogCallPush

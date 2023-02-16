@@ -644,7 +644,7 @@ trivialManaAbilities =
   ]
 
 mkBasicLandwalk :: BasicLandType -> Ability OTNCreature
-mkBasicLandwalk = Static . Landwalk . pure . HasLandType . BasicLand
+mkBasicLandwalk ty = Static $ thisObject \_this -> Landwalk [HasLandType $ BasicLand ty]
 
 swampwalk :: Ability OTNCreature
 swampwalk = mkBasicLandwalk Swamp

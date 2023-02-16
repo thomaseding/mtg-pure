@@ -646,7 +646,7 @@ mkBattlefieldCardBox y zoPerm = do
   let status = case (permanentTapped perm, hasSummoningSickness) of
         (Tapped, True) -> "T"
         (Tapped, False) -> "T"
-        (Untapped, True) -> "S"
+        (Untapped, True) -> "U" -- TODO: "S", need haste in the calculation
         (Untapped, False) -> "U"
   let text =
         status ++ " " ++ name ++ case pt of

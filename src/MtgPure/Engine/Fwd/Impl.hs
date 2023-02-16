@@ -19,6 +19,7 @@ import safe MtgPure.Engine.ActivateCast (
  )
 import safe MtgPure.Engine.CaseOf (caseOf)
 import safe MtgPure.Engine.Core (
+  activatedAbilitiesOf,
   activatedToIndex,
   allControlledPermanentsOf,
   allPermanents,
@@ -32,7 +33,6 @@ import safe MtgPure.Engine.Core (
   findPermanent,
   findPlayer,
   getAPNAP,
-  getActivatedAbilitiesOf,
   getActivePlayer,
   getAlivePlayerCount,
   getAlivePlayers,
@@ -57,7 +57,9 @@ import safe MtgPure.Engine.Core (
   rewindNothing,
   setPermanent,
   setPlayer,
+  staticAbilitiesOf,
   toZO,
+  triggeredAbilitiesOf,
  )
 import safe MtgPure.Engine.Enact (enact)
 import safe MtgPure.Engine.Fwd.Type (Fwd' (..))
@@ -83,7 +85,7 @@ fwdImpl =
     { fwd_ = ()
     , fwd_abilityToIndex = activatedToIndex
     , fwd_activateAbility = activateAbility
-    , fwd_activatedAbilitiesOf = getActivatedAbilitiesOf
+    , fwd_activatedAbilitiesOf = activatedAbilitiesOf
     , fwd_allControlledPermanentsOf = allControlledPermanentsOf
     , fwd_allPermanents = allPermanents
     , fwd_allZOActivatedAbilities = allZOActivatedAbilities
@@ -114,7 +116,7 @@ fwdImpl =
     , fwd_getPlayer = getPlayer
     , fwd_getPlayerWithPriority = getPlayerWithPriority
     , fwd_getTrivialManaAbilities = getTrivialManaAbilities
-    , fwd_indexToAbility = indexToActivated
+    , fwd_indexToActivated = indexToActivated
     , fwd_newObjectId = newObjectId
     , fwd_newVariableId = newVariableId
     , fwd_ownerOf = ownerOf
@@ -139,6 +141,8 @@ fwdImpl =
     , fwd_setPermanent = setPermanent
     , fwd_setPlayer = setPlayer
     , fwd_startGame = startGame
+    , fwd_staticAbilitiesOf = staticAbilitiesOf
+    , fwd_triggeredAbilitiesOf = triggeredAbilitiesOf
     , fwd_toZO = toZO
     , fwd_zosSatisfying = zosSatisfying
     }

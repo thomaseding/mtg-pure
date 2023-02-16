@@ -48,6 +48,7 @@ module MtgPure.Model.Recursive (
   WithThis (..),
   WithThisActivated,
   WithThisOneShot,
+  WithThisStatic,
   WithThisTriggered,
   YourCardFacet (..),
   pattern CFalse,
@@ -75,7 +76,6 @@ import safe MtgPure.Model.Loyalty (Loyalty)
 import safe MtgPure.Model.Mana.ManaCost (ManaCost)
 import safe MtgPure.Model.Mana.ManaPool (ManaPool)
 import safe MtgPure.Model.Mana.Snow (Snow (..))
-import safe MtgPure.Model.Object.IndexOT (IndexOT)
 import safe MtgPure.Model.Object.IsObjectType (IsObjectType)
 import safe MtgPure.Model.Object.OTN (OT1, OT2, OT3, OT4, OT5, OT6, OTN)
 import safe MtgPure.Model.Object.OTNAliases (
@@ -135,12 +135,15 @@ import safe MtgPure.Model.ZoneObject.ZoneObject (
 
 ----------------------------------------
 
+-- XXX: Perhaps WithThisActivated, WithThisStatic, and WithThisTriggered can be ditched in favor of
+--      adding `WithThisAbility ot`.
+--
+-- XXX: Until I add WithThisAbility, I need a special case without THIS for split cards
 data Ability (ot :: Type) :: Type where
   Activated :: IsZO zone ot => WithThisActivated zone ot -> Ability ot
-  -- FIXME: Needs `WithThisStatic zone ot` to be able to encode things like "as long as THIS is damaged, THIS has Haste".
-  -- XXX: At which point, perhaps WithThisActivated, WithThisStatic, and WithThisTriggered can be ditched in favor of
-  --      adding `WithThisAbility ot`.
-  Static :: (IsZone zone, IndexOT ot) => StaticAbility zone ot -> Ability ot
+  Static :: IsZO zone ot => WithThisStatic zone ot -> Ability ot
+  -- TODO: Eventually remove this and simply have SplitCards refer to Ability and not WithThisAbility
+  StaticWithoutThis :: (IsZO zone ot1, IsZO zone ot2) => StaticAbility zone (ot1, ot2) -> Ability (ot1, ot2)
   Triggered :: IsZO zone ot => WithThisTriggered zone ot -> Ability ot
   deriving (Typeable)
 
@@ -148,7 +151,8 @@ instance ConsIndex (Ability ot) where
   consIndex = \case
     Activated{} -> 1
     Static{} -> 2
-    Triggered{} -> 3
+    StaticWithoutThis{} -> 3
+    Triggered{} -> 4
 
 ----------------------------------------
 
@@ -739,6 +743,7 @@ instance ConsIndex (NonProxy liftOT) where
 data Requirement (zone :: Zone) (ot :: Type) :: Type where
   ControlledBy :: IsOTN ot => ZOPlayer -> Requirement 'ZBattlefield ot
   ControlsA :: IsOTN ot => Requirement 'ZBattlefield ot -> Requirement zone OTNPlayer
+  -- TODO: This prolly no longer needs the WithThis wrapper since Ability now does this itself.
   HasAbility :: IsZO zone ot => WithThis zone Ability ot -> Requirement zone ot -- Non-unique differing representations will not be considered the same
   HasLandType :: IsZO zone OTNLand => LandType -> Requirement zone OTNLand
   Is :: (CoAny ot, IsZO zone ot) => ZO zone ot -> Requirement zone ot
@@ -963,12 +968,15 @@ data StaticAbility (zone :: Zone) (ot :: Type) :: Type where
   As :: (ot ~ OTN x, IsOTN ot) => Elect 'Post EventListener ot -> StaticAbility 'ZBattlefield ot -- 603.6d: not a triggered ability
   -- XXX: BestowPre and BestowPost
   Bestow :: ot ~ OTNEnchantmentCreature => Elect 'Pre (Cost ot) ot -> Enchant 'ZBattlefield OTNCreature -> StaticAbility 'ZBattlefield ot
+  CantBlock :: ot ~ OTNCreature => StaticAbility 'ZBattlefield ot
+  Defender :: ot ~ OTNCreature => StaticAbility 'ZBattlefield ot
   Enters :: IsZO zone ot => EntersStatic zone ot -> StaticAbility zone ot
   FirstStrike :: ot ~ OTNCreature => StaticAbility 'ZBattlefield ot
   Flying :: ot ~ OTNCreature => StaticAbility 'ZBattlefield ot
   Fuse :: IsOTN ot => StaticAbility 'ZHand (ot, ot) -- TODO: Add witness or constraint for OTNInstant or OTNSorcery
   Haste :: ot ~ OTNCreature => StaticAbility 'ZBattlefield ot
   Landwalk :: ot ~ OTNCreature => [Requirement 'ZBattlefield OTNLand] -> StaticAbility 'ZBattlefield ot
+  Phasing :: CoPermanent ot => StaticAbility 'ZBattlefield ot
   StaticContinuous :: (ot ~ OTN x, IsOTN ot) => Elect 'Post (Effect 'Continuous) ot -> StaticAbility 'ZBattlefield ot -- 611.3
   -- XXX: SuspendPre and SuspendPost
   Suspend :: (ot ~ OTN x, IsOTN ot) => Int -> Elect 'Pre (Cost ot) ot -> StaticAbility 'ZBattlefield ot -- PositiveInt
@@ -979,15 +987,18 @@ instance ConsIndex (StaticAbility zone ot) where
   consIndex = \case
     As{} -> 1
     Bestow{} -> 2
-    Enters{} -> 3
-    FirstStrike{} -> 4
-    Flying{} -> 5
-    Fuse{} -> 6
-    Haste{} -> 7
-    Landwalk{} -> 8
-    StaticContinuous{} -> 9
-    Suspend{} -> 10
-    Trample{} -> 11
+    CantBlock{} -> 3
+    Defender{} -> 4
+    Enters{} -> 5
+    FirstStrike{} -> 6
+    Flying{} -> 7
+    Fuse{} -> 8
+    Haste{} -> 9
+    Landwalk{} -> 10
+    Phasing{} -> 11
+    StaticContinuous{} -> 12
+    Suspend{} -> 13
+    Trample{} -> 14
 
 ----------------------------------------
 
@@ -1170,7 +1181,18 @@ instance ConsIndex (WithMaskedObjects zone liftOT ot) where
 -- things by only specifying OTNPermanent and not all the combinations of OT's that constitute
 -- OTNPermanent. Currently this is leveraged to by the UI through `getIntrinsicManaAbilities` to
 -- discover the mana abilities of permanents without caring too much about the specific type.
+--
+-- NOTE: I don't think it makes sense for this to ever support split cards directly through
+-- something like `WithThis zone (ot1, ot2)` pairings since split cards (et al) always resolve
+-- into a single object... unless fused, but note that fused cards have ot1 == ot2. So perhaps
+-- I only support the case for `WithThis zone (ot, ot)`. Normally to "support" split cards with
+-- differing ot1 and ot2, each split card constituent would boil down into a normal non-split
+-- card, in which case we can just use `WithThis zone ot1` or `WithThis zone ot2` respectively.
 data WithThis (zone :: Zone) (liftOT :: Type -> Type) (ot :: Type) :: Type where
+  -- SplitThis2 ::
+  --   (IsOTN ot1, IsOTN ot2) =>
+  --   (ZO zone (ot1, ot2) -> liftOT (ot1, ot2)) ->
+  --   WithThis zone liftOT (ot1, ot2)
   This1 ::
     (IsOTN (OT1 a), Inst1 IsObjectType a) =>
     (ZO zone (OT1 a) -> liftOT (OT1 a)) ->
@@ -1207,6 +1229,8 @@ instance ConsIndex (WithThis zone liftOT ot) where
 type WithThisActivated zone ot = WithThis zone (Elect 'Pre (ActivatedAbility zone ot)) ot
 
 type WithThisOneShot = WithThis 'ZStack (Elect 'Post (Effect 'OneShot))
+
+type WithThisStatic zone ot = WithThis zone (StaticAbility zone) ot
 
 type WithThisTriggered zone ot = WithThis zone (TriggeredAbility zone) ot
 

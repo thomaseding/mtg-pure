@@ -142,6 +142,7 @@ import safe MtgPure.Model.Recursive (
   WithThis (..),
   WithThisActivated,
   WithThisOneShot,
+  WithThisStatic,
   WithThisTriggered,
   YourCardFacet (..),
  )
@@ -251,6 +252,9 @@ instance IsZO zone ot => Show (WithThisActivated zone ot) where
 instance IsZO 'ZStack ot => Show (WithThisOneShot ot) where
   show = runEnvM defaultDepthLimit . showWithThis showElect "this"
 
+instance IsZO zone ot => Show (WithThisStatic zone ot) where
+  show = runEnvM defaultDepthLimit . showWithThis showStaticAbility "this"
+
 instance IsZO zone ot => Show (WithThisTriggered zone ot) where
   show = runEnvM defaultDepthLimit . showWithThis showTriggeredAbility "this"
 
@@ -279,25 +283,25 @@ instance IsString Item where
 
 type Items = DList.DList Item
 
-data Paren = NeedsParen | DoesntNeedParen
+data Paren = NeedsParen | DoesNotNeedParam
 
 type ParenItems = (Paren, Items)
 
 parens :: ParenItems -> Items
 parens (p, s) = case p of
   NeedsParen -> pure "(" <> s <> pure ")"
-  DoesntNeedParen -> s
+  DoesNotNeedParam -> s
 
 dollar :: ParenItems -> Items
 dollar (p, s) = case p of
   NeedsParen -> pure " $ " <> s
-  DoesntNeedParen -> pure " " <> s
+  DoesNotNeedParam -> pure " " <> s
 
 dropParens :: ParenItems -> Items
 dropParens = snd
 
 noParens :: EnvM Items -> EnvM ParenItems
-noParens = fmap $ (,) DoesntNeedParen
+noParens = fmap $ (,) DoesNotNeedParam
 
 yesParens :: EnvM Items -> EnvM ParenItems
 yesParens = fmap $ (,) NeedsParen
@@ -474,8 +478,11 @@ showAbility = \case
     sAbility <- dollar <$> showWithThis showElect "this" ability
     pure $ pure "Activated" <> sAbility
   Static ability -> yesParens do
-    sAbility <- dollar <$> showStaticAbility ability
+    sAbility <- dollar <$> showWithThis showStaticAbility "this" ability
     pure $ pure "Static" <> sAbility
+  StaticWithoutThis ability -> yesParens do
+    sAbility <- dollar <$> showStaticAbility ability
+    pure $ pure "StaticWithoutThis" <> sAbility
   Triggered ability -> yesParens do
     sAbility <- dollar <$> showWithThis showTriggeredAbility "this" ability
     pure $ pure "Triggered" <> sAbility
@@ -1934,6 +1941,10 @@ showStaticAbility = \case
     sCost <- parens <$> showElect cost
     sEnchant <- dollar <$> showEnchant enchant
     pure $ pure "Bestow " <> sCost <> sEnchant
+  CantBlock -> noParens do
+    pure $ pure "CantBlock"
+  Defender -> noParens do
+    pure $ pure "Defender"
   Enters entersStatic -> yesParens do
     sEntersStatic <- dollar <$> showEntersStatic entersStatic
     pure $ pure "Enters" <> sEntersStatic
@@ -1948,6 +1959,8 @@ showStaticAbility = \case
   Landwalk reqs -> yesParens do
     sReqs <- dollar <$> showRequirements reqs
     pure $ pure "Landwalk" <> sReqs
+  Phasing -> noParens do
+    pure $ pure "Phasing"
   StaticContinuous continuous -> yesParens do
     sContinuous <- dollar <$> showElect continuous
     pure $ pure "StaticContinuous" <> sContinuous

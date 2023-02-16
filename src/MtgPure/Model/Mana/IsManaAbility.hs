@@ -147,6 +147,7 @@ instance (Typeable user, IsNat n) => DummyVar (Fin user n) where
 instance IsManaAbilityImpl (Ability ot) where
   isManaAbilityImpl = \case
     Static{} -> IsNotManaAbility
+    StaticWithoutThis{} -> IsNotManaAbility
     Activated withThis -> isManaAbilityImpl withThis
     Triggered withThis -> isManaAbilityImpl withThis
   isTrivialManaAbilityImpl stage x = case (stage, x) of

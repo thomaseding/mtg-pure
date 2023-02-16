@@ -10,5 +10,6 @@ module Data.ConsIndex (
 
 -- `Data` not always derivable, hence this.
 -- `NumberMonger` VSCode extension nice for populating instances.
+-- `Copilot` handles it well too.
 class ConsIndex a where
   consIndex :: a -> Int

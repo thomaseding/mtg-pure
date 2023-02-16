@@ -16,6 +16,7 @@ fourmolu
 ghci
 HLINT
 infixl
+kinded
 mconcat
 mempty
 newtype

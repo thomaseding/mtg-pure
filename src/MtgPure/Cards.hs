@@ -94,6 +94,7 @@ module MtgPure.Cards (
   sunkenRuins,
   swamp,
   swanSong,
+  teferisIsle,
   thermopod,
   thunderingTanadon,
   tresserhornSinks,
@@ -187,7 +188,7 @@ import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Object.ToObjectN.Instances ()
 import safe MtgPure.Model.Power (Power (..))
 import safe MtgPure.Model.Recursive (
-  Ability (Activated, Static, Triggered),
+  Ability (Activated, Static, StaticWithoutThis, Triggered),
   ActivatedAbility (..),
   Card (..),
   CardFacet (..),
@@ -238,6 +239,7 @@ import safe MtgPure.Model.Recursive (
     Flying,
     Fuse,
     Haste,
+    Phasing,
     StaticContinuous,
     Suspend,
     Trample
@@ -249,6 +251,7 @@ import safe MtgPure.Model.Recursive (
   pattern CTrue,
  )
 import safe MtgPure.Model.Step (Step (..))
+import safe MtgPure.Model.Supertype (Supertype (Legendary))
 import safe qualified MtgPure.Model.Supertype as Ty
 import safe MtgPure.Model.TimePoint (TimePoint (..))
 import safe MtgPure.Model.Toughness (Toughness (..))
@@ -281,7 +284,7 @@ mkDualTapImpl supertypes name ty1 ty2 = Card name $
     LandFacet
       { land_supertypes = supertypes
       , land_landTypes = [BasicLand ty1, BasicLand ty2]
-      , land_abilities = [Static $ Enters EntersTapped]
+      , land_abilities = [Static $ thisObject \_this -> Enters EntersTapped]
       }
 
 mkSnowCoveredTapDualLand :: CardName -> BasicLandType -> BasicLandType -> Card OTNLand
@@ -492,7 +495,7 @@ ancestralVision = Card "Ancestral Vision" $
           { sorcery_colors = toColors U
           , sorcery_cost = noCost
           , sorcery_supertypes = []
-          , sorcery_abilities = [Static $ Suspend 4 $ Cost $ manaCost U]
+          , sorcery_abilities = [Static $ thisObject \_this -> Suspend 4 $ Cost $ manaCost U]
           , sorcery_effect = thisObject \_this ->
               effect $ DrawCards target 3
           }
@@ -552,7 +555,7 @@ birdToken = Token $
         , creature_creatureTypes = [Bird]
         , creature_power = Power 2
         , creature_toughness = Toughness 2
-        , creature_abilities = [Static Flying]
+        , creature_abilities = [Static $ thisObject \_this -> Flying]
         }
 
 blackLotus :: Card OTNArtifact
@@ -605,7 +608,7 @@ bloodMoon = Card "Blood Moon" $
       , enchantment_supertypes = []
       , enchantment_enchantmentTypes = []
       , enchantment_abilities =
-          [ Static $
+          [ Static $ thisObject \_this ->
               StaticContinuous $
                 All $ maskeds [nonBasic] \lands ->
                   effect $
@@ -741,7 +744,7 @@ conversion = Card "Conversion" $
                               TimePoint (StepBegin UpkeepStep) $
                                 effect $
                                   sacrifice you [is this]
-          , Static $
+          , Static $ thisObject \_this ->
               StaticContinuous $
                 All $ maskeds [hasLandType Mountain] \lands ->
                   effect $
@@ -761,7 +764,8 @@ corrosiveGale = Card "Corrosive Gale" $
           , sorcery_supertypes = []
           , sorcery_abilities = []
           , sorcery_effect = thisObject \this ->
-              All $ maskeds @OTNCreature [hasAbility \_this -> Static Flying] \victims ->
+              -- FIXME: Double WithThis is unwanted in the encoding
+              All $ maskeds @OTNCreature [hasAbility \_this -> Static $ thisObject \_this -> Flying] \victims ->
                 effect $
                   WithList $ Each victims \victim ->
                     dealDamage this victim x
@@ -778,7 +782,8 @@ squallLine = Card "Squall Line" $
           , instant_supertypes = []
           , instant_abilities = []
           , instant_effect = thisObject \this ->
-              All $ maskeds @OTNCreature [hasAbility \_this -> Static Flying] \creatures ->
+              -- FIXME: Double WithThis is unwanted in the encoding
+              All $ maskeds @OTNCreature [hasAbility \_this -> Static $ thisObject \_this -> Flying] \creatures ->
                 All $ maskeds @OTNPlayer [] \players ->
                   effect
                     [ WithList $ Each creatures \victim ->
@@ -895,7 +900,7 @@ dismember = Card "Dismember" $
               effect $
                 untilEndOfTurn $
                   gainAbility target $
-                    Static $
+                    Static $ thisObject \_this ->
                       StaticContinuous $
                         effect $ StatDelta target (Power (-5)) (Toughness (-5))
           }
@@ -1005,7 +1010,7 @@ giantGrowth = Card "Giant Growth" $
               effect $
                 untilEndOfTurn $
                   gainAbility target $
-                    Static $
+                    Static $ thisObject \_this ->
                       StaticContinuous $
                         effect $ StatDelta target (Power 3) (Toughness 3)
           }
@@ -1188,7 +1193,7 @@ moltensteelDragon = Card "Moltensteel Dragon" $
       , artifactCreature_toughness = Toughness 4
       , artifactCreature_artifactAbilities = []
       , artifactCreature_creatureAbilities =
-          [ Static Flying
+          [ Static $ thisObject \_this -> Flying
           , Activated @ 'ZBattlefield $
               thisObject \this ->
                 ElectActivated $
@@ -1198,7 +1203,7 @@ moltensteelDragon = Card "Moltensteel Dragon" $
                         effect $
                           untilEndOfTurn $
                             gainAbility this $
-                              Static $
+                              Static $ thisObject \_this ->
                                 StaticContinuous $
                                   effect $
                                     StatDelta this (Power 1) (Toughness 0)
@@ -1271,7 +1276,7 @@ mutagenicGrowth = Card "Mutagenic Growth" $
               effect $
                 untilEndOfTurn $
                   gainAbility target $
-                    Static $
+                    Static $ thisObject \_this ->
                       StaticContinuous $
                         effect $ StatDelta target (Power 2) (Toughness 2)
           }
@@ -1290,7 +1295,7 @@ nyxbornRollicker = Card "Nyxborn Rollicker" $
       , enchantmentCreature_creatureAbilities = []
       , enchantmentCreature_enchantmentAbilities = []
       , enchantmentCreature_enchantmentCreatureAbilities =
-          [ Static $
+          [ Static $ thisObject \_this ->
               Bestow (Cost $ manaCost (1, R)) $
                 Enchant $ linked [] \enchanted ->
                   effect $ StatDelta enchanted (Power 1) (Toughness 1)
@@ -1309,7 +1314,7 @@ ornithopter = Card "Ornithopter" $
       , artifactCreature_power = Power 0
       , artifactCreature_toughness = Toughness 2
       , artifactCreature_artifactAbilities = []
-      , artifactCreature_creatureAbilities = [Static Flying]
+      , artifactCreature_creatureAbilities = [Static $ thisObject \_this -> Flying]
       , artifactCreature_artifactCreatureAbilities = []
       }
 
@@ -1319,7 +1324,7 @@ plains = mkBasicLand Plains
 plummet :: Card OTNInstant
 plummet = Card "Plummet" $
   YourInstant \you ->
-    Target you $ masked [hasAbility \_this -> Static Flying] \target ->
+    Target you $ masked [hasAbility \_this -> Static $ thisObject \_this -> Flying] \target ->
       ElectCard $
         InstantFacet
           { instant_colors = toColors G
@@ -1345,7 +1350,7 @@ porcelainLegionnaire = Card "Porcelain Legionnaire" $
       , artifactCreature_power = Power 3
       , artifactCreature_toughness = Toughness 1
       , artifactCreature_artifactAbilities = []
-      , artifactCreature_creatureAbilities = [Static FirstStrike]
+      , artifactCreature_creatureAbilities = [Static $ thisObject \_this -> FirstStrike]
       , artifactCreature_artifactCreatureAbilities = []
       }
 
@@ -1375,7 +1380,7 @@ pradeshGypsies = Card "Pradesh Gypsies" $
                             effect $
                               untilEndOfTurn $
                                 gainAbility creature $
-                                  Static $
+                                  Static $ thisObject \_this ->
                                     StaticContinuous $
                                       effect $
                                         StatDelta creature (Power (-2)) (Toughness 0)
@@ -1393,7 +1398,7 @@ ragingGoblin = Card "Raging Goblin" $
       , creature_creatureTypes = [Goblin]
       , creature_power = Power 1
       , creature_toughness = Toughness 1
-      , creature_abilities = [Static Haste]
+      , creature_abilities = [Static $ thisObject \_this -> Haste]
       }
 
 rimewoodFalls :: Card OTNLand
@@ -1453,7 +1458,7 @@ slashPanther = Card "Slash Panther" $
       , artifactCreature_power = Power 4
       , artifactCreature_toughness = Toughness 2
       , artifactCreature_artifactAbilities = []
-      , artifactCreature_creatureAbilities = [Static Haste]
+      , artifactCreature_creatureAbilities = [Static $ thisObject \_this -> Haste]
       , artifactCreature_artifactCreatureAbilities = []
       }
 
@@ -1531,7 +1536,7 @@ spinedThopter = Card "Spined Thopter" $
       , artifactCreature_power = Power 2
       , artifactCreature_toughness = Toughness 1
       , artifactCreature_artifactAbilities = []
-      , artifactCreature_creatureAbilities = [Static Flying]
+      , artifactCreature_creatureAbilities = [Static $ thisObject \_this -> Flying]
       , artifactCreature_artifactCreatureAbilities = []
       }
 
@@ -1546,7 +1551,7 @@ squallDrifter = Card "Squall Drifter" $
       , creature_power = Power 1
       , creature_toughness = Toughness 1
       , creature_abilities =
-          [ Static Flying
+          [ Static $ thisObject \_this -> Flying
           , Activated @ 'ZBattlefield $
               thisObject \this ->
                 controllerOf this \you ->
@@ -1601,7 +1606,7 @@ stoneThrowingDevils = Card "Stone-Throwing Devils" $
       , creature_creatureTypes = [Devil]
       , creature_power = Power 1
       , creature_toughness = Toughness 1
-      , creature_abilities = [Static FirstStrike]
+      , creature_abilities = [Static $ thisObject \_this -> FirstStrike]
       }
 
 sulfurousMire :: Card OTNLand
@@ -1631,6 +1636,26 @@ swanSong = Card "Swan Song" $
                   ]
             }
 
+teferisIsle :: Card OTNLand
+teferisIsle = Card "Teferi's Isle" $
+  YourLand \_you ->
+    LandFacet
+      { land_supertypes = [Legendary]
+      , land_landTypes = []
+      , land_abilities =
+          [ Static $ thisObject \_this -> Phasing
+          , Static $ thisObject \_this -> Enters EntersTapped
+          , Activated @ 'ZBattlefield $
+              thisObject \this -> do
+                controllerOf this \you ->
+                  ElectActivated
+                    Ability
+                      { activated_cost = tapCost [is this]
+                      , activated_effect = effect $ AddMana you $ toManaPool (U, 2)
+                      }
+          ]
+      }
+
 thermopod :: Card OTNCreature
 thermopod = Card "Thermopod" $
   YourCreature \_you ->
@@ -1647,7 +1672,7 @@ thermopod = Card "Thermopod" $
                 ElectActivated $
                   Ability
                     { activated_cost = manaCost S
-                    , activated_effect = effect $ untilEndOfTurn $ gainAbility this $ Static Haste
+                    , activated_effect = effect $ untilEndOfTurn $ gainAbility this $ Static $ thisObject \_this -> Haste
                     }
           , Activated @ 'ZBattlefield $
               thisObject \this ->
@@ -1672,7 +1697,7 @@ thunderingTanadon = Card "Thundering Tanadon" $
       , artifactCreature_power = Power 5
       , artifactCreature_toughness = Toughness 4
       , artifactCreature_artifactAbilities = []
-      , artifactCreature_creatureAbilities = [Static Trample]
+      , artifactCreature_creatureAbilities = [Static $ thisObject \_this -> Trample]
       , artifactCreature_artifactCreatureAbilities = []
       }
 
@@ -1721,7 +1746,7 @@ waspLancer = Card "Wasp Lancer" $
       , creature_creatureTypes = [Faerie, Soldier]
       , creature_power = Power 3
       , creature_toughness = Toughness 2
-      , creature_abilities = [Static Flying]
+      , creature_abilities = [Static $ thisObject \_this -> Flying]
       }
 
 -- NOTE: Wastes does NOT have an intrinsic mana ability.
@@ -1744,7 +1769,7 @@ wastes = Card "Wastes" $
       }
 
 wear_tear :: Card (OTNInstant, OTNInstant)
-wear_tear = SplitCard wear tear [Static Fuse]
+wear_tear = SplitCard wear tear [StaticWithoutThis Fuse]
  where
   wear :: Card OTNInstant
   wear = Card "Wear" $

@@ -31,6 +31,8 @@ import safe MtgPure.Engine.Prompt (
   QueryObjectResult,
   ResolveElected,
   SomeActivatedAbility,
+  SomeStaticAbility,
+  SomeTriggeredAbility,
   SourceZO,
   SpecialAction,
  )
@@ -95,7 +97,7 @@ data Fwd' ex st m where
     , fwd_getPlayer :: Object 'OTPlayer -> Magic' ex st 'Private 'RO m Player
     , fwd_getPlayerWithPriority :: Magic' ex st 'Public 'RO m (Maybe (Object 'OTPlayer))
     , fwd_getTrivialManaAbilities :: forall ot. CanHaveTrivialManaAbility ot => ZO 'ZBattlefield ot -> Magic' ex st 'Private 'RO m [SomeActivatedAbility 'ZBattlefield ot]
-    , fwd_indexToAbility :: forall zone ot. IsZO zone ot => AbsoluteActivatedAbilityIndex -> Magic' ex st 'Private 'RO m (Maybe (SomeActivatedAbility zone ot))
+    , fwd_indexToActivated :: forall zone ot. IsZO zone ot => AbsoluteActivatedAbilityIndex -> Magic' ex st 'Private 'RO m (Maybe (SomeActivatedAbility zone ot))
     , fwd_newObjectId :: Magic' ex st 'Private 'RW m ObjectId
     , fwd_newVariableId :: Magic' ex st 'Private 'RW m VariableId
     , fwd_ownerOf :: forall zone ot. IsZO zone ot => ZO zone ot -> Magic' ex st 'Private 'RO m (Object 'OTPlayer)
@@ -120,7 +122,9 @@ data Fwd' ex st m where
     , fwd_setPermanent :: ZO 'ZBattlefield OTNPermanent -> Maybe Permanent -> Magic' ex st 'Private 'RW m ()
     , fwd_setPlayer :: Object 'OTPlayer -> Player -> Magic' ex st 'Private 'RW m ()
     , fwd_startGame :: Magic' ex st 'Private 'RW m Void
+    , fwd_staticAbilitiesOf :: forall zone ot. IsZO zone ot => ZO zone ot -> Magic' ex st 'Private 'RO m [SomeStaticAbility zone ot]
     , fwd_toZO :: forall zone ot. IsZO zone ot => ObjectId -> Magic' ex st 'Private 'RO m (Maybe (ZO zone ot))
+    , fwd_triggeredAbilitiesOf :: forall zone ot. IsZO zone ot => ZO zone ot -> Magic' ex st 'Private 'RO m [SomeTriggeredAbility zone ot]
     , fwd_zosSatisfying :: forall zone ot. IsZO zone ot => Requirement zone ot -> Magic' ex st 'Private 'RO m [ZO zone ot]
     } ->
     Fwd' ex st m
