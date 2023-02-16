@@ -743,8 +743,7 @@ instance ConsIndex (NonProxy liftOT) where
 data Requirement (zone :: Zone) (ot :: Type) :: Type where
   ControlledBy :: IsOTN ot => ZOPlayer -> Requirement 'ZBattlefield ot
   ControlsA :: IsOTN ot => Requirement 'ZBattlefield ot -> Requirement zone OTNPlayer
-  -- TODO: This prolly no longer needs the WithThis wrapper since Ability now does this itself.
-  HasAbility :: IsZO zone ot => WithThis zone Ability ot -> Requirement zone ot -- Non-unique differing representations will not be considered the same
+  HasAbility :: IsZO zone ot => Ability ot -> Requirement zone ot -- Non-unique differing representations will not be considered the same
   HasLandType :: IsZO zone OTNLand => LandType -> Requirement zone OTNLand
   Is :: (CoAny ot, IsZO zone ot) => ZO zone ot -> Requirement zone ot
   IsOpponentOf :: ZOPlayer -> Requirement zone OTNPlayer

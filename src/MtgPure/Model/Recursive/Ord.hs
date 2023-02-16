@@ -1714,7 +1714,7 @@ ordRequirement x = case x of
        in go req1 req2
     y -> compareIndexM x y
   HasAbility ability1 -> \case
-    HasAbility ability2 -> ordWithThis ordAbility ability1 ability2
+    HasAbility ability2 -> ordAbility ability1 ability2
     y -> compareIndexM x y
   HasLandType type1 -> \case
     HasLandType type2 -> pure $ compare type1 type2

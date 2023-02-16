@@ -531,10 +531,10 @@ addManaAnyColor color player amount =
 -- mkToken name = Token coPermanent . mkCard name
 
 hasAbility ::
-  (AsWithThis ot zone, IsZO zone ot) =>
-  (ThisFromOTN zone ot -> Ability ot) ->
+  IsZO zone ot =>
+  Ability ot ->
   Requirement zone ot
-hasAbility = HasAbility . thisObject
+hasAbility = HasAbility
 
 becomesTapped ::
   CoPermanent ot =>

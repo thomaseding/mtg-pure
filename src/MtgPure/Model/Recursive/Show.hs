@@ -1846,7 +1846,7 @@ showRequirement = \case
     sObj <- dollar <$> showRequirement req
     pure $ pure "ControlsA" <> sObj
   HasAbility ability -> yesParens do
-    sAbility <- dollar <$> showWithThis showAbility "this" ability
+    sAbility <- dollar <$> showAbility ability
     pure $ pure "HasAbility" <> sAbility
   HasLandType landType -> yesParens do
     sLandType <- dollar <$> showLandType landType

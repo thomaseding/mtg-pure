@@ -764,8 +764,7 @@ corrosiveGale = Card "Corrosive Gale" $
           , sorcery_supertypes = []
           , sorcery_abilities = []
           , sorcery_effect = thisObject \this ->
-              -- FIXME: Double WithThis is unwanted in the encoding
-              All $ maskeds @OTNCreature [hasAbility \_this -> Static $ thisObject \_this -> Flying] \victims ->
+              All $ maskeds @OTNCreature [hasAbility $ Static $ thisObject \_this -> Flying] \victims ->
                 effect $
                   WithList $ Each victims \victim ->
                     dealDamage this victim x
@@ -782,8 +781,7 @@ squallLine = Card "Squall Line" $
           , instant_supertypes = []
           , instant_abilities = []
           , instant_effect = thisObject \this ->
-              -- FIXME: Double WithThis is unwanted in the encoding
-              All $ maskeds @OTNCreature [hasAbility \_this -> Static $ thisObject \_this -> Flying] \creatures ->
+              All $ maskeds @OTNCreature [hasAbility $ Static $ thisObject \_this -> Flying] \creatures ->
                 All $ maskeds @OTNPlayer [] \players ->
                   effect
                     [ WithList $ Each creatures \victim ->
@@ -1324,7 +1322,7 @@ plains = mkBasicLand Plains
 plummet :: Card OTNInstant
 plummet = Card "Plummet" $
   YourInstant \you ->
-    Target you $ masked [hasAbility \_this -> Static $ thisObject \_this -> Flying] \target ->
+    Target you $ masked [hasAbility $ Static $ thisObject \_this -> Flying] \target ->
       ElectCard $
         InstantFacet
           { instant_colors = toColors G
