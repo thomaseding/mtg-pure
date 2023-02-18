@@ -129,15 +129,16 @@ import safe MtgPure.Model.Object.ToObjectN (toObject1, toObjectNAny)
 import safe MtgPure.Model.Permanent (Permanent (..))
 import safe MtgPure.Model.Player (Player (..))
 import safe MtgPure.Model.Recursive (
-  Ability (..),
   AnyCard (..),
   Card (..),
   CardFacet (..),
+  SomeZone (..),
+  WithThisAbility (..),
   WithThisActivated,
   WithThisStatic,
   WithThisTriggered,
   YourCardFacet (..),
-  fromSome,
+  fromSomeOT,
  )
 import safe MtgPure.Model.Variable (VariableId, VariableId' (..))
 import safe MtgPure.Model.Zone (IsZone (..), SZone (..), Zone (..))
@@ -364,9 +365,10 @@ activatedAbilitiesOf zo = logCall 'activatedAbilitiesOf do
       findPermanent zoPerm <&> \case
         Nothing -> []
         Just perm -> catMaybes $ flip map (permanentAbilities perm) \ability ->
-          fromSome ability \case
-            Activated withThis -> go withThis
-            _ -> Nothing
+          fromSomeOT ability \case
+            SomeZone withThisAbil -> case withThisAbil of
+              WithThisActivated withThisActivated -> go withThisActivated
+              _ -> Nothing
     _ -> undefined -- XXX: sung zone
  where
   go ::
@@ -396,9 +398,10 @@ staticAbilitiesOf zo = logCall 'staticAbilitiesOf do
       findPermanent zoPerm <&> \case
         Nothing -> []
         Just perm -> catMaybes $ flip map (permanentAbilities perm) \ability ->
-          fromSome ability \case
-            Static withThis -> go withThis
-            _ -> Nothing
+          fromSomeOT ability \case
+            SomeZone withThisAbil -> case withThisAbil of
+              WithThisStatic withThisStatic -> go withThisStatic
+              _ -> Nothing
     _ -> undefined -- XXX: sung zone
  where
   go ::
@@ -428,9 +431,10 @@ triggeredAbilitiesOf zo = logCall 'triggeredAbilitiesOf do
       findPermanent zoPerm <&> \case
         Nothing -> []
         Just perm -> catMaybes $ flip map (permanentAbilities perm) \ability ->
-          fromSome ability \case
-            Triggered withThis -> go withThis
-            _ -> Nothing
+          fromSomeOT ability \case
+            SomeZone withThisAbil -> case withThisAbil of
+              WithThisTriggered withThisTriggered -> go withThisTriggered
+              _ -> Nothing
     _ -> undefined -- XXX: sung zone
  where
   go ::
@@ -497,21 +501,22 @@ getNonIntrinsicTrivialManaAbilities zo = logCall 'getNonIntrinsicTrivialManaAbil
     <&> List.nub . \case
       Nothing -> assert False []
       Just perm -> flip mapMaybe (permanentAbilities perm) \someAbility ->
-        fromSome someAbility \case
-          Activated withThis0 ->
-            let go ::
-                  forall zone ot'.
-                  IsZO zone ot' =>
-                  WithThisActivated zone ot' ->
-                  Maybe (SomeActivatedAbility 'ZBattlefield ot)
-                go withThis1 = case cast withThis1 of
-                  Nothing -> assert False Nothing
-                  Just (withThis2 :: WithThisActivated 'ZBattlefield ot') ->
-                    case isTrivialManaAbility withThis2 of
-                      Nothing -> Nothing
-                      Just{} -> Just $ SomeActivatedAbility zo withThis2
-             in go withThis0
-          _ -> Nothing
+        fromSomeOT someAbility \case
+          SomeZone withThisAbil -> case withThisAbil of
+            WithThisActivated withThis0 ->
+              let go ::
+                    forall zone ot'.
+                    IsZO zone ot' =>
+                    WithThisActivated zone ot' ->
+                    Maybe (SomeActivatedAbility 'ZBattlefield ot)
+                  go withThis1 = case cast withThis1 of
+                    Nothing -> assert False Nothing
+                    Just (withThis2 :: WithThisActivated 'ZBattlefield ot') ->
+                      case isTrivialManaAbility withThis2 of
+                        Nothing -> Nothing
+                        Just{} -> Just $ SomeActivatedAbility zo withThis2
+               in go withThis0
+            _ -> Nothing
 
 getIntrinsicManaAbilities ::
   (IsZO 'ZBattlefield ot, Monad m) =>

@@ -29,19 +29,22 @@ import safe MtgPure.Model.Recursive (
   Cost (..),
   Effect (..),
   Elect (..),
+  ElectOT (..),
   Else (..),
   Event,
   EventListener,
   EventListener' (..),
   List (..),
   Requirement (..),
+  SomeZone (..),
   TriggeredAbility (..),
   WithLinkedObject (..),
   WithList (..),
   WithMaskedObject (..),
   WithMaskedObjects (..),
+  WithThis,
   WithThisActivated,
-  WithThisTriggered,
+  WithThisZ (..),
  )
 import safe MtgPure.Model.Variable (Variable (ReifiedVariable), VariableId' (..))
 import safe MtgPure.Model.Zone (IsZone (..))
@@ -54,20 +57,26 @@ import safe MtgPure.Model.ZoneObject.ZoneObject (IsOTN, IsZO, ZO, ZOPlayer, Zone
 class IsManaAbilityImpl a => IsManaAbility a where
   startingStageTrivial :: StageTrivial
 
-instance IsManaAbility (Ability ot) where
-  startingStageTrivial = StageInitial
+instance IsManaAbility (Ability zone ot) where
+  startingStageTrivial = StageAbility
 
 instance IsManaAbility (ActivatedAbility zone ot) where
-  startingStageTrivial = StageInitial
+  startingStageTrivial = StageAbility
 
 instance IsManaAbility (TriggeredAbility zone ot) where
-  startingStageTrivial = StageFinal
+  startingStageTrivial = StageAbility
+
+instance IsManaAbility (SomeZone Ability ot) where
+  startingStageTrivial = StageAbility
+
+instance IsOTN ot => IsManaAbility (SomeZone (WithThisZ Ability) ot) where
+  startingStageTrivial = StageWithThisAbility
+
+instance IsZO zone ot => IsManaAbility (WithThis (Ability zone) zone ot) where
+  startingStageTrivial = StageWithThisAbility
 
 instance IsZO zone ot => IsManaAbility (WithThisActivated zone ot) where
-  startingStageTrivial = StageWithThisActivated
-
-instance IsZO zone ot => IsManaAbility (WithThisTriggered zone ot) where
-  startingStageTrivial = StageFinal
+  startingStageTrivial = StageWithThisAbility
 
 isManaAbility :: IsManaAbility a => a -> Bool
 isManaAbility x = case isManaAbilityImpl x of
@@ -98,8 +107,8 @@ instance Monoid Result where
   mempty = Indeterminate
 
 data StageTrivial
-  = StageInitial
-  | StageWithThisActivated
+  = StageWithThisAbility
+  | StageAbility
   | StageControllerOf
   | StageElectActivated
   | StageFinal
@@ -142,14 +151,13 @@ instance DummyVar Power where
 instance (Typeable user, IsNat n) => DummyVar (Fin user n) where
   dummyVar = mkDummyVar FZ
 
-instance IsManaAbilityImpl (Ability ot) where
+instance IsManaAbilityImpl (Ability zone ot) where
   isManaAbilityImpl = \case
     Static{} -> IsNotManaAbility
-    StaticWithoutThis{} -> IsNotManaAbility
     Activated withThis -> isManaAbilityImpl withThis
     Triggered withThis -> isManaAbilityImpl withThis
   isTrivialManaAbilityImpl stage x = case (stage, x) of
-    (StageInitial, Activated withThis) -> isTrivialManaAbilityImpl StageWithThisActivated withThis
+    (StageAbility, Activated electActivated) -> isTrivialManaAbilityImpl StageElectActivated electActivated
     _ -> Nothing
 
 instance IsManaAbilityImpl (ActivatedAbility zone ot) where
@@ -171,36 +179,6 @@ instance IsManaAbilityImpl x => IsManaAbilityImpl (Case x) where
   isManaAbilityImpl = \case
     CaseFin _var list -> isManaAbilityImpl list
   isTrivialManaAbilityImpl _ _ = Nothing
-
-instance IsManaAbilityImpl (Elect p el ot) where
-  isManaAbilityImpl = \case
-    ActivePlayer cont -> isManaAbilityImpl $ cont dummyZO
-    All wmo -> isManaAbilityImpl wmo
-    Choose _zo wmo -> isManaAbilityImpl wmo
-    ChooseOption _zo _conds cont -> isManaAbilityImpl $ cont dummyVar
-    Condition{} -> IsNotManaAbility
-    ControllerOf _zo cont -> isManaAbilityImpl $ cont dummyZO
-    Cost{} -> IsNotManaAbility
-    Effect effects -> mconcat $ map isManaAbilityImpl effects
-    Elect el -> isManaAbilityImpl el
-    ElectActivated ability -> isManaAbilityImpl ability
-    ElectCard{} -> IsNotManaAbility
-    ElectCase case_ -> isManaAbilityImpl case_
-    Event{} -> IsNotManaAbility
-    If _cond then_ else_ -> isManaAbilityImpl then_ <> isManaAbilityImpl else_
-    Listen listener -> isManaAbilityImpl listener
-    OwnerOf _zo cont -> isManaAbilityImpl $ cont dummyZO
-    Random wmo -> isManaAbilityImpl wmo
-    Target{} -> IsNotManaAbility
-    VariableFromPower _zo cont -> isManaAbilityImpl $ cont dummyVar
-    VariableInt cont -> isManaAbilityImpl $ cont dummyVar
-  isTrivialManaAbilityImpl stage x = case (stage, x) of
-    (StageControllerOf, ControllerOf this cont) -> case getObjectId this == proxyThisId of
-      True -> isTrivialManaAbilityImpl StageElectActivated $ cont proxyYou
-      False -> Nothing
-    (StageElectActivated, ElectActivated ability) -> isTrivialManaAbilityImpl StageFinal ability
-    (StageFinal, Effect [e]) -> isTrivialManaAbilityImpl StageFinal e
-    _ -> Nothing
 
 instance IsManaAbilityImpl (Effect ef) where
   isManaAbilityImpl = \case
@@ -237,6 +215,40 @@ instance IsManaAbilityImpl (Effect ef) where
       True -> extractSingleManaType pool
       False -> Nothing
     _ -> Nothing
+
+instance IsManaAbilityImpl (Elect p el ot) where
+  isManaAbilityImpl = \case
+    ActivePlayer cont -> isManaAbilityImpl $ cont dummyZO
+    All wmo -> isManaAbilityImpl wmo
+    Choose _zo wmo -> isManaAbilityImpl wmo
+    ChooseOption _zo _conds cont -> isManaAbilityImpl $ cont dummyVar
+    Condition{} -> IsNotManaAbility
+    ControllerOf _zo cont -> isManaAbilityImpl $ cont dummyZO
+    Cost{} -> IsNotManaAbility
+    Effect effects -> mconcat $ map isManaAbilityImpl effects
+    Elect el -> isManaAbilityImpl el
+    ElectActivated ability -> isManaAbilityImpl ability
+    ElectCard{} -> IsNotManaAbility
+    ElectCase case_ -> isManaAbilityImpl case_
+    Event{} -> IsNotManaAbility
+    If _cond then_ else_ -> isManaAbilityImpl then_ <> isManaAbilityImpl else_
+    Listen listener -> isManaAbilityImpl listener
+    OwnerOf _zo cont -> isManaAbilityImpl $ cont dummyZO
+    Random wmo -> isManaAbilityImpl wmo
+    Target{} -> IsNotManaAbility
+    VariableFromPower _zo cont -> isManaAbilityImpl $ cont dummyVar
+    VariableInt cont -> isManaAbilityImpl $ cont dummyVar
+  isTrivialManaAbilityImpl stage x = case (stage, x) of
+    (StageControllerOf, ControllerOf this cont) -> case getObjectId this == proxyThisId of
+      True -> isTrivialManaAbilityImpl StageElectActivated $ cont proxyYou
+      False -> Nothing
+    (StageElectActivated, ElectActivated ability) -> isTrivialManaAbilityImpl StageFinal ability
+    (StageFinal, Effect [e]) -> isTrivialManaAbilityImpl StageFinal e
+    _ -> Nothing
+
+instance IsManaAbilityImpl (ElectOT p liftOT ot) where
+  isManaAbilityImpl = isManaAbilityImpl . unElectOT
+  isTrivialManaAbilityImpl stage = isTrivialManaAbilityImpl stage . unElectOT
 
 extractSingleManaType :: ManaPool 'NonSnow -> TrivialManaAbilityResult
 extractSingleManaType pool = case countMana pool of
@@ -286,6 +298,22 @@ instance IsManaAbilityImpl x => IsManaAbilityImpl (NatList user n x) where
     LS x xs -> isManaAbilityImpl x <> isManaAbilityImpl xs
   isTrivialManaAbilityImpl _ _ = Nothing
 
+instance IsManaAbilityImpl (SomeZone Ability ot) where
+  isManaAbilityImpl = \case
+    SomeZone ability -> isManaAbilityImpl ability
+    SomeZone2{} -> IsNotManaAbility
+  isTrivialManaAbilityImpl stage szAbility = case szAbility of
+    SomeZone ability -> isTrivialManaAbilityImpl stage ability
+    SomeZone2{} -> Nothing
+
+instance IsOTN ot => IsManaAbilityImpl (SomeZone (WithThisZ Ability) ot) where
+  isManaAbilityImpl = \case
+    SomeZone (WithThisZ ability) -> isManaAbilityImpl ability
+  isTrivialManaAbilityImpl = \case
+    StageWithThisAbility -> \case
+      SomeZone (WithThisZ ability) -> isTrivialManaAbilityImpl StageWithThisAbility ability
+    _ -> const Nothing
+
 instance IsManaAbilityImpl (TriggeredAbility zone ot) where
   isManaAbilityImpl = \case
     When elect -> isManaAbilityImpl elect
@@ -327,13 +355,16 @@ instance IsManaAbilityImpl ret => IsManaAbilityImpl (WithList ret zone ot) where
     SuchThat _reqs withList -> isManaAbilityImpl withList
   isTrivialManaAbilityImpl _ _ = Nothing
 
+instance IsZO zone ot => IsManaAbilityImpl (WithThis (Ability zone) zone ot) where
+  isManaAbilityImpl = isManaAbilityImpl . reifyWithThis dummyObjectId
+  isTrivialManaAbilityImpl = \case
+    StageWithThisAbility ->
+      isTrivialManaAbilityImpl StageAbility . reifyWithThis proxyThisId
+    _ -> const Nothing
+
 instance IsZO zone ot => IsManaAbilityImpl (WithThisActivated zone ot) where
   isManaAbilityImpl = isManaAbilityImpl . reifyWithThis dummyObjectId
   isTrivialManaAbilityImpl = \case
-    StageWithThisActivated ->
+    StageWithThisAbility ->
       isTrivialManaAbilityImpl StageControllerOf . reifyWithThis proxyThisId
     _ -> const Nothing
-
-instance IsZO zone ot => IsManaAbilityImpl (WithThisTriggered zone ot) where
-  isManaAbilityImpl = isManaAbilityImpl . reifyWithThis dummyObjectId
-  isTrivialManaAbilityImpl _ _ = Nothing

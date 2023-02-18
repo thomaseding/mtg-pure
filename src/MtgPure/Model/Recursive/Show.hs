@@ -107,6 +107,7 @@ import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Object.ViewObjectN (viewOTN')
 import safe MtgPure.Model.Object.VisitObjectN (visitObjectN')
 import safe MtgPure.Model.Power (Power)
+import safe MtgPure.Model.PrePost (PrePost (..))
 import safe MtgPure.Model.PrettyType (PrettyType (..))
 import safe MtgPure.Model.Recursive (
   Ability (..),
@@ -120,6 +121,7 @@ import safe MtgPure.Model.Recursive (
   Cost (..),
   Effect (..),
   Elect (..),
+  ElectOT (unElectOT),
   Else (..),
   Enchant (..),
   EnchantmentType (..),
@@ -132,6 +134,7 @@ import safe MtgPure.Model.Recursive (
   Requirement (..),
   SetCard (SetCard),
   SetToken (SetToken),
+  SomeZone (..),
   StaticAbility (..),
   Token (..),
   TriggeredAbility (..),
@@ -140,10 +143,9 @@ import safe MtgPure.Model.Recursive (
   WithMaskedObject (..),
   WithMaskedObjects (..),
   WithThis (..),
-  WithThisActivated,
+  WithThisAbility (..),
   WithThisOneShot,
-  WithThisStatic,
-  WithThisTriggered,
+  WithThisZ (..),
   YourCardFacet (..),
  )
 import safe MtgPure.Model.Supertype (Supertype (..))
@@ -171,7 +173,7 @@ import safe Prelude hiding (showList)
 defaultDepthLimit :: Maybe Int
 defaultDepthLimit = Nothing
 
-instance Show (Ability ot) where
+instance Show (Ability zone ot) where
   show = runEnvM defaultDepthLimit . showAbility
 
 instance Show (ActivatedAbility zone ot) where
@@ -246,16 +248,31 @@ instance Show (TriggeredAbility zone ot) where
 instance IsZO zone ot => Show (WithMaskedObject zone (Elect p e) ot) where
   show = runEnvM defaultDepthLimit . showWithMaskedObject showElect "obj"
 
-instance IsZO zone ot => Show (WithThisActivated zone ot) where
-  show = runEnvM defaultDepthLimit . showWithThis showElect "this"
+instance IsOTN ot => Show (SomeZone WithThisAbility ot) where
+  show = runEnvM defaultDepthLimit . showSomeZone (showWithThisAbility "this")
+
+instance IsOTN ot => Show (SomeZone (WithThisZ ActivatedAbility) ot) where
+  show = runEnvM defaultDepthLimit . showSomeZone (showWithThisZ showActivatedAbility "this")
+
+instance IsOTN ot => Show (SomeZone (WithThisZ StaticAbility) ot) where
+  show = runEnvM defaultDepthLimit . showSomeZone (showWithThisZ showStaticAbility "this")
+
+instance IsOTN ot => Show (SomeZone (WithThisZ TriggeredAbility) ot) where
+  show = runEnvM defaultDepthLimit . showSomeZone (showWithThisZ showTriggeredAbility "this")
+
+instance IsZO zone ot => Show (WithThis (Ability zone) zone ot) where
+  show = runEnvM defaultDepthLimit . showWithThis showAbility "this"
+
+instance IsZO zone ot => Show (WithThis (ElectOT 'Pre (ActivatedAbility zone)) zone ot) where
+  show = runEnvM defaultDepthLimit . showWithThis (showElect . unElectOT) "this"
+
+instance IsZO zone ot => Show (WithThis (StaticAbility zone) zone ot) where
+  show = runEnvM defaultDepthLimit . showWithThis showStaticAbility "this"
 
 instance IsZO 'ZStack ot => Show (WithThisOneShot ot) where
   show = runEnvM defaultDepthLimit . showWithThis showElect "this"
 
-instance IsZO zone ot => Show (WithThisStatic zone ot) where
-  show = runEnvM defaultDepthLimit . showWithThis showStaticAbility "this"
-
-instance IsZO zone ot => Show (WithThisTriggered zone ot) where
+instance IsZO zone ot => Show (WithThis (TriggeredAbility zone) zone ot) where
   show = runEnvM defaultDepthLimit . showWithThis showTriggeredAbility "this"
 
 ----------------------------------------
@@ -472,23 +489,17 @@ showListM f xs = noParens do
 
 ----------------------------------------
 
-showAbility :: Ability ot -> EnvM ParenItems
+showAbility :: Ability zone ot -> EnvM ParenItems
 showAbility = \case
   Activated ability -> yesParens do
-    sAbility <- dollar <$> showWithThis showElect "this" ability
+    sAbility <- dollar <$> showElect ability
     pure $ pure "Activated" <> sAbility
   Static ability -> yesParens do
-    sAbility <- dollar <$> showWithThis showStaticAbility "this" ability
-    pure $ pure "Static" <> sAbility
-  StaticWithoutThis ability -> yesParens do
     sAbility <- dollar <$> showStaticAbility ability
-    pure $ pure "StaticWithoutThis" <> sAbility
+    pure $ pure "Static" <> sAbility
   Triggered ability -> yesParens do
-    sAbility <- dollar <$> showWithThis showTriggeredAbility "this" ability
+    sAbility <- dollar <$> showTriggeredAbility ability
     pure $ pure "Triggered" <> sAbility
-
-showAbilities :: [Ability ot] -> EnvM ParenItems
-showAbilities = showListM showAbility
 
 showAnyCard :: AnyCard -> EnvM ParenItems
 showAnyCard = \case
@@ -543,7 +554,7 @@ showCard card = case card of
   SplitCard card1 card2 splitAbilities -> showCardImpl "SplitCard" card do
     sCard1 <- parens <$> showCard card1
     sCard2 <- parens <$> showCard card2
-    sSplitAbilities <- dollar <$> showAbilities splitAbilities
+    sSplitAbilities <- dollar <$> showListM (showSomeZone showAbility) splitAbilities
     pure $
       pure "SplitCard "
         <> sCard1
@@ -568,7 +579,7 @@ showCardFacet = \case
     sCost <- parens <$> showCost cost
     sSups <- parens <$> showSupertypes sups
     sArtTypes <- parens <$> showArtifactTypes artTypes
-    sAbilities <- dollar <$> showAbilities abilities
+    sAbilities <- dollar <$> showListM (showSomeZone (showWithThisAbility "this")) abilities
     pure $
       pure "ArtifactFacet "
         <> sColors
@@ -588,9 +599,9 @@ showCardFacet = \case
       sCreatTypes <- parens <$> showCreatureTypes creatTypes
       sPower <- parens <$> showPower power
       sToughness <- parens <$> showToughness toughness
-      sArtAbils <- parens <$> showAbilities artAbils
-      sCreatAbils <- parens <$> showAbilities creatAbils
-      sBothAbils <- dollar <$> showAbilities bothAbils
+      sArtAbils <- parens <$> showListM (showSomeZone (showWithThisAbility "this")) artAbils
+      sCreatAbils <- parens <$> showListM (showSomeZone (showWithThisAbility "this")) creatAbils
+      sBothAbils <- dollar <$> showListM (showSomeZone (showWithThisAbility "this")) bothAbils
       pure $
         pure "ArtifactCreatureFacet "
           <> sColors
@@ -616,9 +627,9 @@ showCardFacet = \case
       sSups <- parens <$> showSupertypes sups
       sArtTypes <- parens <$> showArtifactTypes artTypes
       sLandTypes <- parens <$> showLandTypes landTypes
-      sArtAbils <- parens <$> showAbilities artAbils
-      sLandAbils <- parens <$> showAbilities landAbils
-      sBothAbils <- dollar <$> showAbilities bothAbils
+      sArtAbils <- parens <$> showListM (showSomeZone (showWithThisAbility "this")) artAbils
+      sLandAbils <- parens <$> showListM (showSomeZone (showWithThisAbility "this")) landAbils
+      sBothAbils <- dollar <$> showListM (showSomeZone (showWithThisAbility "this")) bothAbils
       pure $
         pure "ArtifactLandFacet "
           <> sSups
@@ -639,7 +650,7 @@ showCardFacet = \case
       sCreatureTypes <- parens <$> showCreatureTypes creatureTypes
       sPower <- parens <$> showPower power
       sToughness <- parens <$> showToughness toughness
-      sAbilities <- dollar <$> showAbilities abilities
+      sAbilities <- dollar <$> showListM (showSomeZone (showWithThisAbility "this")) abilities
       pure $
         pure "CreatureFacet "
           <> sColors
@@ -659,7 +670,7 @@ showCardFacet = \case
     sCost <- parens <$> showCost cost
     sSups <- parens <$> showSupertypes sups
     sEnchantTypes <- parens <$> showEnchantmentTypes enchantTypes
-    sAbilities <- dollar <$> showAbilities abilities
+    sAbilities <- dollar <$> showListM (showSomeZone (showWithThisAbility "this")) abilities
     pure $
       pure "EnchantmentFacet " <> sColors
         <> pure " "
@@ -678,9 +689,9 @@ showCardFacet = \case
       sEnchantTypes <- parens <$> showEnchantmentTypes enchantTypes
       sPower <- parens <$> showPower power
       sToughness <- parens <$> showToughness toughness
-      sCreatAbils <- parens <$> showAbilities creatAbils
-      sEnchAbils <- parens <$> showAbilities enchAbils
-      sBothAbils <- dollar <$> showAbilities bothAbils
+      sCreatAbils <- parens <$> showListM (showSomeZone (showWithThisAbility "this")) creatAbils
+      sEnchAbils <- parens <$> showListM (showSomeZone (showWithThisAbility "this")) enchAbils
+      sBothAbils <- dollar <$> showListM (showSomeZone (showWithThisAbility "this")) bothAbils
       pure $
         pure "EnchantmentCreatureFacet "
           <> sColors
@@ -706,7 +717,7 @@ showCardFacet = \case
   LandFacet sups landTypes abilities -> yesParens do
     sSups <- parens <$> showSupertypes sups
     sLandTypes <- parens <$> showLandTypes landTypes
-    sAbilities <- dollar <$> showAbilities abilities
+    sAbilities <- dollar <$> showListM (showSomeZone (showWithThisAbility "this")) abilities
     pure $
       pure "LandFacet "
         <> sSups
@@ -718,7 +729,7 @@ showCardFacet = \case
     sCost <- parens <$> showCost cost
     sSups <- parens <$> showSupertypes sups
     sLoyalty <- parens <$> showLoyalty loyalty
-    sAbilities <- dollar <$> showAbilities abilities
+    sAbilities <- dollar <$> showListM (showSomeZone (showWithThisAbility "this")) abilities
     pure $
       pure "PlaneswalkerFacet "
         <> sColors
@@ -740,14 +751,14 @@ showCardFacet = \case
     Colors ->
     Cost ot ->
     [Supertype ot] ->
-    [Ability ot] ->
+    [SomeZone WithThisAbility ot] ->
     WithThisOneShot ot ->
     EnvM ParenItems
   showOneShot def colors cost sups abilities oneShot = yesParens do
     sColors <- parens <$> showColors colors
     sCost <- parens <$> showCost cost
     sSups <- parens <$> showSupertypes sups
-    sAbilities <- parens <$> showAbilities abilities
+    sAbilities <- parens <$> showListM (showSomeZone (showWithThisAbility "this")) abilities
     sOneShot <- dollar <$> showWithThis showElect "this" oneShot
     pure $
       pure def
@@ -916,7 +927,7 @@ showEffect = \case
     pure $ pure "Exile" <> sObj
   GainAbility obj ability -> yesParens do
     sObj <- parens <$> showZoneObject obj
-    sAbility <- dollar <$> showAbility ability
+    sAbility <- dollar <$> showWithThisAbility "this" ability
     pure $ pure "GainAbility " <> sObj <> sAbility
   GainControl player obj -> yesParens do
     sPlayer <- parens <$> showZoneObject player
@@ -928,7 +939,7 @@ showEffect = \case
     pure $ pure "GainLife " <> sPlayer <> pure " " <> pure amount
   LoseAbility obj ability -> yesParens do
     sObj <- parens <$> showZoneObject obj
-    sAbility <- dollar <$> showAbility ability
+    sAbility <- dollar <$> showWithThisAbility "this" ability
     pure $ pure "LoseAbility " <> sObj <> sAbility
   LoseLife player n -> yesParens do
     sPlayer <- parens <$> showZoneObject player
@@ -1846,7 +1857,7 @@ showRequirement = \case
     sObj <- dollar <$> showRequirement req
     pure $ pure "ControlsA" <> sObj
   HasAbility ability -> yesParens do
-    sAbility <- dollar <$> showAbility ability
+    sAbility <- dollar <$> showSomeZone (showWithThisAbility "this") ability
     pure $ pure "HasAbility" <> sAbility
   HasLandType landType -> yesParens do
     sLandType <- dollar <$> showLandType landType
@@ -1931,6 +1942,19 @@ showSetToken (SetToken set rarity token) = yesParens do
   pure $
     pure (fromString $ "SetToken " ++ show set ++ " " ++ show rarity)
       <> sToken
+
+showSomeZone ::
+  forall liftZOT ot.
+  (forall zone. liftZOT zone ot -> EnvM ParenItems) ->
+  SomeZone liftZOT ot ->
+  EnvM ParenItems
+showSomeZone showM = \case
+  SomeZone x -> yesParens do
+    sX <- dollar <$> showM x
+    pure $ pure "SomeZone" <> sX
+  SomeZone2 x -> yesParens do
+    sX <- dollar <$> showM x
+    pure $ pure "SomeZone2" <> sX
 
 showStaticAbility :: StaticAbility zone ot -> EnvM ParenItems
 showStaticAbility = \case
@@ -2140,12 +2164,12 @@ showWithMaskedObjects showM memo = \case
     pure $ pure "maskeds @" <> sTy <> pure " " <> sReqs <> sCont'
 
 showWithThis ::
-  forall zone liftOT ot.
+  forall liftOT zone ot.
   IsZO zone ot =>
   PrettyType (ZO zone ot) =>
   (forall ot'. liftOT ot' -> EnvM ParenItems) ->
   String ->
-  WithThis zone liftOT ot ->
+  WithThis liftOT zone ot ->
   EnvM ParenItems
 showWithThis showM memo = \case
   This1 cont ->
@@ -2278,6 +2302,33 @@ showWithThis showM memo = \case
               <> pure ") -> "
               <> sElect
      in go cont
+
+showWithThisAbility ::
+  forall zone ot.
+  String ->
+  WithThisAbility zone ot ->
+  EnvM ParenItems
+showWithThisAbility memo = \case
+  WithThisActivated withThis -> yesParens do
+    sWithThis <- dollar <$> showWithThis (showElect . unElectOT) memo withThis
+    pure $ pure "WithThisActivated" <> sWithThis
+  WithThisStatic withThis -> yesParens do
+    sWithThis <- dollar <$> showWithThis showStaticAbility memo withThis
+    pure $ pure "WithThisStatic" <> sWithThis
+  WithThisTriggered withThis -> yesParens do
+    sWithThis <- dollar <$> showWithThis showTriggeredAbility memo withThis
+    pure $ pure "WithThisTriggered" <> sWithThis
+
+showWithThisZ ::
+  forall liftZOT zone ot.
+  (forall ot'. liftZOT zone ot' -> EnvM ParenItems) ->
+  String ->
+  WithThisZ liftZOT zone ot ->
+  EnvM ParenItems
+showWithThisZ showM memo = \case
+  WithThisZ withThis -> yesParens do
+    sWithThis <- dollar <$> showWithThis showM memo withThis
+    pure $ pure "WithThisZ" <> sWithThis
 
 showYourCard :: YourCardFacet ot -> EnvM ParenItems
 showYourCard = \case

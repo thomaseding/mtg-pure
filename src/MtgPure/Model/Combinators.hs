@@ -6,6 +6,8 @@
 {-# HLINT ignore "Use camelCase" #-}
 
 module MtgPure.Model.Combinators (
+  activated,
+  activated',
   addManaAnyColor,
   addToBattlefield,
   AsCost (..),
@@ -54,11 +56,16 @@ module MtgPure.Model.Combinators (
   satisfies,
   searchLibrary,
   manaCost,
+  static_,
+  static,
+  static',
   swampwalk,
   tapCost,
   ToCard (..),
   ToToken (..),
   ToHybrid (..),
+  triggered,
+  triggered',
   trivialManaAbilities,
   trivialManaAbility,
   tyAp,
@@ -113,7 +120,6 @@ import safe MtgPure.Model.Object.Singleton.Permanent (CoPermanent (..))
 import safe MtgPure.Model.Object.ToObjectN.Instances ()
 import safe MtgPure.Model.PrePost (PrePost (..))
 import safe MtgPure.Model.Recursive (
-  Ability (..),
   ActivatedAbility (..),
   AnyCard (..),
   AnyToken (..),
@@ -123,6 +129,7 @@ import safe MtgPure.Model.Recursive (
   Cost (..),
   Effect (..),
   Elect (..),
+  ElectOT (..),
   Else (..),
   Event,
   EventListener,
@@ -130,12 +137,15 @@ import safe MtgPure.Model.Recursive (
   List,
   NonProxy (..),
   Requirement (..),
+  SomeZone (..),
   StaticAbility (Landwalk),
   Token (..),
+  TriggeredAbility,
   WithLinkedObject (..),
   WithMaskedObject (..),
   WithMaskedObjects (..),
   WithThis (..),
+  WithThisAbility (..),
   WithThisActivated,
   pattern CTrue,
  )
@@ -271,39 +281,64 @@ type family OT1FromOTN ot where
   OT1FromOTN (OT4 a b c d) = OT1 a
   OT1FromOTN (OT5 a b c d e) = OT1 a
 
-class IsZO zone ot => AsWithThis ot zone where
-  thisObject :: (ThisFromOTN zone ot -> liftOT ot) -> WithThis zone liftOT ot
-  thisObject1 :: (ZO zone (OT1FromOTN ot) -> liftOT ot) -> WithThis zone liftOT ot
+class IsZO zone ot => AsWithThis zone ot where
+  thisObject :: (ThisFromOTN zone ot -> liftOT ot) -> WithThis liftOT zone ot
+  thisObject1 :: (ZO zone (OT1FromOTN ot) -> liftOT ot) -> WithThis liftOT zone ot
 
-instance IsZO zone (OT1 a) => AsWithThis (OT1 a) zone where
+instance IsZO zone (OT1 a) => AsWithThis zone (OT1 a) where
   thisObject = case litOTN @(OT1 a) of
     OT1 -> This1
   thisObject1 = case litOTN @(OT1 a) of
     OT1 -> This1
 
-instance IsZO zone (OT2 a b) => AsWithThis (OT2 a b) zone where
+instance IsZO zone (OT2 a b) => AsWithThis zone (OT2 a b) where
   thisObject = case litOTN @(OT2 a b) of
     OT2 -> This2
   thisObject1 = case litOTN @(OT2 a b) of
     OT2 -> \goThis1 -> This2 \(a, _) -> goThis1 a
 
-instance IsZO zone (OT3 a b c) => AsWithThis (OT3 a b c) zone where
+instance IsZO zone (OT3 a b c) => AsWithThis zone (OT3 a b c) where
   thisObject = case litOTN @(OT3 a b c) of
     OT3 -> This3
   thisObject1 = case litOTN @(OT3 a b c) of
     OT3 -> \goThis1 -> This3 \(a, _, _) -> goThis1 a
 
-instance IsZO zone (OT4 a b c d) => AsWithThis (OT4 a b c d) zone where
+instance IsZO zone (OT4 a b c d) => AsWithThis zone (OT4 a b c d) where
   thisObject = case litOTN @(OT4 a b c d) of
     OT4 -> This4
   thisObject1 = case litOTN @(OT4 a b c d) of
     OT4 -> \goThis1 -> This4 \(a, _, _, _) -> goThis1 a
 
-instance IsZO zone (OT5 a b c d e) => AsWithThis (OT5 a b c d e) zone where
+instance IsZO zone (OT5 a b c d e) => AsWithThis zone (OT5 a b c d e) where
   thisObject = case litOTN @(OT5 a b c d e) of
     OT5 -> This5
   thisObject1 = case litOTN @(OT5 a b c d e) of
     OT5 -> \goThis1 -> This5 \(a, _, _, _, _) -> goThis1 a
+
+activatedOT' :: (AsWithThis zone ot, ot ~ OTN x) => (ThisFromOTN zone ot -> ElectOT 'Pre (ActivatedAbility zone) ot) -> WithThisAbility zone ot
+activatedOT' = WithThisActivated . thisObject
+
+activated' :: (AsWithThis zone ot, ot ~ OTN x) => (ThisFromOTN zone ot -> Elect 'Pre (ActivatedAbility zone ot) ot) -> WithThisAbility zone ot
+activated' = activatedOT' . (ElectOT .)
+
+activated :: (AsWithThis zone ot, ot ~ OTN x) => (ThisFromOTN zone ot -> Elect 'Pre (ActivatedAbility zone ot) ot) -> SomeZone WithThisAbility ot
+activated = SomeZone . activated'
+
+static' :: (AsWithThis zone ot, ot ~ OTN x) => (ThisFromOTN zone ot -> StaticAbility zone ot) -> WithThisAbility zone ot
+static' = WithThisStatic . thisObject
+
+static :: (AsWithThis zone ot, ot ~ OTN x) => (ThisFromOTN zone ot -> StaticAbility zone ot) -> SomeZone WithThisAbility ot
+static = SomeZone . static'
+
+-- | Alias for `static` in case someone wants to use `StaticPointers` extension.
+static_ :: (AsWithThis zone ot, ot ~ OTN x) => (ThisFromOTN zone ot -> StaticAbility zone ot) -> SomeZone WithThisAbility ot
+static_ = static
+
+triggered' :: (AsWithThis zone ot, ot ~ OTN x) => (ThisFromOTN zone ot -> TriggeredAbility zone ot) -> WithThisAbility zone ot
+triggered' = WithThisTriggered . thisObject
+
+triggered :: (AsWithThis zone ot, ot ~ OTN x) => (ThisFromOTN zone ot -> TriggeredAbility zone ot) -> SomeZone WithThisAbility ot
+triggered = SomeZone . triggered'
 
 class AsDamage a where
   asDamage :: a -> Damage 'Var
@@ -532,7 +567,7 @@ addManaAnyColor color player amount =
 
 hasAbility ::
   IsZO zone ot =>
-  Ability ot ->
+  SomeZone WithThisAbility ot ->
   Requirement zone ot
 hasAbility = HasAbility
 
@@ -546,10 +581,10 @@ untilEndOfTurn :: Effect 'Continuous -> Effect 'OneShot
 untilEndOfTurn =
   EffectContinuous . Until (event $ TimePoint (StepBegin CleanupStep) Proxy)
 
-gainAbility :: CoAny ot => ZO 'ZBattlefield ot -> Ability ot -> Effect 'Continuous
+gainAbility :: CoAny ot => ZO 'ZBattlefield ot -> WithThisAbility 'ZBattlefield ot -> Effect 'Continuous
 gainAbility = GainAbility
 
-loseAbility :: CoAny ot => ZO 'ZBattlefield ot -> Ability ot -> Effect 'Continuous
+loseAbility :: CoAny ot => ZO 'ZBattlefield ot -> WithThisAbility 'ZBattlefield ot -> Effect 'Continuous
 loseAbility = LoseAbility
 
 gainControl :: CoAny ot => ZOPlayer -> ZO 'ZBattlefield ot -> Effect 'Continuous
@@ -580,7 +615,7 @@ type CanHaveTrivialManaAbility ot =
   ( CoPermanent (OT1FromOTN ot)
   , CoAny (OT1FromOTN ot)
   , AsAny (OT1FromOTN ot)
-  , AsWithThis ot 'ZBattlefield
+  , AsWithThis 'ZBattlefield ot
   )
 
 mkTrivialManaAbility ::
@@ -591,19 +626,20 @@ mkTrivialManaAbility ::
   Maybe BasicLandType ->
   WithThisActivated 'ZBattlefield ot
 mkTrivialManaAbility mTy = thisObject1 \this ->
-  controllerOf this \you ->
-    ElectActivated
-      Ability
-        { activated_cost = tapCost [is this]
-        , activated_effect = effect $ AddMana you case mTy of
-            Just ty -> case ty of
-              Plains -> toManaPool W
-              Island -> toManaPool U
-              Swamp -> toManaPool B
-              Mountain -> toManaPool R
-              Forest -> toManaPool G
-            Nothing -> toManaPool C
-        }
+  ElectOT $
+    controllerOf this \you ->
+      ElectActivated
+        Ability
+          { activated_cost = tapCost [is this]
+          , activated_effect = effect $ AddMana you case mTy of
+              Just ty -> case ty of
+                Plains -> toManaPool W
+                Island -> toManaPool U
+                Swamp -> toManaPool B
+                Mountain -> toManaPool R
+                Forest -> toManaPool G
+              Nothing -> toManaPool C
+          }
 
 plainsManaAbility :: CanHaveTrivialManaAbility ot => WithThisActivated 'ZBattlefield ot
 plainsManaAbility = mkTrivialManaAbility $ Just Plains
@@ -643,10 +679,10 @@ trivialManaAbilities =
   , wastesManaAbility
   ]
 
-mkBasicLandwalk :: BasicLandType -> Ability OTNCreature
-mkBasicLandwalk ty = Static $ thisObject \_this -> Landwalk [HasLandType $ BasicLand ty]
+mkBasicLandwalk :: BasicLandType -> SomeZone WithThisAbility OTNCreature
+mkBasicLandwalk ty = static \_this -> Landwalk [HasLandType $ BasicLand ty]
 
-swampwalk :: Ability OTNCreature
+swampwalk :: SomeZone WithThisAbility OTNCreature
 swampwalk = mkBasicLandwalk Swamp
 
 class

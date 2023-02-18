@@ -18,6 +18,7 @@ module MtgPure.Model.Recursive (
   Effect (..),
   Elect (..),
   ElectPrePost,
+  ElectOT (..),
   Else (..),
   Enchant (..),
   EnchantmentType (..),
@@ -32,7 +33,7 @@ module MtgPure.Model.Recursive (
   Requirement (..),
   SetCard (..),
   SetToken (..),
-  Some (..),
+  SomeOT (..),
   SomeCard (..),
   SomeCardOrToken,
   SomeTerm (..),
@@ -46,15 +47,18 @@ module MtgPure.Model.Recursive (
   WithMaskedObject (..),
   WithMaskedObjects (..),
   WithThis (..),
+  WithThisAbility (..),
   WithThisActivated,
   WithThisOneShot,
   WithThisStatic,
   WithThisTriggered,
+  WithThisZ (..),
+  SomeZone (..),
   YourCardFacet (..),
   pattern CFalse,
   pattern CTrue,
-  fromSome,
-  mapSome,
+  fromSomeOT,
+  mapSomeOT,
 ) where
 
 import safe Data.ConsIndex (ConsIndex (..))
@@ -117,7 +121,7 @@ import safe MtgPure.Model.ZoneObject.ZoneObject (
   ZOPlayer,
  )
 
-----------------------------------------
+--------------------------------------------------------------------------------
 
 -- Semantics legend:
 --
@@ -125,36 +129,29 @@ import safe MtgPure.Model.ZoneObject.ZoneObject (
 --    Ability ot (experimenting with engine not having this "exact" notion)
 --    Card ot
 --    EnchantmentType ot
---    WithThis zone liftOT ot
+--    WithThis liftOT zone ot
 --
 -- "ot is (at least) one of (a,b,c,...)"
 --    Enchant zone ot
 --    Requirement zone ot
---    Some liftOT ot
+--    SomeOT liftOT ot
 --    ZO zone ot
 
-----------------------------------------
+--------------------------------------------------------------------------------
 
--- XXX: Perhaps WithThisActivated, WithThisStatic, and WithThisTriggered can be ditched in favor of
---      adding `WithThisAbility ot`.
---
--- XXX: Until I add WithThisAbility, I need a special case without THIS for split cards
-data Ability (ot :: Type) :: Type where
-  Activated :: IsZO zone ot => WithThisActivated zone ot -> Ability ot
-  Static :: IsZO zone ot => WithThisStatic zone ot -> Ability ot
-  -- TODO: Eventually remove this and simply have SplitCards refer to Ability and not WithThisAbility
-  StaticWithoutThis :: (IsZO zone ot1, IsZO zone ot2) => StaticAbility zone (ot1, ot2) -> Ability (ot1, ot2)
-  Triggered :: IsZO zone ot => WithThisTriggered zone ot -> Ability ot
+data Ability (zone :: Zone) (ot :: Type) :: Type where
+  Activated :: IsZO zone ot => Elect 'Pre (ActivatedAbility zone ot) ot -> Ability zone ot
+  Static :: StaticAbility zone ot -> Ability zone ot
+  Triggered :: IsZO zone ot => TriggeredAbility zone ot -> Ability zone ot
   deriving (Typeable)
 
-instance ConsIndex (Ability ot) where
+instance ConsIndex (Ability zone ot) where
   consIndex = \case
     Activated{} -> 1
     Static{} -> 2
-    StaticWithoutThis{} -> 3
-    Triggered{} -> 4
+    Triggered{} -> 3
 
-----------------------------------------
+--------------------------------------------------------------------------------
 
 data ActivatedAbility (zone :: Zone) (ot :: Type) :: Type where
   Ability ::
@@ -171,13 +168,13 @@ instance ConsIndex (ActivatedAbility zone ot) where
     Ability{} -> 1
     Cycling{} -> 2
 
-----------------------------------------
+--------------------------------------------------------------------------------
 
 -- data ArtifactType (ot :: Type) :: Type where
 --   Vehicle :: ArtifactType ot -- TODO: Stuff crew mechanic into here
 --   deriving (Bounded, Enum, Eq, Ord, Show)
 
-----------------------------------------
+--------------------------------------------------------------------------------
 
 -- TODO: Move out of Recursive.hs
 class Typeable (u :: Type) => IsUser u where
@@ -252,7 +249,7 @@ instance IsSpecificCard OTNPlaneswalker where
 instance IsSpecificCard OTNSorcery where
   singSpecificCard = SorceryCard
 
-----------------------------------------
+--------------------------------------------------------------------------------
 
 data AnyCard :: Type where
   AnyCard1 :: (ot ~ OTN x, IsSpecificCard ot) => Card ot -> AnyCard
@@ -269,7 +266,7 @@ instance HasCardName AnyCard where
     AnyCard1 card -> getCardName card
     AnyCard2 card -> getCardName card
 
-----------------------------------------
+--------------------------------------------------------------------------------
 
 data AnyToken :: Type where
   AnyToken :: IsSpecificCard ot => Token ot -> AnyToken
@@ -283,7 +280,7 @@ instance HasCardName AnyToken where
   getCardName = \case
     AnyToken token -> getCardName token
 
-----------------------------------------
+--------------------------------------------------------------------------------
 
 data Card (ot :: Type) :: Type where
   Card :: (ot ~ OTN x, IsSpecificCard ot) => CardName -> YourCardFacet ot -> Card ot
@@ -292,7 +289,7 @@ data Card (ot :: Type) :: Type where
     (ot1 ~ OTN x, ot2 ~ OTN y, Inst2 IsSpecificCard ot1 ot2) =>
     { splitCard_card1 :: Card ot1
     , splitCard_card2 :: Card ot2
-    , splitCard_abilities :: [Ability (ot1, ot2)]
+    , splitCard_abilities :: [SomeZone Ability (ot1, ot2)]
     } ->
     Card (ot1, ot2)
   deriving (Typeable)
@@ -309,7 +306,7 @@ instance HasCardName (Card ot) where
     DoubleSidedCard card1 card2 -> getCardName card1 <> " // " <> getCardName card2
     SplitCard card1 card2 _ -> getCardName card1 <> " // " <> getCardName card2
 
-----------------------------------------
+--------------------------------------------------------------------------------
 
 -- TODO:
 -- The one-shot facets need to be split into two parts:
@@ -324,7 +321,7 @@ data CardFacet (ot :: Type) :: Type where
     , artifact_cost :: Cost OTNArtifact
     , artifact_supertypes :: [Supertype OTNArtifact]
     , artifact_artifactTypes :: [ArtifactType]
-    , artifact_abilities :: [Ability OTNArtifact]
+    , artifact_abilities :: [SomeZone WithThisAbility OTNArtifact]
     } ->
     CardFacet OTNArtifact
   ArtifactCreatureFacet ::
@@ -335,18 +332,18 @@ data CardFacet (ot :: Type) :: Type where
     , artifactCreature_creatureTypes :: [CreatureType]
     , artifactCreature_power :: Power
     , artifactCreature_toughness :: Toughness
-    , artifactCreature_artifactAbilities :: [Ability OTNArtifact]
-    , artifactCreature_creatureAbilities :: [Ability OTNCreature]
-    , artifactCreature_artifactCreatureAbilities :: [Ability OTNArtifactCreature]
+    , artifactCreature_artifactAbilities :: [SomeZone WithThisAbility OTNArtifact]
+    , artifactCreature_creatureAbilities :: [SomeZone WithThisAbility OTNCreature]
+    , artifactCreature_artifactCreatureAbilities :: [SomeZone WithThisAbility OTNArtifactCreature]
     } ->
     CardFacet OTNArtifactCreature
   ArtifactLandFacet ::
     { artifactLand_supertypes :: [Supertype OTNArtifactLand]
     , artifactLand_artifactTypes :: [ArtifactType]
     , artifactLand_landTypes :: [LandType]
-    , artifactLand_artifactAbilities :: [Ability OTNArtifact]
-    , artifactLand_landAbilities :: [Ability OTNLand]
-    , artifactLand_artifactLandAbilities :: [Ability OTNArtifactLand]
+    , artifactLand_artifactAbilities :: [SomeZone WithThisAbility OTNArtifact]
+    , artifactLand_landAbilities :: [SomeZone WithThisAbility OTNLand]
+    , artifactLand_artifactLandAbilities :: [SomeZone WithThisAbility OTNArtifactLand]
     } ->
     CardFacet OTNArtifactLand
   CreatureFacet ::
@@ -356,7 +353,7 @@ data CardFacet (ot :: Type) :: Type where
     , creature_creatureTypes :: [CreatureType]
     , creature_power :: Power
     , creature_toughness :: Toughness
-    , creature_abilities :: [Ability OTNCreature]
+    , creature_abilities :: [SomeZone WithThisAbility OTNCreature]
     } ->
     CardFacet OTNCreature
   EnchantmentFacet ::
@@ -364,7 +361,7 @@ data CardFacet (ot :: Type) :: Type where
     , enchantment_cost :: Cost OTNEnchantment
     , enchantment_supertypes :: [Supertype OTNEnchantment]
     , enchantment_enchantmentTypes :: [EnchantmentType OTNEnchantment]
-    , enchantment_abilities :: [Ability OTNEnchantment]
+    , enchantment_abilities :: [SomeZone WithThisAbility OTNEnchantment]
     } ->
     CardFacet OTNEnchantment
   EnchantmentCreatureFacet ::
@@ -375,9 +372,9 @@ data CardFacet (ot :: Type) :: Type where
     , enchantmentCreature_enchantmentTypes :: [EnchantmentType OTNEnchantmentCreature]
     , enchantmentCreature_power :: Power
     , enchantmentCreature_toughness :: Toughness
-    , enchantmentCreature_creatureAbilities :: [Ability OTNCreature]
-    , enchantmentCreature_enchantmentAbilities :: [Ability OTNEnchantment]
-    , enchantmentCreature_enchantmentCreatureAbilities :: [Ability OTNEnchantmentCreature]
+    , enchantmentCreature_creatureAbilities :: [SomeZone WithThisAbility OTNCreature]
+    , enchantmentCreature_enchantmentAbilities :: [SomeZone WithThisAbility OTNEnchantment]
+    , enchantmentCreature_enchantmentCreatureAbilities :: [SomeZone WithThisAbility OTNEnchantmentCreature]
     } ->
     CardFacet OTNEnchantmentCreature
   InstantFacet ::
@@ -385,14 +382,14 @@ data CardFacet (ot :: Type) :: Type where
     , instant_cost :: Cost OTNInstant
     , instant_supertypes :: [Supertype OTNInstant]
     , -- instant_oneShotTypes :: [OneShotType] e.g. Arcane
-      instant_abilities :: [Ability OTNInstant]
+      instant_abilities :: [SomeZone WithThisAbility OTNInstant]
     , instant_effect :: WithThisOneShot OTNInstant
     } ->
     CardFacet OTNInstant
   LandFacet ::
     { land_supertypes :: [Supertype OTNLand]
     , land_landTypes :: [LandType]
-    , land_abilities :: [Ability OTNLand]
+    , land_abilities :: [SomeZone WithThisAbility OTNLand]
     } ->
     CardFacet OTNLand
   PlaneswalkerFacet ::
@@ -400,7 +397,7 @@ data CardFacet (ot :: Type) :: Type where
     , planeswalker_cost :: Cost OTNPlaneswalker
     , planeswalker_supertypes :: [Supertype OTNPlaneswalker]
     , planeswalker_loyalty :: Loyalty
-    , planeswalker_abilities :: [Ability OTNPlaneswalker]
+    , planeswalker_abilities :: [SomeZone WithThisAbility OTNPlaneswalker]
     } ->
     CardFacet OTNPlaneswalker
   SorceryFacet ::
@@ -408,7 +405,7 @@ data CardFacet (ot :: Type) :: Type where
     , sorcery_cost :: Cost OTNSorcery
     , sorcery_supertypes :: [Supertype OTNSorcery]
     , -- instant_oneShotTypes :: [OneShotType] e.g. Arcane
-      sorcery_abilities :: [Ability OTNSorcery]
+      sorcery_abilities :: [SomeZone WithThisAbility OTNSorcery]
     , sorcery_effect :: WithThisOneShot OTNSorcery
     } ->
     CardFacet OTNSorcery
@@ -427,7 +424,7 @@ instance ConsIndex (CardFacet ot) where
     PlaneswalkerFacet{} -> 9
     SorceryFacet{} -> 10
 
-----------------------------------------
+--------------------------------------------------------------------------------
 
 data Case (x :: Type) where
   CaseFin ::
@@ -442,7 +439,7 @@ instance ConsIndex (Case x) where
   consIndex = \case
     CaseFin{} -> 1
 
-----------------------------------------
+--------------------------------------------------------------------------------
 
 data Condition :: Type where
   CAnd :: [Condition] -> Condition
@@ -464,7 +461,7 @@ pattern CFalse = COr []
 pattern CTrue :: Condition
 pattern CTrue = CAnd []
 
-----------------------------------------
+--------------------------------------------------------------------------------
 
 -- XXX: Uggh... need to add another type index for what to do after since some effects and abilities need to
 -- know which costs were paid. (e.g. "If black mana was spend to pay this card's cost then ..."). Then a
@@ -499,7 +496,7 @@ instance ConsIndex (Cost ot) where
     SacrificeCost{} -> 9
     TapCost{} -> 10
 
-----------------------------------------
+--------------------------------------------------------------------------------
 
 data Effect (ef :: EffectType) :: Type where
   -- TODO: Need 'Var version of ManaPool for add X mana effects.
@@ -516,11 +513,11 @@ data Effect (ef :: EffectType) :: Type where
   EffectContinuous :: Effect 'Continuous -> Effect 'OneShot -- 611.2
   EndTheTurn :: Effect 'OneShot
   Exile :: (IsZO zone ot, CoCard ot) => ZO zone ot -> Effect 'OneShot -- TODO: prohibit (zone == 'ZExile)
-  GainAbility :: (CoAny ot, IsOTN ot) => ZO 'ZBattlefield ot -> Ability ot -> Effect 'Continuous
+  GainAbility :: (CoAny ot, IsOTN ot) => ZO 'ZBattlefield ot -> WithThisAbility 'ZBattlefield ot -> Effect 'Continuous
   -- XXX: This is Continuous to support things like "gain control until end of turn"
   GainControl :: (CoAny ot, IsOTN ot) => ZOPlayer -> ZO 'ZBattlefield ot -> Effect 'Continuous -- TODO: restrict zone to 'ZBattlefield and 'ZStack
   GainLife :: ZOPlayer -> Int -> Effect 'OneShot -- TODO: PositiveInt
-  LoseAbility :: (CoAny ot, IsOTN ot) => ZO 'ZBattlefield ot -> Ability ot -> Effect 'Continuous
+  LoseAbility :: (CoAny ot, IsOTN ot) => ZO 'ZBattlefield ot -> WithThisAbility 'ZBattlefield ot -> Effect 'Continuous
   LoseLife :: ZOPlayer -> Int -> Effect 'OneShot -- TODO: PositiveInt
   PutOntoBattlefield :: (CoPermanent ot, IsZO zone ot) => ZOPlayer -> ZO zone ot -> Effect 'OneShot -- TODO: zone /= 'ZBattlefield
   Sacrifice :: (CoPermanent ot, IsOTN ot) => ZOPlayer -> [Requirement 'ZBattlefield ot] -> Effect 'OneShot
@@ -565,7 +562,7 @@ instance ConsIndex (Effect ef) where
     Until{} -> 27
     WithList{} -> 28
 
-----------------------------------------
+--------------------------------------------------------------------------------
 
 data Elect (p :: PrePost) (el :: Type) (ot :: Type) :: Type where
   ActivePlayer :: (ZOPlayer -> Elect p el ot) -> Elect p el ot
@@ -635,9 +632,14 @@ instance ConsIndex (Elect p el ot) where
     VariableFromPower{} -> 19
     VariableInt{} -> 20
 
+-- | Used to make some higher-kinded `ot` stuff work.
+data ElectOT (p :: PrePost) (liftOT :: Type -> Type) (ot :: Type) where
+  ElectOT :: {unElectOT :: Elect p (liftOT ot) ot} -> ElectOT p liftOT ot
+  deriving (Typeable)
+
 type ElectPrePost el ot = Elect 'Pre (Elect 'Post el ot) ot
 
-----------------------------------------
+--------------------------------------------------------------------------------
 
 data Else (el :: Type) (ot :: Type) :: Type where
   ElseCost :: (el ~ Cost ot) => Elect 'Post el ot -> Else el ot
@@ -656,7 +658,7 @@ instance ConsIndex (Else el ot) where
     ElseEffect{} -> 2
     ElseEvent{} -> 3
 
-----------------------------------------
+--------------------------------------------------------------------------------
 
 data Enchant (zone :: Zone) (ot :: Type) :: Type where
   Enchant :: IsZO zone ot => WithLinkedObject zone (Elect 'Post (Effect 'Continuous)) ot -> Enchant zone ot
@@ -666,7 +668,7 @@ instance ConsIndex (Enchant zone ot) where
   consIndex = \case
     Enchant{} -> 1
 
-----------------------------------------
+--------------------------------------------------------------------------------
 
 data EnchantmentType (ot :: Type) :: Type where
   Aura :: (ot ~ OTNEnchantment, IsZO zone ot') => Enchant zone ot' -> EnchantmentType ot
@@ -676,7 +678,7 @@ instance ConsIndex (EnchantmentType ot) where
   consIndex = \case
     Aura{} -> 1
 
-----------------------------------------
+--------------------------------------------------------------------------------
 
 -- This is distinct from triggered ETB effects.
 data EntersStatic (zone :: Zone) (ot :: Type) :: Type where
@@ -688,7 +690,7 @@ instance ConsIndex (EntersStatic zone ot) where
   consIndex = \case
     EntersTapped{} -> 1
 
-----------------------------------------
+--------------------------------------------------------------------------------
 
 -- TODO: move out of this module
 class IsZone zone => CoNonBattlefield (zone :: Zone)
@@ -717,7 +719,7 @@ instance ConsIndex (EventListener' liftOT) where
     SpellIsCast{} -> 5
     TimePoint{} -> 6
 
-----------------------------------------
+--------------------------------------------------------------------------------
 
 newtype List a = List [a]
   deriving (Functor, Typeable)
@@ -726,7 +728,7 @@ instance Applicative List where
   pure = List . pure
   List f <*> List x = List $ f <*> x
 
-----------------------------------------
+--------------------------------------------------------------------------------
 
 data NonProxy (liftOT :: Type -> Type) :: Type where
   NonProxyElectEffect :: NonProxy (Elect p (Effect ef))
@@ -738,12 +740,12 @@ instance ConsIndex (NonProxy liftOT) where
     NonProxyElectEffect -> 1
     NonProxyElectPrePostEffect -> 2
 
-----------------------------------------
+--------------------------------------------------------------------------------
 
 data Requirement (zone :: Zone) (ot :: Type) :: Type where
   ControlledBy :: IsOTN ot => ZOPlayer -> Requirement 'ZBattlefield ot
   ControlsA :: IsOTN ot => Requirement 'ZBattlefield ot -> Requirement zone OTNPlayer
-  HasAbility :: IsZO zone ot => Ability ot -> Requirement zone ot -- Non-unique differing representations will not be considered the same
+  HasAbility :: IsZO zone ot => SomeZone WithThisAbility ot -> Requirement zone ot -- Non-unique differing representations will not be considered the same
   HasLandType :: IsZO zone OTNLand => LandType -> Requirement zone OTNLand
   Is :: (CoAny ot, IsZO zone ot) => ZO zone ot -> Requirement zone ot
   IsOpponentOf :: ZOPlayer -> Requirement zone OTNPlayer
@@ -811,7 +813,7 @@ instance ConsIndex (Requirement zone ot) where
     Req4{} -> 16
     Req5{} -> 17
 
-----------------------------------------
+--------------------------------------------------------------------------------
 
 -- XXX: Better to just make this take a user type `a` which can encode CardSet and Rarirty amongst other things.
 data SetCard (ot :: Type) :: Type where
@@ -822,7 +824,7 @@ instance ConsIndex (SetCard ot) where
   consIndex = \case
     SetCard{} -> 1
 
-----------------------------------------
+--------------------------------------------------------------------------------
 
 -- XXX: Better to just make this take a user type `a` which can encode CardSet and Rarirty amongst other things.
 data SetToken (ot :: Type) :: Type where
@@ -833,31 +835,31 @@ instance ConsIndex (SetToken ot) where
   consIndex = \case
     SetToken{} -> 1
 
-----------------------------------------
+--------------------------------------------------------------------------------
 
 -- TODO: Move all these Some* stuff to another file
 
-data Some (liftOT :: Type -> Type) (ot :: Type) :: Type where
-  Some2a :: Inst2 IsObjectType a b => SomeTerm liftOT (OT1 a) -> Some liftOT (OT2 a b)
-  Some2b :: Inst2 IsObjectType a b => SomeTerm liftOT (OT1 b) -> Some liftOT (OT2 a b)
+data SomeOT (liftOT :: Type -> Type) (ot :: Type) :: Type where
+  Some2a :: Inst2 IsObjectType a b => SomeTerm liftOT (OT1 a) -> SomeOT liftOT (OT2 a b)
+  Some2b :: Inst2 IsObjectType a b => SomeTerm liftOT (OT1 b) -> SomeOT liftOT (OT2 a b)
   --
-  Some5a :: Inst5 IsObjectType a b c d e => SomeTerm liftOT (OT1 a) -> Some liftOT (OT5 a b c d e)
-  Some5b :: Inst5 IsObjectType a b c d e => SomeTerm liftOT (OT1 b) -> Some liftOT (OT5 a b c d e)
-  Some5c :: Inst5 IsObjectType a b c d e => SomeTerm liftOT (OT1 c) -> Some liftOT (OT5 a b c d e)
-  Some5d :: Inst5 IsObjectType a b c d e => SomeTerm liftOT (OT1 d) -> Some liftOT (OT5 a b c d e)
-  Some5e :: Inst5 IsObjectType a b c d e => SomeTerm liftOT (OT1 e) -> Some liftOT (OT5 a b c d e)
-  Some5ab :: Inst5 IsObjectType a b c d e => SomeTerm liftOT (OT2 a b) -> Some liftOT (OT5 a b c d e)
-  Some5ad :: Inst5 IsObjectType a b c d e => SomeTerm liftOT (OT2 a d) -> Some liftOT (OT5 a b c d e)
-  Some5bc :: Inst5 IsObjectType a b c d e => SomeTerm liftOT (OT2 b c) -> Some liftOT (OT5 a b c d e)
+  Some5a :: Inst5 IsObjectType a b c d e => SomeTerm liftOT (OT1 a) -> SomeOT liftOT (OT5 a b c d e)
+  Some5b :: Inst5 IsObjectType a b c d e => SomeTerm liftOT (OT1 b) -> SomeOT liftOT (OT5 a b c d e)
+  Some5c :: Inst5 IsObjectType a b c d e => SomeTerm liftOT (OT1 c) -> SomeOT liftOT (OT5 a b c d e)
+  Some5d :: Inst5 IsObjectType a b c d e => SomeTerm liftOT (OT1 d) -> SomeOT liftOT (OT5 a b c d e)
+  Some5e :: Inst5 IsObjectType a b c d e => SomeTerm liftOT (OT1 e) -> SomeOT liftOT (OT5 a b c d e)
+  Some5ab :: Inst5 IsObjectType a b c d e => SomeTerm liftOT (OT2 a b) -> SomeOT liftOT (OT5 a b c d e)
+  Some5ad :: Inst5 IsObjectType a b c d e => SomeTerm liftOT (OT2 a d) -> SomeOT liftOT (OT5 a b c d e)
+  Some5bc :: Inst5 IsObjectType a b c d e => SomeTerm liftOT (OT2 b c) -> SomeOT liftOT (OT5 a b c d e)
   --
-  Some6a :: Inst6 IsObjectType a b c d e f => SomeTerm liftOT (OT1 a) -> Some liftOT (OT6 a b c d e f)
-  Some6b :: Inst6 IsObjectType a b c d e f => SomeTerm liftOT (OT1 b) -> Some liftOT (OT6 a b c d e f)
-  Some6c :: Inst6 IsObjectType a b c d e f => SomeTerm liftOT (OT1 c) -> Some liftOT (OT6 a b c d e f)
-  Some6d :: Inst6 IsObjectType a b c d e f => SomeTerm liftOT (OT1 d) -> Some liftOT (OT6 a b c d e f)
-  Some6e :: Inst6 IsObjectType a b c d e f => SomeTerm liftOT (OT1 e) -> Some liftOT (OT6 a b c d e f)
-  Some6f :: Inst6 IsObjectType a b c d e f => SomeTerm liftOT (OT1 f) -> Some liftOT (OT6 a b c d e f)
-  Some6ab :: Inst6 IsObjectType a b c d e f => SomeTerm liftOT (OT2 a b) -> Some liftOT (OT6 a b c d e f)
-  Some6bc :: Inst6 IsObjectType a b c d e f => SomeTerm liftOT (OT2 b c) -> Some liftOT (OT6 a b c d e f)
+  Some6a :: Inst6 IsObjectType a b c d e f => SomeTerm liftOT (OT1 a) -> SomeOT liftOT (OT6 a b c d e f)
+  Some6b :: Inst6 IsObjectType a b c d e f => SomeTerm liftOT (OT1 b) -> SomeOT liftOT (OT6 a b c d e f)
+  Some6c :: Inst6 IsObjectType a b c d e f => SomeTerm liftOT (OT1 c) -> SomeOT liftOT (OT6 a b c d e f)
+  Some6d :: Inst6 IsObjectType a b c d e f => SomeTerm liftOT (OT1 d) -> SomeOT liftOT (OT6 a b c d e f)
+  Some6e :: Inst6 IsObjectType a b c d e f => SomeTerm liftOT (OT1 e) -> SomeOT liftOT (OT6 a b c d e f)
+  Some6f :: Inst6 IsObjectType a b c d e f => SomeTerm liftOT (OT1 f) -> SomeOT liftOT (OT6 a b c d e f)
+  Some6ab :: Inst6 IsObjectType a b c d e f => SomeTerm liftOT (OT2 a b) -> SomeOT liftOT (OT6 a b c d e f)
+  Some6bc :: Inst6 IsObjectType a b c d e f => SomeTerm liftOT (OT2 b c) -> SomeOT liftOT (OT6 a b c d e f)
   -- TODO: Write a script to generate other Some6xy flavors
   deriving (Typeable)
 
@@ -881,16 +883,16 @@ data SomeCard (ot :: Type) :: Type where
   SomeSplitCard1 :: (ot ~ OTN x, ot' ~ OTN y, Inst2 IsSpecificCard ot ot') => SomeCard ot -> SomeCard ot' -> SomeCard ot
   SomeSplitCard2 :: (ot ~ OTN x, ot' ~ OTN y, Inst2 IsSpecificCard ot ot') => SomeCard ot' -> SomeCard ot -> SomeCard ot
 
-type SomeToken = Some Token
+type SomeToken = SomeOT Token
 
 type SomeCardOrToken ot = Either (SomeCard ot) (SomeToken ot)
 
-mapSome ::
+mapSomeOT ::
   forall liftOT liftOT' ot.
-  Some liftOT ot ->
+  SomeOT liftOT ot ->
   (forall ot'. liftOT ot' -> Maybe (liftOT' ot')) ->
-  Maybe (Some liftOT' ot)
-mapSome some f = case some of
+  Maybe (SomeOT liftOT' ot)
+mapSomeOT some f = case some of
   Some2a term -> Some2a <$> goTerm term
   Some2b term -> Some2b <$> goTerm term
   Some5a term -> Some5a <$> goTerm term
@@ -923,12 +925,12 @@ mapSome some f = case some of
     SomeArtifactLand x -> SomeArtifactLand <$> f x
     SomeEnchantmentCreature x -> SomeEnchantmentCreature <$> f x
 
-fromSome ::
+fromSomeOT ::
   forall liftOT ot x.
-  Some liftOT ot ->
+  SomeOT liftOT ot ->
   (forall ot'. liftOT ot' -> x) ->
   x
-fromSome some f = case some of
+fromSomeOT some f = case some of
   Some2a term -> goTerm term
   Some2b term -> goTerm term
   Some5a term -> goTerm term
@@ -961,7 +963,19 @@ fromSome some f = case some of
     SomeArtifactLand x -> f x
     SomeEnchantmentCreature x -> f x
 
-----------------------------------------
+--------------------------------------------------------------------------------
+
+data SomeZone (liftZOT :: Zone -> Type -> Type) (ot :: Type) :: Type where
+  SomeZone :: (ot ~ OTN x, IsZO zone ot) => liftZOT zone ot -> SomeZone liftZOT ot
+  SomeZone2 :: (IsZO zone ot1, IsZO zone ot2) => liftZOT zone (ot1, ot2) -> SomeZone liftZOT (ot1, ot2)
+  deriving (Typeable)
+
+instance ConsIndex (SomeZone liftZOT ot) where
+  consIndex = \case
+    SomeZone{} -> 1
+    SomeZone2{} -> 2
+
+--------------------------------------------------------------------------------
 
 data StaticAbility (zone :: Zone) (ot :: Type) :: Type where
   As :: (ot ~ OTN x, IsOTN ot) => Elect 'Post EventListener ot -> StaticAbility 'ZBattlefield ot -- 603.6d: not a triggered ability
@@ -999,7 +1013,7 @@ instance ConsIndex (StaticAbility zone ot) where
     Suspend{} -> 13
     Trample{} -> 14
 
-----------------------------------------
+--------------------------------------------------------------------------------
 
 data Token (ot :: Type) :: Type where
   Token :: (ot ~ OTN x, CoPermanent ot, IsSpecificCard ot) => Card ot -> Token ot
@@ -1013,7 +1027,7 @@ instance HasCardName (Token ot) where
   getCardName = \case
     Token card -> getCardName card
 
-----------------------------------------
+--------------------------------------------------------------------------------
 
 -- https://www.mtgsalvation.com/forums/magic-fundamentals/magic-rulings/magic-rulings-archives/611601-whenever-what-does-it-mean?comment=3
 -- https://www.reddit.com/r/magicTCG/comments/asmecb/noob_question_difference_between_as_and_when/
@@ -1025,7 +1039,7 @@ instance ConsIndex (TriggeredAbility zone ot) where
   consIndex = \case
     When{} -> 1
 
-----------------------------------------
+--------------------------------------------------------------------------------
 
 -- "Linked" is used to denote that the object fed into the continuation has the same `ot`
 -- as WithLinkedObject's `ot` type.
@@ -1070,7 +1084,7 @@ instance ConsIndex (WithLinkedObject zone liftOT ot) where
     Linked4{} -> 4
     Linked5{} -> 5
 
-----------------------------------------
+--------------------------------------------------------------------------------
 
 data WithList (ret :: Type) (zone :: Zone) (ot :: Type) where
   CountOf :: (IsZO zone ot, Typeable ret) => List (ZO zone ot) -> (Variable Int -> ret) -> WithList ret zone ot
@@ -1083,7 +1097,7 @@ instance ConsIndex (WithList ret zone ot) where
     Each{} -> 2
     SuchThat{} -> 3
 
-----------------------------------------
+--------------------------------------------------------------------------------
 
 -- "Masked" is used to denote that the object fed into the continuation has an `ot'` that
 -- is independent from WithMaskedObject's `ot` type (aka the `ot` in the continuation result).
@@ -1129,7 +1143,7 @@ instance ConsIndex (WithMaskedObject zone liftOT ot) where
     Masked5{} -> 5
     Masked6{} -> 6
 
-----------------------------------------
+--------------------------------------------------------------------------------
 
 data WithMaskedObjects (zone :: Zone) (liftOT :: Type -> Type) (ot :: Type) :: Type where
   Maskeds1 ::
@@ -1173,7 +1187,7 @@ instance ConsIndex (WithMaskedObjects zone liftOT ot) where
     Maskeds5{} -> 5
     Maskeds6{} -> 6
 
-----------------------------------------
+--------------------------------------------------------------------------------
 
 -- NOTE: At the moment there don't exist any cards with more than 3 facets. That said, extending
 -- to This4 and This5, we get OTNPermanent support, which is useful. It lets the engine do some
@@ -1187,7 +1201,7 @@ instance ConsIndex (WithMaskedObjects zone liftOT ot) where
 -- I only support the case for `WithThis zone (ot, ot)`. Normally to "support" split cards with
 -- differing ot1 and ot2, each split card constituent would boil down into a normal non-split
 -- card, in which case we can just use `WithThis zone ot1` or `WithThis zone ot2` respectively.
-data WithThis (zone :: Zone) (liftOT :: Type -> Type) (ot :: Type) :: Type where
+data WithThis (liftOT :: Type -> Type) (zone :: Zone) (ot :: Type) :: Type where
   -- SplitThis2 ::
   --   (IsOTN ot1, IsOTN ot2) =>
   --   (ZO zone (ot1, ot2) -> liftOT (ot1, ot2)) ->
@@ -1195,26 +1209,26 @@ data WithThis (zone :: Zone) (liftOT :: Type -> Type) (ot :: Type) :: Type where
   This1 ::
     (IsOTN (OT1 a), Inst1 IsObjectType a) =>
     (ZO zone (OT1 a) -> liftOT (OT1 a)) ->
-    WithThis zone liftOT (OT1 a)
+    WithThis liftOT zone (OT1 a)
   This2 ::
     (IsOTN (OT2 a b), Inst2 IsObjectType a b) =>
     -- TODO: Add a additional full (ZO zone (OT2 a b)) to the input tuple?
     -- TODO: Introduce a `This ot` record type to access its constituents.
     --       Prolly can also add ToObjectN instances (cool!).
     ((ZO zone (OT1 a), ZO zone (OT1 b)) -> liftOT (OT2 a b)) ->
-    WithThis zone liftOT (OT2 a b)
+    WithThis liftOT zone (OT2 a b)
   This3 ::
     (IsOTN (OT3 a b c), Inst3 IsObjectType a b c) =>
     ((ZO zone (OT1 a), ZO zone (OT1 b), ZO zone (OT1 c)) -> liftOT (OT3 a b c)) ->
-    WithThis zone liftOT (OT3 a b c)
+    WithThis liftOT zone (OT3 a b c)
   This4 ::
     (IsOTN (OT4 a b c d), Inst4 IsObjectType a b c d) =>
     ((ZO zone (OT1 a), ZO zone (OT1 b), ZO zone (OT1 c), ZO zone (OT1 d)) -> liftOT (OT4 a b c d)) ->
-    WithThis zone liftOT (OT4 a b c d)
+    WithThis liftOT zone (OT4 a b c d)
   This5 ::
     (IsOTN (OT5 a b c d e), Inst5 IsObjectType a b c d e) =>
     ((ZO zone (OT1 a), ZO zone (OT1 b), ZO zone (OT1 c), ZO zone (OT1 d), ZO zone (OT1 e)) -> liftOT (OT5 a b c d e)) ->
-    WithThis zone liftOT (OT5 a b c d e)
+    WithThis liftOT zone (OT5 a b c d e)
   deriving (Typeable)
 
 instance ConsIndex (WithThis zone liftOT ot) where
@@ -1225,15 +1239,34 @@ instance ConsIndex (WithThis zone liftOT ot) where
     This4{} -> 4
     This5{} -> 5
 
-type WithThisActivated zone ot = WithThis zone (Elect 'Pre (ActivatedAbility zone ot)) ot
+type WithThisActivated zone = WithThis (ElectOT 'Pre (ActivatedAbility zone)) zone
 
-type WithThisOneShot = WithThis 'ZStack (Elect 'Post (Effect 'OneShot))
+type WithThisOneShot = WithThis (Elect 'Post (Effect 'OneShot)) 'ZStack
 
-type WithThisStatic zone ot = WithThis zone (StaticAbility zone) ot
+type WithThisStatic zone = WithThis (StaticAbility zone) zone
 
-type WithThisTriggered zone ot = WithThis zone (TriggeredAbility zone) ot
+type WithThisTriggered zone = WithThis (TriggeredAbility zone) zone
 
-----------------------------------------
+-- | Used to make some higher-kinded `zone` stuff work.
+data WithThisZ (liftZOT :: Zone -> Type -> Type) (zone :: Zone) (ot :: Type) where
+  WithThisZ :: IsZO zone ot => WithThis (liftZOT zone) zone ot -> WithThisZ liftZOT zone ot
+  deriving (Typeable)
+
+-- This is factored with the constructors expanded out here to enable pattern matching
+-- on the ability type without dealing with continuation crap.
+data WithThisAbility (zone :: Zone) (ot :: Type) where
+  WithThisActivated :: IsZO zone ot => WithThisActivated zone ot -> WithThisAbility zone ot
+  WithThisStatic :: IsZO zone ot => WithThisStatic zone ot -> WithThisAbility zone ot
+  WithThisTriggered :: IsZO zone ot => WithThisTriggered zone ot -> WithThisAbility zone ot
+  deriving (Typeable)
+
+instance ConsIndex (WithThisAbility zone ot) where
+  consIndex = \case
+    WithThisActivated{} -> 1
+    WithThisStatic{} -> 2
+    WithThisTriggered{} -> 3
+
+--------------------------------------------------------------------------------
 
 type YourDirect liftOT ot = ZOPlayer -> liftOT ot
 
@@ -1263,3 +1296,5 @@ instance ConsIndex (YourCardFacet ot) where
     YourLand{} -> 8
     YourPlaneswalker{} -> 9
     YourSorcery{} -> 10
+
+--------------------------------------------------------------------------------

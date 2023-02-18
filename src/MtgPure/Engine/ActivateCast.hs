@@ -100,6 +100,7 @@ import safe MtgPure.Model.Recursive (
   Cost (..),
   Effect (..),
   Elect (..),
+  ElectOT (unElectOT),
   IsSpecificCard (singSpecificCard),
   SpecificCard (..),
   WithThisActivated,
@@ -421,7 +422,7 @@ activateAbility oPlayer = logCall 'activateAbility \case
         goWithThisActivated = do
           abilityId <- newObjectId
           let zoAbility = toZO0 @ 'ZStack abilityId
-          goElectActivated zoAbility $ reifyWithThis thisId withThisActivated
+          goElectActivated zoAbility $ unElectOT $ reifyWithThis thisId withThisActivated
 
         goElectActivated :: ZO 'ZStack OT0 -> Elect 'Pre (ActivatedAbility zone ot) ot -> Magic 'Private 'RW m ActivateResult
         goElectActivated zoAbility elect = logCall' "goElectedActivated" do

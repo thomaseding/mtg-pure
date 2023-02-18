@@ -66,7 +66,17 @@ import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Permanent (Permanent)
 import safe MtgPure.Model.Player (Player)
 import safe MtgPure.Model.PrePost (PrePost (..))
-import safe MtgPure.Model.Recursive (AnyCard, AnyToken, CardFacet, Cost, Effect, Elect, WithThisActivated, WithThisStatic, WithThisTriggered)
+import safe MtgPure.Model.Recursive (
+  AnyCard,
+  AnyToken,
+  CardFacet,
+  Cost,
+  Effect,
+  Elect,
+  WithThisActivated,
+  WithThisStatic,
+  WithThisTriggered,
+ )
 import safe MtgPure.Model.Recursive.Ord ()
 import safe qualified MtgPure.Model.Recursive.Ord as O
 import safe MtgPure.Model.Recursive.Show ()

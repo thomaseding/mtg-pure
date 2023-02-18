@@ -579,7 +579,7 @@ reifyWithThis ::
   forall zone ot liftOT.
   IsZO zone ot =>
   ObjectId ->
-  WithThis zone liftOT ot ->
+  WithThis liftOT zone ot ->
   liftOT ot
 reifyWithThis i = \case
   This1 cont -> cont (toZO1 zo0)

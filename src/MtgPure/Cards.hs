@@ -124,6 +124,7 @@ import safe MtgPure.Model.Combinators (
   ElectEffect (effect),
   HasLandType (hasLandType),
   ToHybrid (..),
+  activated,
   addManaAnyColor,
   addToBattlefield,
   becomesTapped,
@@ -153,8 +154,11 @@ import safe MtgPure.Model.Combinators (
   sacrificeCost,
   satisfies,
   searchLibrary,
+  static,
+  static',
   swampwalk,
   tapCost,
+  triggered,
   untilEndOfTurn,
  )
 import safe MtgPure.Model.CreatureType (CreatureType (..))
@@ -188,7 +192,7 @@ import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Object.ToObjectN.Instances ()
 import safe MtgPure.Model.Power (Power (..))
 import safe MtgPure.Model.Recursive (
-  Ability (Activated, Static, StaticWithoutThis, Triggered),
+  Ability (Static),
   ActivatedAbility (..),
   Card (..),
   CardFacet (..),
@@ -232,6 +236,7 @@ import safe MtgPure.Model.Recursive (
     Not,
     ROr
   ),
+  SomeZone (SomeZone2),
   StaticAbility (
     Bestow,
     Enters,
@@ -284,7 +289,7 @@ mkDualTapImpl supertypes name ty1 ty2 = Card name $
     LandFacet
       { land_supertypes = supertypes
       , land_landTypes = [BasicLand ty1, BasicLand ty2]
-      , land_abilities = [Static $ thisObject \_this -> Enters EntersTapped]
+      , land_abilities = [static \_this -> Enters EntersTapped]
       }
 
 mkSnowCoveredTapDualLand :: CardName -> BasicLandType -> BasicLandType -> Card OTNLand
@@ -303,22 +308,20 @@ mkTapLandImpl supertypes name sym1 sym2 = Card name $
       { land_supertypes = supertypes
       , land_landTypes = []
       , land_abilities =
-          [ Activated @ 'ZBattlefield $
-              thisObject \this -> do
-                controllerOf this \you ->
-                  ElectActivated
-                    Ability
-                      { activated_cost = tapCost [is this]
-                      , activated_effect = effect $ AddMana you $ toManaPool sym1
-                      }
-          , Activated @ 'ZBattlefield $
-              thisObject \this -> do
-                controllerOf this \you ->
-                  ElectActivated
-                    Ability
-                      { activated_cost = tapCost [is this]
-                      , activated_effect = effect $ AddMana you $ toManaPool sym2
-                      }
+          [ activated @ 'ZBattlefield \this ->
+              controllerOf this \you ->
+                ElectActivated
+                  Ability
+                    { activated_cost = tapCost [is this]
+                    , activated_effect = effect $ AddMana you $ toManaPool sym1
+                    }
+          , activated @ 'ZBattlefield \this ->
+              controllerOf this \you ->
+                ElectActivated
+                  Ability
+                    { activated_cost = tapCost [is this]
+                    , activated_effect = effect $ AddMana you $ toManaPool sym2
+                    }
           ]
       }
 
@@ -351,30 +354,29 @@ mkHybridFilterLand name sym1 sym2 = Card name $
       { land_supertypes = []
       , land_landTypes = []
       , land_abilities =
-          [ Activated @ 'ZBattlefield $
-              thisObject \this -> do
-                controllerOf this \you ->
-                  ElectActivated
-                    Ability
-                      { activated_cost =
-                          AndCosts
-                            [ manaCost $ toHybrid sym1 sym2
-                            , tapCost [is this]
-                            ]
-                      , activated_effect = ChooseOption @()
-                          you
-                          (LS CTrue $ LS CTrue $ LZ CTrue)
-                          \option ->
-                            effect $
-                              EffectCase
-                                CaseFin
-                                  { caseFin = option
-                                  , ofFin =
-                                      LS (AddMana you $ toManaPool (sym1, sym1, ())) $
-                                        LS (AddMana you $ toManaPool (sym1, sym2, ())) $
-                                          LZ (AddMana you $ toManaPool (sym2, sym2, ()))
-                                  }
-                      }
+          [ activated @ 'ZBattlefield \this ->
+              controllerOf this \you ->
+                ElectActivated
+                  Ability
+                    { activated_cost =
+                        AndCosts
+                          [ manaCost $ toHybrid sym1 sym2
+                          , tapCost [is this]
+                          ]
+                    , activated_effect = ChooseOption @()
+                        you
+                        (LS CTrue $ LS CTrue $ LZ CTrue)
+                        \option ->
+                          effect $
+                            EffectCase
+                              CaseFin
+                                { caseFin = option
+                                , ofFin =
+                                    LS (AddMana you $ toManaPool (sym1, sym1, ())) $
+                                      LS (AddMana you $ toManaPool (sym1, sym2, ())) $
+                                        LZ (AddMana you $ toManaPool (sym2, sym2, ()))
+                                }
+                    }
           ]
       }
 
@@ -385,23 +387,22 @@ mkFetchLand name ty1 ty2 = Card name $
       { land_supertypes = []
       , land_landTypes = []
       , land_abilities =
-          [ Activated @ 'ZBattlefield $
-              thisObject \this ->
-                controllerOf this \you ->
-                  ElectActivated $
-                    Ability
-                      { activated_cost =
-                          AndCosts
-                            [ tapCost [is this]
-                            , PayLife 1
-                            , sacrificeCost [is this]
-                            ]
-                      , activated_effect = effect $
-                          searchLibrary you you $
-                            linked
-                              [ROr [HasLandType $ BasicLand ty1, HasLandType $ BasicLand ty2]]
-                              \card -> effect $ putOntoBattlefield you card
-                      }
+          [ activated @ 'ZBattlefield \this ->
+              controllerOf this \you ->
+                ElectActivated $
+                  Ability
+                    { activated_cost =
+                        AndCosts
+                          [ tapCost [is this]
+                          , PayLife 1
+                          , sacrificeCost [is this]
+                          ]
+                    , activated_effect = effect $
+                        searchLibrary you you $
+                          linked
+                            [ROr [HasLandType $ BasicLand ty1, HasLandType $ BasicLand ty2]]
+                            \card -> effect $ putOntoBattlefield you card
+                    }
           ]
       }
 
@@ -414,14 +415,13 @@ mkMox name sym = Card name $
       , artifact_supertypes = []
       , artifact_artifactTypes = []
       , artifact_abilities =
-          [ Activated @ 'ZBattlefield $
-              thisObject \this ->
-                controllerOf this \you ->
-                  ElectActivated $
-                    Ability
-                      { activated_cost = tapCost [is this]
-                      , activated_effect = effect $ AddMana you $ toManaPool sym
-                      }
+          [ activated @ 'ZBattlefield \this ->
+              controllerOf this \you ->
+                ElectActivated $
+                  Ability
+                    { activated_cost = tapCost [is this]
+                    , activated_effect = effect $ AddMana you $ toManaPool sym
+                    }
           ]
       }
 
@@ -495,7 +495,7 @@ ancestralVision = Card "Ancestral Vision" $
           { sorcery_colors = toColors U
           , sorcery_cost = noCost
           , sorcery_supertypes = []
-          , sorcery_abilities = [Static $ thisObject \_this -> Suspend 4 $ Cost $ manaCost U]
+          , sorcery_abilities = [static \_this -> Suspend 4 $ Cost $ manaCost U]
           , sorcery_effect = thisObject \_this ->
               effect $ DrawCards target 3
           }
@@ -531,16 +531,15 @@ birdsOfParadise = Card "Birds of Paradise" $
       , creature_power = Power 0
       , creature_toughness = Toughness 1
       , creature_abilities =
-          [ Activated @ 'ZBattlefield $
-              thisObject \this ->
-                controllerOf this \you ->
-                  ElectActivated $
-                    Ability
-                      { activated_cost = tapCost [is this]
-                      , activated_effect =
-                          chooseAnyColor you \color ->
-                            effect $ addManaAnyColor color you 1
-                      }
+          [ activated @ 'ZBattlefield \this ->
+              controllerOf this \you ->
+                ElectActivated $
+                  Ability
+                    { activated_cost = tapCost [is this]
+                    , activated_effect =
+                        chooseAnyColor you \color ->
+                          effect $ addManaAnyColor color you 1
+                    }
           ]
       }
 
@@ -555,7 +554,7 @@ birdToken = Token $
         , creature_creatureTypes = [Bird]
         , creature_power = Power 2
         , creature_toughness = Toughness 2
-        , creature_abilities = [Static $ thisObject \_this -> Flying]
+        , creature_abilities = [static \_this -> Flying]
         }
 
 blackLotus :: Card OTNArtifact
@@ -567,20 +566,19 @@ blackLotus = Card "Black Lotus" $
       , artifact_supertypes = []
       , artifact_artifactTypes = []
       , artifact_abilities =
-          [ Activated @ 'ZBattlefield $
-              thisObject \this ->
-                controllerOf this \you ->
-                  ElectActivated $
-                    Ability
-                      { activated_cost =
-                          AndCosts
-                            [ tapCost [is this]
-                            , sacrificeCost [is this]
-                            ]
-                      , activated_effect =
-                          chooseAnyColor you \color ->
-                            effect $ addManaAnyColor color you 3
-                      }
+          [ activated @ 'ZBattlefield \this ->
+              controllerOf this \you ->
+                ElectActivated $
+                  Ability
+                    { activated_cost =
+                        AndCosts
+                          [ tapCost [is this]
+                          , sacrificeCost [is this]
+                          ]
+                    , activated_effect =
+                        chooseAnyColor you \color ->
+                          effect $ addManaAnyColor color you 3
+                    }
           ]
       }
 
@@ -608,7 +606,7 @@ bloodMoon = Card "Blood Moon" $
       , enchantment_supertypes = []
       , enchantment_enchantmentTypes = []
       , enchantment_abilities =
-          [ Static $ thisObject \_this ->
+          [ static \_this ->
               StaticContinuous $
                 All $ maskeds [nonBasic] \lands ->
                   effect $
@@ -628,15 +626,14 @@ borealDruid = Card "Boreal Druid" $
       , creature_power = Power 1
       , creature_toughness = Toughness 1
       , creature_abilities =
-          [ Activated @ 'ZBattlefield $
-              thisObject \this ->
-                controllerOf this \you ->
-                  ElectActivated $
-                    Ability
-                      { activated_cost = tapCost [is this]
-                      , activated_effect =
-                          effect $ AddMana you $ toManaPool C
-                      }
+          [ activated @ 'ZBattlefield \this ->
+              controllerOf this \you ->
+                ElectActivated $
+                  Ability
+                    { activated_cost = tapCost [is this]
+                    , activated_effect =
+                        effect $ AddMana you $ toManaPool C
+                    }
           ]
       }
 
@@ -652,14 +649,13 @@ braidwoodCup = Card "Braidwood Cup" $
       , artifact_supertypes = []
       , artifact_artifactTypes = []
       , artifact_abilities =
-          [ Activated @ 'ZBattlefield $
-              thisObject \this ->
-                controllerOf this \you ->
-                  ElectActivated $
-                    Ability
-                      { activated_cost = tapCost [is this]
-                      , activated_effect = effect $ GainLife you 1
-                      }
+          [ activated @ 'ZBattlefield \this ->
+              controllerOf this \you ->
+                ElectActivated $
+                  Ability
+                    { activated_cost = tapCost [is this]
+                    , activated_effect = effect $ GainLife you 1
+                    }
           ]
       }
 
@@ -684,23 +680,21 @@ cityOfBrass = Card "City of Brass" $
       { land_supertypes = []
       , land_landTypes = []
       , land_abilities =
-          [ Triggered $
-              thisObject \this ->
-                When $
-                  event $
-                    becomesTapped $ linked [is this] \_ ->
-                      controllerOf this \you ->
-                        effect $ dealDamage this you 1
-          , Activated @ 'ZBattlefield $
-              thisObject \this ->
-                controllerOf this \you ->
-                  ElectActivated $
-                    Ability
-                      { activated_cost = tapCost [is this]
-                      , activated_effect =
-                          chooseAnyColor you \color ->
-                            effect $ addManaAnyColor color you 1
-                      }
+          [ triggered \this ->
+              When $
+                event $
+                  becomesTapped $ linked [is this] \_ ->
+                    controllerOf this \you ->
+                      effect $ dealDamage this you 1
+          , activated @ 'ZBattlefield \this ->
+              controllerOf this \you ->
+                ElectActivated $
+                  Ability
+                    { activated_cost = tapCost [is this]
+                    , activated_effect =
+                        chooseAnyColor you \color ->
+                          effect $ addManaAnyColor color you 1
+                    }
           ]
       }
 
@@ -729,22 +723,21 @@ conversion = Card "Conversion" $
       , enchantment_supertypes = []
       , enchantment_enchantmentTypes = []
       , enchantment_abilities =
-          [ Triggered $
-              thisObject \this ->
-                When $
-                  ActivePlayer \active ->
-                    controllerOf this \you ->
-                      let cond =
-                            COr
-                              [ satisfies you [Not $ is active]
-                              , satisfies you [is active, playerPays $ toManaCost (W, W)]
-                              ]
-                       in ifElse cond $
-                            event $
-                              TimePoint (StepBegin UpkeepStep) $
-                                effect $
-                                  sacrifice you [is this]
-          , Static $ thisObject \_this ->
+          [ triggered \this ->
+              When $
+                ActivePlayer \active ->
+                  controllerOf this \you ->
+                    let cond =
+                          COr
+                            [ satisfies you [Not $ is active]
+                            , satisfies you [is active, playerPays $ toManaCost (W, W)]
+                            ]
+                     in ifElse cond $
+                          event $
+                            TimePoint (StepBegin UpkeepStep) $
+                              effect $
+                                sacrifice you [is this]
+          , static \_this ->
               StaticContinuous $
                 All $ maskeds [hasLandType Mountain] \lands ->
                   effect $
@@ -764,31 +757,10 @@ corrosiveGale = Card "Corrosive Gale" $
           , sorcery_supertypes = []
           , sorcery_abilities = []
           , sorcery_effect = thisObject \this ->
-              All $ maskeds @OTNCreature [hasAbility $ Static $ thisObject \_this -> Flying] \victims ->
+              All $ maskeds @OTNCreature [hasAbility $ static \_this -> Flying] \victims ->
                 effect $
                   WithList $ Each victims \victim ->
                     dealDamage this victim x
-          }
-
-squallLine :: Card OTNInstant
-squallLine = Card "Squall Line" $
-  YourInstant \_you ->
-    VariableInt \x ->
-      ElectCard $
-        InstantFacet
-          { instant_colors = toColors G
-          , instant_cost = manaCost (VariableMana @ 'NonSnow @ 'Ty1 x, G, G)
-          , instant_supertypes = []
-          , instant_abilities = []
-          , instant_effect = thisObject \this ->
-              All $ maskeds @OTNCreature [hasAbility $ Static $ thisObject \_this -> Flying] \creatures ->
-                All $ maskeds @OTNPlayer [] \players ->
-                  effect
-                    [ WithList $ Each creatures \victim ->
-                        dealDamage this victim x
-                    , WithList $ Each players \victim ->
-                        dealDamage this victim x
-                    ]
           }
 
 damnation :: Card OTNSorcery
@@ -834,53 +806,50 @@ deathriteShaman = Card "Deathrite Shaman" $
       , creature_power = Power 1
       , creature_toughness = Toughness 2
       , creature_abilities =
-          [ Activated @ 'ZBattlefield $
-              thisObject \this ->
-                controllerOf this \you ->
-                  Target you $ masked @OTNLand @ 'ZGraveyard [] \land ->
-                    ElectActivated $
-                      Ability
-                        { activated_cost =
-                            AndCosts
-                              [ tapCost [is this]
-                              , ExileCost [is land]
-                              ]
-                        , activated_effect =
-                            chooseAnyColor you \color ->
-                              effect $ addManaAnyColor color you 1
-                        }
-          , Activated @ 'ZBattlefield $
-              thisObject \this ->
-                controllerOf this \you ->
-                  Target you $ masked @(OT2 'OTInstant 'OTSorcery) @ 'ZGraveyard [] \spell ->
-                    ElectActivated $
-                      Ability
-                        { activated_cost =
-                            AndCosts
-                              [ manaCost B
-                              , tapCost [is this]
-                              , ExileCost [is spell]
-                              ]
-                        , activated_effect =
-                            All $ maskeds @OTNPlayer [IsOpponentOf you] \opponents ->
-                              effect $
-                                WithList $ Each opponents \opponent ->
-                                  LoseLife opponent 2
-                        }
-          , Activated @ 'ZBattlefield $
-              thisObject \this ->
-                controllerOf this \you ->
-                  Target you $ masked @OTNCreature @ 'ZGraveyard [] \creature ->
-                    ElectActivated $
-                      Ability
-                        { activated_cost =
-                            AndCosts
-                              [ manaCost G
-                              , tapCost [is this]
-                              , ExileCost [is creature]
-                              ]
-                        , activated_effect = effect $ GainLife you 2
-                        }
+          [ activated @ 'ZBattlefield \this ->
+              controllerOf this \you ->
+                Target you $ masked @OTNLand @ 'ZGraveyard [] \land ->
+                  ElectActivated $
+                    Ability
+                      { activated_cost =
+                          AndCosts
+                            [ tapCost [is this]
+                            , ExileCost [is land]
+                            ]
+                      , activated_effect =
+                          chooseAnyColor you \color ->
+                            effect $ addManaAnyColor color you 1
+                      }
+          , activated @ 'ZBattlefield \this ->
+              controllerOf this \you ->
+                Target you $ masked @(OT2 'OTInstant 'OTSorcery) @ 'ZGraveyard [] \spell ->
+                  ElectActivated $
+                    Ability
+                      { activated_cost =
+                          AndCosts
+                            [ manaCost B
+                            , tapCost [is this]
+                            , ExileCost [is spell]
+                            ]
+                      , activated_effect =
+                          All $ maskeds @OTNPlayer [IsOpponentOf you] \opponents ->
+                            effect $
+                              WithList $ Each opponents \opponent ->
+                                LoseLife opponent 2
+                      }
+          , activated @ 'ZBattlefield \this ->
+              controllerOf this \you ->
+                Target you $ masked @OTNCreature @ 'ZGraveyard [] \creature ->
+                  ElectActivated $
+                    Ability
+                      { activated_cost =
+                          AndCosts
+                            [ manaCost G
+                            , tapCost [is this]
+                            , ExileCost [is creature]
+                            ]
+                      , activated_effect = effect $ GainLife you 2
+                      }
           ]
       }
 
@@ -898,7 +867,7 @@ dismember = Card "Dismember" $
               effect $
                 untilEndOfTurn $
                   gainAbility target $
-                    Static $ thisObject \_this ->
+                    static' \_this ->
                       StaticContinuous $
                         effect $ StatDelta target (Power (-5)) (Toughness (-5))
           }
@@ -927,20 +896,19 @@ elvishHexhunter = Card "Elvish Hexhunter" $
       , creature_power = Power 1
       , creature_toughness = Toughness 1
       , creature_abilities =
-          [ Activated @ 'ZBattlefield $
-              thisObject \this ->
-                controllerOf this \you ->
-                  Target you $ masked @OTNEnchantment [] \target ->
-                    ElectActivated $
-                      Ability
-                        { activated_cost =
-                            AndCosts
-                              [ manaCost GW
-                              , tapCost [is this]
-                              , sacrificeCost [is this]
-                              ]
-                        , activated_effect = effect $ destroy target
-                        }
+          [ activated @ 'ZBattlefield \this ->
+              controllerOf this \you ->
+                Target you $ masked @OTNEnchantment [] \target ->
+                  ElectActivated $
+                    Ability
+                      { activated_cost =
+                          AndCosts
+                            [ manaCost GW
+                            , tapCost [is this]
+                            , sacrificeCost [is this]
+                            ]
+                      , activated_effect = effect $ destroy target
+                      }
           ]
       }
 
@@ -979,15 +947,14 @@ fulminatorMage = Card "Fulminator Mage" $
       , creature_power = Power 2
       , creature_toughness = Toughness 2
       , creature_abilities =
-          [ Activated @ 'ZBattlefield $
-              thisObject \this ->
-                controllerOf this \you ->
-                  Target you $ masked @OTNLand [nonBasic] \land ->
-                    ElectActivated $
-                      Ability
-                        { activated_cost = sacrificeCost [is this]
-                        , activated_effect = effect $ destroy land
-                        }
+          [ activated @ 'ZBattlefield \this ->
+              controllerOf this \you ->
+                Target you $ masked @OTNLand [nonBasic] \land ->
+                  ElectActivated $
+                    Ability
+                      { activated_cost = sacrificeCost [is this]
+                      , activated_effect = effect $ destroy land
+                      }
           ]
       }
 
@@ -1008,7 +975,7 @@ giantGrowth = Card "Giant Growth" $
               effect $
                 untilEndOfTurn $
                   gainAbility target $
-                    Static $ thisObject \_this ->
+                    static' \_this ->
                       StaticContinuous $
                         effect $ StatDelta target (Power 3) (Toughness 3)
           }
@@ -1027,18 +994,17 @@ gutlessGhoul = Card "Gutless Ghoul" $
       , creature_power = Power 2
       , creature_toughness = Toughness 2
       , creature_abilities =
-          [ Activated @ 'ZBattlefield $
-              thisObject \this ->
-                controllerOf this \you ->
-                  ElectActivated $
-                    Ability
-                      { activated_cost =
-                          AndCosts
-                            [ manaCost 1
-                            , sacrificeCost @OTNCreature []
-                            ]
-                      , activated_effect = effect $ GainLife you 2
-                      }
+          [ activated @ 'ZBattlefield \this ->
+              controllerOf this \you ->
+                ElectActivated $
+                  Ability
+                    { activated_cost =
+                        AndCosts
+                          [ manaCost 1
+                          , sacrificeCost @OTNCreature []
+                          ]
+                    , activated_effect = effect $ GainLife you 2
+                    }
           ]
       }
 
@@ -1123,14 +1089,13 @@ llanowarElves = Card "Llanowar Elves" $
       , creature_power = Power 1
       , creature_toughness = Toughness 1
       , creature_abilities =
-          [ Activated @ 'ZBattlefield $
-              thisObject \this ->
-                controllerOf this \you ->
-                  ElectActivated $
-                    Ability
-                      { activated_cost = tapCost [is this]
-                      , activated_effect = effect $ AddMana you $ toManaPool G
-                      }
+          [ activated @ 'ZBattlefield \this ->
+              controllerOf this \you ->
+                ElectActivated $
+                  Ability
+                    { activated_cost = tapCost [is this]
+                    , activated_effect = effect $ AddMana you $ toManaPool G
+                    }
           ]
       }
 
@@ -1191,21 +1156,20 @@ moltensteelDragon = Card "Moltensteel Dragon" $
       , artifactCreature_toughness = Toughness 4
       , artifactCreature_artifactAbilities = []
       , artifactCreature_creatureAbilities =
-          [ Static $ thisObject \_this -> Flying
-          , Activated @ 'ZBattlefield $
-              thisObject \this ->
-                ElectActivated $
-                  Ability
-                    { activated_cost = manaCost PR
-                    , activated_effect =
-                        effect $
-                          untilEndOfTurn $
-                            gainAbility this $
-                              Static $ thisObject \_this ->
-                                StaticContinuous $
-                                  effect $
-                                    StatDelta this (Power 1) (Toughness 0)
-                    }
+          [ static \_this -> Flying
+          , activated @ 'ZBattlefield \this ->
+              ElectActivated $
+                Ability
+                  { activated_cost = manaCost PR
+                  , activated_effect =
+                      effect $
+                        untilEndOfTurn $
+                          gainAbility this $
+                            static' \_this ->
+                              StaticContinuous $
+                                effect $
+                                  StatDelta this (Power 1) (Toughness 0)
+                  }
           ]
       , artifactCreature_artifactCreatureAbilities = []
       }
@@ -1220,28 +1184,26 @@ mouthOfRonom = Card "Mouth of Ronom" $
       { land_supertypes = [Ty.Snow]
       , land_landTypes = []
       , land_abilities =
-          [ Activated @ 'ZBattlefield $
-              thisObject \this ->
-                controllerOf this \you ->
+          [ activated @ 'ZBattlefield \this ->
+              controllerOf this \you ->
+                ElectActivated $
+                  Ability
+                    { activated_cost = tapCost [is this]
+                    , activated_effect = effect $ AddMana you $ toManaPool C
+                    }
+          , activated @ 'ZBattlefield \this ->
+              controllerOf this \you ->
+                Target you $ masked @OTNCreature [] \target ->
                   ElectActivated $
                     Ability
-                      { activated_cost = tapCost [is this]
-                      , activated_effect = effect $ AddMana you $ toManaPool C
+                      { activated_cost =
+                          AndCosts
+                            [ manaCost (4, S)
+                            , tapCost [is this]
+                            , sacrificeCost [is this]
+                            ]
+                      , activated_effect = effect $ dealDamage this target 4
                       }
-          , Activated @ 'ZBattlefield $
-              thisObject \this ->
-                controllerOf this \you ->
-                  Target you $ masked @OTNCreature [] \target ->
-                    ElectActivated $
-                      Ability
-                        { activated_cost =
-                            AndCosts
-                              [ manaCost (4, S)
-                              , tapCost [is this]
-                              , sacrificeCost [is this]
-                              ]
-                        , activated_effect = effect $ dealDamage this target 4
-                        }
           ]
       }
 
@@ -1274,7 +1236,7 @@ mutagenicGrowth = Card "Mutagenic Growth" $
               effect $
                 untilEndOfTurn $
                   gainAbility target $
-                    Static $ thisObject \_this ->
+                    static' \_this ->
                       StaticContinuous $
                         effect $ StatDelta target (Power 2) (Toughness 2)
           }
@@ -1293,7 +1255,7 @@ nyxbornRollicker = Card "Nyxborn Rollicker" $
       , enchantmentCreature_creatureAbilities = []
       , enchantmentCreature_enchantmentAbilities = []
       , enchantmentCreature_enchantmentCreatureAbilities =
-          [ Static $ thisObject \_this ->
+          [ static \_this ->
               Bestow (Cost $ manaCost (1, R)) $
                 Enchant $ linked [] \enchanted ->
                   effect $ StatDelta enchanted (Power 1) (Toughness 1)
@@ -1312,7 +1274,7 @@ ornithopter = Card "Ornithopter" $
       , artifactCreature_power = Power 0
       , artifactCreature_toughness = Toughness 2
       , artifactCreature_artifactAbilities = []
-      , artifactCreature_creatureAbilities = [Static $ thisObject \_this -> Flying]
+      , artifactCreature_creatureAbilities = [static \_this -> Flying]
       , artifactCreature_artifactCreatureAbilities = []
       }
 
@@ -1322,7 +1284,7 @@ plains = mkBasicLand Plains
 plummet :: Card OTNInstant
 plummet = Card "Plummet" $
   YourInstant \you ->
-    Target you $ masked [hasAbility $ Static $ thisObject \_this -> Flying] \target ->
+    Target you $ masked [hasAbility $ static \_this -> Flying] \target ->
       ElectCard $
         InstantFacet
           { instant_colors = toColors G
@@ -1348,7 +1310,7 @@ porcelainLegionnaire = Card "Porcelain Legionnaire" $
       , artifactCreature_power = Power 3
       , artifactCreature_toughness = Toughness 1
       , artifactCreature_artifactAbilities = []
-      , artifactCreature_creatureAbilities = [Static $ thisObject \_this -> FirstStrike]
+      , artifactCreature_creatureAbilities = [static \_this -> FirstStrike]
       , artifactCreature_artifactCreatureAbilities = []
       }
 
@@ -1363,26 +1325,25 @@ pradeshGypsies = Card "Pradesh Gypsies" $
       , creature_power = Power 1
       , creature_toughness = Toughness 1
       , creature_abilities =
-          [ Activated @ 'ZBattlefield $
-              thisObject \this ->
-                controllerOf this \you ->
-                  Target you $ masked [] \creature ->
-                    ElectActivated $
-                      Ability
-                        { activated_cost =
-                            AndCosts
-                              [ manaCost (1, G)
-                              , tapCost [is this]
-                              ]
-                        , activated_effect =
-                            effect $
-                              untilEndOfTurn $
-                                gainAbility creature $
-                                  Static $ thisObject \_this ->
-                                    StaticContinuous $
-                                      effect $
-                                        StatDelta creature (Power (-2)) (Toughness 0)
-                        }
+          [ activated @ 'ZBattlefield \this ->
+              controllerOf this \you ->
+                Target you $ masked [] \creature ->
+                  ElectActivated $
+                    Ability
+                      { activated_cost =
+                          AndCosts
+                            [ manaCost (1, G)
+                            , tapCost [is this]
+                            ]
+                      , activated_effect =
+                          effect $
+                            untilEndOfTurn $
+                              gainAbility creature $
+                                static' \_this ->
+                                  StaticContinuous $
+                                    effect $
+                                      StatDelta creature (Power (-2)) (Toughness 0)
+                      }
           ]
       }
 
@@ -1396,7 +1357,7 @@ ragingGoblin = Card "Raging Goblin" $
       , creature_creatureTypes = [Goblin]
       , creature_power = Power 1
       , creature_toughness = Toughness 1
-      , creature_abilities = [Static $ thisObject \_this -> Haste]
+      , creature_abilities = [static \_this -> Haste]
       }
 
 rimewoodFalls :: Card OTNLand
@@ -1456,7 +1417,7 @@ slashPanther = Card "Slash Panther" $
       , artifactCreature_power = Power 4
       , artifactCreature_toughness = Toughness 2
       , artifactCreature_artifactAbilities = []
-      , artifactCreature_creatureAbilities = [Static $ thisObject \_this -> Haste]
+      , artifactCreature_creatureAbilities = [static \_this -> Haste]
       , artifactCreature_artifactCreatureAbilities = []
       }
 
@@ -1534,7 +1495,7 @@ spinedThopter = Card "Spined Thopter" $
       , artifactCreature_power = Power 2
       , artifactCreature_toughness = Toughness 1
       , artifactCreature_artifactAbilities = []
-      , artifactCreature_creatureAbilities = [Static $ thisObject \_this -> Flying]
+      , artifactCreature_creatureAbilities = [static \_this -> Flying]
       , artifactCreature_artifactCreatureAbilities = []
       }
 
@@ -1549,22 +1510,42 @@ squallDrifter = Card "Squall Drifter" $
       , creature_power = Power 1
       , creature_toughness = Toughness 1
       , creature_abilities =
-          [ Static $ thisObject \_this -> Flying
-          , Activated @ 'ZBattlefield $
-              thisObject \this ->
-                controllerOf this \you ->
-                  Target you $ masked @OTNCreature [] \target ->
-                    ElectActivated $
-                      Ability
-                        { activated_cost =
-                            AndCosts
-                              [ manaCost W
-                              , tapCost [is this]
-                              ]
-                        , activated_effect = effect $ Tap target
-                        }
+          [ static \_this -> Flying
+          , activated @ 'ZBattlefield \this ->
+              controllerOf this \you ->
+                Target you $ masked @OTNCreature [] \target ->
+                  ElectActivated $
+                    Ability
+                      { activated_cost =
+                          AndCosts
+                            [ manaCost W
+                            , tapCost [is this]
+                            ]
+                      , activated_effect = effect $ Tap target
+                      }
           ]
       }
+
+squallLine :: Card OTNInstant
+squallLine = Card "Squall Line" $
+  YourInstant \_you ->
+    VariableInt \x ->
+      ElectCard $
+        InstantFacet
+          { instant_colors = toColors G
+          , instant_cost = manaCost (VariableMana @ 'NonSnow @ 'Ty1 x, G, G)
+          , instant_supertypes = []
+          , instant_abilities = []
+          , instant_effect = thisObject \this ->
+              All $ maskeds @OTNCreature [hasAbility $ static \_this -> Flying] \creatures ->
+                All $ maskeds @OTNPlayer [] \players ->
+                  effect
+                    [ WithList $ Each creatures \victim ->
+                        dealDamage this victim x
+                    , WithList $ Each players \victim ->
+                        dealDamage this victim x
+                    ]
+          }
 
 stifle :: Card OTNInstant
 stifle = Card "Stifle" $
@@ -1604,7 +1585,7 @@ stoneThrowingDevils = Card "Stone-Throwing Devils" $
       , creature_creatureTypes = [Devil]
       , creature_power = Power 1
       , creature_toughness = Toughness 1
-      , creature_abilities = [Static $ thisObject \_this -> FirstStrike]
+      , creature_abilities = [static \_this -> FirstStrike]
       }
 
 sulfurousMire :: Card OTNLand
@@ -1641,16 +1622,15 @@ teferisIsle = Card "Teferi's Isle" $
       { land_supertypes = [Legendary]
       , land_landTypes = []
       , land_abilities =
-          [ Static $ thisObject \_this -> Phasing
-          , Static $ thisObject \_this -> Enters EntersTapped
-          , Activated @ 'ZBattlefield $
-              thisObject \this -> do
-                controllerOf this \you ->
-                  ElectActivated
-                    Ability
-                      { activated_cost = tapCost [is this]
-                      , activated_effect = effect $ AddMana you $ toManaPool (U, 2)
-                      }
+          [ static \_this -> Phasing
+          , static \_this -> Enters EntersTapped
+          , activated @ 'ZBattlefield \this -> do
+              controllerOf this \you ->
+                ElectActivated
+                  Ability
+                    { activated_cost = tapCost [is this]
+                    , activated_effect = effect $ AddMana you $ toManaPool (U, 2)
+                    }
           ]
       }
 
@@ -1665,21 +1645,19 @@ thermopod = Card "Thermopod" $
       , creature_power = Power 4
       , creature_toughness = Toughness 3
       , creature_abilities =
-          [ Activated @ 'ZBattlefield $
-              thisObject \this ->
+          [ activated @ 'ZBattlefield \this ->
+              ElectActivated $
+                Ability
+                  { activated_cost = manaCost S
+                  , activated_effect = effect $ untilEndOfTurn $ gainAbility this $ static' \_this -> Haste
+                  }
+          , activated @ 'ZBattlefield \this ->
+              controllerOf this \you ->
                 ElectActivated $
                   Ability
-                    { activated_cost = manaCost S
-                    , activated_effect = effect $ untilEndOfTurn $ gainAbility this $ Static $ thisObject \_this -> Haste
+                    { activated_cost = sacrificeCost @OTNCreature []
+                    , activated_effect = effect $ AddMana you $ toManaPool R
                     }
-          , Activated @ 'ZBattlefield $
-              thisObject \this ->
-                controllerOf this \you ->
-                  ElectActivated $
-                    Ability
-                      { activated_cost = sacrificeCost @OTNCreature []
-                      , activated_effect = effect $ AddMana you $ toManaPool R
-                      }
           ]
       }
 
@@ -1695,7 +1673,7 @@ thunderingTanadon = Card "Thundering Tanadon" $
       , artifactCreature_power = Power 5
       , artifactCreature_toughness = Toughness 4
       , artifactCreature_artifactAbilities = []
-      , artifactCreature_creatureAbilities = [Static $ thisObject \_this -> Trample]
+      , artifactCreature_creatureAbilities = [static \_this -> Trample]
       , artifactCreature_artifactCreatureAbilities = []
       }
 
@@ -1744,7 +1722,7 @@ waspLancer = Card "Wasp Lancer" $
       , creature_creatureTypes = [Faerie, Soldier]
       , creature_power = Power 3
       , creature_toughness = Toughness 2
-      , creature_abilities = [Static $ thisObject \_this -> Flying]
+      , creature_abilities = [static \_this -> Flying]
       }
 
 -- NOTE: Wastes does NOT have an intrinsic mana ability.
@@ -1755,19 +1733,18 @@ wastes = Card "Wastes" $
       { land_supertypes = [Ty.Basic]
       , land_landTypes = []
       , land_abilities =
-          [ Activated @ 'ZBattlefield $
-              thisObject \this ->
-                controllerOf this \you ->
-                  ElectActivated $
-                    Ability
-                      { activated_cost = tapCost [is this]
-                      , activated_effect = effect $ AddMana you $ toManaPool C
-                      }
+          [ activated @ 'ZBattlefield \this ->
+              controllerOf this \you ->
+                ElectActivated $
+                  Ability
+                    { activated_cost = tapCost [is this]
+                    , activated_effect = effect $ AddMana you $ toManaPool C
+                    }
           ]
       }
 
 wear_tear :: Card (OTNInstant, OTNInstant)
-wear_tear = SplitCard wear tear [StaticWithoutThis Fuse]
+wear_tear = SplitCard wear tear [SomeZone2 $ Static Fuse]
  where
   wear :: Card OTNInstant
   wear = Card "Wear" $
@@ -1808,22 +1785,21 @@ witchEngine = Card "Witch Engine" $
       , creature_toughness = Toughness 4
       , creature_abilities =
           [ swampwalk
-          , Activated @ 'ZBattlefield $
-              thisObject \this ->
-                controllerOf this \you ->
-                  Target you $ masked [IsOpponentOf you] \opponent ->
-                    ElectActivated $
-                      Ability
-                        { activated_cost =
-                            AndCosts
-                              [ tapCost [is this]
-                              ]
-                        , activated_effect =
-                            effect
-                              [ AddMana you $ toManaPool (B, B, B, B)
-                              , EffectContinuous $ gainControl opponent this
-                              ]
-                        }
+          , activated @ 'ZBattlefield \this ->
+              controllerOf this \you ->
+                Target you $ masked [IsOpponentOf you] \opponent ->
+                  ElectActivated $
+                    Ability
+                      { activated_cost =
+                          AndCosts
+                            [ tapCost [is this]
+                            ]
+                      , activated_effect =
+                          effect
+                            [ AddMana you $ toManaPool (B, B, B, B)
+                            , EffectContinuous $ gainControl opponent this
+                            ]
+                      }
           ]
       }
 

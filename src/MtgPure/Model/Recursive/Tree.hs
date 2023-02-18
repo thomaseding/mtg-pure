@@ -27,7 +27,6 @@ import safe MtgPure.Model.CreatureType (CreatureType)
 import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.LandType (LandType (..))
 import safe MtgPure.Model.Loyalty (Loyalty)
-import safe MtgPure.Model.Object.IndexOT (IndexOT)
 import safe MtgPure.Model.Object.OTN (
   OTN,
  )
@@ -62,10 +61,9 @@ import safe MtgPure.Model.Recursive (
   Elect (..),
   IsSpecificCard,
   IsUser,
-  StaticAbility,
+  SomeZone (..),
   Token,
-  WithThisActivated,
-  WithThisTriggered,
+  WithThisAbility,
   YourCardFacet,
  )
 import safe MtgPure.Model.Toughness (Toughness)
@@ -74,7 +72,7 @@ import safe MtgPure.Model.Variable (
   VariableId,
   VariableId' (..),
  )
-import safe MtgPure.Model.Zone (IsZone (..), Zone (..))
+import safe MtgPure.Model.Zone (Zone (..))
 import safe MtgPure.Model.ZoneObject.ZoneObject (
   IsOTN,
   IsZO,
@@ -151,11 +149,6 @@ buildTree config = runTreeM config . buildTreeM
 -- Each UntypedTree constructor can have a lazy field for the `ot` object types as `[ObjectType]`.
 data family Tree (a :: Type) :: Type
 
-data instance Tree (Ability ot) where
-  TreeActivated :: IsZO zone ot => Tree (WithThisActivated zone ot) -> Tree (Ability ot)
-  TreeStatic :: (IsZone zone, IndexOT ot) => Tree (StaticAbility zone ot) -> Tree (Ability ot)
-  TreeTriggered :: IsZO zone ot => Tree (WithThisTriggered zone ot) -> Tree (Ability ot)
-
 data instance Tree (ActivatedAbility zone ot) where
   TreeAbility ::
     IsZO zone ot =>
@@ -179,7 +172,7 @@ data instance Tree (Card ot) where
     (ot1 ~ OTN x, IsSpecificCard ot1, ot2 ~ OTN y, IsSpecificCard ot2) =>
     { treeSplitCard_card1 :: Tree (Card ot1)
     , treeSplitCard_card2 :: Tree (Card ot2)
-    , treeSplitCard_abilities :: Tree [Ability (ot1, ot2)]
+    , treeSplitCard_abilities :: Tree [SomeZone Ability (ot1, ot2)]
     } ->
     Tree (Card (ot1, ot2))
 
@@ -189,7 +182,7 @@ data instance Tree (CardFacet ot) where
     , treeArtifact_cost :: Tree (Cost OTNArtifact)
     , treeArtifact_artifactTypes :: Tree [ArtifactType]
     , treeArtifact_creatureTypes :: Tree [CreatureType]
-    , treeArtifact_abilities :: Tree [Ability OTNArtifact]
+    , treeArtifact_abilities :: Tree [SomeZone WithThisAbility OTNArtifact]
     } ->
     Tree (CardFacet OTNArtifact)
   TreeArtifactCreatureFacet ::
@@ -199,9 +192,9 @@ data instance Tree (CardFacet ot) where
     , treeArtifactCreature_creatureTypes :: Tree [CreatureType]
     , treeArtifactCreature_power :: Tree Power
     , treeArtifactCreature_toughness :: Tree Toughness
-    , treeArtifactCreature_artifactAbilities :: Tree [Ability OTNArtifact]
-    , treeArtifactCreature_creatureAbilities :: Tree [Ability OTNCreature]
-    , treeArtifactCreature_artifactCreatureAbilities :: Tree [Ability OTNArtifactCreature]
+    , treeArtifactCreature_artifactAbilities :: Tree [SomeZone WithThisAbility OTNArtifact]
+    , treeArtifactCreature_creatureAbilities :: Tree [SomeZone WithThisAbility OTNCreature]
+    , treeArtifactCreature_artifactCreatureAbilities :: Tree [SomeZone WithThisAbility OTNArtifactCreature]
     } ->
     Tree (CardFacet OTNArtifactCreature)
   TreeArtifactLandFacet ::
@@ -210,9 +203,9 @@ data instance Tree (CardFacet ot) where
     , treeArtifactLand_artifactTypes :: Tree [ArtifactType]
     , treeArtifactLand_creatureTypes :: Tree [CreatureType]
     , treeArtifactLand_landTypes :: Tree [LandType]
-    , treeArtifactLand_artifactAbilities :: Tree [Ability OTNArtifact]
-    , treeArtifactLand_landAbilities :: Tree [Ability OTNArtifactLand]
-    , treeArtifactLand_artifactLandAbilities :: Tree [Ability OTNArtifactLand]
+    , treeArtifactLand_artifactAbilities :: Tree [SomeZone WithThisAbility OTNArtifact]
+    , treeArtifactLand_landAbilities :: Tree [SomeZone WithThisAbility OTNArtifactLand]
+    , treeArtifactLand_artifactLandAbilities :: Tree [SomeZone WithThisAbility OTNArtifactLand]
     } ->
     Tree (CardFacet OTNArtifactLand)
   TreeCreatureFacet ::
@@ -221,14 +214,14 @@ data instance Tree (CardFacet ot) where
     , treeCreature_creatureTypes :: Tree [CreatureType]
     , treeCreature_power :: Tree Power
     , treeCreature_toughness :: Tree Toughness
-    , treeCreature_abilities :: Tree [Ability OTNCreature]
+    , treeCreature_abilities :: Tree [SomeZone WithThisAbility OTNCreature]
     } ->
     Tree (CardFacet OTNCreature)
   TreeEnchantmentFacet ::
     { treeEnchantment_colors :: Tree [Color]
     , treeEnchantment_cost :: Tree (Cost OTNEnchantment)
     , treeEnchantment_creatureTypes :: Tree [CreatureType]
-    , treeEnchantment_abilities :: Tree [Ability OTNEnchantment]
+    , treeEnchantment_abilities :: Tree [SomeZone WithThisAbility OTNEnchantment]
     } ->
     Tree (CardFacet OTNEnchantment)
   TreeEnchantmentCreatureFacet ::
@@ -237,16 +230,16 @@ data instance Tree (CardFacet ot) where
     , treeEnchantmentCreature_creatureTypes :: Tree [CreatureType]
     , treeEnchantmentCreature_power :: Tree Power
     , treeEnchantmentCreature_toughness :: Tree Toughness
-    , treeEnchantmentCreature_creatureAbilities :: Tree [Ability OTNCreature]
-    , treeEnchantmentCreature_enchantmentAbilities :: Tree [Ability OTNEnchantment]
-    , treeEnchantmentCreature_enchantmentCreatureAbilities :: Tree [Ability OTNEnchantmentCreature]
+    , treeEnchantmentCreature_creatureAbilities :: Tree [SomeZone WithThisAbility OTNCreature]
+    , treeEnchantmentCreature_enchantmentAbilities :: Tree [SomeZone WithThisAbility OTNEnchantment]
+    , treeEnchantmentCreature_enchantmentCreatureAbilities :: Tree [SomeZone WithThisAbility OTNEnchantmentCreature]
     } ->
     Tree (CardFacet OTNEnchantmentCreature)
   TreeInstantFacet ::
     { treeInstant_colors :: Tree [Color]
     , treeInstant_cost :: Tree (Cost OTNInstant)
     , treeInstant_creatureTypes :: Tree [CreatureType]
-    , treeInstant_abilities :: Tree [Ability OTNInstant]
+    , treeInstant_abilities :: Tree [SomeZone WithThisAbility OTNInstant]
     } ->
     Tree (CardFacet OTNInstant)
   TreeLandFacet ::
@@ -254,7 +247,7 @@ data instance Tree (CardFacet ot) where
     , treeLand_cost :: Tree (Cost OTNLand)
     , treeLand_creatureTypes :: Tree [CreatureType]
     , treeLand_landTypes :: Tree [LandType]
-    , treeLand_abilities :: Tree [Ability OTNLand]
+    , treeLand_abilities :: Tree [SomeZone WithThisAbility OTNLand]
     } ->
     Tree (CardFacet OTNLand)
   TreePlaneswalkerFacet ::
@@ -262,14 +255,14 @@ data instance Tree (CardFacet ot) where
     , treePlaneswalker_cost :: Tree (Cost OTNPlaneswalker)
     , treePlaneswalker_creatureTypes :: Tree [CreatureType]
     , treePlaneswalker_loyalty :: Tree Loyalty
-    , treePlaneswalker_abilities :: Tree [Ability OTNPlaneswalker]
+    , treePlaneswalker_abilities :: Tree [SomeZone WithThisAbility OTNPlaneswalker]
     } ->
     Tree (CardFacet OTNPlaneswalker)
   TreeSorceryFacet ::
     { treeSorcery_colors :: Tree [Color]
     , treeSorcery_cost :: Tree (Cost OTNSorcery)
     , treeSorcery_creatureTypes :: Tree [CreatureType]
-    , treeSorcery_abilities :: Tree [Ability OTNSorcery]
+    , treeSorcery_abilities :: Tree [SomeZone WithThisAbility OTNSorcery]
     } ->
     Tree (CardFacet OTNSorcery)
 

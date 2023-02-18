@@ -57,9 +57,11 @@ import safe MtgPure.Model.Recursive (
   Ability,
   Card,
   CardFacet,
-  Some (..),
+  SomeOT (..),
   SomeTerm (..),
+  SomeZone (..),
   Token,
+  WithThisAbility,
  )
 import safe MtgPure.Model.Recursive.Show ()
 import safe MtgPure.Model.Sideboard (Sideboard (..))
@@ -348,21 +350,27 @@ deriving instance Show Player
 
 deriving instance Show QueryObjectResult
 
-deriving instance Show (Some Ability ot)
+deriving instance Show (SomeOT Card ot)
 
-deriving instance Show (Some Card ot)
+deriving instance Show (SomeOT CardFacet ot)
 
-deriving instance Show (Some CardFacet ot)
+deriving instance Show (SomeOT (SomeZone Ability) ot)
 
-deriving instance Show (Some Token ot)
+deriving instance Show (SomeOT (SomeZone WithThisAbility) ot)
 
-deriving instance Show (SomeTerm Ability ot)
+deriving instance Show (SomeOT Token ot)
 
 deriving instance Show (SomeTerm Card ot)
 
 deriving instance Show (SomeTerm CardFacet ot)
 
+deriving instance Show (SomeTerm (SomeZone Ability) ot)
+
+deriving instance Show (SomeTerm (SomeZone WithThisAbility) ot)
+
 deriving instance Show (SomeTerm Token ot)
+
+deriving instance Show (SomeZone Ability ot)
 
 deriving instance Show Stack
 
