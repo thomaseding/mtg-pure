@@ -41,6 +41,7 @@ module MtgPure.Model.Combinators (
   is,
   isBasic,
   isTapped,
+  IsYourCardFacet (..),
   loseAbility,
   -- mkCard,
   -- mkToken,
@@ -108,10 +109,18 @@ import safe MtgPure.Model.Object.OTN (
   OTN,
  )
 import safe MtgPure.Model.Object.OTNAliases (
+  OTNArtifact,
+  OTNArtifactCreature,
+  OTNArtifactLand,
   OTNCreature,
   OTNDamageSource,
+  OTNEnchantment,
+  OTNEnchantmentCreature,
+  OTNInstant,
   OTNLand,
+  OTNPlaneswalker,
   OTNPlayer,
+  OTNSorcery,
  )
 import safe MtgPure.Model.Object.OTN_ (OTN' (..))
 import safe MtgPure.Model.Object.Singleton.Any (CoAny (..))
@@ -124,6 +133,7 @@ import safe MtgPure.Model.Recursive (
   AnyCard (..),
   AnyToken (..),
   Card (..),
+  CardFacet,
   Case (..),
   Condition (..),
   Cost (..),
@@ -147,6 +157,9 @@ import safe MtgPure.Model.Recursive (
   WithThis (..),
   WithThisAbility (..),
   WithThisActivated,
+  YourCardFacet (..),
+  YourDirect,
+  YourElected,
   pattern CTrue,
  )
 import safe MtgPure.Model.Step (Step (..))
@@ -339,6 +352,39 @@ triggered' = WithThisTriggered . thisObject
 
 triggered :: (AsWithThis zone ot, ot ~ OTN x) => (ThisFromOTN zone ot -> TriggeredAbility zone ot) -> SomeZone WithThisAbility ot
 triggered = SomeZone . triggered'
+
+class IsYourCardFacet facetOT ot | facetOT -> ot, ot -> facetOT where
+  yourCardFacet :: facetOT -> YourCardFacet ot
+
+instance IsYourCardFacet (YourDirect CardFacet OTNArtifact) OTNArtifact where
+  yourCardFacet = YourArtifact
+
+instance IsYourCardFacet (YourDirect CardFacet OTNArtifactCreature) OTNArtifactCreature where
+  yourCardFacet = YourArtifactCreature
+
+instance IsYourCardFacet (YourDirect CardFacet OTNArtifactLand) OTNArtifactLand where
+  yourCardFacet = YourArtifactLand
+
+instance IsYourCardFacet (YourDirect CardFacet OTNCreature) OTNCreature where
+  yourCardFacet = YourCreature
+
+instance IsYourCardFacet (YourDirect CardFacet OTNEnchantment) OTNEnchantment where
+  yourCardFacet = YourEnchantment
+
+instance IsYourCardFacet (YourDirect CardFacet OTNEnchantmentCreature) OTNEnchantmentCreature where
+  yourCardFacet = YourEnchantmentCreature
+
+instance IsYourCardFacet (YourElected CardFacet OTNInstant) OTNInstant where
+  yourCardFacet = YourInstant
+
+instance IsYourCardFacet (YourDirect CardFacet OTNLand) OTNLand where
+  yourCardFacet = YourLand
+
+instance IsYourCardFacet (YourDirect CardFacet OTNPlaneswalker) OTNPlaneswalker where
+  yourCardFacet = YourPlaneswalker
+
+instance IsYourCardFacet (YourElected CardFacet OTNSorcery) OTNSorcery where
+  yourCardFacet = YourSorcery
 
 class AsDamage a where
   asDamage :: a -> Damage 'Var

@@ -123,6 +123,7 @@ import safe MtgPure.Model.Combinators (
   AsWithThis (..),
   ElectEffect (effect),
   HasLandType (hasLandType),
+  IsYourCardFacet (..),
   ToHybrid (..),
   activated,
   addManaAnyColor,
@@ -252,7 +253,6 @@ import safe MtgPure.Model.Recursive (
   Token (..),
   TriggeredAbility (When),
   WithList (..),
-  YourCardFacet (..),
   pattern CTrue,
  )
 import safe MtgPure.Model.Step (Step (..))
@@ -266,7 +266,7 @@ import safe MtgPure.Model.Zone (Zone (..))
 
 mkBasicImpl :: [Ty.Supertype OTNLand] -> CardName -> BasicLandType -> Card OTNLand
 mkBasicImpl supertypes name ty = Card name $
-  YourLand \_you ->
+  yourCardFacet \_you ->
     LandFacet
       { land_supertypes = supertypes
       , land_landTypes = [BasicLand ty]
@@ -285,7 +285,7 @@ mkSnowCovered ty = mkBasicImpl [Ty.Snow] name ty
 
 mkDualTapImpl :: [Ty.Supertype OTNLand] -> CardName -> BasicLandType -> BasicLandType -> Card OTNLand
 mkDualTapImpl supertypes name ty1 ty2 = Card name $
-  YourLand \_you ->
+  yourCardFacet \_you ->
     LandFacet
       { land_supertypes = supertypes
       , land_landTypes = [BasicLand ty1, BasicLand ty2]
@@ -303,7 +303,7 @@ mkTapLandImpl ::
   ManaSymbol mt2 ->
   Card OTNLand
 mkTapLandImpl supertypes name sym1 sym2 = Card name $
-  YourLand \_you ->
+  yourCardFacet \_you ->
     LandFacet
       { land_supertypes = supertypes
       , land_landTypes = []
@@ -335,7 +335,7 @@ mkSnowCoveredTapLand = mkTapLandImpl [Ty.Snow]
 
 mkDualLand :: CardName -> BasicLandType -> BasicLandType -> Card OTNLand
 mkDualLand name ty1 ty2 = Card name $
-  YourLand \_you ->
+  yourCardFacet \_you ->
     LandFacet
       { land_supertypes = []
       , land_landTypes = [BasicLand ty1, BasicLand ty2]
@@ -349,7 +349,7 @@ mkHybridFilterLand ::
   ManaSymbol mt2 ->
   Card OTNLand
 mkHybridFilterLand name sym1 sym2 = Card name $
-  YourLand \_you ->
+  yourCardFacet \_you ->
     LandFacet
       { land_supertypes = []
       , land_landTypes = []
@@ -382,7 +382,7 @@ mkHybridFilterLand name sym1 sym2 = Card name $
 
 mkFetchLand :: CardName -> BasicLandType -> BasicLandType -> Card OTNLand
 mkFetchLand name ty1 ty2 = Card name $
-  YourLand \_you ->
+  yourCardFacet \_you ->
     LandFacet
       { land_supertypes = []
       , land_landTypes = []
@@ -408,7 +408,7 @@ mkFetchLand name ty1 ty2 = Card name $
 
 mkMox :: ToManaPool 'NonSnow (ManaSymbol mt) => CardName -> ManaSymbol mt -> Card OTNArtifact
 mkMox name sym = Card name $
-  YourArtifact \_you ->
+  yourCardFacet \_you ->
     ArtifactFacet
       { artifact_colors = toColors ()
       , artifact_cost = manaCost 0
@@ -429,7 +429,7 @@ mkMox name sym = Card name $
 
 acceptableLosses :: Card OTNSorcery
 acceptableLosses = Card "Acceptable Losses" $
-  YourSorcery \you ->
+  yourCardFacet \you ->
     Target you $ masked @OTNCreature [] \target ->
       ElectCard $
         SorceryFacet
@@ -447,7 +447,7 @@ acceptableLosses = Card "Acceptable Losses" $
 
 allIsDust :: Card OTNSorcery
 allIsDust = Card "All Is Dust" $
-  YourSorcery \_you ->
+  yourCardFacet \_you ->
     ElectCard $
       SorceryFacet
         { sorcery_colors = toColors ()
@@ -475,7 +475,7 @@ arcticTreeline = mkSnowCoveredTapDualLand "Arctic Treeline" Forest Plains
 
 ancestralRecall :: Card OTNInstant
 ancestralRecall = Card "Ancestral Recall" $
-  YourInstant \you ->
+  yourCardFacet \you ->
     ElectCard $
       InstantFacet
         { instant_colors = toColors U
@@ -488,7 +488,7 @@ ancestralRecall = Card "Ancestral Recall" $
 
 ancestralVision :: Card OTNSorcery
 ancestralVision = Card "Ancestral Vision" $
-  YourSorcery \you ->
+  yourCardFacet \you ->
     Target you $ masked [] \target ->
       ElectCard $
         SorceryFacet
@@ -502,7 +502,7 @@ ancestralVision = Card "Ancestral Vision" $
 
 backlash :: Card OTNInstant
 backlash = Card "Backlash" $
-  YourInstant \you ->
+  yourCardFacet \you ->
     Target you $ masked [Not isTapped] \target ->
       controllerOf target \targetController ->
         ElectCard $
@@ -522,7 +522,7 @@ bayou = mkDualLand "Bayou" Forest Swamp
 
 birdsOfParadise :: Card OTNCreature
 birdsOfParadise = Card "Birds of Paradise" $
-  YourCreature \_you ->
+  yourCardFacet \_you ->
     CreatureFacet
       { creature_colors = toColors G
       , creature_cost = manaCost G
@@ -546,7 +546,7 @@ birdsOfParadise = Card "Birds of Paradise" $
 birdToken :: Token OTNCreature
 birdToken = Token $
   Card "Bird Token" $
-    YourCreature \_you ->
+    yourCardFacet \_you ->
       CreatureFacet
         { creature_colors = toColors U
         , creature_cost = noCost
@@ -559,7 +559,7 @@ birdToken = Token $
 
 blackLotus :: Card OTNArtifact
 blackLotus = Card "Black Lotus" $
-  YourArtifact \_you ->
+  yourCardFacet \_you ->
     ArtifactFacet
       { artifact_colors = toColors ()
       , artifact_cost = manaCost 0
@@ -584,7 +584,7 @@ blackLotus = Card "Black Lotus" $
 
 blaze :: Card OTNSorcery
 blaze = Card "Blaze" $
-  YourSorcery \you ->
+  yourCardFacet \you ->
     VariableInt \x ->
       Target you $ masked @OTNCreaturePlayerPlaneswalker [] \target ->
         ElectCard $
@@ -599,7 +599,7 @@ blaze = Card "Blaze" $
 
 bloodMoon :: Card OTNEnchantment
 bloodMoon = Card "Blood Moon" $
-  YourEnchantment \_you ->
+  yourCardFacet \_you ->
     EnchantmentFacet
       { enchantment_colors = toColors R
       , enchantment_cost = manaCost (2, R)
@@ -617,7 +617,7 @@ bloodMoon = Card "Blood Moon" $
 
 borealDruid :: Card OTNCreature
 borealDruid = Card "Boreal Druid" $
-  YourCreature \_you ->
+  yourCardFacet \_you ->
     CreatureFacet
       { creature_colors = toColors G
       , creature_cost = manaCost G
@@ -642,7 +642,7 @@ borealShelf = mkSnowCoveredTapLand "Boreal Shelf" W U
 
 braidwoodCup :: Card OTNArtifact
 braidwoodCup = Card "Braidwood Cup" $
-  YourArtifact \_you ->
+  yourCardFacet \_you ->
     ArtifactFacet
       { artifact_colors = toColors ()
       , artifact_cost = manaCost 3
@@ -661,7 +661,7 @@ braidwoodCup = Card "Braidwood Cup" $
 
 counterspell :: Card OTNInstant
 counterspell = Card "Counterspell" $
-  YourInstant \you ->
+  yourCardFacet \you ->
     Target you $ masked @OTNSpell [] \target ->
       ElectCard $
         InstantFacet
@@ -675,7 +675,7 @@ counterspell = Card "Counterspell" $
 
 cityOfBrass :: Card OTNLand
 cityOfBrass = Card "City of Brass" $
-  YourLand \_you ->
+  yourCardFacet \_you ->
     LandFacet
       { land_supertypes = []
       , land_landTypes = []
@@ -700,7 +700,7 @@ cityOfBrass = Card "City of Brass" $
 
 cleanse :: Card OTNSorcery
 cleanse = Card "Cleanse" $
-  YourSorcery \_you ->
+  yourCardFacet \_you ->
     ElectCard $
       SorceryFacet
         { sorcery_colors = toColors W
@@ -716,7 +716,7 @@ cleanse = Card "Cleanse" $
 
 conversion :: Card OTNEnchantment
 conversion = Card "Conversion" $
-  YourEnchantment \_you ->
+  yourCardFacet \_you ->
     EnchantmentFacet
       { enchantment_colors = toColors W
       , enchantment_cost = manaCost (2, W, W)
@@ -748,7 +748,7 @@ conversion = Card "Conversion" $
 
 corrosiveGale :: Card OTNSorcery
 corrosiveGale = Card "Corrosive Gale" $
-  YourSorcery \_you ->
+  yourCardFacet \_you ->
     VariableInt \x ->
       ElectCard $
         SorceryFacet
@@ -765,7 +765,7 @@ corrosiveGale = Card "Corrosive Gale" $
 
 damnation :: Card OTNSorcery
 damnation = Card "Damnation" $
-  YourSorcery \_you ->
+  yourCardFacet \_you ->
     ElectCard $
       SorceryFacet
         { sorcery_colors = toColors B
@@ -784,7 +784,7 @@ damnation = Card "Damnation" $
 
 darkRitual :: Card OTNInstant
 darkRitual = Card "Dark Ritual" $
-  YourInstant \you ->
+  yourCardFacet \you ->
     ElectCard $
       InstantFacet
         { instant_colors = toColors B
@@ -797,7 +797,7 @@ darkRitual = Card "Dark Ritual" $
 
 deathriteShaman :: Card OTNCreature
 deathriteShaman = Card "Deathrite Shaman" $
-  YourCreature \_you ->
+  yourCardFacet \_you ->
     CreatureFacet
       { creature_colors = toColors (B, G)
       , creature_cost = manaCost BG
@@ -855,7 +855,7 @@ deathriteShaman = Card "Deathrite Shaman" $
 
 dismember :: Card OTNInstant
 dismember = Card "Dismember" $
-  YourInstant \you ->
+  yourCardFacet \you ->
     Target you $ masked @OTNCreature [] \target ->
       ElectCard $
         InstantFacet
@@ -874,7 +874,7 @@ dismember = Card "Dismember" $
 
 divination :: Card OTNSorcery
 divination = Card "Divination" $
-  YourSorcery \you ->
+  yourCardFacet \you ->
     ElectCard $
       SorceryFacet
         { sorcery_colors = toColors U
@@ -887,7 +887,7 @@ divination = Card "Divination" $
 
 elvishHexhunter :: Card OTNCreature
 elvishHexhunter = Card "Elvish Hexhunter" $
-  YourCreature \_you ->
+  yourCardFacet \_you ->
     CreatureFacet
       { creature_colors = toColors (G, W)
       , creature_cost = manaCost GW
@@ -914,7 +914,7 @@ elvishHexhunter = Card "Elvish Hexhunter" $
 
 fling :: Card OTNInstant
 fling = Card "Fling" $
-  YourInstant \you ->
+  yourCardFacet \you ->
     Choose you $ masked [ControlledBy you] \sacChoice ->
       Target you $ masked @OTNCreaturePlayer [] \target ->
         ElectCard $
@@ -938,7 +938,7 @@ forest = mkBasicLand Forest
 
 fulminatorMage :: Card OTNCreature
 fulminatorMage = Card "Fulminator Mage" $
-  YourCreature \_you ->
+  yourCardFacet \_you ->
     CreatureFacet
       { creature_colors = toColors (B, R)
       , creature_cost = manaCost (1, BR, BR)
@@ -963,7 +963,7 @@ frostMarsh = mkSnowCoveredTapLand "Frost Marsh" U B
 
 giantGrowth :: Card OTNInstant
 giantGrowth = Card "Giant Growth" $
-  YourInstant \you ->
+  yourCardFacet \you ->
     Target you $ masked @OTNCreature [] \target ->
       ElectCard $
         InstantFacet
@@ -985,7 +985,7 @@ glacialFloodplain = mkSnowCoveredTapDualLand "Glacial Floodplain" Plains Island
 
 gutlessGhoul :: Card OTNCreature
 gutlessGhoul = Card "Gutless Ghoul" $
-  YourCreature \_you ->
+  yourCardFacet \_you ->
     CreatureFacet
       { creature_colors = toColors B
       , creature_cost = manaCost (2, B)
@@ -1010,7 +1010,7 @@ gutlessGhoul = Card "Gutless Ghoul" $
 
 gutShot :: Card OTNInstant
 gutShot = Card "Gut Shot" $
-  YourInstant \you ->
+  yourCardFacet \you ->
     Target you $ masked @OTNCreaturePlayer [] \target ->
       ElectCard $
         InstantFacet
@@ -1024,7 +1024,7 @@ gutShot = Card "Gut Shot" $
 
 grizzlyBears :: Card OTNCreature
 grizzlyBears = Card "Grizzly Bears" $
-  YourCreature \_you ->
+  yourCardFacet \_you ->
     CreatureFacet
       { creature_colors = toColors G
       , creature_cost = manaCost (1, G)
@@ -1043,7 +1043,7 @@ highlandWeald = mkSnowCoveredTapLand "Highland Weald" R G
 
 holyStrength :: Card OTNEnchantment
 holyStrength = Card "Holy Strength" $
-  YourEnchantment \_you ->
+  yourCardFacet \_you ->
     EnchantmentFacet
       { enchantment_colors = toColors W
       , enchantment_cost = manaCost W
@@ -1058,7 +1058,7 @@ holyStrength = Card "Holy Strength" $
 
 icehideGolem :: Card OTNArtifactCreature
 icehideGolem = Card "Icehide Golem" $
-  YourArtifactCreature \_you ->
+  yourCardFacet \_you ->
     ArtifactCreatureFacet
       { artifactCreature_colors = toColors ()
       , artifactCreature_cost = manaCost 1
@@ -1080,7 +1080,7 @@ island = mkBasicLand Island
 
 llanowarElves :: Card OTNCreature
 llanowarElves = Card "Llanowar Elves" $
-  YourCreature \_you ->
+  yourCardFacet \_you ->
     CreatureFacet
       { creature_colors = toColors G
       , creature_cost = manaCost G
@@ -1101,7 +1101,7 @@ llanowarElves = Card "Llanowar Elves" $
 
 lavaAxe :: Card OTNSorcery
 lavaAxe = Card "Lava Axe" $
-  YourSorcery \you ->
+  yourCardFacet \you ->
     Target you $ masked @OTNPlayerPlaneswalker [] \target ->
       ElectCard $
         SorceryFacet
@@ -1115,7 +1115,7 @@ lavaAxe = Card "Lava Axe" $
 
 lightningBolt :: Card OTNInstant
 lightningBolt = Card "Lightning Bolt" $
-  YourInstant \you ->
+  yourCardFacet \you ->
     Target you $ masked @OTNCreaturePlayerPlaneswalker [] \target ->
       ElectCard $
         InstantFacet
@@ -1129,7 +1129,7 @@ lightningBolt = Card "Lightning Bolt" $
 
 manaLeak :: Card OTNInstant
 manaLeak = Card "Mana Leak" $
-  YourInstant \you ->
+  yourCardFacet \you ->
     Target you $ masked @OTNSpell [] \spell ->
       ElectCard $
         InstantFacet
@@ -1145,7 +1145,7 @@ manaLeak = Card "Mana Leak" $
 
 moltensteelDragon :: Card OTNArtifactCreature
 moltensteelDragon = Card "Moltensteel Dragon" $
-  YourArtifactCreature \_you ->
+  yourCardFacet \_you ->
     ArtifactCreatureFacet
       { artifactCreature_colors = toColors R
       , artifactCreature_cost = manaCost (4, PR, PR)
@@ -1179,7 +1179,7 @@ mountain = mkBasicLand Mountain
 
 mouthOfRonom :: Card OTNLand
 mouthOfRonom = Card "Mouth of Ronom" $
-  YourLand \_you ->
+  yourCardFacet \_you ->
     LandFacet
       { land_supertypes = [Ty.Snow]
       , land_landTypes = []
@@ -1224,7 +1224,7 @@ moxSapphire = mkMox "Mox Sapphire" U
 
 mutagenicGrowth :: Card OTNInstant
 mutagenicGrowth = Card "Mutagenic Growth" $
-  YourInstant \you ->
+  yourCardFacet \you ->
     Target you $ masked @OTNCreature [] \target ->
       ElectCard $
         InstantFacet
@@ -1243,7 +1243,7 @@ mutagenicGrowth = Card "Mutagenic Growth" $
 
 nyxbornRollicker :: Card OTNEnchantmentCreature
 nyxbornRollicker = Card "Nyxborn Rollicker" $
-  YourEnchantmentCreature \_you ->
+  yourCardFacet \_you ->
     EnchantmentCreatureFacet
       { enchantmentCreature_colors = toColors R
       , enchantmentCreature_cost = manaCost R
@@ -1264,7 +1264,7 @@ nyxbornRollicker = Card "Nyxborn Rollicker" $
 
 ornithopter :: Card OTNArtifactCreature
 ornithopter = Card "Ornithopter" $
-  YourArtifactCreature \_you ->
+  yourCardFacet \_you ->
     ArtifactCreatureFacet
       { artifactCreature_colors = toColors ()
       , artifactCreature_cost = manaCost 0
@@ -1283,7 +1283,7 @@ plains = mkBasicLand Plains
 
 plummet :: Card OTNInstant
 plummet = Card "Plummet" $
-  YourInstant \you ->
+  yourCardFacet \you ->
     Target you $ masked [hasAbility $ static \_this -> Flying] \target ->
       ElectCard $
         InstantFacet
@@ -1300,7 +1300,7 @@ pollutedDelta = mkFetchLand "Polluted Delta" Island Swamp
 
 porcelainLegionnaire :: Card OTNArtifactCreature
 porcelainLegionnaire = Card "Porcelain Legionnaire" $
-  YourArtifactCreature \_you ->
+  yourCardFacet \_you ->
     ArtifactCreatureFacet
       { artifactCreature_colors = toColors W
       , artifactCreature_cost = manaCost (2, PW)
@@ -1316,7 +1316,7 @@ porcelainLegionnaire = Card "Porcelain Legionnaire" $
 
 pradeshGypsies :: Card OTNCreature
 pradeshGypsies = Card "Pradesh Gypsies" $
-  YourCreature \_you ->
+  yourCardFacet \_you ->
     CreatureFacet
       { creature_colors = toColors G
       , creature_cost = manaCost (2, G)
@@ -1349,7 +1349,7 @@ pradeshGypsies = Card "Pradesh Gypsies" $
 
 ragingGoblin :: Card OTNCreature
 ragingGoblin = Card "Raging Goblin" $
-  YourCreature \_you ->
+  yourCardFacet \_you ->
     CreatureFacet
       { creature_colors = toColors R
       , creature_cost = manaCost R
@@ -1365,7 +1365,7 @@ rimewoodFalls = mkSnowCoveredTapDualLand "Rimewood Falls" Forest Island
 
 shatter :: Card OTNInstant
 shatter = Card "Shatter" $
-  YourInstant \you ->
+  yourCardFacet \you ->
     Target you $ masked @OTNArtifact [] \target ->
       ElectCard $
         InstantFacet
@@ -1379,7 +1379,7 @@ shatter = Card "Shatter" $
 
 shock :: Card OTNInstant
 shock = Card "Shock" $
-  YourInstant \you ->
+  yourCardFacet \you ->
     Target you $ masked @OTNCreaturePlayerPlaneswalker [] \target ->
       ElectCard $
         InstantFacet
@@ -1393,7 +1393,7 @@ shock = Card "Shock" $
 
 sinkhole :: Card OTNSorcery
 sinkhole = Card "Sinkhole" $
-  YourSorcery \you ->
+  yourCardFacet \you ->
     Target you $ masked @OTNLand [] \target ->
       ElectCard $
         SorceryFacet
@@ -1407,7 +1407,7 @@ sinkhole = Card "Sinkhole" $
 
 slashPanther :: Card OTNArtifactCreature
 slashPanther = Card "Slash Panther" $
-  YourArtifactCreature \_you ->
+  yourCardFacet \_you ->
     ArtifactCreatureFacet
       { artifactCreature_colors = toColors R
       , artifactCreature_cost = manaCost (4, PR)
@@ -1426,7 +1426,7 @@ snowfieldSinkhole = mkSnowCoveredTapDualLand "Snowfield Sinkhole" Plains Swamp
 
 snuffOut :: Card OTNInstant
 snuffOut = Card "Snuff Out" $
-  YourInstant \you ->
+  yourCardFacet \you ->
     ChooseOption
       you
       ( LS CTrue $
@@ -1472,7 +1472,7 @@ snowCoveredSwamp = mkSnowCovered Swamp
 soldierToken :: Token OTNCreature
 soldierToken = Token $
   Card "Soldier Token" $
-    YourCreature \_you ->
+    yourCardFacet \_you ->
       CreatureFacet
         { creature_colors = toColors W
         , creature_cost = noCost
@@ -1485,7 +1485,7 @@ soldierToken = Token $
 
 spinedThopter :: Card OTNArtifactCreature
 spinedThopter = Card "Spined Thopter" $
-  YourArtifactCreature \_you ->
+  yourCardFacet \_you ->
     ArtifactCreatureFacet
       { artifactCreature_colors = toColors U
       , artifactCreature_cost = manaCost (2, PU)
@@ -1501,7 +1501,7 @@ spinedThopter = Card "Spined Thopter" $
 
 squallDrifter :: Card OTNCreature
 squallDrifter = Card "Squall Drifter" $
-  YourCreature \_you ->
+  yourCardFacet \_you ->
     CreatureFacet
       { creature_colors = toColors W
       , creature_cost = manaCost (1, W)
@@ -1528,7 +1528,7 @@ squallDrifter = Card "Squall Drifter" $
 
 squallLine :: Card OTNInstant
 squallLine = Card "Squall Line" $
-  YourInstant \_you ->
+  yourCardFacet \_you ->
     VariableInt \x ->
       ElectCard $
         InstantFacet
@@ -1549,7 +1549,7 @@ squallLine = Card "Squall Line" $
 
 stifle :: Card OTNInstant
 stifle = Card "Stifle" $
-  YourInstant \you ->
+  yourCardFacet \you ->
     Target you $ masked @OTNActivatedOrTriggeredAbility [] \target ->
       ElectCard $
         InstantFacet
@@ -1563,7 +1563,7 @@ stifle = Card "Stifle" $
 
 stoneRain :: Card OTNSorcery
 stoneRain = Card "Stone Rain" $
-  YourSorcery \you ->
+  yourCardFacet \you ->
     Target you $ masked @OTNLand [] \target ->
       ElectCard $
         SorceryFacet
@@ -1577,7 +1577,7 @@ stoneRain = Card "Stone Rain" $
 
 stoneThrowingDevils :: Card OTNCreature
 stoneThrowingDevils = Card "Stone-Throwing Devils" $
-  YourCreature \_you ->
+  yourCardFacet \_you ->
     CreatureFacet
       { creature_colors = toColors B
       , creature_cost = manaCost B
@@ -1599,7 +1599,7 @@ swamp = mkBasicLand Swamp
 
 swanSong :: Card OTNInstant
 swanSong = Card "Swan Song" $
-  YourInstant \you ->
+  yourCardFacet \you ->
     Target you $ masked @(OT3 'OTEnchantment 'OTInstant 'OTSorcery) [] \target ->
       controllerOf target \controller ->
         ElectCard $
@@ -1617,7 +1617,7 @@ swanSong = Card "Swan Song" $
 
 teferisIsle :: Card OTNLand
 teferisIsle = Card "Teferi's Isle" $
-  YourLand \_you ->
+  yourCardFacet \_you ->
     LandFacet
       { land_supertypes = [Legendary]
       , land_landTypes = []
@@ -1636,7 +1636,7 @@ teferisIsle = Card "Teferi's Isle" $
 
 thermopod :: Card OTNCreature
 thermopod = Card "Thermopod" $
-  YourCreature \_you ->
+  yourCardFacet \_you ->
     CreatureFacet
       { creature_colors = toColors R
       , creature_cost = manaCost (1, R)
@@ -1663,7 +1663,7 @@ thermopod = Card "Thermopod" $
 
 thunderingTanadon :: Card OTNArtifactCreature
 thunderingTanadon = Card "Thundering Tanadon" $
-  YourArtifactCreature \_you ->
+  yourCardFacet \_you ->
     ArtifactCreatureFacet
       { artifactCreature_colors = toColors G
       , artifactCreature_cost = manaCost (4, PG, PG)
@@ -1682,7 +1682,7 @@ tresserhornSinks = mkSnowCoveredTapLand "Tresserhorn Sinks" B R
 
 unholyStrength :: Card OTNEnchantment
 unholyStrength = Card "Unholy Strength" $
-  YourEnchantment \_you ->
+  yourCardFacet \_you ->
     EnchantmentFacet
       { enchantment_colors = toColors B
       , enchantment_cost = manaCost B
@@ -1697,7 +1697,7 @@ unholyStrength = Card "Unholy Strength" $
 
 vindicate :: Card OTNSorcery
 vindicate = Card "Vindicate" $
-  YourSorcery \you ->
+  yourCardFacet \you ->
     Target you $ masked @OTNPermanent [] \target ->
       ElectCard $
         SorceryFacet
@@ -1714,7 +1714,7 @@ volatileFjord = mkSnowCoveredTapDualLand "Volatile Fjord" Island Mountain
 
 waspLancer :: Card OTNCreature
 waspLancer = Card "Wasp Lancer" $
-  YourCreature \_you ->
+  yourCardFacet \_you ->
     CreatureFacet
       { creature_colors = toColors (U, B)
       , creature_cost = manaCost (UB, UB, UB)
@@ -1728,7 +1728,7 @@ waspLancer = Card "Wasp Lancer" $
 -- NOTE: Wastes does NOT have an intrinsic mana ability.
 wastes :: Card OTNLand
 wastes = Card "Wastes" $
-  YourLand \_you ->
+  yourCardFacet \_you ->
     LandFacet
       { land_supertypes = [Ty.Basic]
       , land_landTypes = []
@@ -1748,7 +1748,7 @@ wear_tear = SplitCard wear tear [SomeZone2 $ Static Fuse]
  where
   wear :: Card OTNInstant
   wear = Card "Wear" $
-    YourInstant \you ->
+    yourCardFacet \you ->
       Target you $ masked @OTNArtifact [] \target ->
         ElectCard $
           InstantFacet
@@ -1761,7 +1761,7 @@ wear_tear = SplitCard wear tear [SomeZone2 $ Static Fuse]
             }
   tear :: Card OTNInstant
   tear = Card "Tear" $
-    YourInstant \you ->
+    yourCardFacet \you ->
       Target you $ masked @OTNEnchantment [] \target ->
         ElectCard $
           InstantFacet
@@ -1775,7 +1775,7 @@ wear_tear = SplitCard wear tear [SomeZone2 $ Static Fuse]
 
 witchEngine :: Card OTNCreature
 witchEngine = Card "Witch Engine" $
-  YourCreature \_you ->
+  yourCardFacet \_you ->
     CreatureFacet
       { creature_colors = toColors B
       , creature_cost = manaCost (5, B)
@@ -1808,7 +1808,7 @@ woodlandChasm = mkSnowCoveredTapDualLand "Woodland Chasm" Swamp Forest
 
 wrathOfGod :: Card OTNSorcery
 wrathOfGod = Card "Wrath of God" $
-  YourSorcery \_you ->
+  yourCardFacet \_you ->
     ElectCard $
       SorceryFacet
         { sorcery_colors = toColors W

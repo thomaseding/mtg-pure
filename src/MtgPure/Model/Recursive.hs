@@ -55,6 +55,8 @@ module MtgPure.Model.Recursive (
   WithThisZ (..),
   SomeZone (..),
   YourCardFacet (..),
+  YourDirect,
+  YourElected,
   pattern CFalse,
   pattern CTrue,
   fromSomeOT,
