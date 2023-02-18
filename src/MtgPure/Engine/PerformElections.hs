@@ -105,7 +105,6 @@ performElections' failureX zoStack goTerm = logCall 'performElections' \case
   ElectCard facet -> goTerm facet
   ElectCase case_ -> caseOf goRec case_
   Effect effect -> goTerm $ Sequence effect
-  Elect elect -> goTerm elect
   Event{} -> undefined
   If{} -> undefined
   Listen{} -> undefined

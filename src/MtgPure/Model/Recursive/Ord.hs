@@ -1093,9 +1093,6 @@ ordElectEl x = case x of
   ElectCase case1 -> \case
     ElectCase case2 -> ordCase ordElectEl case1 case2
     y -> compareIndexM x y
-  Elect elect1 -> \case
-    Elect elect2 -> ordElectEl elect1 elect2
-    y -> compareIndexM x y
   Event event1 -> \case
     Event event2 -> ordEvent event1 event2
     y -> compareIndexM x y

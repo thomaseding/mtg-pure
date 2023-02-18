@@ -17,7 +17,6 @@ module MtgPure.Model.Recursive (
   Cost (..),
   Effect (..),
   Elect (..),
-  ElectPrePost,
   ElectOT (..),
   Else (..),
   Enchant (..),
@@ -581,7 +580,6 @@ data Elect (p :: PrePost) (el :: Type) (ot :: Type) :: Type where
   ControllerOf :: IsZO zone OTNAny => ZO zone OTNAny -> (ZOPlayer -> Elect p el ot) -> Elect p el ot
   Cost :: Cost ot -> Elect 'Pre (Cost ot) ot -- XXX: can this constructor be removed?
   Effect :: Typeable ef => [Effect ef] -> Elect 'Post (Effect ef) ot
-  Elect :: Typeable el => Elect 'Post el ot -> ElectPrePost el ot
   ElectActivated :: IsZO zone ot => ActivatedAbility zone ot -> Elect 'Pre (ActivatedAbility zone ot) ot
   ElectCard :: CardFacet ot -> Elect 'Pre (CardFacet ot) ot
   ElectCase :: Case (Elect p el ot) -> Elect p el ot
@@ -621,25 +619,22 @@ instance ConsIndex (Elect p el ot) where
     ControllerOf{} -> 6
     Cost{} -> 7
     Effect{} -> 8
-    Elect{} -> 9
-    ElectActivated{} -> 10
-    ElectCard{} -> 11
-    ElectCase{} -> 12
-    Event{} -> 13
-    If{} -> 14
-    Listen{} -> 15
-    OwnerOf{} -> 16
-    Random{} -> 17
-    Target{} -> 18
-    VariableFromPower{} -> 19
-    VariableInt{} -> 20
+    ElectActivated{} -> 9
+    ElectCard{} -> 10
+    ElectCase{} -> 11
+    Event{} -> 12
+    If{} -> 13
+    Listen{} -> 14
+    OwnerOf{} -> 15
+    Random{} -> 16
+    Target{} -> 17
+    VariableFromPower{} -> 18
+    VariableInt{} -> 19
 
 -- | Used to make some higher-kinded `ot` stuff work.
 data ElectOT (p :: PrePost) (liftOT :: Type -> Type) (ot :: Type) where
   ElectOT :: {unElectOT :: Elect p (liftOT ot) ot} -> ElectOT p liftOT ot
   deriving (Typeable)
-
-type ElectPrePost el ot = Elect 'Pre (Elect 'Post el ot) ot
 
 --------------------------------------------------------------------------------
 

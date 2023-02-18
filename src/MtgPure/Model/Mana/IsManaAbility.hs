@@ -226,7 +226,6 @@ instance IsManaAbilityImpl (Elect p el ot) where
     ControllerOf _zo cont -> isManaAbilityImpl $ cont dummyZO
     Cost{} -> IsNotManaAbility
     Effect effects -> mconcat $ map isManaAbilityImpl effects
-    Elect el -> isManaAbilityImpl el
     ElectActivated ability -> isManaAbilityImpl ability
     ElectCard{} -> IsNotManaAbility
     ElectCase case_ -> isManaAbilityImpl case_

@@ -1030,9 +1030,6 @@ showElect = \case
   Effect effect -> yesParens do
     sEffect <- dollar <$> showEffects effect
     pure $ pure "Effect" <> sEffect
-  Elect elect -> yesParens do
-    sElect <- dollar <$> showElect elect
-    pure $ pure "Elect" <> sElect
   ElectActivated activated -> yesParens do
     sPost <- dollar <$> showActivatedAbility activated
     pure $ pure "ElectActivated" <> sPost
