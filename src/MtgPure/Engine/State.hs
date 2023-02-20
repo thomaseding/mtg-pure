@@ -121,7 +121,7 @@ type Fwd m = Fwd' (GameResult m) (GameState m) m
 instance Show (Fwd m) where
   show _ = show ''Fwd
 
-type Prompt m = Prompt' OpaqueGameState m (Magic 'Public 'RO m)
+type Prompt m = Prompt' OpaqueGameState m
 
 instance Show (Prompt m) where
   show _ = show ''Prompt

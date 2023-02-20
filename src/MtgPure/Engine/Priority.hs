@@ -21,6 +21,7 @@ module MtgPure.Engine.Priority (
 import safe Control.Exception (assert)
 import safe qualified Control.Monad as M
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
+import safe qualified Control.Monad.Trans as M
 import safe Control.Monad.Util (Attempt, Attempt' (..))
 import safe Data.Functor ((<&>))
 import safe qualified Data.Stream as Stream
@@ -138,7 +139,7 @@ askPriorityAction' attempt oPlayer = M.join $ logCall 'askPriorityAction' do
       prompt = magicPrompt st
   action <- liftCont $
     fromPublic $ fromRO do
-      promptPriorityAction prompt attempt opaque oPlayer
+      M.lift $ promptPriorityAction prompt attempt opaque oPlayer
   performPriorityActionCont oPlayer action >>= \case
     Pass -> pure $ pure ()
     TryAgain mAttempt -> do

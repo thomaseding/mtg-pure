@@ -211,8 +211,7 @@ newtype DefendingPlayer = DefendingPlayer {unDefendingPlayer :: Object 'OTPlayer
 data Pause = Pause | NoPause
   deriving (Eq, Ord, Show)
 
--- TODO: The `magic` variants are all pointless and should be reduced to `m` variants.
-data Prompt' (opaqueGameState :: (Type -> Type) -> Type) (m :: Type -> Type) (magic :: Type -> Type) = Prompt
+data Prompt' (opaqueGameState :: (Type -> Type) -> Type) (m :: Type -> Type) = Prompt
   { exceptionCantBeginGameWithoutPlayers :: m ()
   , exceptionInvalidCastSpell :: opaqueGameState m -> Object 'OTPlayer -> InvalidCastSpell -> m ()
   , exceptionInvalidGenericManaPayment :: Mana 'NoVar 'NonSnow 'Ty1 -> CompleteManaPool -> m ()
@@ -224,14 +223,14 @@ data Prompt' (opaqueGameState :: (Type -> Type) -> Type) (m :: Type -> Type) (ma
   , promptChooseBlockers :: Attempt -> opaqueGameState m -> AttackingPlayer -> DefendingPlayer -> NonEmpty DeclaredAttacker -> m [DeclaredBlocker]
   , promptChooseOption :: forall user n elem. (Typeable user, IsNat n) => opaqueGameState m -> Object 'OTPlayer -> NatList user n elem -> m (Fin user n)
   , promptDebugMessage :: Pause -> String -> m ()
-  , promptGetStartingPlayer :: Attempt -> PlayerCount -> magic PlayerIndex
+  , promptGetStartingPlayer :: Attempt -> PlayerCount -> m PlayerIndex
   , promptLogCallPop :: opaqueGameState m -> CallFrameInfo -> m ()
   , promptLogCallPush :: opaqueGameState m -> CallFrameInfo -> m ()
-  , promptPayDynamicMana :: Attempt -> opaqueGameState m -> Object 'OTPlayer -> DynamicManaCost 'NoVar -> magic ManaPayment
-  , promptPerformMulligan :: Attempt -> Object 'OTPlayer -> [AnyCard] -> magic Bool -- TODO: Encode limited game state about players' mulligan states and [Serum Powder].
-  , promptPickZO :: forall zone ot. IsZO zone ot => Attempt -> opaqueGameState m -> Object 'OTPlayer -> NonEmpty (ZO zone ot) -> magic (ZO zone ot)
-  , promptPriorityAction :: Attempt -> opaqueGameState m -> Object 'OTPlayer -> magic (PriorityAction ())
-  , promptShuffle :: Attempt -> CardCount -> Object 'OTPlayer -> magic [CardIndex]
+  , promptPayDynamicMana :: Attempt -> opaqueGameState m -> Object 'OTPlayer -> DynamicManaCost 'NoVar -> m ManaPayment
+  , promptPerformMulligan :: Attempt -> Object 'OTPlayer -> [AnyCard] -> m Bool -- TODO: Encode limited game state about players' mulligan states and [Serum Powder].
+  , promptPickZO :: forall zone ot. IsZO zone ot => Attempt -> opaqueGameState m -> Object 'OTPlayer -> NonEmpty (ZO zone ot) -> m (ZO zone ot)
+  , promptPriorityAction :: Attempt -> opaqueGameState m -> Object 'OTPlayer -> m (PriorityAction ())
+  , promptShuffle :: Attempt -> CardCount -> Object 'OTPlayer -> m [CardIndex]
   }
 
 data AbsoluteActivatedAbilityIndex :: Type where

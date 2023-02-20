@@ -25,6 +25,7 @@ import safe Control.Exception (assert)
 import safe qualified Control.Monad as M
 import safe Control.Monad.Access (Visibility (..))
 import safe qualified Control.Monad.Access as A
+import safe qualified Control.Monad.Trans as M
 import safe Control.Monad.Util (untilJust)
 import safe qualified Data.List as List
 import safe Data.Monoid (First (..))
@@ -462,7 +463,7 @@ promptPayForCompatibleDynamic oPlayer avail dyn = do
   prompt <- gets magicPrompt
   opaque <- gets mkOpaqueGameState
   untilJust \attempt -> do
-    payment <- fromPublic $ promptPayDynamicMana prompt attempt opaque oPlayer dyn
+    payment <- fromPublic $ M.lift $ promptPayDynamicMana prompt attempt opaque oPlayer dyn
     let hasMana = isEachManaNonNegative $ avail - paymentMana payment
         hasLife = playerLife player > paymentLife payment || paymentLife payment == 0
         isCompatible = isPaymentCompatible payment dyn

@@ -59,6 +59,7 @@ module MtgPure.Engine.Core (
 import safe Control.Exception (assert)
 import safe qualified Control.Monad as M
 import safe Control.Monad.Access (IsReadWrite, ReadWrite (..), Visibility (..))
+import safe qualified Control.Monad.Trans as M
 import safe Control.Monad.Util (untilJust)
 import safe qualified Data.DList as DList
 import safe Data.Functor ((<&>))
@@ -264,7 +265,7 @@ pickOneZO oPlayer = \case
     prompt <- internalFromPrivate $ fromRO $ gets magicPrompt
     opaque <- internalFromPrivate $ fromRO $ gets mkOpaqueGameState
     Just <$> untilJust \attempt -> fromRO do
-      zo <- promptPickZO prompt attempt opaque oPlayer $ zosHead :| zosTail
+      zo <- M.lift $ promptPickZO prompt attempt opaque oPlayer $ zosHead :| zosTail
       pure case zo `elem` zos of
         False -> Nothing
         True -> Just zo

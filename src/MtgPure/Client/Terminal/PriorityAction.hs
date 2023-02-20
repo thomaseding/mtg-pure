@@ -175,7 +175,7 @@ terminalPickZo ::
   OpaqueGameState Terminal ->
   Object 'OTPlayer ->
   NonEmpty (ZO zone ot) ->
-  Magic 'Public 'RO Terminal (ZO zone ot)
+  Terminal (ZO zone ot)
 terminalPickZo _attempt _opaque _p zos = case zos of
   zo :| _ -> do
     liftIO $ print ("picked", zo, "from", NonEmpty.toList zos)
@@ -397,8 +397,8 @@ terminalPriorityAction ::
   Attempt ->
   OpaqueGameState Terminal ->
   Object 'OTPlayer ->
-  Magic 'Public 'RO Terminal (PriorityAction ())
-terminalPriorityAction attempt opaque oPlayer = M.lift do
+  Terminal (PriorityAction ())
+terminalPriorityAction attempt opaque oPlayer = do
   (action, commandInput) <- queryMagic opaque do
     clearScreenWithoutPaging
     M.lift $ printGameState opaque Nothing
@@ -507,8 +507,8 @@ terminalPromptPayDynamicMana ::
   OpaqueGameState Terminal ->
   Object 'OTPlayer ->
   DynamicManaCost 'NoVar ->
-  Magic 'Public 'RO Terminal ManaPayment
-terminalPromptPayDynamicMana attempt opaque oPlayer dyn = M.lift do
+  Terminal ManaPayment
+terminalPromptPayDynamicMana attempt opaque oPlayer dyn = do
   (pool, text) <- queryMagic opaque do
     liftIO case attempt of
       Attempt 0 -> pure ()

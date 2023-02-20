@@ -116,7 +116,7 @@ determineStartingPlayer = logCall 'determineStartingPlayer do
     undefined -- TODO: complain and abort
   logicalStartingIndex <- fromPublic $ fromRO do
     untilJust \attempt -> do
-      PlayerIndex playerIndex <- promptGetStartingPlayer prompt attempt $ PlayerCount playerCount
+      PlayerIndex playerIndex <- M.lift $ promptGetStartingPlayer prompt attempt $ PlayerCount playerCount
       case playerIndex < playerCount of
         True -> pure $ Just playerIndex
         False -> M.lift do

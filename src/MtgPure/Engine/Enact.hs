@@ -182,7 +182,7 @@ shuffleLibrary' _mSource oPlayer = logCall 'shuffleLibrary' do
       count = length library
       ordered = [0 .. count - 1]
   ordering <- untilJust \attempt -> fromPublic $ fromRO do
-    ordering <- promptShuffle prompt attempt (CardCount count) oPlayer
+    ordering <- M.lift $ promptShuffle prompt attempt (CardCount count) oPlayer
     case List.sort (map unCardIndex ordering) == ordered of
       True -> pure $ Just ordering
       False -> do

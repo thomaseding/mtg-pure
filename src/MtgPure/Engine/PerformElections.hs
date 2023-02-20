@@ -278,7 +278,7 @@ electA sel zoStack failureX goElect oPlayer = logCall 'electA \case
         opaque <- fromRO $ gets mkOpaqueGameState
         zo <- fromPublic $ fromRO do
           untilJust \attempt -> do
-            zo <- promptPickZO prompt attempt opaque (zo1ToO oPlayer) $ zosHead :| zosTail
+            zo <- M.lift $ promptPickZO prompt attempt opaque (zo1ToO oPlayer) $ zosHead :| zosTail
             pure case zo `elem` zos of
               False -> Nothing
               True -> Just zo
