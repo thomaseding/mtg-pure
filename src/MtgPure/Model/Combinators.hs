@@ -41,7 +41,6 @@ module MtgPure.Model.Combinators (
   is,
   isBasic,
   isTapped,
-  IsYourCardFacet (..),
   loseAbility,
   -- mkCard,
   -- mkToken,
@@ -71,6 +70,7 @@ module MtgPure.Model.Combinators (
   trivialManaAbility,
   tyAp,
   untilEndOfTurn,
+  yourCardFacet,
 ) where
 
 import safe Data.Inst (
@@ -90,6 +90,7 @@ import safe MtgPure.Model.Color (Color (..))
 import safe MtgPure.Model.ColorsLike (ColorsLike (..))
 import safe MtgPure.Model.Damage (Damage, Damage' (..))
 import safe MtgPure.Model.EffectType (EffectType (..))
+import safe MtgPure.Model.ElectStage (CoNonIntrinsicStage, ElectStage (..))
 import safe MtgPure.Model.LandType (LandType (BasicLand))
 import safe MtgPure.Model.Mana.ManaCost (ManaCost)
 import safe MtgPure.Model.Mana.ManaSymbol (ManaSymbol (..))
@@ -109,25 +110,16 @@ import safe MtgPure.Model.Object.OTN (
   OTN,
  )
 import safe MtgPure.Model.Object.OTNAliases (
-  OTNArtifact,
-  OTNArtifactCreature,
-  OTNArtifactLand,
   OTNCreature,
   OTNDamageSource,
-  OTNEnchantment,
-  OTNEnchantmentCreature,
-  OTNInstant,
   OTNLand,
-  OTNPlaneswalker,
   OTNPlayer,
-  OTNSorcery,
  )
 import safe MtgPure.Model.Object.OTN_ (OTN' (..))
 import safe MtgPure.Model.Object.Singleton.Any (CoAny (..))
 import safe MtgPure.Model.Object.Singleton.Card (CoCard (..))
 import safe MtgPure.Model.Object.Singleton.Permanent (CoPermanent (..))
 import safe MtgPure.Model.Object.ToObjectN.Instances ()
-import safe MtgPure.Model.PrePost (PrePost (..))
 import safe MtgPure.Model.Recursive (
   ActivatedAbility (..),
   AnyCard (..),
@@ -140,6 +132,8 @@ import safe MtgPure.Model.Recursive (
   Effect (..),
   Elect (..),
   ElectOT (..),
+  ElectOneShotEffect,
+  ElectTargetedEffect,
   Else (..),
   Event,
   EventListener,
@@ -157,9 +151,6 @@ import safe MtgPure.Model.Recursive (
   WithThis (..),
   WithThisAbility (..),
   WithThisActivated,
-  YourCardFacet (..),
-  YourDirect,
-  YourElected,
   pattern CTrue,
  )
 import safe MtgPure.Model.Step (Step (..))
@@ -214,11 +205,11 @@ instance CoPermanent ot => ToToken (Token ot) where
 class Typeable x => CoNonProxy x where
   coNonProxy :: NonProxy x
 
-instance (Typeable p, Typeable ef) => CoNonProxy (Elect p (Effect ef)) where
+instance (Typeable s, Typeable ef) => CoNonProxy (Elect s (Effect ef)) where
   coNonProxy = NonProxyElectEffect
 
-instance (Typeable ot) => CoNonProxy (Elect 'Pre (Elect 'Post (Effect 'Continuous) ot)) where
-  coNonProxy = NonProxyElectPrePostEffect
+-- instance (Typeable ot) => CoNonProxy (Elect 'Pre (Elect 'Post (Effect 'Continuous) ot)) where
+--   coNonProxy = NonProxyElectPrePostEffect
 
 class (IsOTN ot, Typeable liftOT) => AsWithLinkedObject ot zone liftOT where
   linked :: [Requirement zone ot] -> (ZO zone ot -> liftOT ot) -> WithLinkedObject zone liftOT ot
@@ -328,13 +319,13 @@ instance IsZO zone (OT5 a b c d e) => AsWithThis zone (OT5 a b c d e) where
   thisObject1 = case litOTN @(OT5 a b c d e) of
     OT5 -> \goThis1 -> This5 \(a, _, _, _, _) -> goThis1 a
 
-activatedOT' :: (AsWithThis zone ot, ot ~ OTN x) => (ThisFromOTN zone ot -> ElectOT 'Pre (ActivatedAbility zone) ot) -> WithThisAbility zone ot
+activatedOT' :: (AsWithThis zone ot, ot ~ OTN x) => (ThisFromOTN zone ot -> ElectOT 'TargetStage (ActivatedAbility zone) ot) -> WithThisAbility zone ot
 activatedOT' = WithThisActivated . thisObject
 
-activated' :: (AsWithThis zone ot, ot ~ OTN x) => (ThisFromOTN zone ot -> Elect 'Pre (ActivatedAbility zone ot) ot) -> WithThisAbility zone ot
+activated' :: (AsWithThis zone ot, ot ~ OTN x) => (ThisFromOTN zone ot -> Elect 'TargetStage (ActivatedAbility zone ot) ot) -> WithThisAbility zone ot
 activated' = activatedOT' . (ElectOT .)
 
-activated :: (AsWithThis zone ot, ot ~ OTN x) => (ThisFromOTN zone ot -> Elect 'Pre (ActivatedAbility zone ot) ot) -> SomeZone WithThisAbility ot
+activated :: (AsWithThis zone ot, ot ~ OTN x) => (ThisFromOTN zone ot -> Elect 'TargetStage (ActivatedAbility zone ot) ot) -> SomeZone WithThisAbility ot
 activated = SomeZone . activated'
 
 static' :: (AsWithThis zone ot, ot ~ OTN x) => (ThisFromOTN zone ot -> StaticAbility zone ot) -> WithThisAbility zone ot
@@ -353,38 +344,8 @@ triggered' = WithThisTriggered . thisObject
 triggered :: (AsWithThis zone ot, ot ~ OTN x) => (ThisFromOTN zone ot -> TriggeredAbility zone ot) -> SomeZone WithThisAbility ot
 triggered = SomeZone . triggered'
 
-class IsYourCardFacet facetOT ot | facetOT -> ot, ot -> facetOT where
-  yourCardFacet :: facetOT -> YourCardFacet ot
-
-instance IsYourCardFacet (YourDirect CardFacet OTNArtifact) OTNArtifact where
-  yourCardFacet = YourArtifact
-
-instance IsYourCardFacet (YourDirect CardFacet OTNArtifactCreature) OTNArtifactCreature where
-  yourCardFacet = YourArtifactCreature
-
-instance IsYourCardFacet (YourDirect CardFacet OTNArtifactLand) OTNArtifactLand where
-  yourCardFacet = YourArtifactLand
-
-instance IsYourCardFacet (YourDirect CardFacet OTNCreature) OTNCreature where
-  yourCardFacet = YourCreature
-
-instance IsYourCardFacet (YourDirect CardFacet OTNEnchantment) OTNEnchantment where
-  yourCardFacet = YourEnchantment
-
-instance IsYourCardFacet (YourDirect CardFacet OTNEnchantmentCreature) OTNEnchantmentCreature where
-  yourCardFacet = YourEnchantmentCreature
-
-instance IsYourCardFacet (YourElected CardFacet OTNInstant) OTNInstant where
-  yourCardFacet = YourInstant
-
-instance IsYourCardFacet (YourDirect CardFacet OTNLand) OTNLand where
-  yourCardFacet = YourLand
-
-instance IsYourCardFacet (YourDirect CardFacet OTNPlaneswalker) OTNPlaneswalker where
-  yourCardFacet = YourPlaneswalker
-
-instance IsYourCardFacet (YourElected CardFacet OTNSorcery) OTNSorcery where
-  yourCardFacet = YourSorcery
+yourCardFacet :: (ZOPlayer -> CardFacet ot) -> Elect 'IntrinsicStage (CardFacet ot) ot
+yourCardFacet = Your . (ElectCardFacet .)
 
 class AsDamage a where
   asDamage :: a -> Damage 'Var
@@ -424,7 +385,7 @@ dealDamage source target =
     . asDamage
 
 controllerOf ::
-  (AsAny ot', IsZO zone ot') => ZO zone ot' -> (ZOPlayer -> Elect p e ot) -> Elect p e ot
+  (AsAny ot', IsZO zone ot') => ZO zone ot' -> (ZOPlayer -> Elect s e ot) -> Elect s e ot
 controllerOf = ControllerOf . asAny
 
 sacrifice ::
@@ -486,19 +447,28 @@ playerPays :: (IsZone zone, AsCost c OTNPlayer) => c -> Requirement zone OTNPlay
 playerPays = PlayerPays . asCost
 
 class ElectEffect effect elect where
-  effect :: effect -> elect ot
+  effect :: effect -> elect
 
-instance Typeable ef => ElectEffect (Effect ef) (Elect 'Post (Effect ef)) where
+instance Typeable ef => ElectEffect (Effect ef) (Elect 'ResolveStage (Effect ef) ot) where
   effect = Effect . pure
 
-instance Typeable ef => ElectEffect [Effect ef] (Elect 'Post (Effect ef)) where
+instance Typeable ef => ElectEffect [Effect ef] (Elect 'ResolveStage (Effect ef) ot) where
   effect = Effect
 
-instance ElectEffect (Effect 'Continuous) (Elect 'Post (Effect 'OneShot)) where
+instance ElectEffect (Effect 'Continuous) (Elect 'ResolveStage (Effect 'OneShot) ot) where
   effect = Effect . pure . EffectContinuous
 
+instance Typeable ef => ElectEffect (Effect ef) (ElectTargetedEffect (Effect ef) ot) where
+  effect = EndTargets . effect
+
+instance Typeable ef => ElectEffect [Effect ef] (ElectTargetedEffect (Effect ef) ot) where
+  effect = EndTargets . effect
+
+instance ElectEffect (Effect 'Continuous) (ElectOneShotEffect ot) where
+  effect = EndTargets . effect
+
 class EventLike el where
-  event :: el -> Elect 'Post el ot
+  event :: el -> Elect 'ResolveStage el ot
 
 instance EventLike Event where
   event = Event
@@ -507,7 +477,7 @@ instance EventLike EventListener where
   event = Listen
 
 class AsIfThen (el :: Type) (ot :: Type) where
-  thenEmpty :: Elect 'Post el ot
+  thenEmpty :: Elect 'ResolveStage el ot
 
 class AsIfThen el ot => AsIfElse el ot where
   elseEmpty :: Else el ot
@@ -515,7 +485,7 @@ class AsIfThen el ot => AsIfElse el ot where
   elseEmpty = liftElse thenEmpty
 
 class AsIfThen (el :: Type) (ot :: Type) => AsIfThenElse el ot where
-  liftElse :: Elect 'Post el ot -> Else el ot
+  liftElse :: Elect 'ResolveStage el ot -> Else el ot
 
 instance AsIfThen (Effect 'OneShot) ot where
   thenEmpty = Effect []
@@ -531,14 +501,14 @@ instance AsIfElse EventListener ot where
 instance AsIfThenElse (Effect 'OneShot) ot where
   liftElse = ElseEffect
 
-ifThen :: AsIfElse el ot => Condition -> Elect 'Post el ot -> Elect 'Post el ot
+ifThen :: AsIfElse el ot => Condition -> Elect 'ResolveStage el ot -> Elect 'ResolveStage el ot
 ifThen cond then_ = If cond then_ elseEmpty
 
-ifElse :: AsIfElse el ot => Condition -> Elect 'Post el ot -> Elect 'Post el ot
+ifElse :: AsIfElse el ot => Condition -> Elect 'ResolveStage el ot -> Elect 'ResolveStage el ot
 ifElse cond else_ = If (CNot cond) else_ elseEmpty
 
 ifThenElse ::
-  AsIfThenElse el ot => Condition -> Elect 'Post el ot -> Elect 'Post el ot -> Elect 'Post el ot
+  AsIfThenElse el ot => Condition -> Elect 'ResolveStage el ot -> Elect 'ResolveStage el ot -> Elect 'ResolveStage el ot
 ifThenElse cond then_ else_ = If cond then_ $ liftElse else_
 
 isBasic :: IsZone zone => Requirement zone OTNLand
@@ -558,7 +528,7 @@ colorless = Not colored
 
 type FinColor = Fin Color (ToNat 4)
 
-chooseAnyColor :: ZOPlayer -> (Variable FinColor -> Elect p el ot) -> Elect p el ot
+chooseAnyColor :: CoNonIntrinsicStage s => ZOPlayer -> (Variable FinColor -> Elect s el ot) -> Elect s el ot
 chooseAnyColor player = ChooseOption player list
  where
   list = LS CTrue $ LS CTrue $ LS CTrue $ LS CTrue $ LZ CTrue
@@ -619,7 +589,7 @@ hasAbility = HasAbility
 
 becomesTapped ::
   CoPermanent ot =>
-  WithLinkedObject 'ZBattlefield (Elect 'Post (Effect 'OneShot)) ot ->
+  WithLinkedObject 'ZBattlefield (Elect 'ResolveStage (Effect 'OneShot)) ot ->
   EventListener
 becomesTapped = BecomesTapped
 
@@ -653,7 +623,7 @@ searchLibrary ::
   CoCard ot =>
   ZOPlayer ->
   ZOPlayer ->
-  WithLinkedObject 'ZLibrary (Elect 'Post (Effect 'OneShot)) ot ->
+  WithLinkedObject 'ZLibrary (Elect 'ResolveStage (Effect 'OneShot)) ot ->
   Effect 'OneShot
 searchLibrary = SearchLibrary
 

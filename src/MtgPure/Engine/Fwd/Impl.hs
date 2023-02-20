@@ -42,6 +42,7 @@ import safe MtgPure.Engine.Core (
   getPlayer,
   getTrivialManaAbilities,
   indexToActivated,
+  localNewObjectId,
   newObjectId,
   newVariableId,
   pickOneZO,
@@ -117,6 +118,7 @@ fwdImpl =
     , fwd_getPlayerWithPriority = getPlayerWithPriority
     , fwd_getTrivialManaAbilities = getTrivialManaAbilities
     , fwd_indexToActivated = indexToActivated
+    , fwd_localNewObjectId = localNewObjectId
     , fwd_newObjectId = newObjectId
     , fwd_newVariableId = newVariableId
     , fwd_ownerOf = ownerOf

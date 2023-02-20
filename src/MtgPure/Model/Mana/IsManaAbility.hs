@@ -216,7 +216,7 @@ instance IsManaAbilityImpl (Effect ef) where
       False -> Nothing
     _ -> Nothing
 
-instance IsManaAbilityImpl (Elect p el ot) where
+instance IsManaAbilityImpl (Elect s el ot) where
   isManaAbilityImpl = \case
     ActivePlayer cont -> isManaAbilityImpl $ cont dummyZO
     All wmo -> isManaAbilityImpl wmo
@@ -227,8 +227,10 @@ instance IsManaAbilityImpl (Elect p el ot) where
     Cost{} -> IsNotManaAbility
     Effect effects -> mconcat $ map isManaAbilityImpl effects
     ElectActivated ability -> isManaAbilityImpl ability
-    ElectCard{} -> IsNotManaAbility
+    ElectCardFacet{} -> IsNotManaAbility
+    ElectCardFacet'{} -> IsNotManaAbility
     ElectCase case_ -> isManaAbilityImpl case_
+    EndTargets elect -> isManaAbilityImpl elect
     Event{} -> IsNotManaAbility
     If _cond then_ else_ -> isManaAbilityImpl then_ <> isManaAbilityImpl else_
     Listen listener -> isManaAbilityImpl listener
@@ -237,6 +239,7 @@ instance IsManaAbilityImpl (Elect p el ot) where
     Target{} -> IsNotManaAbility
     VariableFromPower _zo cont -> isManaAbilityImpl $ cont dummyVar
     VariableInt cont -> isManaAbilityImpl $ cont dummyVar
+    Your cont -> isManaAbilityImpl $ cont dummyZO
   isTrivialManaAbilityImpl stage x = case (stage, x) of
     (StageControllerOf, ControllerOf this cont) -> case getObjectId this == proxyThisId of
       True -> isTrivialManaAbilityImpl StageElectActivated $ cont proxyYou
@@ -318,7 +321,7 @@ instance IsManaAbilityImpl (TriggeredAbility zone ot) where
     When elect -> isManaAbilityImpl elect
   isTrivialManaAbilityImpl _ _ = Nothing
 
-instance IsZone zone => IsManaAbilityImpl (WithLinkedObject zone (Elect p el) ot) where
+instance IsZone zone => IsManaAbilityImpl (WithLinkedObject zone (Elect s el) ot) where
   isManaAbilityImpl = \case
     Linked1 _wit _reqs cont -> isManaAbilityImpl $ cont dummyZO
     Linked2 _wit _reqs cont -> isManaAbilityImpl $ cont dummyZO
@@ -327,7 +330,7 @@ instance IsZone zone => IsManaAbilityImpl (WithLinkedObject zone (Elect p el) ot
     Linked5 _wit _reqs cont -> isManaAbilityImpl $ cont dummyZO
   isTrivialManaAbilityImpl _ _ = Nothing
 
-instance IsZone zone => IsManaAbilityImpl (WithMaskedObject zone (Elect p el) ot) where
+instance IsZone zone => IsManaAbilityImpl (WithMaskedObject zone (Elect s el) ot) where
   isManaAbilityImpl = \case
     Masked1 _reqs cont -> isManaAbilityImpl $ cont dummyZO
     Masked2 _reqs cont -> isManaAbilityImpl $ cont dummyZO
@@ -337,7 +340,7 @@ instance IsZone zone => IsManaAbilityImpl (WithMaskedObject zone (Elect p el) ot
     Masked6 _reqs cont -> isManaAbilityImpl $ cont dummyZO
   isTrivialManaAbilityImpl _ _ = Nothing
 
-instance IsManaAbilityImpl (WithMaskedObjects zone (Elect p el) ot) where
+instance IsManaAbilityImpl (WithMaskedObjects zone (Elect s el) ot) where
   isManaAbilityImpl = \case
     Maskeds1 _reqs cont -> isManaAbilityImpl $ cont $ List []
     Maskeds2 _reqs cont -> isManaAbilityImpl $ cont $ List []

@@ -35,6 +35,7 @@ import safe MtgPure.Model.Color (Color (..))
 import safe MtgPure.Model.Colors (Colors)
 import safe MtgPure.Model.Damage (Damage)
 import safe MtgPure.Model.EffectType (EffectType (..))
+import safe MtgPure.Model.ElectStage (CoNonIntrinsicStage, ElectStage (..))
 import safe MtgPure.Model.Mana.ManaCost (ManaCost)
 import safe MtgPure.Model.Mana.ManaPool (ManaPool)
 import safe MtgPure.Model.Object.IndexOT (IndexOT (indexOT))
@@ -62,7 +63,6 @@ import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Object.ToObjectN.Classes (ToObject1' (toObject1'))
 import safe MtgPure.Model.Object.ToObjectN.Instances ()
 import safe MtgPure.Model.Object.VisitObjectN (visitObjectN')
-import safe MtgPure.Model.PrePost (IsPrePost (..), PrePost (..))
 import safe MtgPure.Model.Recursive (
   Ability (..),
   ActivatedAbility (..),
@@ -70,6 +70,7 @@ import safe MtgPure.Model.Recursive (
   AnyToken (..),
   Card (..),
   CardFacet (..),
+  CardFacet' (..),
   Case (..),
   Condition (..),
   Cost (..),
@@ -102,7 +103,6 @@ import safe MtgPure.Model.Recursive (
   WithThisActivated,
   WithThisStatic,
   WithThisTriggered,
-  YourCardFacet (..),
  )
 import safe MtgPure.Model.TimePoint (TimePoint (..))
 import safe MtgPure.Model.Variable (
@@ -139,7 +139,7 @@ instance IndexOT ot => Eq (Cost ot) where
 instance Typeable ef => Eq (Effect ef) where
   (==) x y = runEnvM (ordEffect x y) == EQ
 
-instance (Typeable el, Typeable p, IsOTN ot) => Eq (Elect p el ot) where
+instance (Typeable el, Typeable s, IsOTN ot) => Eq (Elect s el ot) where
   (==) x y = runEnvM (ordElectEl x y) == EQ
 
 instance Eq EventListener where
@@ -169,7 +169,7 @@ instance Eq (Token ot) where
 instance IndexOT ot => Eq (TriggeredAbility zone ot) where
   (==) x y = runEnvM (ordTriggeredAbility x y) == EQ
 
-instance (Typeable el, Typeable p, IsZO zone ot) => Eq (WithMaskedObject zone (Elect p el) ot) where
+instance (Typeable el, Typeable s, IsZO zone ot) => Eq (WithMaskedObject zone (Elect s el) ot) where
   (==) x y = runEnvM (ordWithMaskedObjectElectEl x y) == EQ
 
 instance IsZO zone ot => Eq (WithThis (Ability zone) zone ot) where
@@ -207,7 +207,7 @@ instance IndexOT ot => Ord (Cost ot) where
 instance Typeable ef => Ord (Effect ef) where
   compare x y = runEnvM (ordEffect x y)
 
-instance (Typeable el, Typeable p, IsOTN ot) => Ord (Elect p el ot) where
+instance (Typeable el, Typeable s, IsOTN ot) => Ord (Elect s el ot) where
   compare x y = runEnvM (ordElectEl x y)
 
 instance Ord EventListener where
@@ -237,7 +237,7 @@ instance Ord (Token ot) where
 instance IndexOT ot => Ord (TriggeredAbility zone ot) where
   compare x y = runEnvM (ordTriggeredAbility x y)
 
-instance (Typeable el, Typeable p, IsZO zone ot) => Ord (WithMaskedObject zone (Elect p el) ot) where
+instance (Typeable el, Typeable s, IsZO zone ot) => Ord (WithMaskedObject zone (Elect s el) ot) where
   compare x y = runEnvM (ordWithMaskedObjectElectEl x y)
 
 instance IsZO zone ot => Ord (WithThis (Ability zone) zone ot) where
@@ -426,7 +426,7 @@ ordCard x = case x of
     Card name2 yourCard2 -> do
       seqM
         [ pure $ compare name1 name2
-        , ordYourCard yourCard1 yourCard2
+        , ordElectEl yourCard1 yourCard2
         ]
   DoubleSidedCard card1a card1b -> \case
     DoubleSidedCard card2a card2b ->
@@ -446,107 +446,157 @@ ordCard x = case x of
 
 ordCardFacet :: CardFacet ot -> CardFacet ot -> EnvM Ordering
 ordCardFacet = \case
-  ArtifactFacet colors1 cost1 sups1 artTypes1 abilities1 -> \case
-    ArtifactFacet colors2 cost2 sups2 artTypes2 abilities2 ->
+  ArtifactFacet colors1 sups1 artTypes1 spec1 -> \case
+    ArtifactFacet colors2 sups2 artTypes2 spec2 ->
       seqM
         [ ordColors colors1 colors2
-        , ordCost cost1 cost2
         , pure $ compare sups1 sups2
         , pure $ compare artTypes1 artTypes2
-        , listM ordSomeZoneWithThisAbility abilities1 abilities2
+        , ordCardFacet' spec1 spec2
         ]
-  ArtifactCreatureFacet colors1 cost1 sups1 artTypes1 creatTypes1 power1 toughness1 artAbils1 creatAbils1 bothAbils1 ->
-    \case
-      ArtifactCreatureFacet colors2 cost2 sups2 artTypes2 creatTypes2 power2 toughness2 artAbils2 creatAbils2 bothAbils2 ->
-        seqM
-          [ ordColors colors1 colors2
-          , ordCost cost1 cost2
-          , pure $ compare sups1 sups2
-          , pure $ compare artTypes1 artTypes2
-          , pure $ compare creatTypes1 creatTypes2
-          , pure $ compare power1 power2
-          , pure $ compare toughness1 toughness2
-          , listM ordSomeZoneWithThisAbility artAbils1 artAbils2
-          , listM ordSomeZoneWithThisAbility creatAbils1 creatAbils2
-          , listM ordSomeZoneWithThisAbility bothAbils1 bothAbils2
-          ]
-  ArtifactLandFacet sups1 artTypes1 landTypes1 artAbils1 landAbils1 bothAbils1 ->
-    \case
-      ArtifactLandFacet sups2 artTypes2 landTypes2 artAbils2 landAbils2 bothAbils2 ->
-        seqM
-          [ pure $ compare sups1 sups2
-          , pure $ compare artTypes1 artTypes2
-          , pure $ compare landTypes1 landTypes2
-          , listM ordSomeZoneWithThisAbility artAbils1 artAbils2
-          , listM ordSomeZoneWithThisAbility landAbils1 landAbils2
-          , listM ordSomeZoneWithThisAbility bothAbils1 bothAbils2
-          ]
-  CreatureFacet colors1 cost1 sups1 creatTypes1 power1 toughness1 abilities1 -> \case
-    CreatureFacet colors2 cost2 sups2 creatTypes2 power2 toughness2 abilities2 ->
+  ArtifactCreatureFacet colors1 sups1 artTypes1 creatTypes1 spec1 -> \case
+    ArtifactCreatureFacet colors2 sups2 artTypes2 creatTypes2 spec2 ->
       seqM
         [ ordColors colors1 colors2
-        , ordCost cost1 cost2
+        , pure $ compare sups1 sups2
+        , pure $ compare artTypes1 artTypes2
+        , pure $ compare creatTypes1 creatTypes2
+        , ordCardFacet' spec1 spec2
+        ]
+  ArtifactLandFacet sups1 artTypes1 landTypes1 spec1 -> \case
+    ArtifactLandFacet sups2 artTypes2 landTypes2 spec2 ->
+      seqM
+        [ pure $ compare sups1 sups2
+        , pure $ compare artTypes1 artTypes2
+        , pure $ compare landTypes1 landTypes2
+        , ordCardFacet' spec1 spec2
+        ]
+  CreatureFacet colors1 sups1 creatTypes1 spec1 -> \case
+    CreatureFacet colors2 sups2 creatTypes2 spec2 ->
+      seqM
+        [ ordColors colors1 colors2
         , pure $ compare sups1 sups2
         , pure $ compare creatTypes1 creatTypes2
+        , ordCardFacet' spec1 spec2
+        ]
+  EnchantmentFacet colors1 sups1 enchantTypes1 spec1 -> \case
+    EnchantmentFacet colors2 sups2 enchantTypes2 spec2 ->
+      seqM
+        [ ordColors colors1 colors2
+        , pure $ compare sups1 sups2
+        , ordEnchantmentTypes enchantTypes1 enchantTypes2
+        , ordCardFacet' spec1 spec2
+        ]
+  EnchantmentCreatureFacet colors1 sups1 creatTypes1 enchantTypes1 spec1 -> \case
+    EnchantmentCreatureFacet colors2 sups2 creatTypes2 enchantTypes2 spec2 ->
+      seqM
+        [ ordColors colors1 colors2
+        , pure $ compare sups1 sups2
+        , pure $ compare creatTypes1 creatTypes2
+        , ordEnchantmentTypes enchantTypes1 enchantTypes2
+        , ordCardFacet' spec1 spec2
+        ]
+  InstantFacet colors1 sups1 spec1 -> \case
+    InstantFacet colors2 sups2 spec2 ->
+      seqM
+        [ ordColors colors1 colors2
+        , pure $ compare sups1 sups2
+        , ordElectEl spec1 spec2
+        ]
+  LandFacet sups1 landTypes1 spec1 -> \case
+    LandFacet sups2 landTypes2 spec2 ->
+      seqM
+        [ pure $ compare sups1 sups2
+        , pure $ compare landTypes1 landTypes2
+        , ordCardFacet' spec1 spec2
+        ]
+  PlaneswalkerFacet colors1 sup1 spec1 -> \case
+    PlaneswalkerFacet colors2 sup2 spec2 ->
+      seqM
+        [ ordColors colors1 colors2
+        , pure $ compare sup1 sup2
+        , ordCardFacet' spec1 spec2
+        ]
+  SorceryFacet colors1 sups1 spec1 -> \case
+    SorceryFacet colors2 sups2 spec2 ->
+      seqM
+        [ ordColors colors1 colors2
+        , pure $ compare sups1 sups2
+        , ordElectEl spec1 spec2
+        ]
+
+ordCardFacet' :: CardFacet' ot -> CardFacet' ot -> EnvM Ordering
+ordCardFacet' = \case
+  ArtifactFacet' cost1 abilities1 -> \case
+    ArtifactFacet' cost2 abilities2 ->
+      seqM
+        [ ordCost cost1 cost2
+        , listM ordSomeZoneWithThisAbility abilities1 abilities2
+        ]
+  ArtifactCreatureFacet' cost1 power1 toughness1 artAbils1 creatAbils1 bothAbils1 -> \case
+    ArtifactCreatureFacet' cost2 power2 toughness2 artAbils2 creatAbils2 bothAbils2 ->
+      seqM
+        [ ordCost cost1 cost2
+        , pure $ compare power1 power2
+        , pure $ compare toughness1 toughness2
+        , listM ordSomeZoneWithThisAbility artAbils1 artAbils2
+        , listM ordSomeZoneWithThisAbility creatAbils1 creatAbils2
+        , listM ordSomeZoneWithThisAbility bothAbils1 bothAbils2
+        ]
+  ArtifactLandFacet' artAbils1 landAbils1 bothAbils1 -> \case
+    ArtifactLandFacet' artAbils2 landAbils2 bothAbils2 ->
+      seqM
+        [ listM ordSomeZoneWithThisAbility artAbils1 artAbils2
+        , listM ordSomeZoneWithThisAbility landAbils1 landAbils2
+        , listM ordSomeZoneWithThisAbility bothAbils1 bothAbils2
+        ]
+  CreatureFacet' cost1 power1 toughness1 abilities1 -> \case
+    CreatureFacet' cost2 power2 toughness2 abilities2 ->
+      seqM
+        [ ordCost cost1 cost2
         , pure $ compare power1 power2
         , pure $ compare toughness1 toughness2
         , listM ordSomeZoneWithThisAbility abilities1 abilities2
         ]
-  EnchantmentFacet colors1 cost1 sups1 enchantTypes1 abilities1 -> \case
-    EnchantmentFacet colors2 cost2 sups2 enchantTypes2 abilities2 ->
+  EnchantmentFacet' cost1 abilities1 -> \case
+    EnchantmentFacet' cost2 abilities2 ->
       seqM
-        [ ordColors colors1 colors2
-        , ordCost cost1 cost2
-        , pure $ compare sups1 sups2
-        , ordEnchantmentTypes enchantTypes1 enchantTypes2
+        [ ordCost cost1 cost2
         , listM ordSomeZoneWithThisAbility abilities1 abilities2
         ]
-  EnchantmentCreatureFacet colors1 cost1 sups1 creatTypes1 enchantTypes1 power1 toughness1 creatAbils1 enchAbils1 bothAbils1 ->
-    \case
-      EnchantmentCreatureFacet colors2 cost2 sups2 creatTypes2 enchantTypes2 power2 toughness2 creatAbils2 enchAbils2 bothAbils2 ->
-        seqM
-          [ ordColors colors1 colors2
-          , ordCost cost1 cost2
-          , pure $ compare sups1 sups2
-          , pure $ compare creatTypes1 creatTypes2
-          , ordEnchantmentTypes enchantTypes1 enchantTypes2
-          , pure $ compare power1 power2
-          , pure $ compare toughness1 toughness2
-          , listM ordSomeZoneWithThisAbility creatAbils1 creatAbils2
-          , listM ordSomeZoneWithThisAbility enchAbils1 enchAbils2
-          , listM ordSomeZoneWithThisAbility bothAbils1 bothAbils2
-          ]
-  InstantFacet colors1 cost1 sups1 abilities1 effect1 -> \case
-    InstantFacet colors2 cost2 sups2 abilities2 effect2 ->
+  EnchantmentCreatureFacet' cost1 power1 toughness1 creatAbils1 enchAbils1 bothAbils1 -> \case
+    EnchantmentCreatureFacet' cost2 power2 toughness2 creatAbils2 enchAbils2 bothAbils2 ->
       seqM
-        [ ordColors colors1 colors2
-        , ordCost cost1 cost2
-        , pure $ compare sups1 sups2
+        [ ordCost cost1 cost2
+        , pure $ compare power1 power2
+        , pure $ compare toughness1 toughness2
+        , listM ordSomeZoneWithThisAbility creatAbils1 creatAbils2
+        , listM ordSomeZoneWithThisAbility enchAbils1 enchAbils2
+        , listM ordSomeZoneWithThisAbility bothAbils1 bothAbils2
+        ]
+  InstantFacet' cost1 abilities1 effect1 -> \case
+    InstantFacet' cost2 abilities2 effect2 ->
+      seqM
+        [ ordCost cost1 cost2
         , listM ordSomeZoneWithThisAbility abilities1 abilities2
         , ordWithThis ordElectEl effect1 effect2
         ]
-  LandFacet sups1 landTypes1 abilities1 -> \case
-    LandFacet sups2 landTypes2 abilities2 ->
+  LandFacet' abilities1 -> \case
+    LandFacet' abilities2 ->
       seqM
-        [ pure $ compare sups1 sups2
-        , pure $ compare landTypes1 landTypes2
-        , listM ordSomeZoneWithThisAbility abilities1 abilities2
+        [ listM ordSomeZoneWithThisAbility abilities1 abilities2
         ]
-  PlaneswalkerFacet colors1 cost1 sup1 loyalty1 abilities1 -> \case
-    PlaneswalkerFacet colors2 cost2 sup2 loyalty2 abilities2 ->
+  PlaneswalkerFacet' cost1 loyalty1 abilities1 -> \case
+    PlaneswalkerFacet' cost2 loyalty2 abilities2 ->
       seqM
-        [ ordColors colors1 colors2
-        , ordCost cost1 cost2
-        , pure $ compare sup1 sup2
+        [ ordCost cost1 cost2
         , pure $ compare loyalty1 loyalty2
         , listM ordSomeZoneWithThisAbility abilities1 abilities2
         ]
-  SorceryFacet colors1 cost1 sup1 abilities1 effect1 -> \case
-    SorceryFacet colors2 cost2 sup2 abilities2 effect2 ->
+  SorceryFacet' cost1 abilities1 effect1 -> \case
+    SorceryFacet' cost2 abilities2 effect2 ->
       seqM
-        [ ordColors colors1 colors2
-        , ordCost cost1 cost2
-        , pure $ compare sup1 sup2
+        [ ordCost cost1 cost2
         , listM ordSomeZoneWithThisAbility abilities1 abilities2
         , ordWithThis ordElectEl effect1 effect2
         ]
@@ -903,8 +953,8 @@ ordEffect x = case x of
             forall ot1 ot2.
             IsOTN ot1 =>
             IsOTN ot2 =>
-            WithLinkedObject 'ZLibrary (Elect 'Post (Effect 'OneShot)) ot1 ->
-            WithLinkedObject 'ZLibrary (Elect 'Post (Effect 'OneShot)) ot2 ->
+            WithLinkedObject 'ZLibrary (Elect 'ResolveStage (Effect 'OneShot)) ot1 ->
+            WithLinkedObject 'ZLibrary (Elect 'ResolveStage (Effect 'OneShot)) ot2 ->
             EnvM Ordering
           go _ _ = case cast withCard2 of
             Nothing -> compareOT @ot1 @ot2
@@ -978,10 +1028,10 @@ ordEffect x = case x of
     y -> compareIndexM x y
 
 ordElectEl ::
-  forall p el ot.
-  (IndexOT ot, Typeable el, Typeable p) =>
-  Elect p el ot ->
-  Elect p el ot ->
+  forall s el ot.
+  (IndexOT ot, Typeable el, Typeable s) =>
+  Elect s el ot ->
+  Elect s el ot ->
   EnvM Ordering
 ordElectEl x = case x of
   ActivePlayer playerToElect1 -> \case
@@ -999,12 +1049,12 @@ ordElectEl x = case x of
     Choose player2 with2 ->
       let go ::
             forall zone1 zone2.
-            IsPrePost p =>
+            CoNonIntrinsicStage s =>
             Typeable el =>
             IsZO zone1 ot =>
             IsZO zone2 ot =>
-            WithMaskedObject zone1 (Elect p el) ot ->
-            WithMaskedObject zone2 (Elect p el) ot ->
+            WithMaskedObject zone1 (Elect s el) ot ->
+            WithMaskedObject zone2 (Elect s el) ot ->
             EnvM Ordering
           go _ _ = case cast with2 of
             Nothing -> compareZoneOT @zone1 @zone2 @ot @ot
@@ -1087,11 +1137,17 @@ ordElectEl x = case x of
             Just ability2 -> ordActivatedAbility ability1 ability2
        in go ability1 ability2
     y -> compareIndexM x y
-  ElectCard card1 -> \case
-    ElectCard card2 -> ordCardFacet card1 card2
+  ElectCardFacet card1 -> \case
+    ElectCardFacet card2 -> ordCardFacet card1 card2
+    y -> compareIndexM x y
+  ElectCardFacet' card1 -> \case
+    ElectCardFacet' card2 -> ordCardFacet' card1 card2
     y -> compareIndexM x y
   ElectCase case1 -> \case
     ElectCase case2 -> ordCase ordElectEl case1 case2
+    y -> compareIndexM x y
+  EndTargets elect1 -> \case
+    EndTargets elect2 -> ordElectEl elect1 elect2
     y -> compareIndexM x y
   Event event1 -> \case
     Event event2 -> ordEvent event1 event2
@@ -1134,8 +1190,8 @@ ordElectEl x = case x of
             Typeable el =>
             IsZO zone1 ot =>
             IsZO zone2 ot =>
-            WithMaskedObject zone1 (Elect 'Pre el) ot ->
-            WithMaskedObject zone2 (Elect 'Pre el) ot ->
+            WithMaskedObject zone1 (Elect 'TargetStage el) ot ->
+            WithMaskedObject zone2 (Elect 'TargetStage el) ot ->
             EnvM Ordering
           go _ _ = case cast with2 of
             Nothing -> compareZoneOT @zone1 @zone2 @ot @ot
@@ -1162,9 +1218,22 @@ ordElectEl x = case x of
           ret2 = varToRet2 var
       ordElectEl ret1 ret2
     y -> compareIndexM x y
+  Your playerToElect1 -> \case
+    Your playerToElect2 -> do
+      player' <- newObjectN @ 'OTPlayer toObject1'
+      let player = toZone player'
+          elect1 = playerToElect1 player
+          elect2 = playerToElect2 player
+      ordElectEl elect1 elect2
+    y -> compareIndexM x y
 
-ordElectPostEl :: forall el ot. (Typeable el, IndexOT ot) => Elect 'Post el ot -> Elect 'Post el ot -> EnvM Ordering
-ordElectPostEl = ordElectEl
+ordElectResolveEl ::
+  forall el ot.
+  (Typeable el, IndexOT ot) =>
+  Elect 'ResolveStage el ot ->
+  Elect 'ResolveStage el ot ->
+  EnvM Ordering
+ordElectResolveEl = ordElectEl
 
 ordElseE :: IndexOT ot => Else e ot -> Else e ot -> EnvM Ordering
 ordElseE = \case
@@ -1852,7 +1921,7 @@ ordTriggeredAbility ::
   EnvM Ordering
 ordTriggeredAbility = \case
   When listener1 -> \case
-    When listener2 -> ordElectPostEl @EventListener @ot listener1 listener2
+    When listener2 -> ordElectResolveEl @EventListener @ot listener1 listener2
 
 ordVariable :: Variable x -> Variable x -> EnvM Ordering
 ordVariable = \case
@@ -1880,22 +1949,6 @@ ordWithLinkedObject ordM x = case x of
       ordO4 ordM reqs1 reqs2 cont1 cont2
   Linked5 NonProxyElectEffect reqs1 cont1 -> \case
     Linked5 NonProxyElectEffect reqs2 cont2 ->
-      ordO5 ordM reqs1 reqs2 cont1 cont2
-  --
-  Linked1 NonProxyElectPrePostEffect reqs1 cont1 -> \case
-    Linked1 NonProxyElectPrePostEffect reqs2 cont2 ->
-      ordO1 ordM reqs1 reqs2 cont1 cont2
-  Linked2 NonProxyElectPrePostEffect reqs1 cont1 -> \case
-    Linked2 NonProxyElectPrePostEffect reqs2 cont2 ->
-      ordO2 ordM reqs1 reqs2 cont1 cont2
-  Linked3 NonProxyElectPrePostEffect reqs1 cont1 -> \case
-    Linked3 NonProxyElectPrePostEffect reqs2 cont2 ->
-      ordO3 ordM reqs1 reqs2 cont1 cont2
-  Linked4 NonProxyElectPrePostEffect reqs1 cont1 -> \case
-    Linked4 NonProxyElectPrePostEffect reqs2 cont2 ->
-      ordO4 ordM reqs1 reqs2 cont1 cont2
-  Linked5 NonProxyElectPrePostEffect reqs1 cont1 -> \case
-    Linked5 NonProxyElectPrePostEffect reqs2 cont2 ->
       ordO5 ordM reqs1 reqs2 cont1 cont2
 
 ordWithList :: (ret -> ret -> EnvM Ordering) -> WithList ret zone ot -> WithList ret zone ot -> EnvM Ordering
@@ -1925,11 +1978,11 @@ ordWithList ordRet x = case x of
     y -> compareIndexM x y
 
 ordWithMaskedObjectElectEl ::
-  Typeable p =>
+  Typeable s =>
   Typeable el =>
   IsZO zone ot =>
-  WithMaskedObject zone (Elect p el) ot ->
-  WithMaskedObject zone (Elect p el) ot ->
+  WithMaskedObject zone (Elect s el) ot ->
+  WithMaskedObject zone (Elect s el) ot ->
   EnvM Ordering
 ordWithMaskedObjectElectEl x = case x of
   Masked1 reqs1 cont1 -> \case
@@ -1954,11 +2007,11 @@ ordWithMaskedObjectElectEl x = case x of
   ordM = ordElectEl
 
 ordWithMaskedObjectsElectEl ::
-  Typeable p =>
+  Typeable s =>
   Typeable el =>
   IsZO zone ot =>
-  WithMaskedObjects zone (Elect p el) ot ->
-  WithMaskedObjects zone (Elect p el) ot ->
+  WithMaskedObjects zone (Elect s el) ot ->
+  WithMaskedObjects zone (Elect s el) ot ->
   EnvM Ordering
 ordWithMaskedObjectsElectEl x = case x of
   Maskeds1 reqs1 cont1 -> \case
@@ -2126,39 +2179,6 @@ ordWithThisTriggered ::
   WithThisTriggered zone ot ->
   EnvM Ordering
 ordWithThisTriggered = ordWithThis ordTriggeredAbility
-
-ordYourCard :: YourCardFacet ot -> YourCardFacet ot -> EnvM Ordering
-ordYourCard = \case
-  YourArtifact cont1 -> \case
-    YourArtifact cont2 -> goPerm cont1 cont2
-  YourArtifactCreature cont1 -> \case
-    YourArtifactCreature cont2 -> goPerm cont1 cont2
-  YourArtifactLand cont1 -> \case
-    YourArtifactLand cont2 -> goPerm cont1 cont2
-  YourCreature cont1 -> \case
-    YourCreature cont2 -> goPerm cont1 cont2
-  YourEnchantment cont1 -> \case
-    YourEnchantment cont2 -> goPerm cont1 cont2
-  YourEnchantmentCreature cont1 -> \case
-    YourEnchantmentCreature cont2 -> goPerm cont1 cont2
-  YourLand cont1 -> \case
-    YourLand cont2 -> goPerm cont1 cont2
-  YourPlaneswalker cont1 -> \case
-    YourPlaneswalker cont2 -> goPerm cont1 cont2
-  --
-  YourInstant cont1 -> \case
-    YourInstant cont2 -> goSpell cont1 cont2
-  YourSorcery cont1 -> \case
-    YourSorcery cont2 -> goSpell cont1 cont2
- where
-  withYou action = do
-    you' <- newObjectN @ 'OTPlayer toObject1'
-    let you = toZone you'
-    action you
-  goPerm cont1 cont2 = withYou \you -> do
-    ordCardFacet (cont1 you) (cont2 you)
-  goSpell cont1 cont2 = withYou \you -> do
-    ordElectEl (cont1 you) (cont2 you)
 
 ordZoneObject :: ZO zone ot -> ZO zone ot -> EnvM Ordering
 ordZoneObject x = case x of

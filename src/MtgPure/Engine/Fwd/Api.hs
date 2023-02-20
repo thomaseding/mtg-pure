@@ -54,6 +54,7 @@ module MtgPure.Engine.Fwd.Api (
   getPlayerWithPriority,
   getTrivialManaAbilities,
   indexToActivated,
+  localNewObjectId,
   modifyPlayer,
   newObjectId,
   newVariableId,
@@ -127,6 +128,7 @@ import safe MtgPure.Engine.State (
 import safe MtgPure.Model.BasicLandType (BasicLandType)
 import safe MtgPure.Model.Combinators (CanHaveTrivialManaAbility)
 import safe MtgPure.Model.EffectType (EffectType (..))
+import safe MtgPure.Model.ElectStage (ElectStage (..), ElectStageRW)
 import safe MtgPure.Model.Object.OTN (OT0)
 import safe MtgPure.Model.Object.OTNAliases (OTNCard, OTNPermanent)
 import safe MtgPure.Model.Object.Object (Object)
@@ -134,7 +136,6 @@ import safe MtgPure.Model.Object.ObjectId (ObjectId)
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Permanent (Permanent)
 import safe MtgPure.Model.Player (Player)
-import safe MtgPure.Model.PrePost (PrePost (..))
 import safe MtgPure.Model.Recursive (
   AnyCard,
   Case,
@@ -201,7 +202,7 @@ data Api (m :: Type -> Type) (v :: Visibility) (rw :: ReadWrite) (ret :: Type) :
   ModifyPlayer :: Object 'OTPlayer -> (Player -> Player) -> Api m 'Private 'RW ()
   NewObjectId :: Api m 'Private 'RW ObjectId
   Pay :: Object 'OTPlayer -> Cost ot -> Api m 'Private 'RW Legality
-  PerformElections :: AndLike (Maybe ret) => ZO 'ZStack OT0 -> (el -> Api m 'Private 'RW (Maybe ret)) -> Elect p el ot -> Api m 'Private 'RW (Maybe ret)
+  PerformElections :: AndLike (Maybe ret) => ZO 'ZStack OT0 -> (el -> Api m 'Private (ElectStageRW s) (Maybe ret)) -> Elect s el ot -> Api m 'Private (ElectStageRW s) (Maybe ret)
   PerformStateBasedActions :: Api m 'Private 'RW ()
   PlayerWithPriority :: Api m 'Public 'RO (Maybe (Object 'OTPlayer))
   PushHandCard :: Object 'OTPlayer -> AnyCard -> Api m 'Private 'RW (ZO 'ZHand OTNCard)
@@ -220,7 +221,7 @@ data ApiCont (m :: Type -> Type) (v :: Visibility) (rw :: ReadWrite) (bail :: Ty
   GainPriority :: Object 'OTPlayer -> ApiCont m 'Private 'RW Void ()
   ResolveTopOfStack :: ApiCont m 'Private 'RW PriorityEnd Void
 
-run :: Monad m => Api m v rw z -> Magic v rw m z
+run :: (IsReadWrite rw, Monad m) => Api m v rw z -> Magic v rw m z
 run = \case
   ActivatedToIndex a -> activatedToIndex a
   ActivatedAbilitiesOf a -> activatedAbilitiesOf a
@@ -334,7 +335,7 @@ allPermanents = fwd0 fwd_allPermanents
 allZOs :: (IsZO zone ot, Monad m) => Magic 'Private 'RO m [ZO zone ot]
 allZOs = fwd0 fwd_allZOs
 
-caseOf :: Monad m => (x -> Magic 'Private 'RW m a) -> Case x -> Magic 'Private 'RW m a
+caseOf :: (IsReadWrite rw, Monad m) => (x -> Magic 'Private rw m a) -> Case x -> Magic 'Private rw m a
 caseOf = fwd2 fwd_caseOf
 
 activateAbility :: forall m. Monad m => Object 'OTPlayer -> PriorityAction ActivateAbility -> Magic 'Private 'RW m ActivateResult
@@ -406,6 +407,9 @@ getTrivialManaAbilities = fwd1 fwd_getTrivialManaAbilities
 indexToActivated :: (IsZO zone ot, Monad m) => AbsoluteActivatedAbilityIndex -> Magic 'Private 'RO m (Maybe (SomeActivatedAbility zone ot))
 indexToActivated = fwd1 fwd_indexToActivated
 
+localNewObjectId :: (IsReadWrite rw, Monad m) => Object 'OTPlayer -> (ObjectId -> Magic 'Private rw m a) -> Magic 'Private rw m a
+localNewObjectId = fwd2 fwd_localNewObjectId
+
 modifyPlayer :: Monad m => Object 'OTPlayer -> (Player -> Player) -> Magic 'Private 'RW m ()
 modifyPlayer o f = do
   p <- fromRO $ getPlayer o
@@ -424,12 +428,12 @@ pay :: Monad m => Object 'OTPlayer -> Cost ot -> Magic 'Private 'RW m Legality
 pay = fwd2 fwd_pay
 
 performElections ::
-  forall ot m p el x.
-  Monad m =>
+  forall ot m s el x.
+  (IsReadWrite (ElectStageRW s), Monad m) =>
   ZO 'ZStack OT0 ->
-  (el -> Magic 'Private 'RW m (Maybe x)) ->
-  Elect p el ot ->
-  Magic 'Private 'RW m (Maybe x)
+  (el -> Magic 'Private (ElectStageRW s) m (Maybe x)) ->
+  Elect s el ot ->
+  Magic 'Private (ElectStageRW s) m (Maybe x)
 performElections = fwd3 fwd_performElections
 
 performStateBasedActions :: Monad m => Magic 'Private 'RW m ()
@@ -462,7 +466,7 @@ removeHandCard = fwd2 fwd_removeHandCard
 removeLibraryCard :: Monad m => Object 'OTPlayer -> ZO 'ZLibrary OTNCard -> Magic 'Private 'RW m (Maybe AnyCard)
 removeLibraryCard = fwd2 fwd_removeLibraryCard
 
-resolveElected :: (Monad m, IsOTN ot) => ZO 'ZStack OT0 -> Elected 'Pre ot -> Magic 'Private 'RW m ResolveElected
+resolveElected :: (Monad m, IsOTN ot) => ZO 'ZStack OT0 -> Elected 'TargetStage ot -> Magic 'Private 'RW m ResolveElected
 resolveElected = fwd2 fwd_resolveElected
 
 satisfies :: (Monad m, IsZO zone ot) => ZO zone ot -> Requirement zone ot -> Magic 'Private 'RO m Bool

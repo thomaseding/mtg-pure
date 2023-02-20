@@ -54,22 +54,29 @@ import safe Data.Typeable (Typeable, cast)
 import safe MtgPure.Engine.Monad (CallFrameInfo)
 import safe MtgPure.Engine.Orphans.ZO ()
 import safe MtgPure.Model.EffectType (EffectType (..))
+import safe MtgPure.Model.ElectStage (ElectStage (..))
 import safe MtgPure.Model.Mana.Mana (Mana)
 import safe MtgPure.Model.Mana.ManaCost (DynamicManaCost)
 import safe MtgPure.Model.Mana.ManaPool (CompleteManaPool, ManaPayment)
 import safe MtgPure.Model.Mana.ManaType (ManaType (..))
 import safe MtgPure.Model.Mana.Snow (Snow (..))
-import safe MtgPure.Model.Object.OTNAliases (OTNCreature, OTNLand, OTNPermanent, OTNPlayerPlaneswalker, OTNSpell)
+import safe MtgPure.Model.Object.OTNAliases (
+  OTNCreature,
+  OTNLand,
+  OTNPermanent,
+  OTNPlayerPlaneswalker,
+  OTNSpell,
+ )
 import safe MtgPure.Model.Object.Object (Object)
 import safe MtgPure.Model.Object.ObjectId (GetObjectId (getUntypedObject), ObjectId)
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Permanent (Permanent)
 import safe MtgPure.Model.Player (Player)
-import safe MtgPure.Model.PrePost (PrePost (..))
 import safe MtgPure.Model.Recursive (
   AnyCard,
   AnyToken,
   CardFacet,
+  CardFacet',
   Cost,
   Effect,
   Elect,
@@ -145,26 +152,26 @@ data QueryObjectResult = QueryObjectResult
   , qorZone :: Zone
   }
 
-data PendingReady (p :: PrePost) (el :: Type) (ot :: Type) where
-  Pending :: {unPending :: Elect 'Post el ot} -> Pending el ot
+data PendingReady (s :: ElectStage) (el :: Type) (ot :: Type) where
+  Pending :: {unPending :: Elect 'ResolveStage el ot} -> Pending el ot
   Ready :: {unReady :: el} -> Ready el ot
 
 deriving instance Show el => Show (PendingReady p el ot)
 
-type Pending = PendingReady 'Pre
+type Pending = PendingReady 'TargetStage
 
-type Ready = PendingReady 'Post
+type Ready = PendingReady 'ResolveStage
 
-data Elected (pEffect :: PrePost) (ot :: Type) :: Type where
+data Elected (s :: ElectStage) (ot :: Type) :: Type where
   ElectedActivatedAbility ::
     IsZO zone ot =>
     { electedActivatedAbility_ability :: SomeActivatedAbility zone ot
     , electedActivatedAbility_controller :: Object 'OTPlayer
     , electedActivatedAbility_this :: ZO zone ot
     , electedActivatedAbility_cost :: Cost ot
-    , electedActivatedAbility_effect :: PendingReady pEffect (Effect 'OneShot) ot
+    , electedActivatedAbility_effect :: PendingReady s (Effect 'OneShot) ot
     } ->
-    Elected pEffect ot
+    Elected s ot
   ElectedSpell ::
     IsZO zone OTNSpell =>
     { -- | NOTE: This is the card that was cast, so its lifetime is short and the object it points to is often dead.
@@ -174,24 +181,25 @@ data Elected (pEffect :: PrePost) (ot :: Type) :: Type where
     , electedSpell_controller :: Object 'OTPlayer
     , electedSpell_card :: AnyCard -- TODO: OwnedCard?
     , electedSpell_facet :: CardFacet ot
+    , electedSpell_facet' :: CardFacet' ot
     , electedSpell_cost :: Cost ot
-    , electedSpell_effect :: Maybe (PendingReady pEffect (Effect 'OneShot) ot)
+    , electedSpell_effect :: Maybe (PendingReady s (Effect 'OneShot) ot)
     } ->
-    Elected pEffect ot
+    Elected s ot
   deriving (Typeable)
 
-electedObject_controller :: Elected pEffect ot -> Object 'OTPlayer
+electedObject_controller :: Elected s ot -> Object 'OTPlayer
 electedObject_controller elected = ($ elected) case elected of
   ElectedActivatedAbility{} -> electedActivatedAbility_controller
   ElectedSpell{} -> electedSpell_controller
 
-electedObject_cost :: Elected pEffect ot -> Cost ot
+electedObject_cost :: Elected s ot -> Cost ot
 electedObject_cost elected = ($ elected) case elected of
   ElectedActivatedAbility{} -> electedActivatedAbility_cost
   ElectedSpell{} -> electedSpell_cost
 
-data AnyElected (pEffect :: PrePost) :: Type where
-  AnyElected :: IsOTN ot => Elected pEffect ot -> AnyElected pEffect
+data AnyElected (s :: ElectStage) :: Type where
+  AnyElected :: IsOTN ot => Elected s ot -> AnyElected s
   deriving (Typeable)
 
 newtype AttackingPlayer = AttackingPlayer {unAttackingPlayer :: Object 'OTPlayer}

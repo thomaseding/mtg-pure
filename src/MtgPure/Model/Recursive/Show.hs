@@ -107,7 +107,6 @@ import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Object.ViewObjectN (viewOTN')
 import safe MtgPure.Model.Object.VisitObjectN (visitObjectN')
 import safe MtgPure.Model.Power (Power)
-import safe MtgPure.Model.PrePost (PrePost (..))
 import safe MtgPure.Model.PrettyType (PrettyType (..))
 import safe MtgPure.Model.Recursive (
   Ability (..),
@@ -116,6 +115,7 @@ import safe MtgPure.Model.Recursive (
   AnyToken (..),
   Card (..),
   CardFacet (..),
+  CardFacet' (..),
   Case (..),
   Condition (..),
   Cost (..),
@@ -144,9 +144,11 @@ import safe MtgPure.Model.Recursive (
   WithMaskedObjects (..),
   WithThis (..),
   WithThisAbility (..),
+  WithThisActivated,
   WithThisOneShot,
+  WithThisStatic,
+  WithThisTriggered,
   WithThisZ (..),
-  YourCardFacet (..),
  )
 import safe MtgPure.Model.Supertype (Supertype (..))
 import safe MtgPure.Model.TimePoint (TimePoint (..))
@@ -191,6 +193,9 @@ instance Show (Card ot) where
 instance Show (CardFacet ot) where
   show = runEnvM defaultDepthLimit . showCardFacet
 
+instance Show (CardFacet' ot) where
+  show = runEnvM defaultDepthLimit . showCardFacet'
+
 instance Show CompleteManaPool where
   show = runEnvM defaultDepthLimit . showCompleteManaPool
 
@@ -206,7 +211,7 @@ instance Show (DynamicManaCost var) where
 instance Show (Effect ef) where
   show = runEnvM defaultDepthLimit . showEffect
 
-instance Show (Elect p el ot) where
+instance Show (Elect s el ot) where
   show = runEnvM defaultDepthLimit . showElect
 
 instance Show (EnchantmentType ot) where
@@ -245,7 +250,7 @@ instance Show (Token ot) where
 instance Show (TriggeredAbility zone ot) where
   show = runEnvM defaultDepthLimit . showTriggeredAbility
 
-instance IsZO zone ot => Show (WithMaskedObject zone (Elect p e) ot) where
+instance IsZO zone ot => Show (WithMaskedObject zone (Elect s e) ot) where
   show = runEnvM defaultDepthLimit . showWithMaskedObject showElect "obj"
 
 instance IsOTN ot => Show (SomeZone WithThisAbility ot) where
@@ -263,16 +268,19 @@ instance IsOTN ot => Show (SomeZone (WithThisZ TriggeredAbility) ot) where
 instance IsZO zone ot => Show (WithThis (Ability zone) zone ot) where
   show = runEnvM defaultDepthLimit . showWithThis showAbility "this"
 
-instance IsZO zone ot => Show (WithThis (ElectOT 'Pre (ActivatedAbility zone)) zone ot) where
-  show = runEnvM defaultDepthLimit . showWithThis (showElect . unElectOT) "this"
+instance IsZO zone ot => Show (WithThisAbility zone ot) where
+  show = runEnvM defaultDepthLimit . showWithThisAbility "this"
 
-instance IsZO zone ot => Show (WithThis (StaticAbility zone) zone ot) where
-  show = runEnvM defaultDepthLimit . showWithThis showStaticAbility "this"
+instance IsZO zone ot => Show (WithThisActivated zone ot) where
+  show = runEnvM defaultDepthLimit . showWithThis (showElect . unElectOT) "this"
 
 instance IsZO 'ZStack ot => Show (WithThisOneShot ot) where
   show = runEnvM defaultDepthLimit . showWithThis showElect "this"
 
-instance IsZO zone ot => Show (WithThis (TriggeredAbility zone) zone ot) where
+instance IsZO zone ot => Show (WithThisStatic zone ot) where
+  show = runEnvM defaultDepthLimit . showWithThis showStaticAbility "this"
+
+instance IsZO zone ot => Show (WithThisTriggered zone ot) where
   show = runEnvM defaultDepthLimit . showWithThis showTriggeredAbility "this"
 
 ----------------------------------------
@@ -539,7 +547,7 @@ showCard :: Card ot -> EnvM ParenItems
 showCard card = case card of
   Card name yourCard -> showCardImpl "Card" card do
     let sName = pure $ fromString $ show name
-    sYourCard <- dollar <$> showYourCard yourCard
+    sYourCard <- dollar <$> showElect yourCard
     pure $
       pure "Card "
         <> sName
@@ -571,48 +579,157 @@ showCardImpl consName (getCardName -> CardName name) cont = yesParens do
     Just 0 -> pure $ pure consName <> pure " " <> sName <> pure " ..."
     _ -> cont
 
--- FIXME: supertypes
 showCardFacet :: CardFacet ot -> EnvM ParenItems
 showCardFacet = \case
-  ArtifactFacet colors cost sups artTypes abilities -> yesParens do
+  ArtifactFacet colors sups artTypes spec -> yesParens do
     sColors <- parens <$> showColors colors
-    sCost <- parens <$> showCost cost
     sSups <- parens <$> showSupertypes sups
     sArtTypes <- parens <$> showArtifactTypes artTypes
-    sAbilities <- dollar <$> showListM (showSomeZone (showWithThisAbility "this")) abilities
+    sSpec <- dollar <$> showCardFacet' spec
     pure $
       pure "ArtifactFacet "
         <> sColors
         <> pure " "
-        <> sCost
-        <> pure " "
         <> sSups
         <> pure " "
         <> sArtTypes
-        <> sAbilities
-  ArtifactCreatureFacet colors cost sups artTypes creatTypes power toughness artAbils creatAbils bothAbils ->
+        <> sSpec
+  ArtifactCreatureFacet colors sups artTypes creatTypes spec ->
     yesParens do
       sColors <- parens <$> showColors colors
-      sCost <- parens <$> showCost cost
       sSups <- parens <$> showSupertypes sups
       sArtTypes <- parens <$> showArtifactTypes artTypes
       sCreatTypes <- parens <$> showCreatureTypes creatTypes
-      sPower <- parens <$> showPower power
-      sToughness <- parens <$> showToughness toughness
-      sArtAbils <- parens <$> showListM (showSomeZone (showWithThisAbility "this")) artAbils
-      sCreatAbils <- parens <$> showListM (showSomeZone (showWithThisAbility "this")) creatAbils
-      sBothAbils <- dollar <$> showListM (showSomeZone (showWithThisAbility "this")) bothAbils
+      sSpec <- dollar <$> showCardFacet' spec
       pure $
         pure "ArtifactCreatureFacet "
           <> sColors
-          <> pure " "
-          <> sCost
           <> pure " "
           <> sSups
           <> pure " "
           <> sArtTypes
           <> pure " "
           <> sCreatTypes
+          <> sSpec
+  ArtifactLandFacet sups artTypes landTypes spec ->
+    yesParens do
+      sSups <- parens <$> showSupertypes sups
+      sArtTypes <- parens <$> showArtifactTypes artTypes
+      sLandTypes <- parens <$> showLandTypes landTypes
+      sSpec <- dollar <$> showCardFacet' spec
+      pure $
+        pure "ArtifactLandFacet "
+          <> sSups
+          <> pure " "
+          <> sArtTypes
+          <> pure " "
+          <> sLandTypes
+          <> sSpec
+  CreatureFacet colors sups creatureTypes spec ->
+    yesParens do
+      sColors <- parens <$> showColors colors
+      sSups <- parens <$> showSupertypes sups
+      sCreatureTypes <- parens <$> showCreatureTypes creatureTypes
+      sSpec <- dollar <$> showCardFacet' spec
+      pure $
+        pure "CreatureFacet "
+          <> sColors
+          <> pure " "
+          <> sSups
+          <> pure " "
+          <> sCreatureTypes
+          <> sSpec
+  EnchantmentFacet colors sups enchantTypes spec -> yesParens do
+    sColors <- parens <$> showColors colors
+    sSups <- parens <$> showSupertypes sups
+    sEnchantTypes <- parens <$> showEnchantmentTypes enchantTypes
+    sSpec <- dollar <$> showCardFacet' spec
+    pure $
+      pure "EnchantmentFacet "
+        <> sColors
+        <> pure " "
+        <> sSups
+        <> pure " "
+        <> sEnchantTypes
+        <> sSpec
+  EnchantmentCreatureFacet colors sups creatTypes enchantTypes spec ->
+    yesParens do
+      sColors <- parens <$> showColors colors
+      sSups <- parens <$> showSupertypes sups
+      sCreatTypes <- parens <$> showCreatureTypes creatTypes
+      sEnchantTypes <- parens <$> showEnchantmentTypes enchantTypes
+      sSpec <- dollar <$> showCardFacet' spec
+      pure $
+        pure "EnchantmentCreatureFacet "
+          <> sColors
+          <> pure " "
+          <> sSups
+          <> pure " "
+          <> sCreatTypes
+          <> pure " "
+          <> sEnchantTypes
+          <> sSpec
+  InstantFacet colors sups spec -> yesParens do
+    sColors <- parens <$> showColors colors
+    sSups <- parens <$> showSupertypes sups
+    sSpec <- dollar <$> showElect spec
+    pure $
+      pure "InstantFacet "
+        <> sColors
+        <> pure " "
+        <> sSups
+        <> sSpec
+  LandFacet sups landTypes spec -> yesParens do
+    sSups <- parens <$> showSupertypes sups
+    sLandTypes <- parens <$> showLandTypes landTypes
+    sSpec <- dollar <$> showCardFacet' spec
+    pure $
+      pure "LandFacet "
+        <> sSups
+        <> pure " "
+        <> sLandTypes
+        <> sSpec
+  PlaneswalkerFacet colors sups spec -> yesParens do
+    sColors <- parens <$> showColors colors
+    sSups <- parens <$> showSupertypes sups
+    sSpec <- dollar <$> showCardFacet' spec
+    pure $
+      pure "PlaneswalkerFacet "
+        <> sColors
+        <> pure " "
+        <> sSups
+        <> sSpec
+  SorceryFacet colors sups spec -> yesParens do
+    sColors <- parens <$> showColors colors
+    sSups <- parens <$> showSupertypes sups
+    sSpec <- dollar <$> showElect spec
+    pure $
+      pure "SorceryFacet "
+        <> sColors
+        <> pure " "
+        <> sSups
+        <> sSpec
+
+showCardFacet' :: CardFacet' ot -> EnvM ParenItems
+showCardFacet' = \case
+  ArtifactFacet' cost abilities -> yesParens do
+    sCost <- parens <$> showCost cost
+    sAbilities <- dollar <$> showListM (showSomeZone (showWithThisAbility "this")) abilities
+    pure $
+      pure "ArtifactFacet' "
+        <> sCost
+        <> sAbilities
+  ArtifactCreatureFacet' cost power toughness artAbils creatAbils bothAbils ->
+    yesParens do
+      sCost <- parens <$> showCost cost
+      sPower <- parens <$> showPower power
+      sToughness <- parens <$> showToughness toughness
+      sArtAbils <- parens <$> showListM (showSomeZone (showWithThisAbility "this")) artAbils
+      sCreatAbils <- parens <$> showListM (showSomeZone (showWithThisAbility "this")) creatAbils
+      sBothAbils <- dollar <$> showListM (showSomeZone (showWithThisAbility "this")) bothAbils
+      pure $
+        pure "ArtifactCreatureFacet' "
+          <> sCost
           <> pure " "
           <> sPower
           <> pure " "
@@ -622,87 +739,49 @@ showCardFacet = \case
           <> pure " "
           <> sCreatAbils
           <> sBothAbils
-  ArtifactLandFacet sups artTypes landTypes artAbils landAbils bothAbils ->
+  ArtifactLandFacet' artAbils landAbils bothAbils ->
     yesParens do
-      sSups <- parens <$> showSupertypes sups
-      sArtTypes <- parens <$> showArtifactTypes artTypes
-      sLandTypes <- parens <$> showLandTypes landTypes
       sArtAbils <- parens <$> showListM (showSomeZone (showWithThisAbility "this")) artAbils
       sLandAbils <- parens <$> showListM (showSomeZone (showWithThisAbility "this")) landAbils
       sBothAbils <- dollar <$> showListM (showSomeZone (showWithThisAbility "this")) bothAbils
       pure $
-        pure "ArtifactLandFacet "
-          <> sSups
-          <> pure " "
-          <> sArtTypes
-          <> pure " "
-          <> sLandTypes
-          <> pure " "
+        pure "ArtifactLandFacet' "
           <> sArtAbils
           <> pure " "
           <> sLandAbils
           <> sBothAbils
-  CreatureFacet colors cost sups creatureTypes power toughness abilities ->
+  CreatureFacet' cost power toughness abilities ->
     yesParens do
-      sColors <- parens <$> showColors colors
       sCost <- parens <$> showCost cost
-      sSups <- parens <$> showSupertypes sups
-      sCreatureTypes <- parens <$> showCreatureTypes creatureTypes
       sPower <- parens <$> showPower power
       sToughness <- parens <$> showToughness toughness
       sAbilities <- dollar <$> showListM (showSomeZone (showWithThisAbility "this")) abilities
       pure $
-        pure "CreatureFacet "
-          <> sColors
-          <> pure " "
+        pure "CreatureFacet' "
           <> sCost
-          <> pure " "
-          <> sSups
-          <> pure " "
-          <> sCreatureTypes
           <> pure " "
           <> sPower
           <> pure " "
           <> sToughness
           <> sAbilities
-  EnchantmentFacet colors cost sups enchantTypes abilities -> yesParens do
-    sColors <- parens <$> showColors colors
+  EnchantmentFacet' cost abilities -> yesParens do
     sCost <- parens <$> showCost cost
-    sSups <- parens <$> showSupertypes sups
-    sEnchantTypes <- parens <$> showEnchantmentTypes enchantTypes
     sAbilities <- dollar <$> showListM (showSomeZone (showWithThisAbility "this")) abilities
     pure $
-      pure "EnchantmentFacet " <> sColors
-        <> pure " "
+      pure "EnchantmentFacet' "
         <> sCost
-        <> pure " "
-        <> sSups
-        <> pure " "
-        <> sEnchantTypes
         <> sAbilities
-  EnchantmentCreatureFacet colors cost sups creatTypes enchantTypes power toughness creatAbils enchAbils bothAbils ->
+  EnchantmentCreatureFacet' cost power toughness creatAbils enchAbils bothAbils ->
     yesParens do
-      sColors <- parens <$> showColors colors
       sCost <- parens <$> showCost cost
-      sSups <- parens <$> showSupertypes sups
-      sCreatTypes <- parens <$> showCreatureTypes creatTypes
-      sEnchantTypes <- parens <$> showEnchantmentTypes enchantTypes
       sPower <- parens <$> showPower power
       sToughness <- parens <$> showToughness toughness
       sCreatAbils <- parens <$> showListM (showSomeZone (showWithThisAbility "this")) creatAbils
       sEnchAbils <- parens <$> showListM (showSomeZone (showWithThisAbility "this")) enchAbils
       sBothAbils <- dollar <$> showListM (showSomeZone (showWithThisAbility "this")) bothAbils
       pure $
-        pure "EnchantmentCreatureFacet "
-          <> sColors
-          <> pure " "
+        pure "EnchantmentCreatureFacet' "
           <> sCost
-          <> pure " "
-          <> sSups
-          <> pure " "
-          <> sCreatTypes
-          <> pure " "
-          <> sEnchantTypes
           <> pure " "
           <> sPower
           <> pure " "
@@ -712,62 +791,37 @@ showCardFacet = \case
           <> pure " "
           <> sEnchAbils
           <> sBothAbils
-  InstantFacet colors cost sups abilities oneShot -> do
-    showOneShot "InstantFacet " colors cost sups abilities oneShot
-  LandFacet sups landTypes abilities -> yesParens do
-    sSups <- parens <$> showSupertypes sups
-    sLandTypes <- parens <$> showLandTypes landTypes
-    sAbilities <- dollar <$> showListM (showSomeZone (showWithThisAbility "this")) abilities
-    pure $
-      pure "LandFacet "
-        <> sSups
-        <> pure " "
-        <> sLandTypes
-        <> sAbilities
-  PlaneswalkerFacet colors cost sups loyalty abilities -> yesParens do
-    sColors <- parens <$> showColors colors
+  InstantFacet' cost abilities oneShot -> yesParens do
     sCost <- parens <$> showCost cost
-    sSups <- parens <$> showSupertypes sups
-    sLoyalty <- parens <$> showLoyalty loyalty
-    sAbilities <- dollar <$> showListM (showSomeZone (showWithThisAbility "this")) abilities
-    pure $
-      pure "PlaneswalkerFacet "
-        <> sColors
-        <> pure " "
-        <> sCost
-        <> pure " "
-        <> sSups
-        <> pure " "
-        <> sLoyalty
-        <> sAbilities
-  SorceryFacet colors cost sups abilities oneShot -> do
-    showOneShot "SorceryFacet " colors cost sups abilities oneShot
- where
-  showOneShot ::
-    forall a ot.
-    IsObjectType a =>
-    ot ~ OT1 a =>
-    Item ->
-    Colors ->
-    Cost ot ->
-    [Supertype ot] ->
-    [SomeZone WithThisAbility ot] ->
-    WithThisOneShot ot ->
-    EnvM ParenItems
-  showOneShot def colors cost sups abilities oneShot = yesParens do
-    sColors <- parens <$> showColors colors
-    sCost <- parens <$> showCost cost
-    sSups <- parens <$> showSupertypes sups
     sAbilities <- parens <$> showListM (showSomeZone (showWithThisAbility "this")) abilities
     sOneShot <- dollar <$> showWithThis showElect "this" oneShot
     pure $
-      pure def
-        <> sColors
-        <> pure " "
+      pure "InstantFacet' "
+        <> sCost
+        <> sAbilities
+        <> sOneShot
+  LandFacet' abilities -> yesParens do
+    sAbilities <- dollar <$> showListM (showSomeZone (showWithThisAbility "this")) abilities
+    pure $
+      pure "LandFacet'"
+        <> sAbilities
+  PlaneswalkerFacet' cost loyalty abilities -> yesParens do
+    sCost <- parens <$> showCost cost
+    sLoyalty <- parens <$> showLoyalty loyalty
+    sAbilities <- dollar <$> showListM (showSomeZone (showWithThisAbility "this")) abilities
+    pure $
+      pure "PlaneswalkerFacet' "
         <> sCost
         <> pure " "
-        <> sSups
-        <> pure " "
+        <> sLoyalty
+        <> sAbilities
+  SorceryFacet' cost abilities oneShot -> yesParens do
+    sCost <- parens <$> showCost cost
+    sAbilities <- parens <$> showListM (showSomeZone (showWithThisAbility "this")) abilities
+    sOneShot <- dollar <$> showWithThis showElect "this" oneShot
+    pure $
+      pure "SorceryFacet' "
+        <> sCost
         <> sAbilities
         <> sOneShot
 
@@ -986,7 +1040,7 @@ showEffect = \case
 showEffects :: [Effect e] -> EnvM ParenItems
 showEffects = showListM showEffect
 
-showElect :: Elect p e ot -> EnvM ParenItems
+showElect :: Elect s e ot -> EnvM ParenItems
 showElect = \case
   ActivePlayer contElect -> yesParens do
     (active', snap) <- newObjectN @ 'OTPlayer O1 "active"
@@ -1023,7 +1077,7 @@ showElect = \case
     sCond <- dollar <$> showCondition cond
     pure $ pure "Condition" <> sCond
   ControllerOf zObj contElect -> do
-    goPlayerOf "ControllerOf" "controller" zObj contElect
+    goPlayerOf1 "ControllerOf" "controller" zObj contElect
   Cost cost -> yesParens do
     sCost <- dollar <$> showCost cost
     pure $ pure "Cost" <> sCost
@@ -1033,12 +1087,18 @@ showElect = \case
   ElectActivated activated -> yesParens do
     sPost <- dollar <$> showActivatedAbility activated
     pure $ pure "ElectActivated" <> sPost
-  ElectCard post -> yesParens do
+  ElectCardFacet post -> yesParens do
     sPost <- dollar <$> showCardFacet post
-    pure $ pure "ElectCard" <> sPost
+    pure $ pure "ElectCardFacet" <> sPost
+  ElectCardFacet' post -> yesParens do
+    sPost <- dollar <$> showCardFacet' post
+    pure $ pure "ElectCardFacet'" <> sPost
   ElectCase case_ -> yesParens do
     sCase <- dollar <$> showCase showElect case_
     pure $ pure "ElectCase" <> sCase
+  EndTargets elect -> yesParens do
+    sElect <- dollar <$> showElect elect
+    pure $ pure "EndTargets" <> sElect
   Event event -> yesParens do
     sEvent <- dollar <$> showEvent event
     pure $ pure "Event" <> sEvent
@@ -1051,7 +1111,7 @@ showElect = \case
     sListener <- dollar <$> showEventListener listener
     pure $ pure "Listen" <> sListener
   OwnerOf zObj contElect -> do
-    goPlayerOf "OwnerOf" "owner" zObj contElect
+    goPlayerOf1 "OwnerOf" "owner" zObj contElect
   Random withObject -> yesParens do
     sWithObject <- dollar <$> showWithMaskedObject showElect "rand" withObject
     pure $ pure "Random" <> sWithObject
@@ -1082,8 +1142,23 @@ showElect = \case
         elect = contElect var
     sElect <- dropParens <$> showElect elect
     pure $ pure "VariableInt $ \\" <> pure varName <> pure " -> " <> sElect
+  Your contElect -> do
+    goPlayerOf0 "Your" "you" contElect
  where
-  goPlayerOf consName varName zObj contElect = yesParens do
+  goPlayerOf0 consName varName contElect = yesParens do
+    (player', snap) <- newObjectN @ 'OTPlayer O1 varName
+    let player = toZone player'
+    sPlayer <- parens <$> showZoneObject player
+    let elect = contElect player
+    sElect <- dropParens <$> showElect elect
+    restoreObject snap
+    pure $
+      pure consName
+        <> pure " $ \\"
+        <> sPlayer
+        <> pure " -> "
+        <> sElect
+  goPlayerOf1 consName varName zObj contElect = yesParens do
     objPrefix <-
       getObjectNamePrefix
         let objN :: ObjectN OTNAny
@@ -2326,37 +2401,6 @@ showWithThisZ showM memo = \case
   WithThisZ withThis -> yesParens do
     sWithThis <- dollar <$> showWithThis showM memo withThis
     pure $ pure "WithThisZ" <> sWithThis
-
-showYourCard :: YourCardFacet ot -> EnvM ParenItems
-showYourCard = \case
-  YourArtifact cont -> goPerm cont "YourArtifact"
-  YourArtifactCreature cont -> goPerm cont "YourArtifactCreature"
-  YourArtifactLand cont -> goPerm cont "YourArtifactLand"
-  YourCreature cont -> goPerm cont "YourCreature"
-  YourEnchantment cont -> goPerm cont "YourEnchantment"
-  YourEnchantmentCreature cont -> goPerm cont "YourEnchantmentCreature"
-  YourLand cont -> goPerm cont "YourLand"
-  YourPlaneswalker cont -> goPerm cont "YourPlaneswalker"
-  --
-  YourInstant cont -> goSpell cont "YourInstant"
-  YourSorcery cont -> goSpell cont "YourSorcery"
- where
-  withYou action = do
-    (you', snap) <- newObjectN @ 'OTPlayer O1 "you"
-    let you = toZone you'
-    x <- action you
-    restoreObject snap
-    pure x
-  goPerm cont consName = withYou \you -> yesParens do
-    sYou <- parens <$> showZoneObject you
-    let facet = cont you
-    sFacet <- dropParens <$> showCardFacet facet
-    pure $ pure consName <> pure " $ \\" <> sYou <> pure " -> " <> sFacet
-  goSpell cont consName = withYou \you -> yesParens do
-    sYou <- parens <$> showZoneObject you
-    let electFacet = cont you
-    sFacet <- dropParens <$> showElect electFacet
-    pure $ pure consName <> pure " $ \\" <> sYou <> pure " -> " <> sFacet
 
 showZoneObject :: forall zone ot. IsZO zone ot => ZO zone ot -> EnvM ParenItems
 showZoneObject = \case

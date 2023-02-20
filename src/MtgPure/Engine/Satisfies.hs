@@ -16,10 +16,9 @@ module MtgPure.Engine.Satisfies (
 
 import safe qualified Control.Monad as M
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
-import safe Data.Functor ((<&>))
 import safe MtgPure.Engine.Fwd.Api (
   allZOs,
-  findPermanent,
+  controllerOf,
   getPermanent,
  )
 import safe MtgPure.Engine.Orphans ()
@@ -87,12 +86,9 @@ controlledBy' ::
   ZO zone ot ->
   ZOPlayer ->
   Magic 'Private 'RO m Bool
-controlledBy' zo zoPlayer = logCall 'controlledBy' case singZone @zone of
-  SZBattlefield -> do
-    findPermanent (zo0ToPermanent $ toZO0 zo) <&> \case
-      Nothing -> getObjectId zo == getObjectId zoPlayer -- TODO: [Mindslaver]
-      Just perm -> getObjectId (permanentController perm) == getObjectId zoPlayer
-  _ -> undefined -- XXX: sung zone
+controlledBy' zo zoPlayer = logCall 'controlledBy' do
+  controller <- controllerOf zo
+  pure $ getObjectId controller == getObjectId zoPlayer
 
 is' :: (Monad m, IsZO zone ot) => ZO zone ot -> ZO zone ot -> Magic 'Private 'RO m Bool
 is' zo zo' = logCall 'is' do

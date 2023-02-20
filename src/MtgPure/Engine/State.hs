@@ -94,6 +94,7 @@ import safe MtgPure.Engine.Prompt (
   TriggerTime,
  )
 import safe MtgPure.Model.Deck (Deck (..))
+import safe MtgPure.Model.ElectStage (ElectStage (..))
 import safe MtgPure.Model.Mulligan (Mulligan)
 import safe MtgPure.Model.Object.OTN (OT0)
 import safe MtgPure.Model.Object.Object (Object)
@@ -104,7 +105,6 @@ import safe MtgPure.Model.Object.ObjectType (
 import safe MtgPure.Model.Permanent (Permanent)
 import safe MtgPure.Model.PhaseStep (PhaseStep (..))
 import safe MtgPure.Model.Player (Player (..))
-import safe MtgPure.Model.PrePost (PrePost (..))
 import safe MtgPure.Model.Recursive (
   AnyCard,
   Requirement,
@@ -144,6 +144,7 @@ data GameState (m :: Type -> Type) where
   -- Simply knowing that a non-visible ID exists allow players to cheat (clients could spam it and then glean zone information and whatnot).
   GameState ::
     { magic_ :: ()
+    , magicControllerMap :: Map.Map ObjectId (Object 'OTPlayer)
     , magicCurrentTurn :: Int
     , magicExiledCards :: Map.Map (ZO 'ZExile OT0) AnyCard
     , magicFwd :: Fwd m
@@ -157,7 +158,7 @@ data GameState (m :: Type -> Type) where
     , magicNextObjectDiscriminant :: ObjectDiscriminant
     , magicNextObjectId :: ObjectId
     , magicNextVariableId :: VariableId
-    , magicOwnershipMap :: Map.Map ObjectId (Object 'OTPlayer)
+    , magicOwnerMap :: Map.Map ObjectId (Object 'OTPlayer)
     , magicPermanents :: Map.Map (ZO 'ZBattlefield OT0) Permanent
     , magicPhaseStep :: PhaseStep
     , magicPlayers :: Map.Map (Object 'OTPlayer) Player -- contains all players
@@ -168,7 +169,7 @@ data GameState (m :: Type -> Type) where
     , magicStack :: Stack
     , -- This is not bundled with the AnyElected map because the Cost hasn't necessarily been determined when targets are being built
       magicStackEntryTargetsMap :: Map.Map (ZO 'ZStack OT0) [TargetId]
-    , magicStackEntryElectedMap :: Map.Map (ZO 'ZStack OT0) (AnyElected 'Pre)
+    , magicStackEntryElectedMap :: Map.Map (ZO 'ZStack OT0) (AnyElected 'TargetStage)
     , magicStartingPlayer :: Object 'OTPlayer
     , magicTargetProperties :: Map.Map TargetId AnyRequirement
     } ->

@@ -139,10 +139,10 @@ replayInputs =
   , "Pass # O=2 DrawStep Turn5"
   , "PlayLand 128 # O=1 PreCombatMainPhase Turn5"
   , "CastSpell 123 # O=1 PreCombatMainPhase Turn5" -- fail: not enough mana
-  , "ActivateAbility 137 R # O=1 PreCombatMainPhase Turn5"
+  , "ActivateAbility 138 R # O=1 PreCombatMainPhase Turn5"
   , "CastSpell 123 # O=1 PreCombatMainPhase Turn5" -- fail: not enough mana
-  , "ActivateAbility 140 R # O=1 PreCombatMainPhase Turn5"
+  , "ActivateAbility 142 R # O=1 PreCombatMainPhase Turn5"
   , "CastSpell 123 # O=1 PreCombatMainPhase Turn5" -- fail: not enough mana
-  , "ActivateAbility 143 R # O=1 PreCombatMainPhase Turn5"
+  , "ActivateAbility 146 R # O=1 PreCombatMainPhase Turn5"
   , "CastSpell 123 # O=1 PreCombatMainPhase Turn5"
   ]

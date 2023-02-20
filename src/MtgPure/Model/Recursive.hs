@@ -12,12 +12,15 @@ module MtgPure.Model.Recursive (
   AnyToken (..),
   Card (..),
   CardFacet (..),
+  CardFacet' (..),
   Case (..),
   Condition (..),
   Cost (..),
   Effect (..),
   Elect (..),
+  ElectOneShotEffect,
   ElectOT (..),
+  ElectTargetedEffect,
   Else (..),
   Enchant (..),
   EnchantmentType (..),
@@ -53,9 +56,6 @@ module MtgPure.Model.Recursive (
   WithThisTriggered,
   WithThisZ (..),
   SomeZone (..),
-  YourCardFacet (..),
-  YourDirect,
-  YourElected,
   pattern CFalse,
   pattern CTrue,
   fromSomeOT,
@@ -76,6 +76,7 @@ import safe MtgPure.Model.Colors (Colors)
 import safe MtgPure.Model.CreatureType (CreatureType)
 import safe MtgPure.Model.Damage (Damage)
 import safe MtgPure.Model.EffectType (EffectType (..))
+import safe MtgPure.Model.ElectStage (CoNonIntrinsicStage, ElectStage (..))
 import safe MtgPure.Model.LandType (LandType)
 import safe MtgPure.Model.Loyalty (Loyalty)
 import safe MtgPure.Model.Mana.ManaCost (ManaCost)
@@ -105,7 +106,6 @@ import safe MtgPure.Model.Object.Singleton.Card (CoCard)
 import safe MtgPure.Model.Object.Singleton.Permanent (CoPermanent)
 import safe MtgPure.Model.Object.Singleton.Spell (CoSpell)
 import safe MtgPure.Model.Power (Power)
-import safe MtgPure.Model.PrePost (IsPrePost, PrePost (..))
 import safe MtgPure.Model.Rarity (Rarity)
 import safe MtgPure.Model.Supertype (Supertype)
 import safe MtgPure.Model.TimePoint (TimePoint)
@@ -141,7 +141,7 @@ import safe MtgPure.Model.ZoneObject.ZoneObject (
 --------------------------------------------------------------------------------
 
 data Ability (zone :: Zone) (ot :: Type) :: Type where
-  Activated :: IsZO zone ot => Elect 'Pre (ActivatedAbility zone ot) ot -> Ability zone ot
+  Activated :: IsZO zone ot => Elect 'IntrinsicStage (ActivatedAbility zone ot) ot -> Ability zone ot
   Static :: StaticAbility zone ot -> Ability zone ot
   Triggered :: IsZO zone ot => TriggeredAbility zone ot -> Ability zone ot
   deriving (Typeable)
@@ -158,7 +158,7 @@ data ActivatedAbility (zone :: Zone) (ot :: Type) :: Type where
   Ability ::
     IsZO zone ot =>
     { activated_cost :: Cost ot
-    , activated_effect :: Elect 'Post (Effect 'OneShot) ot
+    , activated_effect :: Elect 'ResolveStage (Effect 'OneShot) ot
     } ->
     ActivatedAbility zone ot
   Cycling :: (ot ~ OTN x, IsOTN ot) => Cost ot -> ActivatedAbility 'ZHand ot
@@ -284,7 +284,7 @@ instance HasCardName AnyToken where
 --------------------------------------------------------------------------------
 
 data Card (ot :: Type) :: Type where
-  Card :: (ot ~ OTN x, IsSpecificCard ot) => CardName -> YourCardFacet ot -> Card ot
+  Card :: (ot ~ OTN x, IsSpecificCard ot) => CardName -> Elect 'IntrinsicStage (CardFacet ot) ot -> Card ot
   DoubleSidedCard :: (ot1 ~ OTN x, ot2 ~ OTN y, Inst2 IsSpecificCard ot1 ot2) => Card ot1 -> Card ot2 -> Card (ot1, ot2)
   SplitCard ::
     (ot1 ~ OTN x, ot2 ~ OTN y, Inst2 IsSpecificCard ot1 ot2) =>
@@ -309,105 +309,73 @@ instance HasCardName (Card ot) where
 
 --------------------------------------------------------------------------------
 
--- TODO:
--- The one-shot facets need to be split into two parts:
---    * A static part
---    * A dynamic part
--- The reason for this is that the engine and clients will need to know things
--- like color, card super types, and card subtypes before doing any elections.
--- The YourCardFacet type will hold both flavors in its one-shot constructor flavors.
 data CardFacet (ot :: Type) :: Type where
   ArtifactFacet ::
     { artifact_colors :: Colors
-    , artifact_cost :: Cost OTNArtifact
     , artifact_supertypes :: [Supertype OTNArtifact]
     , artifact_artifactTypes :: [ArtifactType]
-    , artifact_abilities :: [SomeZone WithThisAbility OTNArtifact]
+    , artifact_spec :: CardFacet' OTNArtifact
     } ->
     CardFacet OTNArtifact
   ArtifactCreatureFacet ::
     { artifactCreature_colors :: Colors
-    , artifactCreature_cost :: Cost OTNArtifactCreature
     , artifactCreature_supertypes :: [Supertype OTNArtifactCreature]
     , artifactCreature_artifactTypes :: [ArtifactType]
-    , artifactCreature_creatureTypes :: [CreatureType]
-    , artifactCreature_power :: Power
-    , artifactCreature_toughness :: Toughness
-    , artifactCreature_artifactAbilities :: [SomeZone WithThisAbility OTNArtifact]
-    , artifactCreature_creatureAbilities :: [SomeZone WithThisAbility OTNCreature]
-    , artifactCreature_artifactCreatureAbilities :: [SomeZone WithThisAbility OTNArtifactCreature]
+    , artifactCreature_creatureTypes :: [CreatureType] -- TODO: Non-empty
+    , artifactCreature_spec :: CardFacet' OTNArtifactCreature
     } ->
     CardFacet OTNArtifactCreature
   ArtifactLandFacet ::
     { artifactLand_supertypes :: [Supertype OTNArtifactLand]
     , artifactLand_artifactTypes :: [ArtifactType]
     , artifactLand_landTypes :: [LandType]
-    , artifactLand_artifactAbilities :: [SomeZone WithThisAbility OTNArtifact]
-    , artifactLand_landAbilities :: [SomeZone WithThisAbility OTNLand]
-    , artifactLand_artifactLandAbilities :: [SomeZone WithThisAbility OTNArtifactLand]
+    , artifactLand_spec :: CardFacet' OTNArtifactLand
     } ->
     CardFacet OTNArtifactLand
   CreatureFacet ::
     { creature_colors :: Colors
-    , creature_cost :: Cost OTNCreature
     , creature_supertypes :: [Supertype OTNCreature]
-    , creature_creatureTypes :: [CreatureType]
-    , creature_power :: Power
-    , creature_toughness :: Toughness
-    , creature_abilities :: [SomeZone WithThisAbility OTNCreature]
+    , creature_creatureTypes :: [CreatureType] -- TODO: Non-empty
+    , creature_spec :: CardFacet' OTNCreature
     } ->
     CardFacet OTNCreature
   EnchantmentFacet ::
     { enchantment_colors :: Colors
-    , enchantment_cost :: Cost OTNEnchantment
     , enchantment_supertypes :: [Supertype OTNEnchantment]
     , enchantment_enchantmentTypes :: [EnchantmentType OTNEnchantment]
-    , enchantment_abilities :: [SomeZone WithThisAbility OTNEnchantment]
+    , enchantment_spec :: CardFacet' OTNEnchantment
     } ->
     CardFacet OTNEnchantment
   EnchantmentCreatureFacet ::
     { enchantmentCreature_colors :: Colors
-    , enchantmentCreature_cost :: Cost OTNEnchantmentCreature
     , enchantmentCreature_supertypes :: [Supertype OTNEnchantmentCreature]
-    , enchantmentCreature_creatureTypes :: [CreatureType]
+    , enchantmentCreature_creatureTypes :: [CreatureType] -- TODO: Non-empty
     , enchantmentCreature_enchantmentTypes :: [EnchantmentType OTNEnchantmentCreature]
-    , enchantmentCreature_power :: Power
-    , enchantmentCreature_toughness :: Toughness
-    , enchantmentCreature_creatureAbilities :: [SomeZone WithThisAbility OTNCreature]
-    , enchantmentCreature_enchantmentAbilities :: [SomeZone WithThisAbility OTNEnchantment]
-    , enchantmentCreature_enchantmentCreatureAbilities :: [SomeZone WithThisAbility OTNEnchantmentCreature]
+    , enchantmentCreature_spec :: CardFacet' OTNEnchantmentCreature
     } ->
     CardFacet OTNEnchantmentCreature
   InstantFacet ::
     { instant_colors :: Colors
-    , instant_cost :: Cost OTNInstant
     , instant_supertypes :: [Supertype OTNInstant]
-    , -- instant_oneShotTypes :: [OneShotType] e.g. Arcane
-      instant_abilities :: [SomeZone WithThisAbility OTNInstant]
-    , instant_effect :: WithThisOneShot OTNInstant
+    , instant_spec :: Elect 'TargetStage (CardFacet' OTNInstant) OTNInstant
     } ->
     CardFacet OTNInstant
   LandFacet ::
     { land_supertypes :: [Supertype OTNLand]
     , land_landTypes :: [LandType]
-    , land_abilities :: [SomeZone WithThisAbility OTNLand]
+    , land_spec :: CardFacet' OTNLand
     } ->
     CardFacet OTNLand
   PlaneswalkerFacet ::
     { planeswalker_colors :: Colors
-    , planeswalker_cost :: Cost OTNPlaneswalker
     , planeswalker_supertypes :: [Supertype OTNPlaneswalker]
-    , planeswalker_loyalty :: Loyalty
-    , planeswalker_abilities :: [SomeZone WithThisAbility OTNPlaneswalker]
+    , planeswalker_spec :: CardFacet' OTNPlaneswalker
     } ->
     CardFacet OTNPlaneswalker
   SorceryFacet ::
     { sorcery_colors :: Colors
-    , sorcery_cost :: Cost OTNSorcery
     , sorcery_supertypes :: [Supertype OTNSorcery]
-    , -- instant_oneShotTypes :: [OneShotType] e.g. Arcane
-      sorcery_abilities :: [SomeZone WithThisAbility OTNSorcery]
-    , sorcery_effect :: WithThisOneShot OTNSorcery
+    , sorcery_spec :: Elect 'TargetStage (CardFacet' OTNSorcery) OTNSorcery
     } ->
     CardFacet OTNSorcery
   deriving (Typeable)
@@ -424,6 +392,88 @@ instance ConsIndex (CardFacet ot) where
     LandFacet{} -> 8
     PlaneswalkerFacet{} -> 9
     SorceryFacet{} -> 10
+
+--------------------------------------------------------------------------------
+
+data CardFacet' (ot :: Type) :: Type where
+  ArtifactFacet' ::
+    { artifact_cost :: Cost OTNArtifact
+    , artifact_abilities :: [SomeZone WithThisAbility OTNArtifact]
+    } ->
+    CardFacet' OTNArtifact
+  ArtifactCreatureFacet' ::
+    { artifactCreature_cost :: Cost OTNArtifactCreature
+    , artifactCreature_power :: Power
+    , artifactCreature_toughness :: Toughness
+    , -- TODO: artifactCreature_abilities :: [SomeOT (SomeZone WithThisAbility) OTNArtifactCreature]
+      artifactCreature_artifactAbilities :: [SomeZone WithThisAbility OTNArtifact]
+    , artifactCreature_creatureAbilities :: [SomeZone WithThisAbility OTNCreature]
+    , artifactCreature_artifactCreatureAbilities :: [SomeZone WithThisAbility OTNArtifactCreature]
+    } ->
+    CardFacet' OTNArtifactCreature
+  ArtifactLandFacet' ::
+    { artifactLand_artifactAbilities :: [SomeZone WithThisAbility OTNArtifact]
+    , artifactLand_landAbilities :: [SomeZone WithThisAbility OTNLand]
+    , artifactLand_artifactLandAbilities :: [SomeZone WithThisAbility OTNArtifactLand]
+    } ->
+    CardFacet' OTNArtifactLand
+  CreatureFacet' ::
+    { creature_cost :: Cost OTNCreature
+    , creature_power :: Power
+    , creature_toughness :: Toughness
+    , creature_abilities :: [SomeZone WithThisAbility OTNCreature]
+    } ->
+    CardFacet' OTNCreature
+  EnchantmentFacet' ::
+    { enchantment_cost :: Cost OTNEnchantment
+    , enchantment_abilities :: [SomeZone WithThisAbility OTNEnchantment]
+    } ->
+    CardFacet' OTNEnchantment
+  EnchantmentCreatureFacet' ::
+    { enchantmentCreature_cost :: Cost OTNEnchantmentCreature
+    , enchantmentCreature_power :: Power
+    , enchantmentCreature_toughness :: Toughness
+    , enchantmentCreature_creatureAbilities :: [SomeZone WithThisAbility OTNCreature]
+    , enchantmentCreature_enchantmentAbilities :: [SomeZone WithThisAbility OTNEnchantment]
+    , enchantmentCreature_enchantmentCreatureAbilities :: [SomeZone WithThisAbility OTNEnchantmentCreature]
+    } ->
+    CardFacet' OTNEnchantmentCreature
+  InstantFacet' ::
+    { instant_cost :: Cost OTNInstant
+    , instant_abilities :: [SomeZone WithThisAbility OTNInstant]
+    , instant_effect :: WithThisOneShot OTNInstant
+    } ->
+    CardFacet' OTNInstant
+  LandFacet' ::
+    { land_abilities :: [SomeZone WithThisAbility OTNLand]
+    } ->
+    CardFacet' OTNLand
+  PlaneswalkerFacet' ::
+    { planeswalker_cost :: Cost OTNPlaneswalker
+    , planeswalker_loyalty :: Loyalty
+    , planeswalker_abilities :: [SomeZone WithThisAbility OTNPlaneswalker]
+    } ->
+    CardFacet' OTNPlaneswalker
+  SorceryFacet' ::
+    { sorcery_cost :: Cost OTNSorcery
+    , sorcery_abilities :: [SomeZone WithThisAbility OTNSorcery]
+    , sorcery_effect :: WithThisOneShot OTNSorcery
+    } ->
+    CardFacet' OTNSorcery
+  deriving (Typeable)
+
+instance ConsIndex (CardFacet' ot) where
+  consIndex = \case
+    ArtifactFacet'{} -> 1
+    ArtifactCreatureFacet'{} -> 2
+    ArtifactLandFacet'{} -> 3
+    CreatureFacet'{} -> 4
+    EnchantmentCreatureFacet'{} -> 5
+    EnchantmentFacet'{} -> 6
+    InstantFacet'{} -> 7
+    LandFacet'{} -> 8
+    PlaneswalkerFacet'{} -> 9
+    SorceryFacet'{} -> 10
 
 --------------------------------------------------------------------------------
 
@@ -522,13 +572,13 @@ data Effect (ef :: EffectType) :: Type where
   LoseLife :: ZOPlayer -> Int -> Effect 'OneShot -- TODO: PositiveInt
   PutOntoBattlefield :: (CoPermanent ot, IsZO zone ot) => ZOPlayer -> ZO zone ot -> Effect 'OneShot -- TODO: zone /= 'ZBattlefield
   Sacrifice :: (CoPermanent ot, IsOTN ot) => ZOPlayer -> [Requirement 'ZBattlefield ot] -> Effect 'OneShot
-  SearchLibrary :: (CoCard ot, IsOTN ot) => ZOPlayer {-searcher-} -> ZOPlayer {-searchee-} -> WithLinkedObject 'ZLibrary (Elect 'Post (Effect 'OneShot)) ot -> Effect 'OneShot
+  SearchLibrary :: (CoCard ot, IsOTN ot) => ZOPlayer {-searcher-} -> ZOPlayer {-searchee-} -> WithLinkedObject 'ZLibrary (Elect 'ResolveStage (Effect 'OneShot)) ot -> Effect 'OneShot
   Sequence :: [Effect ef] -> Effect ef
   ShuffleLibrary :: ZOPlayer -> Effect 'OneShot
   StatDelta :: ZOCreature -> Power -> Toughness -> Effect 'Continuous
   Tap :: CoPermanent ot => ZO 'ZBattlefield ot -> Effect 'OneShot
   Untap :: CoPermanent ot => ZO 'ZBattlefield ot -> Effect 'OneShot
-  Until :: Elect 'Post Event OTNPlayer -> Effect 'Continuous -> Effect 'Continuous
+  Until :: Elect 'ResolveStage Event OTNPlayer -> Effect 'Continuous -> Effect 'Continuous
   WithList :: IsZO zone ot => WithList (Effect ef) zone ot -> Effect ef
   deriving (Typeable)
 
@@ -565,28 +615,35 @@ instance ConsIndex (Effect ef) where
 
 --------------------------------------------------------------------------------
 
-data Elect (p :: PrePost) (el :: Type) (ot :: Type) :: Type where
-  ActivePlayer :: (ZOPlayer -> Elect p el ot) -> Elect p el ot
+data Elect (s :: ElectStage) (el :: Type) (ot :: Type) :: Type where
+  ActivePlayer :: (ZOPlayer -> Elect s el ot) -> Elect s el ot
   -- TODO: Add `IsZO zone ot` witness and change `'ZBattlefield` to `zone`.
-  All :: IsOTN ot => WithMaskedObjects 'ZBattlefield (Elect p el) ot -> Elect p el ot
+  All :: IsOTN ot => WithMaskedObjects 'ZBattlefield (Elect s el) ot -> Elect s el ot
   -- TODO: Disallow `Choose` for some types of `el` using a witness arg, in particular Event and EventListener
   Choose ::
-    (IsPrePost p, Typeable el, IsZO zone ot) =>
+    (CoNonIntrinsicStage s, Typeable el, IsZO zone ot) =>
     ZOPlayer ->
-    WithMaskedObject zone (Elect p el) ot ->
-    Elect p el ot
-  ChooseOption :: (IsUser u, IsNat n) => ZOPlayer -> NatList u n Condition -> (Variable (Fin u n) -> Elect p el ot) -> Elect p el ot
-  Condition :: Condition -> Elect p Condition ot
-  ControllerOf :: IsZO zone OTNAny => ZO zone OTNAny -> (ZOPlayer -> Elect p el ot) -> Elect p el ot
-  Cost :: Cost ot -> Elect 'Pre (Cost ot) ot -- XXX: can this constructor be removed?
-  Effect :: Typeable ef => [Effect ef] -> Elect 'Post (Effect ef) ot
-  ElectActivated :: IsZO zone ot => ActivatedAbility zone ot -> Elect 'Pre (ActivatedAbility zone ot) ot
-  ElectCard :: CardFacet ot -> Elect 'Pre (CardFacet ot) ot
-  ElectCase :: Case (Elect p el ot) -> Elect p el ot
-  Event :: Event -> Elect 'Post Event ot
-  If :: Condition -> Elect 'Post el ot -> Else el ot -> Elect 'Post el ot -- NOTE: It is probably correct to allow this constructor with CardTypeDef usage in order to encode split cards and such.
-  Listen :: EventListener -> Elect 'Post EventListener ot
-  OwnerOf :: IsZO zone OTNAny => ZO zone OTNAny -> (ZOPlayer -> Elect p el ot) -> Elect p el ot
+    WithMaskedObject zone (Elect s el) ot ->
+    Elect s el ot
+  ChooseOption ::
+    (IsUser u, IsNat n, CoNonIntrinsicStage s) =>
+    ZOPlayer ->
+    NatList u n Condition ->
+    (Variable (Fin u n) -> Elect s el ot) ->
+    Elect s el ot
+  Condition :: Condition -> Elect s Condition ot
+  ControllerOf :: IsZO zone OTNAny => ZO zone OTNAny -> (ZOPlayer -> Elect s el ot) -> Elect s el ot
+  Cost :: Cost ot -> Elect 'IntrinsicStage (Cost ot) ot -- XXX: can this constructor be removed?
+  Effect :: Typeable ef => [Effect ef] -> Elect 'ResolveStage (Effect ef) ot
+  ElectActivated :: IsZO zone ot => ActivatedAbility zone ot -> Elect 'TargetStage (ActivatedAbility zone ot) ot
+  ElectCardFacet :: CardFacet ot -> Elect 'IntrinsicStage (CardFacet ot) ot
+  ElectCardFacet' :: CardFacet' ot -> Elect 'TargetStage (CardFacet' ot) ot
+  ElectCase :: Case (Elect s el ot) -> Elect s el ot
+  EndTargets :: Typeable el => Elect 'ResolveStage el ot -> Elect 'TargetStage (Elect 'ResolveStage el ot) ot
+  Event :: Event -> Elect 'ResolveStage Event ot
+  If :: Condition -> Elect 'ResolveStage el ot -> Else el ot -> Elect 'ResolveStage el ot -- NOTE: It is probably correct to allow this constructor with CardTypeDef usage in order to encode split cards and such.
+  Listen :: EventListener -> Elect 'ResolveStage EventListener ot
+  OwnerOf :: IsZO zone OTNAny => ZO zone OTNAny -> (ZOPlayer -> Elect s el ot) -> Elect s el ot
   -- TODO: Add `IsZO zone ot` witness and change `'ZBattlefield` to `zone`.
   -- TODO: Prolly allow both 'Pre and 'Post
   -- XXX: `Random` is potentially problematic when done within an aggregate Elect such as `All`...
@@ -596,20 +653,25 @@ data Elect (p :: PrePost) (el :: Type) (ot :: Type) :: Type where
   --      (3) Say that this is OK and say that Random must come before All if want it unified. Seems good actually...
   Random ::
     IsOTN ot =>
-    WithMaskedObject 'ZBattlefield (Elect 'Post el) ot ->
-    Elect 'Post el ot -- Interpreted as "Arbitrary" in some contexts, such as Event and EventListener
+    WithMaskedObject 'ZBattlefield (Elect 'ResolveStage el) ot ->
+    Elect 'ResolveStage el ot -- Interpreted as "Arbitrary" in some contexts, such as Event and EventListener
 
   -- TODO: Disallow `Target` for some types of `el` using a witness arg, in particular Event and EventListener
   Target ::
     (Typeable el, IsZO zone ot) =>
     ZOPlayer ->
-    WithMaskedObject zone (Elect 'Pre el) ot ->
-    Elect 'Pre el ot
-  VariableFromPower :: ZOCreature -> (Variable Int -> Elect 'Post el ot) -> Elect 'Post el ot
-  VariableInt :: (Variable Int -> Elect 'Pre el ot) -> Elect 'Pre el ot
+    WithMaskedObject zone (Elect 'TargetStage el) ot ->
+    Elect 'TargetStage el ot
+  VariableFromPower :: ZOCreature -> (Variable Int -> Elect 'ResolveStage el ot) -> Elect 'ResolveStage el ot
+  -- TODO: It is actually possible to allow this to be IntrinsicStage by defaulting X to 0... but then `performElections`
+  -- for IntrinsicStage would need to somehow be RO and RW (RO for defaulted X and RW for player choice for X). Probably
+  -- possible by augmenting ElectStageRW with another type parameter. Worth it or necessary?
+  VariableInt :: (Variable Int -> Elect 'TargetStage el ot) -> Elect 'TargetStage el ot
+  -- TODO: Prolly can be any electStage instead of just IntrinsicStage.
+  Your :: (ZOPlayer -> Elect 'IntrinsicStage el ot) -> Elect 'IntrinsicStage el ot
   deriving (Typeable)
 
-instance ConsIndex (Elect p el ot) where
+instance ConsIndex (Elect s el ot) where
   consIndex = \case
     ActivePlayer{} -> 1
     All{} -> 2
@@ -620,27 +682,34 @@ instance ConsIndex (Elect p el ot) where
     Cost{} -> 7
     Effect{} -> 8
     ElectActivated{} -> 9
-    ElectCard{} -> 10
-    ElectCase{} -> 11
-    Event{} -> 12
-    If{} -> 13
-    Listen{} -> 14
-    OwnerOf{} -> 15
-    Random{} -> 16
-    Target{} -> 17
-    VariableFromPower{} -> 18
-    VariableInt{} -> 19
+    ElectCardFacet{} -> 10
+    ElectCardFacet'{} -> 11
+    ElectCase{} -> 12
+    EndTargets{} -> 13
+    Event{} -> 14
+    If{} -> 15
+    Listen{} -> 16
+    OwnerOf{} -> 17
+    Random{} -> 18
+    Target{} -> 19
+    VariableFromPower{} -> 20
+    VariableInt{} -> 21
+    Your{} -> 22
+
+type ElectTargetedEffect ef ot = Elect 'TargetStage (Elect 'ResolveStage ef ot) ot
+
+type ElectOneShotEffect ot = ElectTargetedEffect (Effect 'OneShot) ot
 
 -- | Used to make some higher-kinded `ot` stuff work.
-data ElectOT (p :: PrePost) (liftOT :: Type -> Type) (ot :: Type) where
-  ElectOT :: {unElectOT :: Elect p (liftOT ot) ot} -> ElectOT p liftOT ot
+data ElectOT (s :: ElectStage) (liftOT :: Type -> Type) (ot :: Type) where
+  ElectOT :: {unElectOT :: Elect s (liftOT ot) ot} -> ElectOT s liftOT ot
   deriving (Typeable)
 
 --------------------------------------------------------------------------------
 
 data Else (el :: Type) (ot :: Type) :: Type where
-  ElseCost :: (el ~ Cost ot) => Elect 'Post el ot -> Else el ot
-  ElseEffect :: (el ~ Effect 'OneShot) => Elect 'Post el ot -> Else el ot
+  ElseCost :: (el ~ Cost ot) => Elect 'ResolveStage el ot -> Else el ot
+  ElseEffect :: (el ~ Effect 'OneShot) => Elect 'ResolveStage el ot -> Else el ot
   -- NOTE: Events need linear history to make sense of election costs tied to it, hence this hole.
   -- Imagine otherwise this were not the case. Then different parts of the branch could listen to different
   -- event types (without injecting yet another index/witness to prevent it). This is is dumb on its own
@@ -658,7 +727,7 @@ instance ConsIndex (Else el ot) where
 --------------------------------------------------------------------------------
 
 data Enchant (zone :: Zone) (ot :: Type) :: Type where
-  Enchant :: IsZO zone ot => WithLinkedObject zone (Elect 'Post (Effect 'Continuous)) ot -> Enchant zone ot
+  Enchant :: IsZO zone ot => WithLinkedObject zone (Elect 'ResolveStage (Effect 'Continuous)) ot -> Enchant zone ot
   deriving (Typeable)
 
 instance ConsIndex (Enchant zone ot) where
@@ -696,7 +765,7 @@ class IsZone zone => CoNonBattlefield (zone :: Zone)
 type Event = EventListener' Proxy
 
 -- XXX: This should use 'Pre/PrePost instead of 'Post? e.g. [Flametongue Kavu]
-type EventListener = EventListener' (Elect 'Post (Effect 'OneShot))
+type EventListener = EventListener' (Elect 'ResolveStage (Effect 'OneShot))
 
 data EventListener' (liftOT :: Type -> Type) :: Type where
   BecomesTapped :: (CoPermanent ot, IsOTN ot, Typeable liftOT) => WithLinkedObject 'ZBattlefield liftOT ot -> EventListener' liftOT
@@ -728,14 +797,13 @@ instance Applicative List where
 --------------------------------------------------------------------------------
 
 data NonProxy (liftOT :: Type -> Type) :: Type where
-  NonProxyElectEffect :: NonProxy (Elect p (Effect ef))
-  NonProxyElectPrePostEffect :: NonProxy (Elect 'Pre (Elect 'Post (Effect 'Continuous) ot))
+  NonProxyElectEffect :: NonProxy (Elect s (Effect ef))
+  --NonProxyElectPrePostEffect :: NonProxy (Elect 'Pre (Elect 'Post (Effect 'Continuous) ot))
   deriving (Typeable)
 
 instance ConsIndex (NonProxy liftOT) where
   consIndex = \case
     NonProxyElectEffect -> 1
-    NonProxyElectPrePostEffect -> 2
 
 --------------------------------------------------------------------------------
 
@@ -975,9 +1043,9 @@ instance ConsIndex (SomeZone liftZOT ot) where
 --------------------------------------------------------------------------------
 
 data StaticAbility (zone :: Zone) (ot :: Type) :: Type where
-  As :: (ot ~ OTN x, IsOTN ot) => Elect 'Post EventListener ot -> StaticAbility 'ZBattlefield ot -- 603.6d: not a triggered ability
+  As :: (ot ~ OTN x, IsOTN ot) => Elect 'ResolveStage EventListener ot -> StaticAbility 'ZBattlefield ot -- 603.6d: not a triggered ability
   -- XXX: BestowPre and BestowPost
-  Bestow :: ot ~ OTNEnchantmentCreature => Elect 'Pre (Cost ot) ot -> Enchant 'ZBattlefield OTNCreature -> StaticAbility 'ZBattlefield ot
+  Bestow :: ot ~ OTNEnchantmentCreature => Elect 'IntrinsicStage (Cost ot) ot -> Enchant 'ZBattlefield OTNCreature -> StaticAbility 'ZBattlefield ot
   CantBlock :: ot ~ OTNCreature => StaticAbility 'ZBattlefield ot
   Defender :: ot ~ OTNCreature => StaticAbility 'ZBattlefield ot
   Enters :: IsZO zone ot => EntersStatic zone ot -> StaticAbility zone ot
@@ -987,9 +1055,9 @@ data StaticAbility (zone :: Zone) (ot :: Type) :: Type where
   Haste :: ot ~ OTNCreature => StaticAbility 'ZBattlefield ot
   Landwalk :: ot ~ OTNCreature => [Requirement 'ZBattlefield OTNLand] -> StaticAbility 'ZBattlefield ot
   Phasing :: CoPermanent ot => StaticAbility 'ZBattlefield ot
-  StaticContinuous :: (ot ~ OTN x, IsOTN ot) => Elect 'Post (Effect 'Continuous) ot -> StaticAbility 'ZBattlefield ot -- 611.3
+  StaticContinuous :: (ot ~ OTN x, IsOTN ot) => Elect 'ResolveStage (Effect 'Continuous) ot -> StaticAbility 'ZBattlefield ot -- 611.3
   -- XXX: SuspendPre and SuspendPost
-  Suspend :: (ot ~ OTN x, IsOTN ot) => Int -> Elect 'Pre (Cost ot) ot -> StaticAbility 'ZBattlefield ot -- PositiveInt
+  Suspend :: (ot ~ OTN x, IsOTN ot) => Int -> Elect 'IntrinsicStage (Cost ot) ot -> StaticAbility 'ZBattlefield ot -- PositiveInt
   Trample :: ot ~ OTNCreature => StaticAbility 'ZBattlefield ot
   deriving (Typeable)
 
@@ -1029,7 +1097,7 @@ instance HasCardName (Token ot) where
 -- https://www.mtgsalvation.com/forums/magic-fundamentals/magic-rulings/magic-rulings-archives/611601-whenever-what-does-it-mean?comment=3
 -- https://www.reddit.com/r/magicTCG/comments/asmecb/noob_question_difference_between_as_and_when/
 data TriggeredAbility (zone :: Zone) (ot :: Type) :: Type where
-  When :: IsZO 'ZBattlefield ot => Elect 'Post EventListener ot -> TriggeredAbility 'ZBattlefield ot
+  When :: IsZO 'ZBattlefield ot => Elect 'ResolveStage EventListener ot -> TriggeredAbility 'ZBattlefield ot
   deriving (Typeable)
 
 instance ConsIndex (TriggeredAbility zone ot) where
@@ -1236,9 +1304,10 @@ instance ConsIndex (WithThis zone liftOT ot) where
     This4{} -> 4
     This5{} -> 5
 
-type WithThisActivated zone = WithThis (ElectOT 'Pre (ActivatedAbility zone)) zone
+-- XXX: Can this be changed to ResolveStage if I remove WithThis and use an Elect This constructor?
+type WithThisActivated zone = WithThis (ElectOT 'TargetStage (ActivatedAbility zone)) zone
 
-type WithThisOneShot = WithThis (Elect 'Post (Effect 'OneShot)) 'ZStack
+type WithThisOneShot ot = WithThis (Elect 'TargetStage (Elect 'ResolveStage (Effect 'OneShot) ot)) 'ZStack ot
 
 type WithThisStatic zone = WithThis (StaticAbility zone) zone
 
@@ -1262,36 +1331,5 @@ instance ConsIndex (WithThisAbility zone ot) where
     WithThisActivated{} -> 1
     WithThisStatic{} -> 2
     WithThisTriggered{} -> 3
-
---------------------------------------------------------------------------------
-
-type YourDirect liftOT ot = ZOPlayer -> liftOT ot
-
-type YourElected liftOT ot = ZOPlayer -> Elect 'Pre (liftOT ot) ot
-
-data YourCardFacet (ot :: Type) :: Type where
-  YourArtifact :: OTNArtifact ~ ot => YourDirect CardFacet ot -> YourCardFacet ot
-  YourArtifactCreature :: OTNArtifactCreature ~ ot => YourDirect CardFacet ot -> YourCardFacet ot
-  YourArtifactLand :: OTNArtifactLand ~ ot => YourDirect CardFacet ot -> YourCardFacet ot
-  YourCreature :: OTNCreature ~ ot => YourDirect CardFacet ot -> YourCardFacet ot
-  YourEnchantment :: OTNEnchantment ~ ot => YourDirect CardFacet ot -> YourCardFacet ot
-  YourEnchantmentCreature :: OTNEnchantmentCreature ~ ot => YourDirect CardFacet ot -> YourCardFacet ot
-  YourInstant :: OTNInstant ~ ot => YourElected CardFacet ot -> YourCardFacet ot
-  YourLand :: OTNLand ~ ot => YourDirect CardFacet ot -> YourCardFacet ot
-  YourPlaneswalker :: OTNPlaneswalker ~ ot => YourDirect CardFacet ot -> YourCardFacet ot
-  YourSorcery :: OTNSorcery ~ ot => YourElected CardFacet ot -> YourCardFacet ot
-
-instance ConsIndex (YourCardFacet ot) where
-  consIndex = \case
-    YourArtifact{} -> 1
-    YourArtifactCreature{} -> 2
-    YourArtifactLand{} -> 3
-    YourCreature{} -> 4
-    YourEnchantment{} -> 5
-    YourEnchantmentCreature{} -> 6
-    YourInstant{} -> 7
-    YourLand{} -> 8
-    YourPlaneswalker{} -> 9
-    YourSorcery{} -> 10
 
 --------------------------------------------------------------------------------

@@ -33,13 +33,12 @@ import safe MtgPure.Model.Object.OTNAliases (
   OTNPermanent,
   OTNPlaneswalker,
  )
-import safe MtgPure.Model.Object.Object (Object (..))
-import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Planeswalker (Planeswalker (..))
 import safe MtgPure.Model.Recursive (
   AnyCard,
   AnyToken,
   CardFacet (..),
+  CardFacet' (..),
   SomeOT (..),
   SomeTerm (..),
   SomeZone,
@@ -66,7 +65,6 @@ data Permanent :: Type where
     , permanentCard :: Either AnyCard AnyToken -- SomeCardOrToken OTNPermanent
     , permanentCardFacet :: SomeOT CardFacet OTNPermanent
     , permanentColors :: Colors
-    , permanentController :: Object 'OTPlayer -- TODO: Use controller map on game state instead
     , permanentCreature :: Maybe Creature
     , permanentCreatureDamage :: Damage 'NoVar -- 120.6
     , permanentEnchantment :: Maybe Enchantment
@@ -138,31 +136,30 @@ someArtifactLand = Some5ad . SomeArtifactLand
 someEnchantmentCreature :: liftOT OTNEnchantmentCreature -> SomeOT liftOT OTNPermanent
 someEnchantmentCreature = Some5bc . SomeEnchantmentCreature
 
--- | Usage requirement: The provided CardFacet must actually be part of the provided AnyCard.
+-- | Usage requirement: The provided facets must actually be part of the provided AnyCard.
 cardToPermanent ::
-  Object 'OTPlayer ->
   AnyCard ->
   CardFacet ot ->
+  CardFacet' ot ->
   Maybe Permanent
-cardToPermanent owner card facet = case viewPermanentFacet facet of
+cardToPermanent card facet facet' = case viewPermanentFacet facet of
   Nothing -> Nothing
   Just someFacet ->
     Just
       Permanent
-        { permanentAbilities = permanentAbilitiesOf facet
+        { permanentAbilities = permanentAbilitiesOf facet'
         , permanentArtifact = facetToArtifact facet
         , permanentCard = Left card
         , permanentCardFacet = someFacet
         , permanentColors = getColors facet
-        , permanentController = owner
-        , permanentCreature = facetToCreature facet
+        , permanentCreature = facetToCreature facet facet'
         , permanentCreatureDamage = Damage 0
         , permanentEnchantment = facetToEnchantment facet
         , permanentFace = FaceUp
         , permanentFlipped = Unflipped
         , permanentLand = facetToLand facet
         , permanentPhased = PhasedIn
-        , permanentPlaneswalker = facetToPlaneswalker facet
+        , permanentPlaneswalker = facetToPlaneswalker facet'
         , permanentSummoningSickness = True
         , permanentTapped = Untapped
         }
@@ -180,28 +177,28 @@ viewPermanentFacet facet = case facet of
   ArtifactLandFacet{} -> Just $ someArtifactLand facet
   EnchantmentCreatureFacet{} -> Just $ someEnchantmentCreature facet
 
-permanentAbilitiesOf :: CardFacet ot -> [SomeOT (SomeZone WithThisAbility) OTNPermanent]
+permanentAbilitiesOf :: CardFacet' ot -> [SomeOT (SomeZone WithThisAbility) OTNPermanent]
 permanentAbilitiesOf facet = case facet of
-  InstantFacet{} -> []
-  SorceryFacet{} -> []
-  ArtifactFacet{} -> map someArtifact $ artifact_abilities facet
-  CreatureFacet{} -> map someCreature $ creature_abilities facet
-  EnchantmentFacet{} -> map someEnchantment $ enchantment_abilities facet
-  LandFacet{} -> map someLand $ land_abilities facet
-  PlaneswalkerFacet{} -> map somePlaneswalker $ planeswalker_abilities facet
-  ArtifactCreatureFacet{} ->
+  InstantFacet'{} -> []
+  SorceryFacet'{} -> []
+  ArtifactFacet'{} -> map someArtifact $ artifact_abilities facet
+  CreatureFacet'{} -> map someCreature $ creature_abilities facet
+  EnchantmentFacet'{} -> map someEnchantment $ enchantment_abilities facet
+  LandFacet'{} -> map someLand $ land_abilities facet
+  PlaneswalkerFacet'{} -> map somePlaneswalker $ planeswalker_abilities facet
+  ArtifactCreatureFacet'{} ->
     concat
       [ map someArtifact $ artifactCreature_artifactAbilities facet
       , map someCreature $ artifactCreature_creatureAbilities facet
       , map someArtifactCreature $ artifactCreature_artifactCreatureAbilities facet
       ]
-  ArtifactLandFacet{} ->
+  ArtifactLandFacet'{} ->
     concat
       [ map someArtifact $ artifactLand_artifactAbilities facet
       , map someLand $ artifactLand_landAbilities facet
       , map someArtifactLand $ artifactLand_artifactLandAbilities facet
       ]
-  EnchantmentCreatureFacet{} ->
+  EnchantmentCreatureFacet'{} ->
     concat
       [ map someEnchantment $ enchantmentCreature_enchantmentAbilities facet
       , map someCreature $ enchantmentCreature_creatureAbilities facet
@@ -227,28 +224,28 @@ facetToArtifact facet = case facet of
         }
   _ -> Nothing
 
-facetToCreature :: CardFacet ot -> Maybe Creature
-facetToCreature facet = case facet of
+facetToCreature :: CardFacet ot -> CardFacet' ot -> Maybe Creature
+facetToCreature facet facet' = case facet of
   CreatureFacet{} ->
     Just
       Creature
         { creatureTypes = creature_creatureTypes facet
-        , creaturePower = creature_power facet
-        , creatureToughness = creature_toughness facet
+        , creaturePower = creature_power facet'
+        , creatureToughness = creature_toughness facet'
         }
   ArtifactCreatureFacet{} ->
     Just
       Creature
         { creatureTypes = artifactCreature_creatureTypes facet
-        , creaturePower = artifactCreature_power facet
-        , creatureToughness = artifactCreature_toughness facet
+        , creaturePower = artifactCreature_power facet'
+        , creatureToughness = artifactCreature_toughness facet'
         }
   EnchantmentCreatureFacet{} ->
     Just
       Creature
         { creatureTypes = enchantmentCreature_creatureTypes facet
-        , creaturePower = enchantmentCreature_power facet
-        , creatureToughness = enchantmentCreature_toughness facet
+        , creaturePower = enchantmentCreature_power facet'
+        , creatureToughness = enchantmentCreature_toughness facet'
         }
   _ -> Nothing
 
@@ -280,11 +277,11 @@ facetToLand facet = case facet of
         }
   _ -> Nothing
 
-facetToPlaneswalker :: CardFacet ot -> Maybe Planeswalker
-facetToPlaneswalker facet = case facet of
-  PlaneswalkerFacet{} ->
+facetToPlaneswalker :: CardFacet' ot -> Maybe Planeswalker
+facetToPlaneswalker facet' = case facet' of
+  PlaneswalkerFacet'{} ->
     Just
       Planeswalker
-        { planeswalkerLoyalty = planeswalker_loyalty facet
+        { planeswalkerLoyalty = planeswalker_loyalty facet'
         }
   _ -> Nothing

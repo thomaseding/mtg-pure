@@ -13,16 +13,21 @@ module MtgPure.Engine.CaseOf (
   caseOf,
 ) where
 
-import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
+import safe Control.Monad.Access (IsReadWrite, Visibility (..))
 import safe Data.Nat (Fin (..), NatList (..))
 import safe MtgPure.Engine.State (Magic, logCall)
 import safe MtgPure.Model.Recursive (Case (..))
 import safe MtgPure.Model.Variable (readVariable)
 
-caseOf :: forall m x a. Monad m => (x -> Magic 'Private 'RW m a) -> Case x -> Magic 'Private 'RW m a
+caseOf ::
+  forall m x a rw.
+  (IsReadWrite rw, Monad m) =>
+  (x -> Magic 'Private rw m a) ->
+  Case x ->
+  Magic 'Private rw m a
 caseOf cont = logCall 'caseOf \case
   CaseFin (readVariable -> fin) xs ->
-    let go :: Fin u n -> NatList u n x -> Magic 'Private 'RW m a
+    let go :: Fin u n -> NatList u n x -> Magic 'Private rw m a
         go fin' xs' = case (fin', xs') of
           (FZ, LZ x) -> cont x
           (FZ, LS x _) -> cont x

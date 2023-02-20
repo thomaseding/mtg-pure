@@ -35,6 +35,7 @@ module MtgPure.Engine.Core (
   getPlayer,
   getTrivialManaAbilities,
   indexToActivated,
+  localNewObjectId,
   newObjectId,
   newVariableId,
   pickOneZO,
@@ -57,7 +58,7 @@ module MtgPure.Engine.Core (
 
 import safe Control.Exception (assert)
 import safe qualified Control.Monad as M
-import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
+import safe Control.Monad.Access (IsReadWrite, ReadWrite (..), Visibility (..))
 import safe Control.Monad.Util (untilJust)
 import safe qualified Data.DList as DList
 import safe Data.Functor ((<&>))
@@ -69,7 +70,7 @@ import safe qualified Data.Stream as Stream
 import safe qualified Data.Traversable as T
 import safe Data.Typeable (cast)
 import safe Data.Void (Void)
-import safe MtgPure.Engine.Fwd.Api (eachLogged, ownerOf)
+import safe MtgPure.Engine.Fwd.Api (controllerOf, eachLogged, ownerOf, performElections)
 import safe MtgPure.Engine.Legality (Legality (..))
 import safe MtgPure.Engine.Monad (
   fromPublic,
@@ -77,6 +78,7 @@ import safe MtgPure.Engine.Monad (
   get,
   gets,
   internalFromPrivate,
+  local,
   magicCatch,
   magicThrow,
   modify,
@@ -103,6 +105,7 @@ import safe MtgPure.Engine.State (
  )
 import safe MtgPure.Model.BasicLandType (BasicLandType)
 import safe MtgPure.Model.Combinators (CanHaveTrivialManaAbility, trivialManaAbility)
+import safe MtgPure.Model.ElectStage (ElectStage (..))
 import safe MtgPure.Model.Graveyard (Graveyard (..))
 import safe MtgPure.Model.Hand (Hand (..))
 import safe MtgPure.Model.IsCardList (pushCard)
@@ -132,12 +135,12 @@ import safe MtgPure.Model.Recursive (
   AnyCard (..),
   Card (..),
   CardFacet (..),
+  Elect,
   SomeZone (..),
   WithThisAbility (..),
   WithThisActivated,
   WithThisStatic,
   WithThisTriggered,
-  YourCardFacet (..),
   fromSomeOT,
  )
 import safe MtgPure.Model.Variable (VariableId, VariableId' (..))
@@ -145,7 +148,6 @@ import safe MtgPure.Model.Zone (IsZone (..), SZone (..), Zone (..))
 import safe MtgPure.Model.ZoneObject.Convert (
   ToZO0,
   castOToON,
-  oToZO1,
   toZO0,
   zo0ToCard,
   zo0ToPermanent,
@@ -179,8 +181,8 @@ allControlledPermanentsOf ::
 allControlledPermanentsOf oPlayer =
   logCall 'allControlledPermanentsOf $
     allPermanents >>= M.filterM \zoPerm -> do
-      perm <- internalFromPrivate $ fromRO $ getPermanent zoPerm
-      pure $ permanentController perm == oPlayer
+      controller <- internalFromPrivate $ controllerOf zoPerm
+      pure $ controller == oPlayer
 
 rewindLeft :: Monad m => ex -> Magic 'Private 'RW m (Either ex a) -> Magic 'Private 'RW m (Either ex a)
 rewindLeft ex m = logCall 'rewindLeft do
@@ -542,6 +544,8 @@ getBasicLandTypes zo = logCall 'getBasicLandTypes do
     SZGraveyard -> goFindCard findGraveyardCard
     _ -> undefined -- XXX: sung zone
  where
+  uniquify = List.nub . List.sort
+
   goFindCard ::
     (Object 'OTPlayer -> ZO zone OTNCard -> Magic 'Private 'RO m (Maybe AnyCard)) ->
     Magic 'Private 'RO m [BasicLandType]
@@ -549,32 +553,46 @@ getBasicLandTypes zo = logCall 'getBasicLandTypes do
     let zoCard = zo0ToCard $ toZO0 zo
     oPlayers <- fromPublic getAlivePlayers
     uniquify . concat <$> T.for oPlayers \oPlayer -> do
-      let zoPlayer = oToZO1 @ 'ZBattlefield oPlayer
-          goRec :: AnyCard -> Magic 'Private 'RO m [BasicLandType]
-          goRec = \case
-            AnyCard1 (Card _ card) -> pure case card of
-              YourArtifactLand playerToFacet -> case playerToFacet zoPlayer of
-                ArtifactLandFacet{artifactLand_landTypes = tys} -> fromLandTypes tys
-              YourLand playerToFacet -> case playerToFacet zoPlayer of
-                LandFacet{land_landTypes = tys} -> fromLandTypes tys
-              _ -> []
-            AnyCard2 (DoubleSidedCard c1 c2) -> do
-              tys1 <- goRec $ AnyCard1 c1
-              tys2 <- goRec $ AnyCard1 c2
-              pure $ tys1 ++ tys2
-            AnyCard2 SplitCard{splitCard_card1 = c1, splitCard_card2 = c2} -> do
-              tys1 <- goRec $ AnyCard1 c1
-              tys2 <- goRec $ AnyCard1 c2
-              pure $ tys1 ++ tys2
       findCard oPlayer zoCard >>= \case
         Nothing -> pure []
-        Just card -> goRec card
+        Just card -> goAnyCard oPlayer card
+
+  goAnyCard :: Object 'OTPlayer -> AnyCard -> Magic 'Private 'RO m [BasicLandType]
+  goAnyCard oPlayer = \case
+    AnyCard1 (Card _ card) -> goElectFacet oPlayer card
+    AnyCard2 (DoubleSidedCard c1 c2) -> do
+      tys1 <- goAnyCard oPlayer $ AnyCard1 c1
+      tys2 <- goAnyCard oPlayer $ AnyCard1 c2
+      pure $ tys1 ++ tys2
+    AnyCard2 SplitCard{splitCard_card1 = c1, splitCard_card2 = c2} -> do
+      tys1 <- goAnyCard oPlayer $ AnyCard1 c1
+      tys2 <- goAnyCard oPlayer $ AnyCard1 c2
+      pure $ tys1 ++ tys2
+
+  goElectFacet :: Object 'OTPlayer -> Elect 'IntrinsicStage (CardFacet ot') ot' -> Magic 'Private 'RO m [BasicLandType]
+  goElectFacet oPlayer elect = do
+    localNewObjectId oPlayer \i -> do
+      let zoStack0 = toZO0 i
+      performElections zoStack0 goFacetM elect <&> \case
+        Nothing -> []
+        Just tys -> tys
+
+  goFacetM :: CardFacet ot' -> Magic 'Private 'RO m (Maybe [BasicLandType])
+  goFacetM facet = pure $ case goFacet facet of
+    [] -> Nothing
+    tys -> Just tys
+
+  goFacet :: CardFacet ot' -> [BasicLandType]
+  goFacet = \case
+    ArtifactLandFacet{artifactLand_landTypes = tys} -> fromLandTypes tys
+    LandFacet{land_landTypes = tys} -> fromLandTypes tys
+    _ -> []
+
   fromLandTypes :: [LandType] -> [BasicLandType]
   fromLandTypes tys =
     tys >>= \case
       BasicLand ty -> [ty]
       _ -> []
-  uniquify = List.nub . List.sort
 
 queryObjectId :: forall m. Monad m => ObjectId -> Magic 'Private 'RO m (Maybe QueryObjectResult)
 queryObjectId i = do
@@ -626,13 +644,14 @@ queryObjectId i = do
         findPermanent zoPerm >>= \case
           Nothing -> pure []
           Just perm -> do
+            controller <- controllerOf zoPerm
             owner <- ownerOf zoPerm
             pure
               [ QueryObjectResult
                   { qor_ = ()
                   , qorCard = either Just (const Nothing) $ permanentCard perm
                   , qorToken = Nothing
-                  , qorController = permanentController perm
+                  , qorController = controller
                   , qorOwner = owner
                   , qorPermanent = Just perm
                   , qorPlayer = Nothing
@@ -669,6 +688,21 @@ newVariableId = logCall 'newVariableId do
   VariableId i <- fromRO $ gets magicNextVariableId
   modify \st -> st{magicNextVariableId = VariableId $ i + 1}
   pure $ VariableId i
+
+localNewObjectId :: (IsReadWrite rw, Monad m) => Object 'OTPlayer -> (ObjectId -> Magic 'Private rw m a) -> Magic 'Private rw m a
+localNewObjectId owner cont = logCall 'localNewObjectId do
+  local advanceId do
+    ObjectId j <- fromRO $ gets magicNextObjectId
+    let i = j - 1
+    cont $ ObjectId i
+ where
+  advanceId st =
+    let ObjectId i = magicNextObjectId st
+     in st
+          { magicNextObjectId = ObjectId $ i + 1
+          , magicControllerMap = Map.insert (ObjectId i) owner $ magicControllerMap st
+          , magicOwnerMap = Map.insert (ObjectId i) owner $ magicOwnerMap st
+          }
 
 data PlayerCardsInfo zone m = PlayerCardsInfo
   { pci_ :: ()
@@ -727,7 +761,11 @@ pushZoneCard info oPlayer card = logCall 'pushZoneCard do
       zoCard = zo0ToCard zo0
   modify \st ->
     let st' = pci_setMagicZoneCards info st $ Map.insert zo0 card $ pci_magicZoneCards info st
-        st'' = st'{magicOwnershipMap = Map.insert i oPlayer $ magicOwnershipMap st'}
+        st'' =
+          st'
+            { magicControllerMap = Map.insert i oPlayer $ magicControllerMap st'
+            , magicOwnerMap = Map.insert i oPlayer $ magicOwnerMap st'
+            }
      in st''
   setPlayer oPlayer $
     pci_setPlayerZoneCards info player $
@@ -781,7 +819,11 @@ removeZoneCard info oPlayer zoCard = logCall 'removeZoneCard do
       mCard <- fromRO $ gets $ Map.lookup (toZO0 zoCard) . pci_magicZoneCards info
       modify \st ->
         let st' = pci_setMagicZoneCards info st $ Map.delete (toZO0 zoCard) $ pci_magicZoneCards info st
-            st'' = st'{magicOwnershipMap = Map.delete (getObjectId zoCard) $ magicOwnershipMap st'}
+            st'' =
+              st'
+                { magicControllerMap = Map.delete (getObjectId zoCard) $ magicControllerMap st'
+                , magicOwnerMap = Map.delete (getObjectId zoCard) $ magicOwnerMap st'
+                }
          in st''
       player <- fromRO $ getPlayer oPlayer
       setPlayer oPlayer $
@@ -817,9 +859,12 @@ setPermanent zoPerm mPerm = logCall 'setPermanent do
           Nothing -> Map.delete (toZO0 zoPerm) permMap
      in st
           { magicPermanents = permMap'
-          , magicOwnershipMap = case mPerm of
-              Just{} -> magicOwnershipMap st
-              Nothing -> Map.delete (getObjectId zoPerm) $ magicOwnershipMap st
+          , magicControllerMap = case mPerm of
+              Just{} -> magicControllerMap st
+              Nothing -> Map.delete (getObjectId zoPerm) $ magicControllerMap st
+          , magicOwnerMap = case mPerm of
+              Just{} -> magicOwnerMap st
+              Nothing -> Map.delete (getObjectId zoPerm) $ magicOwnerMap st
           }
 
 findPlayer :: Monad m => Object 'OTPlayer -> Magic 'Private 'RO m (Maybe Player)

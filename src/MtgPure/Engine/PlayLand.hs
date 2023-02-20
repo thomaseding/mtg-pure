@@ -24,6 +24,7 @@ import safe MtgPure.Engine.Fwd.Api (
   getPlayer,
   modifyPlayer,
   newObjectId,
+  performElections,
   removeHandCard,
   setPermanent,
  )
@@ -50,8 +51,8 @@ import safe MtgPure.Engine.State (
   logCall,
   mkOpaqueGameState,
  )
+import safe MtgPure.Model.ElectStage (ElectStage (..))
 import safe MtgPure.Model.IsCardList (containsCard)
-import safe MtgPure.Model.Object.OTN (OTN)
 import safe MtgPure.Model.Object.OTNAliases (OTNLand)
 import safe MtgPure.Model.Object.Object (Object)
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
@@ -61,14 +62,15 @@ import safe MtgPure.Model.Player (Player (..))
 import safe MtgPure.Model.Recursive (
   AnyCard (..),
   Card (..),
-  CardFacet,
+  CardFacet (..),
+  CardFacet',
+  Elect,
   IsSpecificCard,
-  YourCardFacet (..),
  )
 import safe MtgPure.Model.Stack (Stack (..))
 import safe MtgPure.Model.Zone (IsZone (..), SZone (..))
-import safe MtgPure.Model.ZoneObject.Convert (asCard, oToZO1, toZO0, zo0ToPermanent)
-import safe MtgPure.Model.ZoneObject.ZoneObject (ZO, ZOPlayer)
+import safe MtgPure.Model.ZoneObject.Convert (asCard, toZO0, zo0ToPermanent)
+import safe MtgPure.Model.ZoneObject.ZoneObject (ZO)
 
 data PlayLandReqs = PlayLandReqs
   { playLandReqs_hasPriority :: Bool
@@ -113,6 +115,20 @@ playLand :: Monad m => Object 'OTPlayer -> SpecialAction PlayLand -> Magic 'Priv
 playLand oPlayer (PlayLand oLand) = logCall 'playLand do
   playLandZO oPlayer oLand
 
+viewLand :: CardFacet ot -> Maybe (CardFacet' ot)
+viewLand facet = case facet of
+  ArtifactLandFacet{} -> Just $ artifactLand_spec facet
+  LandFacet{} -> Just $ land_spec facet
+  --
+  ArtifactFacet{} -> Nothing
+  ArtifactCreatureFacet{} -> Nothing
+  CreatureFacet{} -> Nothing
+  EnchantmentFacet{} -> Nothing
+  EnchantmentCreatureFacet{} -> Nothing
+  InstantFacet{} -> Nothing
+  PlaneswalkerFacet{} -> Nothing
+  SorceryFacet{} -> Nothing
+
 playLandZO ::
   forall m zone.
   (Monad m, IsZone zone) =>
@@ -120,69 +136,9 @@ playLandZO ::
   ZO zone OTNLand ->
   Magic 'Private 'RW m Legality
 playLandZO oPlayer zoLand = logCall 'playLandZO do
-  let logCall' s = logCall ('playLandZO, s :: String)
-  st <- internalFromPrivate $ fromRO get
   reqs <- fromRO $ getPlayLandReqs oPlayer
   player <- fromRO $ getPlayer oPlayer
-  let opaque = mkOpaqueGameState st
-      prompt = magicPrompt st
-      hand = playerHand player
-      zoPlayer = oToZO1 oPlayer
-      --
-      invalid :: (ZO zone OTNLand -> InvalidPlayLand) -> Magic 'Private 'RW m Legality
-      invalid ex = do
-        lift $ exceptionInvalidPlayLand prompt opaque oPlayer $ ex zoLand
-        pure Illegal
-      --
-
-      goCard2 ::
-        forall ot1 ot2.
-        (IsSpecificCard ot1, IsSpecificCard ot2) =>
-        Card (ot1, ot2) ->
-        Magic 'Private 'RW m Legality
-      goCard2 = undefined
-
-      goCard1 :: forall ot x. (ot ~ OTN x, IsSpecificCard ot) => Card ot -> Magic 'Private 'RW m Legality
-      goCard1 card@(Card _name yourCard) = logCall' "goCard" case yourCard of
-        YourArtifact{} -> invalid PlayLand_NotALand
-        YourArtifactCreature{} -> invalid PlayLand_NotALand
-        YourCreature{} -> invalid PlayLand_NotALand
-        YourEnchantment{} -> invalid PlayLand_NotALand
-        YourEnchantmentCreature{} -> invalid PlayLand_NotALand
-        YourInstant{} -> invalid PlayLand_NotALand
-        YourPlaneswalker{} -> invalid PlayLand_NotALand
-        YourSorcery{} -> invalid PlayLand_NotALand
-        --
-        YourLand cont -> goPlayerToFacet cont
-        YourArtifactLand cont -> goPlayerToFacet cont
-       where
-        goPlayerToFacet :: IsSpecificCard ot => (ZOPlayer -> CardFacet ot) -> Magic 'Private 'RW m Legality
-        goPlayerToFacet playerToFacet = logCall' "goPlayerToFacet" do
-          let facet = playerToFacet zoPlayer
-          goFacet facet
-
-        goFacet :: CardFacet ot -> Magic 'Private 'RW m Legality
-        goFacet facet = logCall' "goFacet" do
-          () <- case singZone @zone of
-            SZBattlefield -> error $ show CantHappenByConstruction
-            SZExile -> error $ show CantHappenByConstruction
-            SZLibrary -> error $ show CantHappenByConstruction
-            SZStack -> error $ show CantHappenByConstruction
-            SZGraveyard -> undefined -- TODO: [Crucible of Worlds]
-            SZHand -> do
-              removeHandCard oPlayer (asCard zoLand) >>= \case
-                Nothing -> error $ show $ ObjectIdExistsAndAlsoDoesNotExist zoLand
-                Just{} -> pure ()
-          modifyPlayer oPlayer \p -> p{playerLandsPlayedThisTurn = playerLandsPlayedThisTurn p + 1}
-          i <- newObjectId
-          let oLand' = zo0ToPermanent $ toZO0 i
-              perm = case cardToPermanent oPlayer (AnyCard1 card) facet of
-                Nothing -> error $ show ExpectedCardToBeAPermanentCard
-                Just perm' -> perm'
-          modify \st' -> st'{magicOwnershipMap = Map.insert i oPlayer $ magicOwnershipMap st'}
-          setPermanent oLand' $ Just perm
-          pure Legal
-
+  let hand = playerHand player
   case reqs of
     PlayLandReqs{playLandReqs_hasPriority = False} -> invalid PlayLand_NoPriority
     PlayLandReqs{playLandReqs_isActive = False} -> invalid PlayLand_NotActive
@@ -209,5 +165,78 @@ playLandZO oPlayer zoLand = logCall 'playLandZO do
               case containsCard (asCard zoLand) hand of
                 False -> invalid PlayLand_NotOwned
                 True -> case anyCard of
-                  AnyCard1 card -> goCard1 card
-                  AnyCard2 card -> goCard2 card
+                  AnyCard1 card -> goCard anyCard card
+                  AnyCard2 card -> goCard anyCard card
+ where
+  logCall' s = logCall ('playLandZO, s :: String)
+
+  invalid :: (ZO zone OTNLand -> InvalidPlayLand) -> Magic 'Private 'RW m Legality
+  invalid ex = do
+    st <- internalFromPrivate $ fromRO get
+    let opaque = mkOpaqueGameState st
+        prompt = magicPrompt st
+    lift $ exceptionInvalidPlayLand prompt opaque oPlayer $ ex zoLand
+    pure Illegal
+
+  goCard :: AnyCard -> Card ot -> Magic 'Private 'RW m Legality
+  goCard anyCard card = case card of
+    Card _name elect -> goElectIntrinsic anyCard elect
+    _ -> undefined
+
+  goElectIntrinsic ::
+    IsSpecificCard ot =>
+    AnyCard ->
+    Elect 'IntrinsicStage (CardFacet ot) ot ->
+    Magic 'Private 'RW m Legality
+  goElectIntrinsic anyCard electIntrinsic = do
+    i <- newObjectId
+    -- Yes, lands don't use the stack, but we make a faux stack object anyway
+    -- so elections like `Your` work for free. If this ends up being too hokey
+    -- the type of `performElections` would need to be changed. Prolly would
+    -- change the `ZO 'ZStack OT0` to be the result of a type family for the
+    -- non-intrinsic `ElectStage` cases and `ZOPlayer` for `IntrinsicStage`.
+    let zoStack0 = toZO0 i
+    modify \st' ->
+      st'
+        { magicControllerMap = Map.insert i oPlayer $ magicControllerMap st'
+        , magicOwnerMap = Map.insert i oPlayer $ magicOwnerMap st'
+        }
+    mFacet <- fromRO $ performElections zoStack0 (pure . Just) electIntrinsic
+    case mFacet of
+      Nothing -> pure Illegal
+      Just facet -> do
+        result <- goFacet anyCard facet
+        modify \st' ->
+          st'
+            { magicControllerMap = Map.delete i $ magicControllerMap st'
+            , magicOwnerMap = Map.delete i $ magicOwnerMap st'
+            }
+        pure result
+
+  goFacet :: AnyCard -> CardFacet ot -> Magic 'Private 'RW m Legality
+  goFacet anyCard facet = logCall' "goFacet" case viewLand facet of
+    Nothing -> pure Illegal
+    Just facet' -> do
+      () <- case singZone @zone of
+        SZBattlefield -> error $ show CantHappenByConstruction
+        SZExile -> error $ show CantHappenByConstruction
+        SZLibrary -> error $ show CantHappenByConstruction
+        SZStack -> error $ show CantHappenByConstruction
+        SZGraveyard -> undefined -- TODO: [Crucible of Worlds]
+        SZHand -> do
+          removeHandCard oPlayer (asCard zoLand) >>= \case
+            Nothing -> error $ show $ ObjectIdExistsAndAlsoDoesNotExist zoLand
+            Just{} -> pure ()
+      modifyPlayer oPlayer \p -> p{playerLandsPlayedThisTurn = playerLandsPlayedThisTurn p + 1}
+      i <- newObjectId
+      let oLand' = zo0ToPermanent $ toZO0 i
+          perm = case cardToPermanent anyCard facet facet' of
+            Nothing -> error $ show ExpectedCardToBeAPermanentCard
+            Just perm' -> perm'
+      modify \st' ->
+        st'
+          { magicControllerMap = Map.insert i oPlayer $ magicControllerMap st'
+          , magicOwnerMap = Map.insert i oPlayer $ magicOwnerMap st'
+          }
+      setPermanent oLand' $ Just perm
+      pure Legal

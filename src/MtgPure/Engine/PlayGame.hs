@@ -110,6 +110,7 @@ mkGameState fwd input = case playerObjects of
     Just
       GameState
         { magic_ = ()
+        , magicControllerMap = controllerMap
         , magicCurrentTurn = 0
         , magicExiledCards = mempty
         , magicFwd = fwd
@@ -123,7 +124,7 @@ mkGameState fwd input = case playerObjects of
         , magicNextObjectDiscriminant = (1 +) <$> DefaultObjectDiscriminant
         , magicNextObjectId = ObjectId $ 1 + playerCount
         , magicNextVariableId = VariableId 1
-        , magicOwnershipMap = Map.fromList $ map (\o -> (getObjectId o, o)) playerObjects
+        , magicOwnerMap = ownerMap
         , magicPermanents = mempty
         , magicPhaseStep = PSBeginningPhase UntapStep
         , magicPlayers = playerMap
@@ -145,3 +146,5 @@ mkGameState fwd input = case playerObjects of
   playerObjects = idToObject . UntypedObject DefaultObjectDiscriminant <$> playerIds
   players = zipWith (mkPlayer format) playerObjects decks
   playerMap = Map.fromList $ zip playerObjects players
+  ownerMap = Map.fromList $ map (\o -> (getObjectId o, o)) playerObjects
+  controllerMap = ownerMap

@@ -316,13 +316,13 @@ instance Num (ManaCost 'NoVar) where
 instance ForceVars (ManaCost var) (ManaCost 'NoVar) where
   forceVars = mapManaCost forceVars
 
-deriving instance Show (AnyElected pEffect)
+deriving instance Show (AnyElected s)
 
 deriving instance Show Artifact
 
 deriving instance Show Creature
 
-deriving instance Show (Elected pEffect ot)
+deriving instance Show (Elected s ot)
 
 deriving instance Show Enchantment
 

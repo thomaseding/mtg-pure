@@ -13,7 +13,7 @@ module MtgPure.Engine.Fwd.Type (
   Fwd' (..),
 ) where
 
-import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
+import safe Control.Monad.Access (IsReadWrite, ReadWrite (..), Visibility (..))
 import safe qualified Data.Stream as Stream
 import safe Data.Void (Void)
 import safe MtgPure.Engine.Legality (Legality)
@@ -39,6 +39,7 @@ import safe MtgPure.Engine.Prompt (
 import safe MtgPure.Model.BasicLandType (BasicLandType)
 import safe MtgPure.Model.Combinators (CanHaveTrivialManaAbility)
 import safe MtgPure.Model.EffectType (EffectType (..))
+import safe MtgPure.Model.ElectStage (ElectStage (..), ElectStageRW)
 import safe MtgPure.Model.Object.OTN (OT0)
 import safe MtgPure.Model.Object.OTNAliases (OTNCard, OTNPermanent)
 import safe MtgPure.Model.Object.Object (Object)
@@ -46,7 +47,6 @@ import safe MtgPure.Model.Object.ObjectId (ObjectId)
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Permanent (Permanent)
 import safe MtgPure.Model.Player (Player)
-import safe MtgPure.Model.PrePost (PrePost (..))
 import safe MtgPure.Model.Recursive (
   AnyCard,
   Case,
@@ -71,7 +71,7 @@ data Fwd' ex st m where
     , fwd_allZOs :: forall zone ot. IsZO zone ot => Magic' ex st 'Private 'RO m [ZO zone ot]
     , fwd_askPriorityAction :: Object 'OTPlayer -> MagicCont' ex st 'Private 'RW PriorityEnd m ()
     , fwd_bailGainPriority :: forall a. Object 'OTPlayer -> MagicCont' ex st 'Private 'RW PriorityEnd m a
-    , fwd_caseOf :: forall x a. (x -> Magic' ex st 'Private 'RW m a) -> Case x -> Magic' ex st 'Private 'RW m a
+    , fwd_caseOf :: forall rw x a. IsReadWrite rw => (x -> Magic' ex st 'Private rw m a) -> Case x -> Magic' ex st 'Private rw m a
     , fwd_castSpell :: Object 'OTPlayer -> PriorityAction CastSpell -> Magic' ex st 'Private 'RW m Legality
     , fwd_controllerOf :: forall zone ot. IsZO zone ot => ZO zone ot -> Magic' ex st 'Private 'RO m (Object 'OTPlayer)
     , fwd_doesZoneObjectExist :: forall zone ot. IsZO zone ot => ZO zone ot -> Magic' ex st 'Private 'RO m Bool
@@ -98,11 +98,12 @@ data Fwd' ex st m where
     , fwd_getPlayerWithPriority :: Magic' ex st 'Public 'RO m (Maybe (Object 'OTPlayer))
     , fwd_getTrivialManaAbilities :: forall ot. CanHaveTrivialManaAbility ot => ZO 'ZBattlefield ot -> Magic' ex st 'Private 'RO m [SomeActivatedAbility 'ZBattlefield ot]
     , fwd_indexToActivated :: forall zone ot. IsZO zone ot => AbsoluteActivatedAbilityIndex -> Magic' ex st 'Private 'RO m (Maybe (SomeActivatedAbility zone ot))
+    , fwd_localNewObjectId :: forall rw a. IsReadWrite rw => Object 'OTPlayer -> (ObjectId -> Magic' ex st 'Private rw m a) -> Magic' ex st 'Private rw m a
     , fwd_newObjectId :: Magic' ex st 'Private 'RW m ObjectId
     , fwd_newVariableId :: Magic' ex st 'Private 'RW m VariableId
     , fwd_ownerOf :: forall zone ot. IsZO zone ot => ZO zone ot -> Magic' ex st 'Private 'RO m (Object 'OTPlayer)
     , fwd_pay :: forall ot. Object 'OTPlayer -> Cost ot -> Magic' ex st 'Private 'RW m Legality
-    , fwd_performElections :: forall ot p el x. ZO 'ZStack OT0 -> (el -> Magic' ex st 'Private 'RW m (Maybe x)) -> Elect p el ot -> Magic' ex st 'Private 'RW m (Maybe x)
+    , fwd_performElections :: forall ot s el x. IsReadWrite (ElectStageRW s) => ZO 'ZStack OT0 -> (el -> Magic' ex st 'Private (ElectStageRW s) m (Maybe x)) -> Elect s el ot -> Magic' ex st 'Private (ElectStageRW s) m (Maybe x)
     , fwd_performStateBasedActions :: Magic' ex st 'Private 'RW m ()
     , fwd_pickOneZO :: forall zone ot. IsZO zone ot => Object 'OTPlayer -> [ZO zone ot] -> Magic' ex st 'Public 'RW m (Maybe (ZO zone ot))
     , fwd_playLand :: Object 'OTPlayer -> SpecialAction PlayLand -> Magic' ex st 'Private 'RW m Legality
@@ -113,7 +114,7 @@ data Fwd' ex st m where
     , fwd_removeGraveyardCard :: Object 'OTPlayer -> ZO 'ZGraveyard OTNCard -> Magic' ex st 'Private 'RW m (Maybe AnyCard)
     , fwd_removeHandCard :: Object 'OTPlayer -> ZO 'ZHand OTNCard -> Magic' ex st 'Private 'RW m (Maybe AnyCard)
     , fwd_removeLibraryCard :: Object 'OTPlayer -> ZO 'ZLibrary OTNCard -> Magic' ex st 'Private 'RW m (Maybe AnyCard)
-    , fwd_resolveElected :: forall ot. IsOTN ot => ZO 'ZStack OT0 -> Elected 'Pre ot -> Magic' ex st 'Private 'RW m ResolveElected
+    , fwd_resolveElected :: forall ot. IsOTN ot => ZO 'ZStack OT0 -> Elected 'TargetStage ot -> Magic' ex st 'Private 'RW m ResolveElected
     , fwd_resolveTopOfStack :: MagicCont' ex st 'Private 'RW PriorityEnd m Void
     , fwd_rewindIllegal :: Magic' ex st 'Private 'RW m Legality -> Magic' ex st 'Private 'RW m Bool
     , fwd_rewindIllegalActivation :: Magic' ex st 'Private 'RW m ActivateResult -> Magic' ex st 'Private 'RW m ActivateResult

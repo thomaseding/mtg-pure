@@ -58,13 +58,13 @@ import safe MtgPure.Engine.State (
   logCall,
  )
 import safe MtgPure.Model.EffectType (EffectType (..))
+import safe MtgPure.Model.ElectStage (ElectStage (..))
 import safe MtgPure.Model.Object.OTN (OT0)
 import safe MtgPure.Model.Object.Object (Object)
 import safe MtgPure.Model.Object.ObjectId (getObjectId)
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Permanent (cardToPermanent)
-import safe MtgPure.Model.PrePost (PrePost (..))
-import safe MtgPure.Model.Recursive (AnyCard (..), CardFacet, Effect (..), Elect (..))
+import safe MtgPure.Model.Recursive (AnyCard (..), CardFacet, CardFacet', Effect (..), Elect (..))
 import safe MtgPure.Model.Stack (Stack (..), stackObjectToZo0)
 import safe MtgPure.Model.Zone (Zone (..))
 import safe MtgPure.Model.ZoneObject.Convert (toZO0, zo0ToPermanent)
@@ -83,7 +83,8 @@ resolveTopOfStack = M.join $ logCall 'resolveTopOfStack do
         st
           { magicStackEntryTargetsMap = Map.delete zoStack $ magicStackEntryTargetsMap st
           , magicStackEntryElectedMap = Map.delete zoStack $ magicStackEntryElectedMap st
-          , magicOwnershipMap = Map.delete (getObjectId zoStack) $ magicOwnershipMap st
+          , magicControllerMap = Map.delete (getObjectId zoStack) $ magicControllerMap st
+          , magicOwnerMap = Map.delete (getObjectId zoStack) $ magicOwnerMap st
           }
       oActive <- liftCont $ fromPublicRO getActivePlayer
       bailGainPriority oActive
@@ -101,7 +102,7 @@ resolveStackObject zoStack = logCall 'resolveStackObject do
     Just anyElected -> case anyElected of
       AnyElected elected -> resolveElected zoStack elected
 
-resolveElected :: forall ot m. (IsOTN ot, Monad m) => ZO 'ZStack OT0 -> Elected 'Pre ot -> Magic 'Private 'RW m ResolveElected
+resolveElected :: forall ot m. (IsOTN ot, Monad m) => ZO 'ZStack OT0 -> Elected 'TargetStage ot -> Magic 'Private 'RW m ResolveElected
 resolveElected zoStack elected = logCall 'resolveElected do
   case elected of
     ElectedActivatedAbility{} -> do
@@ -119,6 +120,7 @@ resolveElected zoStack elected = logCall 'resolveElected do
                   { electedPermanent_controller = electedSpell_controller elected
                   , electedPermanent_card = card
                   , electedPermanent_facet = electedSpell_facet elected
+                  , electedPermanent_facet' = electedSpell_facet' elected
                   }
           resolvePermanent electedPerm
           pure PermanentResolved
@@ -128,14 +130,18 @@ resolveOneShot ::
   ZO 'ZStack OT0 ->
   -- | `Nothing` is for tokens
   Maybe OwnedCard ->
-  Elect 'Post (Effect 'OneShot) ot ->
+  Elect 'ResolveStage (Effect 'OneShot) ot ->
   Magic 'Private 'RW m ResolveElected
 resolveOneShot zoStack mCard elect = logCall 'resolveOneShot do
   mResult <- performElections zoStack goEffect elect
   case mCard of
     Nothing -> pure ()
     Just (OwnedCard oPlayer card) -> do
-      modify \st -> st{magicOwnershipMap = Map.delete (getObjectId zoStack) $ magicOwnershipMap st}
+      modify \st ->
+        st
+          { magicControllerMap = Map.delete (getObjectId zoStack) $ magicControllerMap st
+          , magicOwnerMap = Map.delete (getObjectId zoStack) $ magicOwnerMap st
+          }
       M.void $ pushGraveyardCard oPlayer card
   pure case mResult of
     Just result -> result
@@ -151,6 +157,7 @@ data ElectedPermanent (ot :: Type) :: Type where
     { electedPermanent_controller :: Object 'OTPlayer
     , electedPermanent_card :: AnyCard -- TODO: OwnedCard
     , electedPermanent_facet :: CardFacet ot
+    , electedPermanent_facet' :: CardFacet' ot
     } ->
     ElectedPermanent ot
   deriving (Typeable)
@@ -159,14 +166,19 @@ resolvePermanent :: (IsOTN ot, Monad m) => ElectedPermanent ot -> Magic 'Private
 resolvePermanent elected = logCall 'resolvePermanent do
   i <- newObjectId
   let oPerm = zo0ToPermanent $ toZO0 i
-      perm = case cardToPermanent oPlayer card facet of
+      perm = case cardToPermanent card facet facet' of
         Nothing -> error $ show ExpectedCardToBeAPermanentCard
         Just perm' -> perm'
-  modify \st -> st{magicOwnershipMap = Map.insert i oPlayer $ magicOwnershipMap st}
+  modify \st ->
+    st
+      { magicControllerMap = Map.insert i oPlayer $ magicControllerMap st
+      , magicOwnerMap = Map.insert i oPlayer $ magicOwnerMap st
+      }
   setPermanent oPerm $ Just perm
  where
   ElectedPermanent
     { electedPermanent_controller = oPlayer
     , electedPermanent_card = card
     , electedPermanent_facet = facet
+    , electedPermanent_facet' = facet'
     } = elected

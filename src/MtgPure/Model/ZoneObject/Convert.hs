@@ -33,6 +33,7 @@ module MtgPure.Model.ZoneObject.Convert (
   AsSpell,
   asActivatedOrTriggeredAbility,
   asAny,
+  asAny0,
   asCard,
   asCreaturePlayerPlaneswalker,
   asDamageSource,
@@ -462,23 +463,38 @@ castOToON o = objN
     goCast :: Typeable z' => (Object z' -> ObjectN ot') -> Maybe (ObjectN ot')
     goCast f = f <$> cast o
 
+type ToActivatedOrTriggeredAbility = ToObject2
+
 type AsActivatedOrTriggeredAbility ot =
-  ToObject2 ot 'OTActivatedAbility 'OTTriggeredAbility
+  ToActivatedOrTriggeredAbility
+    ot
+    'OTActivatedAbility
+    'OTTriggeredAbility
+
+type ToCreaturePlayerPlaneswalker = ToObject3
 
 type AsCreaturePlayerPlaneswalker ot =
-  ToObject3 ot 'OTCreature 'OTPlaneswalker 'OTPlayer
+  ToCreaturePlayerPlaneswalker
+    ot
+    'OTCreature
+    'OTPlaneswalker
+    'OTPlayer
+
+type ToPermanent = ToObject5
 
 type AsPermanent ot =
-  ToObject5
+  ToPermanent
     ot
     'OTArtifact
     'OTCreature
     'OTEnchantment
     'OTLand
     'OTPlaneswalker
+
+type ToSpell' = ToObject6'
 
 type AsSpell' ot =
-  ToObject6'
+  ToSpell'
     ot
     'OTArtifact
     'OTCreature
@@ -486,9 +502,11 @@ type AsSpell' ot =
     'OTInstant
     'OTPlaneswalker
     'OTSorcery
+
+type ToSpell = ToObject6
 
 type AsSpell ot =
-  ToObject6
+  ToSpell
     ot
     'OTArtifact
     'OTCreature
@@ -497,8 +515,10 @@ type AsSpell ot =
     'OTPlaneswalker
     'OTSorcery
 
+type ToCard = ToObject7
+
 type AsCard ot =
-  ToObject7
+  ToCard
     ot
     'OTArtifact
     'OTCreature
@@ -508,8 +528,10 @@ type AsCard ot =
     'OTPlaneswalker
     'OTSorcery
 
+type ToDamageSource = ToObject8
+
 type AsDamageSource ot =
-  ToObject8
+  ToDamageSource
     ot
     'OTArtifact
     'OTCreature
@@ -520,8 +542,10 @@ type AsDamageSource ot =
     'OTPlayer
     'OTSorcery
 
+type ToAny = ToObject12
+
 type AsAny ot =
-  ToObject12
+  ToAny
     ot
     'OTActivatedAbility
     'OTArtifact
@@ -562,6 +586,9 @@ asDamageSource = toZO8
 
 asAny :: AsAny ot => ZO zone ot -> ZO zone OTNAny
 asAny = toZO12
+
+asAny0 :: ZO zone OT0 -> ZO zone OTNAny
+asAny0 = asAny . toZO1 @OT0 @ 'OTArtifact
 
 zo0ToPermanent :: ZO 'ZBattlefield OT0 -> ZO 'ZBattlefield OTNPermanent
 zo0ToPermanent = asPermanent . ZO SZBattlefield . O1 . Object SLand . getUntypedObject
