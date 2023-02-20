@@ -191,7 +191,7 @@ getCastSpellReqs oPlayer = logCall 'getCastSpellReqs do
 data CastMeta (ot :: Type) :: Type where
   CastMeta ::
     { castMeta_effect :: Maybe (CardSpec ot -> WithThisOneShot ot)
-    , castMeta_cost :: CardSpec ot -> Cost ot
+    , castMeta_cost :: CardSpec ot -> Cost
     } ->
     CastMeta ot
 
@@ -497,9 +497,9 @@ playPendingOneShot ::
   (AndLike x, AndLike (Maybe x), IsZO 'ZStack ot) =>
   Monad m =>
   ZO 'ZStack OT0 ->
-  Cost ot ->
+  Cost ->
   WithThisOneShot ot ->
-  (Cost ot -> Maybe (Pending (Effect 'OneShot) ot) -> Magic 'Private 'RW m (Maybe x)) ->
+  (Cost -> Maybe (Pending (Effect 'OneShot) ot) -> Magic 'Private 'RW m (Maybe x)) ->
   Magic 'Private 'RW m (Maybe x)
 playPendingOneShot _zoStack cost withThisElectEffect cont = logCall 'playPendingOneShot do
   thisId <- newObjectId
@@ -513,8 +513,8 @@ playPendingPermanent ::
   (AndLike x, AndLike (Maybe x)) =>
   Monad m =>
   ZO 'ZStack OT0 ->
-  Cost ot ->
-  (Cost ot -> Maybe (Pending (Effect 'OneShot) ot) -> Magic 'Private 'RW m (Maybe x)) ->
+  Cost ->
+  (Cost -> Maybe (Pending (Effect 'OneShot) ot) -> Magic 'Private 'RW m (Maybe x)) ->
   Magic 'Private 'RW m (Maybe x)
 playPendingPermanent _zoStack cost cont = logCall 'playPendingPermanent do
   cont cost Nothing
@@ -523,9 +523,9 @@ playPendingAbility ::
   forall m ot x.
   Monad m =>
   ZO 'ZStack OT0 ->
-  Cost ot ->
+  Cost ->
   Elect 'ResolveStage (Effect 'OneShot) ot ->
-  (Cost ot -> Pending (Effect 'OneShot) ot -> Magic 'Private 'RW m x) ->
+  (Cost -> Pending (Effect 'OneShot) ot -> Magic 'Private 'RW m x) ->
   Magic 'Private 'RW m x
 playPendingAbility _zoStack cost electEffect cont = logCall 'playPendingAbility do
   pure () -- TODO: other stuff?

@@ -27,6 +27,7 @@ module MtgPure.Model.Recursive (
   Event,
   EventListener,
   EventListener' (..),
+  FinPayment,
   IsSpecificCard (..),
   IsUser (..),
   List (..),
@@ -64,7 +65,7 @@ module MtgPure.Model.Recursive (
 import safe Data.ConsIndex (ConsIndex (..))
 import safe Data.Inst (Inst1, Inst2, Inst3, Inst4, Inst5, Inst6)
 import safe Data.Kind (Type)
-import safe Data.Nat (Fin, IsNat, NatList)
+import safe Data.Nat (Fin (..), IsNat, NatList (..), ToNat)
 import safe Data.Proxy (Proxy (..))
 import safe Data.Typeable (Typeable, typeRep)
 import safe MtgPure.Model.ArtifactType (ArtifactType)
@@ -156,11 +157,11 @@ instance ConsIndex (Ability zone ot) where
 data ActivatedAbility (zone :: Zone) (ot :: Type) :: Type where
   Ability ::
     IsZO zone ot =>
-    { activated_cost :: Cost ot
+    { activated_cost :: Cost
     , activated_effect :: Elect 'ResolveStage (Effect 'OneShot) ot
     } ->
     ActivatedAbility zone ot
-  Cycling :: (ot ~ OTN x, IsOTN ot) => Cost ot -> ActivatedAbility 'ZHand ot
+  Cycling :: (ot ~ OTN x, IsOTN ot) => Cost -> ActivatedAbility 'ZHand ot
   deriving (Typeable)
 
 instance ConsIndex (ActivatedAbility zone ot) where
@@ -185,6 +186,8 @@ instance IsUser () where
   showUserType = "()"
 
 instance IsUser Color
+
+instance IsUser (Maybe Cost)
 
 -- TODO: Move out of Recursive.hs
 -- TODO: EnchantmentLand [Urza's Saga]
@@ -402,12 +405,12 @@ instance ConsIndex (CardCharacteristic ot) where
 
 data CardSpec (ot :: Type) :: Type where
   ArtifactSpec ::
-    { artifact_cost :: Cost OTNArtifact
+    { artifact_cost :: Cost
     , artifact_abilities :: [SomeZone WithThisAbility OTNArtifact]
     } ->
     CardSpec OTNArtifact
   ArtifactCreatureSpec ::
-    { artifactCreature_cost :: Cost OTNArtifactCreature
+    { artifactCreature_cost :: Cost
     , -- TODO: artifactCreature_abilities :: [SomeOT (SomeZone WithThisAbility) OTNArtifactCreature]
       artifactCreature_artifactAbilities :: [SomeZone WithThisAbility OTNArtifact]
     , artifactCreature_creatureAbilities :: [SomeZone WithThisAbility OTNCreature]
@@ -421,24 +424,24 @@ data CardSpec (ot :: Type) :: Type where
     } ->
     CardSpec OTNArtifactLand
   CreatureSpec ::
-    { creature_cost :: Cost OTNCreature
+    { creature_cost :: Cost
     , creature_abilities :: [SomeZone WithThisAbility OTNCreature]
     } ->
     CardSpec OTNCreature
   EnchantmentSpec ::
-    { enchantment_cost :: Cost OTNEnchantment
+    { enchantment_cost :: Cost
     , enchantment_abilities :: [SomeZone WithThisAbility OTNEnchantment]
     } ->
     CardSpec OTNEnchantment
   EnchantmentCreatureSpec ::
-    { enchantmentCreature_cost :: Cost OTNEnchantmentCreature
+    { enchantmentCreature_cost :: Cost
     , enchantmentCreature_creatureAbilities :: [SomeZone WithThisAbility OTNCreature]
     , enchantmentCreature_enchantmentAbilities :: [SomeZone WithThisAbility OTNEnchantment]
     , enchantmentCreature_enchantmentCreatureAbilities :: [SomeZone WithThisAbility OTNEnchantmentCreature]
     } ->
     CardSpec OTNEnchantmentCreature
   InstantSpec ::
-    { instant_cost :: Cost OTNInstant
+    { instant_cost :: Cost
     , instant_abilities :: [SomeZone WithThisAbility OTNInstant]
     , instant_effect :: WithThisOneShot OTNInstant
     } ->
@@ -448,13 +451,13 @@ data CardSpec (ot :: Type) :: Type where
     } ->
     CardSpec OTNLand
   PlaneswalkerSpec ::
-    { planeswalker_cost :: Cost OTNPlaneswalker
+    { planeswalker_cost :: Cost
     , planeswalker_loyalty :: Loyalty
     , planeswalker_abilities :: [SomeZone WithThisAbility OTNPlaneswalker]
     } ->
     CardSpec OTNPlaneswalker
   SorcerySpec ::
-    { sorcery_cost :: Cost OTNSorcery
+    { sorcery_cost :: Cost
     , sorcery_abilities :: [SomeZone WithThisAbility OTNSorcery]
     , sorcery_effect :: WithThisOneShot OTNSorcery
     } ->
@@ -520,20 +523,20 @@ pattern CTrue = CAnd []
 -- (or whatever types) gets a constructor that can obtain an abstract runtime Cost which can be queried by
 -- the API. This would likely require the model to encode more contingencies to handle dynamic issues, but this
 -- is likely overwhelmingly worth it to avoid the continuation approach.
-data Cost (ot :: Type) :: Type where
-  AndCosts :: [Cost ot] -> Cost ot
-  CostCase :: Case (Cost ot) -> Cost ot
-  DiscardRandomCost :: Int -> Cost ot -- TODO: PositiveInt
-  ExileCost :: IsZO zone ot' => [Requirement zone ot'] -> Cost ot -- TODO: prohibit (zone == 'ZExile)
-  LoyaltyCost :: Loyalty -> Cost OTNPlaneswalker
-  ManaCost :: ManaCost 'Var -> Cost ot
-  OrCosts :: [Cost ot] -> Cost ot
-  PayLife :: Int -> Cost ot -- TODO: PositiveInt
-  SacrificeCost :: (CoPermanent ot', IsZO 'ZBattlefield ot') => [Requirement 'ZBattlefield ot'] -> Cost ot
-  TapCost :: (CoPermanent ot', IsZO 'ZBattlefield ot') => [Requirement 'ZBattlefield ot'] -> Cost ot
+data Cost :: Type where
+  AndCosts :: [Cost] -> Cost
+  CostCase :: Case Cost -> Cost
+  DiscardRandomCost :: Int -> Cost -- TODO: PositiveInt
+  ExileCost :: IsZO zone ot' => [Requirement zone ot'] -> Cost -- TODO: prohibit (zone == 'ZExile)
+  LoyaltyCost :: ZO 'ZBattlefield OTNPlaneswalker -> Loyalty -> Cost
+  ManaCost :: ManaCost 'Var -> Cost
+  OrCosts :: [Cost] -> Cost
+  PayLife :: Int -> Cost -- TODO: PositiveInt
+  SacrificeCost :: (CoPermanent ot', IsZO 'ZBattlefield ot') => [Requirement 'ZBattlefield ot'] -> Cost
+  TapCost :: (CoPermanent ot', IsZO 'ZBattlefield ot') => [Requirement 'ZBattlefield ot'] -> Cost
   deriving (Typeable)
 
-instance ConsIndex (Cost ot) where
+instance ConsIndex Cost where
   consIndex = \case
     AndCosts{} -> 1
     CostCase{} -> 2
@@ -632,7 +635,7 @@ data Elect (s :: ElectStage) (el :: Type) (ot :: Type) :: Type where
     Elect s el ot
   Condition :: Condition -> Elect s Condition ot
   ControllerOf :: IsZO zone OTNAny => ZO zone OTNAny -> (ZOPlayer -> Elect s el ot) -> Elect s el ot
-  Cost :: Cost ot -> Elect 'IntrinsicStage (Cost ot) ot -- XXX: can this constructor be removed?
+  Cost :: Cost -> Elect 'IntrinsicStage Cost ot -- XXX: can this constructor be removed?
   Effect :: Typeable ef => [Effect ef] -> Elect 'ResolveStage (Effect ef) ot
   ElectActivated :: IsZO zone ot => ActivatedAbility zone ot -> Elect 'TargetStage (ActivatedAbility zone ot) ot
   ElectCardFacet :: CardCharacteristic ot -> Elect 'IntrinsicStage (CardCharacteristic ot) ot
@@ -640,9 +643,10 @@ data Elect (s :: ElectStage) (el :: Type) (ot :: Type) :: Type where
   ElectCase :: Case (Elect s el ot) -> Elect s el ot
   EndTargets :: Typeable el => Elect 'ResolveStage el ot -> Elect 'TargetStage (Elect 'ResolveStage el ot) ot
   Event :: Event -> Elect 'ResolveStage Event ot
-  If :: Condition -> Elect 'ResolveStage el ot -> Else el ot -> Elect 'ResolveStage el ot -- NOTE: It is probably correct to allow this constructor with CardTypeDef usage in order to encode split cards and such.
-  Listen :: EventListener -> Elect 'ResolveStage EventListener ot
+  If :: Condition -> Elect s el ot -> Else s el ot -> Elect s el ot -- NOTE: It is probably correct to allow this constructor with CardTypeDef usage in order to encode split cards and such.
+  Listen :: EventListener -> Elect 'IntrinsicStage EventListener ot
   OwnerOf :: IsZO zone OTNAny => ZO zone OTNAny -> (ZOPlayer -> Elect s el ot) -> Elect s el ot
+  PlayerPays :: ZOPlayer -> Cost -> (Variable FinPayment -> Elect 'ResolveStage el ot) -> Elect 'ResolveStage el ot
   -- TODO: Add `IsZO zone ot` witness and change `'ZBattlefield` to `zone`.
   -- TODO: Prolly allow both 'Pre and 'Post
   -- XXX: `Random` is potentially problematic when done within an aggregate Elect such as `All`...
@@ -689,11 +693,12 @@ instance ConsIndex (Elect s el ot) where
     If{} -> 15
     Listen{} -> 16
     OwnerOf{} -> 17
-    Random{} -> 18
-    Target{} -> 19
-    VariableFromPower{} -> 20
-    VariableInt{} -> 21
-    Your{} -> 22
+    PlayerPays{} -> 18
+    Random{} -> 19
+    Target{} -> 20
+    VariableFromPower{} -> 21
+    VariableInt{} -> 22
+    Your{} -> 23
 
 type ElectTargetedEffect ef ot = Elect 'TargetStage (Elect 'ResolveStage ef ot) ot
 
@@ -704,18 +709,18 @@ data ElectOT (s :: ElectStage) (liftOT :: Type -> Type) (ot :: Type) where
 
 --------------------------------------------------------------------------------
 
-data Else (el :: Type) (ot :: Type) :: Type where
-  ElseCost :: (el ~ Cost ot) => Elect 'ResolveStage el ot -> Else el ot
-  ElseEffect :: (el ~ Effect 'OneShot) => Elect 'ResolveStage el ot -> Else el ot
+data Else (s :: ElectStage) (el :: Type) (ot :: Type) :: Type where
+  ElseCost :: (el ~ Cost) => Elect s el ot -> Else s el ot
+  ElseEffect :: (el ~ Effect 'OneShot) => Elect s el ot -> Else s el ot
   -- NOTE: Events need linear history to make sense of election costs tied to it, hence this hole.
   -- Imagine otherwise this were not the case. Then different parts of the branch could listen to different
   -- event types (without injecting yet another index/witness to prevent it). This is is dumb on its own
   -- and gets worse when the conditional has costs involved. You'd have to solve for the future to know what
   -- costs are paid in order to know which event to trigger! Impossible!
-  ElseEvent :: (el ~ EventListener' liftOT) => Else el ot
+  ElseEvent :: (el ~ EventListener' liftOT) => Else s el ot
   deriving (Typeable)
 
-instance ConsIndex (Else el ot) where
+instance ConsIndex (Else s el ot) where
   consIndex = \case
     ElseCost{} -> 1
     ElseEffect{} -> 2
@@ -784,6 +789,10 @@ instance ConsIndex (EventListener' liftOT) where
 
 --------------------------------------------------------------------------------
 
+type FinPayment = Fin (Maybe Cost) (ToNat 1)
+
+--------------------------------------------------------------------------------
+
 newtype List a = List [a]
   deriving (Functor, Typeable)
 
@@ -815,7 +824,6 @@ data Requirement (zone :: Zone) (ot :: Type) :: Type where
   Not :: IsZO zone ot => Requirement zone ot -> Requirement zone ot
   OfColors :: IsZO zone ot => Colors -> Requirement zone ot -- needs `WCard a` witness
   OwnedBy :: IsZO zone ot => ZOPlayer -> Requirement zone ot
-  PlayerPays :: IsZO zone OTNPlayer => Cost OTNPlayer -> Requirement zone OTNPlayer
   RAnd :: IsZO zone ot => [Requirement zone ot] -> Requirement zone ot
   ROr :: IsZO zone ot => [Requirement zone ot] -> Requirement zone ot
   -- TODO: Try to add some combinators that go from: forall a b. [forall liftOT. Requirement x] -> Requirement (ON2 a, b)
@@ -867,13 +875,12 @@ instance ConsIndex (Requirement zone ot) where
     Not{} -> 8
     OfColors{} -> 9
     OwnedBy{} -> 10
-    PlayerPays{} -> 11
-    RAnd{} -> 12
-    ROr{} -> 13
-    Req2{} -> 14
-    Req3{} -> 15
-    Req4{} -> 16
-    Req5{} -> 17
+    RAnd{} -> 11
+    ROr{} -> 12
+    Req2{} -> 13
+    Req3{} -> 14
+    Req4{} -> 15
+    Req5{} -> 16
 
 --------------------------------------------------------------------------------
 
@@ -1042,7 +1049,7 @@ instance ConsIndex (SomeZone liftZOT ot) where
 data StaticAbility (zone :: Zone) (ot :: Type) :: Type where
   As :: (ot ~ OTN x, IsOTN ot) => Elect 'ResolveStage EventListener ot -> StaticAbility 'ZBattlefield ot -- 603.6d: not a triggered ability
   -- XXX: BestowPre and BestowPost
-  Bestow :: ot ~ OTNEnchantmentCreature => Elect 'IntrinsicStage (Cost ot) ot -> Enchant 'ZBattlefield OTNCreature -> StaticAbility 'ZBattlefield ot
+  Bestow :: ot ~ OTNEnchantmentCreature => Elect 'IntrinsicStage Cost ot -> Enchant 'ZBattlefield OTNCreature -> StaticAbility 'ZBattlefield ot
   CantBlock :: ot ~ OTNCreature => StaticAbility 'ZBattlefield ot
   Defender :: ot ~ OTNCreature => StaticAbility 'ZBattlefield ot
   Enters :: IsZO zone ot => EntersStatic zone ot -> StaticAbility zone ot
@@ -1054,7 +1061,7 @@ data StaticAbility (zone :: Zone) (ot :: Type) :: Type where
   Phasing :: CoPermanent ot => StaticAbility 'ZBattlefield ot
   StaticContinuous :: (ot ~ OTN x, IsOTN ot) => Elect 'ResolveStage (Effect 'Continuous) ot -> StaticAbility 'ZBattlefield ot -- 611.3
   -- XXX: SuspendPre and SuspendPost
-  Suspend :: (ot ~ OTN x, IsOTN ot) => Int -> Elect 'IntrinsicStage (Cost ot) ot -> StaticAbility 'ZBattlefield ot -- PositiveInt
+  Suspend :: (ot ~ OTN x, IsOTN ot) => Int -> Elect 'IntrinsicStage Cost ot -> StaticAbility 'ZBattlefield ot -- PositiveInt
   Trample :: ot ~ OTNCreature => StaticAbility 'ZBattlefield ot
   deriving (Typeable)
 
@@ -1094,7 +1101,7 @@ instance HasCardName (Token ot) where
 -- https://www.mtgsalvation.com/forums/magic-fundamentals/magic-rulings/magic-rulings-archives/611601-whenever-what-does-it-mean?comment=3
 -- https://www.reddit.com/r/magicTCG/comments/asmecb/noob_question_difference_between_as_and_when/
 data TriggeredAbility (zone :: Zone) (ot :: Type) :: Type where
-  When :: IsZO 'ZBattlefield ot => Elect 'ResolveStage EventListener ot -> TriggeredAbility 'ZBattlefield ot
+  When :: IsZO 'ZBattlefield ot => Elect 'IntrinsicStage EventListener ot -> TriggeredAbility 'ZBattlefield ot
   deriving (Typeable)
 
 instance ConsIndex (TriggeredAbility zone ot) where

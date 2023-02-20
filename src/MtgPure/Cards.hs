@@ -136,6 +136,7 @@ import safe MtgPure.Model.Combinators (
   counterSpell,
   dealDamage,
   destroy,
+  didNotPayCost,
   event,
   gainAbility,
   gainControl,
@@ -148,7 +149,7 @@ import safe MtgPure.Model.Combinators (
   nonBasic,
   nonBlack,
   ofColors,
-  playerPays,
+  paidCost,
   putOntoBattlefield,
   sacrifice,
   sacrificeCost,
@@ -168,7 +169,6 @@ import safe MtgPure.Model.Mana.Mana (Mana (VariableMana))
 import safe MtgPure.Model.Mana.ManaSymbol (ManaSymbol (..))
 import safe MtgPure.Model.Mana.ManaType (ManaType (..))
 import safe MtgPure.Model.Mana.Snow (Snow (..))
-import safe MtgPure.Model.Mana.ToManaCost (ToManaCost (toManaCost))
 import safe MtgPure.Model.Mana.ToManaPool (ToManaPool (..))
 import safe MtgPure.Model.Object.OTN (OT2, OT3)
 import safe MtgPure.Model.Object.OTNAliases (
@@ -198,7 +198,6 @@ import safe MtgPure.Model.Recursive (
   CardCharacteristic (..),
   CardSpec (..),
   Case (CaseFin, caseFin, ofFin),
-  Condition (COr),
   Cost (..),
   Effect (
     AddMana,
@@ -222,6 +221,7 @@ import safe MtgPure.Model.Recursive (
     ElectActivated,
     ElectCardFacet,
     ElectCardSpec,
+    PlayerPays,
     Target,
     VariableFromPower,
     VariableInt,
@@ -821,16 +821,19 @@ conversion =
                       When $
                         ActivePlayer \active ->
                           controllerOf this \you ->
-                            let cond =
-                                  COr
-                                    [ satisfies you [Not $ is active]
-                                    , satisfies you [is active, playerPays $ toManaCost (W, W)]
-                                    ]
-                             in ifElse cond $
+                            let isNotYourTurn = satisfies you [Not $ is active]
+                             in ifElse isNotYourTurn $
                                   event $
                                     TimePoint (StepBegin UpkeepStep) $
-                                      effect $
-                                        sacrifice you [is this]
+                                      PlayerPays you (manaCost (W, W)) \option ->
+                                        effect $
+                                          EffectCase
+                                            CaseFin
+                                              { caseFin = option
+                                              , ofFin =
+                                                  paidCost (Sequence []) $
+                                                    didNotPayCost $ sacrifice you [is this]
+                                              }
                   , static \_this ->
                       StaticContinuous $
                         All $ maskeds [hasLandType Mountain] \lands ->
@@ -1309,8 +1312,15 @@ manaLeak = Card "Mana Leak" $
                   , instant_abilities = []
                   , instant_effect = thisObject \_this ->
                       controllerOf spell \controller ->
-                        ifElse (satisfies controller [playerPays $ toManaCost 3]) $
-                          effect $ counterSpell spell
+                        PlayerPays controller (manaCost 3) \option ->
+                          effect $
+                            EffectCase
+                              CaseFin
+                                { caseFin = option
+                                , ofFin =
+                                    paidCost (Sequence []) $
+                                      didNotPayCost (counterSpell spell)
+                                }
                   }
         }
 

@@ -127,11 +127,11 @@ data family Tree (a :: Type) :: Type
 data instance Tree (ActivatedAbility zone ot) where
   TreeAbility ::
     IsZO zone ot =>
-    { treeActivated_cost :: Tree (Cost ot)
+    { treeActivated_cost :: Tree Cost
     , treeActivated_effect :: Tree (Elect 'TargetStage (Effect 'OneShot) ot)
     } ->
     Tree (ActivatedAbility zone ot)
-  TreeCycling :: (ot ~ OTN x, IsOTN ot) => Tree (Cost ot) -> Tree (ActivatedAbility 'ZHand ot)
+  TreeCycling :: (ot ~ OTN x, IsOTN ot) => Tree Cost -> Tree (ActivatedAbility 'ZHand ot)
 
 data instance Tree AnyCard where
   TreeAnyCard1 :: (ot ~ OTN x, IsSpecificCard ot) => Tree (Card ot) -> Tree AnyCard

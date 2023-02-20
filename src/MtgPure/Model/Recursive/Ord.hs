@@ -133,7 +133,7 @@ instance Eq (CardCharacteristic ot) where
 instance Eq Condition where
   (==) x y = runEnvM (ordCondition x y) == EQ
 
-instance IndexOT ot => Eq (Cost ot) where
+instance Eq Cost where
   (==) x y = runEnvM (ordCost x y) == EQ
 
 instance Typeable ef => Eq (Effect ef) where
@@ -201,7 +201,7 @@ instance Ord (CardCharacteristic ot) where
 instance Ord Condition where
   compare x y = runEnvM (ordCondition x y)
 
-instance IndexOT ot => Ord (Cost ot) where
+instance Ord Cost where
   compare x y = runEnvM (ordCost x y)
 
 instance Typeable ef => Ord (Effect ef) where
@@ -671,7 +671,7 @@ ordCondition x = case x of
 ordConditions :: [Condition] -> [Condition] -> EnvM Ordering
 ordConditions = listM ordCondition
 
-ordCost :: IndexOT ot => Cost ot -> Cost ot -> EnvM Ordering
+ordCost :: Cost -> Cost -> EnvM Ordering
 ordCost x = case x of
   AndCosts costs1 -> \case
     AndCosts costs2 -> ordCosts costs1 costs2
@@ -696,8 +696,12 @@ ordCost x = case x of
             Just reqs2 -> seqM [ordRequirements reqs1 reqs2]
        in go reqs1 reqs2
     y -> compareIndexM x y
-  LoyaltyCost amount1 -> \case
-    LoyaltyCost amount2 -> pure $ compare amount1 amount2
+  LoyaltyCost zoPlaneswalker1 amount1 -> \case
+    LoyaltyCost zoPlaneswalker2 amount2 ->
+      seqM
+        [ ordZoneObject zoPlaneswalker1 zoPlaneswalker2
+        , pure $ compare amount1 amount2
+        ]
     y -> compareIndexM x y
   ManaCost mana1 -> \case
     ManaCost mana2 -> ordManaCost mana1 mana2
@@ -737,7 +741,7 @@ ordCost x = case x of
        in go reqs1 reqs2
     y -> compareIndexM x y
 
-ordCosts :: IndexOT ot => [Cost ot] -> [Cost ot] -> EnvM Ordering
+ordCosts :: [Cost] -> [Cost] -> EnvM Ordering
 ordCosts = listM ordCost
 
 ordDamage :: Damage var -> Damage var -> EnvM Ordering
@@ -1180,6 +1184,14 @@ ordElectEl x = case x of
               seqM [ordZoneObject obj1 obj2, ordElectEl elect1 elect2]
        in go obj1 obj2
     y -> compareIndexM x y
+  PlayerPays oPlayer1 cost1 varToRet1 -> \case
+    PlayerPays oPlayer2 cost2 varToRet2 -> do
+      discr <- newVariableId
+      let var = ReifiedVariable discr FZ
+          ret1 = varToRet1 var
+          ret2 = varToRet2 var
+      seqM [ordZoneObject oPlayer1 oPlayer2, ordCost cost1 cost2, ordElectEl ret1 ret2]
+    y -> compareIndexM x y
   Random with1 -> \case
     Random with2 -> ordWithMaskedObjectElectEl with1 with2
     y -> compareIndexM x y
@@ -1227,15 +1239,15 @@ ordElectEl x = case x of
       ordElectEl elect1 elect2
     y -> compareIndexM x y
 
-ordElectResolveEl ::
+ordElectIntrinsicEl ::
   forall el ot.
   (Typeable el, IndexOT ot) =>
-  Elect 'ResolveStage el ot ->
-  Elect 'ResolveStage el ot ->
+  Elect 'IntrinsicStage el ot ->
+  Elect 'IntrinsicStage el ot ->
   EnvM Ordering
-ordElectResolveEl = ordElectEl
+ordElectIntrinsicEl = ordElectEl
 
-ordElseE :: IndexOT ot => Else e ot -> Else e ot -> EnvM Ordering
+ordElseE :: (IndexOT ot, Typeable s) => Else s e ot -> Else s e ot -> EnvM Ordering
 ordElseE = \case
   ElseCost elect1 -> \case
     ElseCost elect2 -> ordElectEl elect1 elect2
@@ -1742,9 +1754,6 @@ ordRequirement x = case x of
   OwnedBy player1 -> \case
     OwnedBy player2 -> ordZoneObject player1 player2
     y -> compareIndexM x y
-  PlayerPays cost1 -> \case
-    PlayerPays cost2 -> ordCost cost1 cost2
-    y -> compareIndexM x y
   RAnd reqs1 -> \case
     RAnd reqs2 -> ordRequirements reqs1 reqs2
     y -> compareIndexM x y
@@ -1921,7 +1930,7 @@ ordTriggeredAbility ::
   EnvM Ordering
 ordTriggeredAbility = \case
   When listener1 -> \case
-    When listener2 -> ordElectResolveEl @EventListener @ot listener1 listener2
+    When listener2 -> ordElectIntrinsicEl @EventListener @ot listener1 listener2
 
 ordVariable :: Variable x -> Variable x -> EnvM Ordering
 ordVariable = \case

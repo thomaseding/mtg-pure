@@ -29,6 +29,7 @@ module MtgPure.Model.Combinators (
   counterSpell,
   dealDamage,
   destroy,
+  didNotPayCost,
   ElectEffect (..),
   event,
   gainAbility,
@@ -48,7 +49,7 @@ module MtgPure.Model.Combinators (
   nonBasic,
   nonBlack,
   ofColors,
-  playerPays,
+  paidCost,
   Proxy (Proxy),
   putOntoBattlefield,
   sacrifice,
@@ -112,7 +113,6 @@ import safe MtgPure.Model.Object.OTNAliases (
   OTNCreature,
   OTNDamageSource,
   OTNLand,
-  OTNPlayer,
  )
 import safe MtgPure.Model.Object.OTN_ (OTN' (..))
 import safe MtgPure.Model.Object.Singleton.Any (CoAny (..))
@@ -356,10 +356,10 @@ instance AsDamage (Damage 'Var) where
 instance AsDamage (Variable Int) where
   asDamage = VariableDamage
 
-manaCost :: ToManaCost a => a -> Cost ot
+manaCost :: ToManaCost a => a -> Cost
 manaCost = ManaCost . toManaCost
 
-noCost :: Cost ot
+noCost :: Cost
 noCost = OrCosts []
 
 dealDamage ::
@@ -413,10 +413,10 @@ satisfies ::
   (IsZone zone, CoAny ot) => ZO zone ot -> [Requirement zone ot] -> Condition
 satisfies = Satisfies
 
-sacrificeCost :: CoPermanent ot' => [Requirement 'ZBattlefield ot'] -> Cost ot
+sacrificeCost :: CoPermanent ot' => [Requirement 'ZBattlefield ot'] -> Cost
 sacrificeCost = SacrificeCost
 
-tapCost :: CoPermanent ot' => [Requirement 'ZBattlefield ot'] -> Cost ot
+tapCost :: CoPermanent ot' => [Requirement 'ZBattlefield ot'] -> Cost
 tapCost = TapCost
 
 isTapped :: CoPermanent ot => Requirement 'ZBattlefield ot
@@ -429,16 +429,13 @@ ofColors :: (IsZO zone ot, ColorsLike c) => c -> Requirement zone ot
 ofColors = OfColors . toColors
 
 class AsCost c ot where
-  asCost :: c -> Cost ot
+  asCost :: c -> Cost
 
-instance AsCost (Cost ot) ot where
+instance AsCost Cost ot where
   asCost = id
 
 instance AsCost (ManaCost 'Var) ot where
   asCost = ManaCost
-
-playerPays :: (IsZone zone, AsCost c OTNPlayer) => c -> Requirement zone OTNPlayer
-playerPays = PlayerPays . asCost
 
 class ElectEffect effect elect where
   effect :: effect -> elect
@@ -458,48 +455,48 @@ instance Typeable ef => ElectEffect (Effect ef) (ElectTargetedEffect (Effect ef)
 instance Typeable ef => ElectEffect [Effect ef] (ElectTargetedEffect (Effect ef) ot) where
   effect = EndTargets . effect
 
-class EventLike el where
-  event :: el -> Elect 'ResolveStage el ot
+class EventLike s el where
+  event :: el -> Elect s el ot
 
-instance EventLike Event where
+instance EventLike 'ResolveStage Event where
   event = Event
 
-instance EventLike EventListener where
+instance EventLike 'IntrinsicStage EventListener where
   event = Listen
 
-class AsIfThen (el :: Type) (ot :: Type) where
-  thenEmpty :: Elect 'ResolveStage el ot
+class AsIfThen (s :: ElectStage) (el :: Type) (ot :: Type) where
+  thenEmpty :: Elect s el ot
 
-class AsIfThen el ot => AsIfElse el ot where
-  elseEmpty :: Else el ot
-  default elseEmpty :: AsIfThenElse el ot => Else el ot
+class AsIfThen s el ot => AsIfElse s el ot where
+  elseEmpty :: Else s el ot
+  default elseEmpty :: AsIfThenElse s el ot => Else s el ot
   elseEmpty = liftElse thenEmpty
 
-class AsIfThen (el :: Type) (ot :: Type) => AsIfThenElse el ot where
-  liftElse :: Elect 'ResolveStage el ot -> Else el ot
+class AsIfThen (s :: ElectStage) (el :: Type) (ot :: Type) => AsIfThenElse s el ot where
+  liftElse :: Elect s el ot -> Else s el ot
 
-instance AsIfThen (Effect 'OneShot) ot where
+instance AsIfThen 'ResolveStage (Effect 'OneShot) ot where
   thenEmpty = Effect []
 
-instance AsIfElse (Effect 'OneShot) ot
+instance AsIfElse 'ResolveStage (Effect 'OneShot) ot
 
-instance AsIfThen EventListener ot where
+instance AsIfThen 'IntrinsicStage EventListener ot where
   thenEmpty = event $ Events []
 
-instance AsIfElse EventListener ot where
+instance AsIfElse 'IntrinsicStage EventListener ot where
   elseEmpty = ElseEvent
 
-instance AsIfThenElse (Effect 'OneShot) ot where
+instance AsIfThenElse 'ResolveStage (Effect 'OneShot) ot where
   liftElse = ElseEffect
 
-ifThen :: AsIfElse el ot => Condition -> Elect 'ResolveStage el ot -> Elect 'ResolveStage el ot
+ifThen :: AsIfElse s el ot => Condition -> Elect s el ot -> Elect s el ot
 ifThen cond then_ = If cond then_ elseEmpty
 
-ifElse :: AsIfElse el ot => Condition -> Elect 'ResolveStage el ot -> Elect 'ResolveStage el ot
+ifElse :: AsIfElse s el ot => Condition -> Elect s el ot -> Elect s el ot
 ifElse cond else_ = If (CNot cond) else_ elseEmpty
 
 ifThenElse ::
-  AsIfThenElse el ot => Condition -> Elect 'ResolveStage el ot -> Elect 'ResolveStage el ot -> Elect 'ResolveStage el ot
+  AsIfThenElse s el ot => Condition -> Elect s el ot -> Elect s el ot -> Elect s el ot
 ifThenElse cond then_ else_ = If cond then_ $ liftElse else_
 
 isBasic :: IsZone zone => Requirement zone OTNLand
@@ -691,6 +688,12 @@ mkBasicLandwalk ty = static \_this -> Landwalk [HasLandType $ BasicLand ty]
 
 swampwalk :: SomeZone WithThisAbility OTNCreature
 swampwalk = mkBasicLandwalk Swamp
+
+paidCost :: a -> NatList (Maybe Cost) (ToNat 0) a -> NatList (Maybe Cost) (ToNat 1) a
+paidCost = LS
+
+didNotPayCost :: a -> NatList (Maybe Cost) (ToNat 0) a
+didNotPayCost = LZ
 
 class
   ( ToManaPool 'NonSnow (ManaSymbol mt1)

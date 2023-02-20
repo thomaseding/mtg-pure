@@ -202,7 +202,7 @@ instance Show CompleteManaPool where
 instance Show Condition where
   show = runEnvM defaultDepthLimit . showCondition
 
-instance Show (Cost ot) where
+instance Show Cost where
   show = runEnvM defaultDepthLimit . showCost
 
 instance Show (DynamicManaCost var) where
@@ -885,7 +885,7 @@ showCondition = \case
 showConditions :: [Condition] -> EnvM ParenItems
 showConditions = showListM showCondition
 
-showCost :: Cost ot -> EnvM ParenItems
+showCost :: Cost -> EnvM ParenItems
 showCost = \case
   AndCosts costs -> yesParens do
     sCosts <- dollar <$> showListM showCost costs
@@ -899,9 +899,10 @@ showCost = \case
   ExileCost reqs -> yesParens do
     sReqs <- dollar <$> showRequirements reqs
     pure $ pure "ExileCost" <> sReqs
-  LoyaltyCost loyalty -> yesParens do
+  LoyaltyCost zoPlaneswalker loyalty -> yesParens do
+    sPlaneswalker <- parens <$> showZoneObject zoPlaneswalker
     sLoyalty <- dollar <$> showLoyalty loyalty
-    pure $ pure "LoyaltyCost " <> sLoyalty
+    pure $ pure "LoyaltyCost " <> sPlaneswalker <> sLoyalty
   ManaCost cost -> yesParens do
     sCost <- dollar <$> showManaCost cost
     pure $ pure (fromString "ManaCost") <> sCost
@@ -1112,6 +1113,24 @@ showElect = \case
     pure $ pure "Listen" <> sListener
   OwnerOf zObj contElect -> do
     goPlayerOf1 "OwnerOf" "owner" zObj contElect
+  PlayerPays oPlayer cost contElect -> yesParens do
+    discr <- EnvM $ State.gets nextVariableId
+    EnvM $ State.modify' \st -> st{nextVariableId = (1 +) <$> discr}
+    let var = ReifiedVariable discr FZ
+        varName = getVarName var
+        elect = contElect var
+    sPlayer <- parens <$> showZoneObject oPlayer
+    sCost <- dollar <$> showCost cost
+    sElect <- dropParens <$> showElect elect
+    pure $
+      pure "PlayerPays "
+        <> sPlayer
+        <> pure " "
+        <> sCost
+        <> pure " $ \\"
+        <> pure varName
+        <> pure " -> "
+        <> sElect
   Random withObject -> yesParens do
     sWithObject <- dollar <$> showWithMaskedObject showElect "rand" withObject
     pure $ pure "Random" <> sWithObject
@@ -1184,7 +1203,7 @@ showElect = \case
         <> pure " -> "
         <> sElect
 
-showElse :: Else e ot -> EnvM ParenItems
+showElse :: Else s e ot -> EnvM ParenItems
 showElse = \case
   ElseCost elect -> yesParens do
     sElect <- dollar <$> showElect elect
@@ -1950,9 +1969,6 @@ showRequirement = \case
   OwnedBy obj -> yesParens do
     sObj <- dollar <$> showZoneObject obj
     pure $ pure "OwnedBy" <> sObj
-  PlayerPays cost -> yesParens do
-    sCost <- dollar <$> showCost cost
-    pure $ pure "PlayerPays" <> sCost
   RAnd reqs -> yesParens do
     sReqs <- dollar <$> showRequirements reqs
     pure $ pure "RAnd" <> sReqs

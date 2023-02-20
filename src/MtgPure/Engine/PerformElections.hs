@@ -115,6 +115,7 @@ performElections' failureX zoStack goTerm = logCall 'performElections' \case
   If{} -> undefined
   Listen{} -> undefined
   OwnerOf zo cont -> electOwnerOf goRec zo cont
+  PlayerPays{} -> undefined
   Random{} -> undefined
   Target zoPlayer thisToElect -> goTarget goRec zoPlayer thisToElect
   VariableFromPower{} -> undefined

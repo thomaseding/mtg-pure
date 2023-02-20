@@ -53,7 +53,6 @@ satisfies zo = logCall 'satisfies \case
   Not req -> not' zo req
   OfColors{} -> undefined
   OwnedBy{} -> undefined
-  PlayerPays{} -> undefined
   RAnd reqs -> rAnd' zo reqs
   ROr reqs -> rOr' zo reqs
   Req2{} -> undefined

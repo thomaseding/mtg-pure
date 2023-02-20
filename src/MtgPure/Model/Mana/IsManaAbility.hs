@@ -170,7 +170,7 @@ instance IsManaAbilityImpl (ActivatedAbility zone ot) where
       False -> Nothing
     _ -> Nothing
 
-isTapThis :: IsOTN ot => Cost ot -> Bool
+isTapThis :: Cost -> Bool
 isTapThis = \case
   TapCost [Is this] -> getObjectId this == proxyThisId
   _ -> False
@@ -235,6 +235,7 @@ instance IsManaAbilityImpl (Elect s el ot) where
     If _cond then_ else_ -> isManaAbilityImpl then_ <> isManaAbilityImpl else_
     Listen listener -> isManaAbilityImpl listener
     OwnerOf _zo cont -> isManaAbilityImpl $ cont dummyZO
+    PlayerPays _zo _cost cont -> isManaAbilityImpl $ cont dummyVar
     Random wmo -> isManaAbilityImpl wmo
     Target{} -> IsNotManaAbility
     VariableFromPower _zo cont -> isManaAbilityImpl $ cont dummyVar
@@ -273,7 +274,7 @@ extractSingleManaType pool = case countMana pool of
     , poolC = Mana c
     } = pool
 
-instance IsManaAbilityImpl (Else el ot) where
+instance IsManaAbilityImpl (Else s el ot) where
   isManaAbilityImpl = \case
     ElseCost{} -> IsNotManaAbility
     ElseEffect elect -> isManaAbilityImpl elect

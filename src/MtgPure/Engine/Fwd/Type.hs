@@ -102,7 +102,7 @@ data Fwd' ex st m where
     , fwd_newObjectId :: Magic' ex st 'Private 'RW m ObjectId
     , fwd_newVariableId :: Magic' ex st 'Private 'RW m VariableId
     , fwd_ownerOf :: forall zone ot. IsZO zone ot => ZO zone ot -> Magic' ex st 'Private 'RO m (Object 'OTPlayer)
-    , fwd_pay :: forall ot. Object 'OTPlayer -> Cost ot -> Magic' ex st 'Private 'RW m Legality
+    , fwd_pay :: Object 'OTPlayer -> Cost -> Magic' ex st 'Private 'RW m Legality
     , fwd_performElections :: forall ot s el x. IsReadWrite (ElectStageRW s) => ZO 'ZStack OT0 -> (el -> Magic' ex st 'Private (ElectStageRW s) m (Maybe x)) -> Elect s el ot -> Magic' ex st 'Private (ElectStageRW s) m (Maybe x)
     , fwd_performStateBasedActions :: Magic' ex st 'Private 'RW m ()
     , fwd_pickOneZO :: forall zone ot. IsZO zone ot => Object 'OTPlayer -> [ZO zone ot] -> Magic' ex st 'Public 'RW m (Maybe (ZO zone ot))

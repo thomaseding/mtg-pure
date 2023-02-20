@@ -168,7 +168,7 @@ data Elected (s :: ElectStage) (ot :: Type) :: Type where
     { electedActivatedAbility_ability :: SomeActivatedAbility zone ot
     , electedActivatedAbility_controller :: Object 'OTPlayer
     , electedActivatedAbility_this :: ZO zone ot
-    , electedActivatedAbility_cost :: Cost ot
+    , electedActivatedAbility_cost :: Cost
     , electedActivatedAbility_effect :: PendingReady s (Effect 'OneShot) ot
     } ->
     Elected s ot
@@ -182,7 +182,7 @@ data Elected (s :: ElectStage) (ot :: Type) :: Type where
     , electedSpell_card :: AnyCard -- TODO: OwnedCard?
     , electedSpell_character :: CardCharacteristic ot
     , electedSpell_spec :: CardSpec ot
-    , electedSpell_cost :: Cost ot
+    , electedSpell_cost :: Cost
     , electedSpell_effect :: Maybe (PendingReady s (Effect 'OneShot) ot)
     } ->
     Elected s ot
@@ -193,7 +193,7 @@ electedObject_controller elected = ($ elected) case elected of
   ElectedActivatedAbility{} -> electedActivatedAbility_controller
   ElectedSpell{} -> electedSpell_controller
 
-electedObject_cost :: Elected s ot -> Cost ot
+electedObject_cost :: Elected s ot -> Cost
 electedObject_cost elected = ($ elected) case elected of
   ElectedActivatedAbility{} -> electedActivatedAbility_cost
   ElectedSpell{} -> electedSpell_cost

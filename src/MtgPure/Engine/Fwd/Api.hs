@@ -201,7 +201,7 @@ data Api (m :: Type -> Type) (v :: Visibility) (rw :: ReadWrite) (ret :: Type) :
   IndexToActivated :: IsZO zone ot => AbsoluteActivatedAbilityIndex -> Api m 'Private 'RO (Maybe (SomeActivatedAbility zone ot))
   ModifyPlayer :: Object 'OTPlayer -> (Player -> Player) -> Api m 'Private 'RW ()
   NewObjectId :: Api m 'Private 'RW ObjectId
-  Pay :: Object 'OTPlayer -> Cost ot -> Api m 'Private 'RW Legality
+  Pay :: Object 'OTPlayer -> Cost -> Api m 'Private 'RW Legality
   PerformElections :: AndLike (Maybe ret) => ZO 'ZStack OT0 -> (el -> Api m 'Private (ElectStageRW s) (Maybe ret)) -> Elect s el ot -> Api m 'Private (ElectStageRW s) (Maybe ret)
   PerformStateBasedActions :: Api m 'Private 'RW ()
   PlayerWithPriority :: Api m 'Public 'RO (Maybe (Object 'OTPlayer))
@@ -424,7 +424,7 @@ newVariableId = fwd0 fwd_newVariableId
 ownerOf :: (IsZO zone ot, Monad m) => ZO zone ot -> Magic 'Private 'RO m (Object 'OTPlayer)
 ownerOf = fwd1 fwd_ownerOf
 
-pay :: Monad m => Object 'OTPlayer -> Cost ot -> Magic 'Private 'RW m Legality
+pay :: Monad m => Object 'OTPlayer -> Cost -> Magic 'Private 'RW m Legality
 pay = fwd2 fwd_pay
 
 performElections ::
