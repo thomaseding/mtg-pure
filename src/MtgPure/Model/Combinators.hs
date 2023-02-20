@@ -70,7 +70,6 @@ module MtgPure.Model.Combinators (
   trivialManaAbility,
   tyAp,
   untilEndOfTurn,
-  yourCardFacet,
 ) where
 
 import safe Data.Inst (
@@ -125,7 +124,6 @@ import safe MtgPure.Model.Recursive (
   AnyCard (..),
   AnyToken (..),
   Card (..),
-  CardFacet,
   Case (..),
   Condition (..),
   Cost (..),
@@ -342,9 +340,6 @@ triggered' = WithThisTriggered . thisObject
 
 triggered :: (AsWithThis zone ot, ot ~ OTN x) => (ThisFromOTN zone ot -> TriggeredAbility zone ot) -> SomeZone WithThisAbility ot
 triggered = SomeZone . triggered'
-
-yourCardFacet :: (ZOPlayer -> CardFacet ot) -> Elect 'IntrinsicStage (CardFacet ot) ot
-yourCardFacet = Your . (ElectCardFacet .)
 
 class AsDamage a where
   asDamage :: a -> Damage 'Var
