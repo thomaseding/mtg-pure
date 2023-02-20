@@ -2137,28 +2137,28 @@ showWithLinkedObject ::
   WithLinkedObject zone x ot ->
   EnvM ParenItems
 showWithLinkedObject showM memo = \case
-  Linked1 nonProxy reqs cont ->
+  Linked1 reqs cont ->
     let ty = getType reqs
-     in go ty nonProxy reqs $ showO1 @zone p showM memo (cont . toZone)
-  Linked2 nonProxy reqs cont ->
+     in go ty reqs $ showO1 @zone p showM memo (cont . toZone)
+  Linked2 reqs cont ->
     let ty = getType reqs
-     in go ty nonProxy reqs $ showO2 @zone p showM memo (cont . toZone)
-  Linked3 nonProxy reqs cont ->
+     in go ty reqs $ showO2 @zone p showM memo (cont . toZone)
+  Linked3 reqs cont ->
     let ty = getType reqs
-     in go ty nonProxy reqs $ showO3 @zone p showM memo (cont . toZone)
-  Linked4 nonProxy reqs cont ->
+     in go ty reqs $ showO3 @zone p showM memo (cont . toZone)
+  Linked4 reqs cont ->
     let ty = getType reqs
-     in go ty nonProxy reqs $ showO4 @zone p showM memo (cont . toZone)
-  Linked5 nonProxy reqs cont ->
+     in go ty reqs $ showO4 @zone p showM memo (cont . toZone)
+  Linked5 reqs cont ->
     let ty = getType reqs
-     in go ty nonProxy reqs $ showO5 @zone p showM memo (cont . toZone)
+     in go ty reqs $ showO5 @zone p showM memo (cont . toZone)
  where
   p = Singular
 
   getType :: [Requirement zone ot] -> Proxy ot
   getType _ = Proxy
 
-  go ty _nonProxy reqs sCont = yesParens do
+  go ty reqs sCont = yesParens do
     sTy <- parens <$> showTypeOf ty
     sReqs <- parens <$> showRequirements reqs
     sCont' <- dollar <$> sCont

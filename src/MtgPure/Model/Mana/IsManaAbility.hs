@@ -324,11 +324,11 @@ instance IsManaAbilityImpl (TriggeredAbility zone ot) where
 
 instance IsZone zone => IsManaAbilityImpl (WithLinkedObject zone (Elect s el) ot) where
   isManaAbilityImpl = \case
-    Linked1 _wit _reqs cont -> isManaAbilityImpl $ cont dummyZO
-    Linked2 _wit _reqs cont -> isManaAbilityImpl $ cont dummyZO
-    Linked3 _wit _reqs cont -> isManaAbilityImpl $ cont dummyZO
-    Linked4 _wit _reqs cont -> isManaAbilityImpl $ cont dummyZO
-    Linked5 _wit _reqs cont -> isManaAbilityImpl $ cont dummyZO
+    Linked1 _reqs cont -> isManaAbilityImpl $ cont dummyZO
+    Linked2 _reqs cont -> isManaAbilityImpl $ cont dummyZO
+    Linked3 _reqs cont -> isManaAbilityImpl $ cont dummyZO
+    Linked4 _reqs cont -> isManaAbilityImpl $ cont dummyZO
+    Linked5 _reqs cont -> isManaAbilityImpl $ cont dummyZO
   isTrivialManaAbilityImpl _ _ = Nothing
 
 instance IsZone zone => IsManaAbilityImpl (WithMaskedObject zone (Elect s el) ot) where

@@ -174,8 +174,8 @@ controllerOf ::
   Magic 'Private 'RO m (Object 'OTPlayer)
 controllerOf zo = logCall 'controllerOf do
   gets (Map.lookup (getObjectId zo) . magicControllerMap) >>= \case
-    Nothing -> error $ "controllerOf: no owner for " <> show zo
-    Just owner -> pure owner
+    Nothing -> error $ "controllerOf: no controller for " <> show zo
+    Just controller -> pure controller
 
 electControllerOf ::
   forall s zone m el ot x.

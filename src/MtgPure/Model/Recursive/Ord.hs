@@ -86,7 +86,6 @@ import safe MtgPure.Model.Recursive (
   EventListener' (..),
   IsUser,
   List (..),
-  NonProxy (..),
   Requirement (..),
   SetCard (..),
   SetToken (SetToken),
@@ -1944,20 +1943,20 @@ ordWithLinkedObject ::
   WithLinkedObject zone x ot ->
   EnvM Ordering
 ordWithLinkedObject ordM x = case x of
-  Linked1 NonProxyElectEffect reqs1 cont1 -> \case
-    Linked1 NonProxyElectEffect reqs2 cont2 ->
+  Linked1 reqs1 cont1 -> \case
+    Linked1 reqs2 cont2 ->
       ordO1 ordM reqs1 reqs2 cont1 cont2
-  Linked2 NonProxyElectEffect reqs1 cont1 -> \case
-    Linked2 NonProxyElectEffect reqs2 cont2 ->
+  Linked2 reqs1 cont1 -> \case
+    Linked2 reqs2 cont2 ->
       ordO2 ordM reqs1 reqs2 cont1 cont2
-  Linked3 NonProxyElectEffect reqs1 cont1 -> \case
-    Linked3 NonProxyElectEffect reqs2 cont2 ->
+  Linked3 reqs1 cont1 -> \case
+    Linked3 reqs2 cont2 ->
       ordO3 ordM reqs1 reqs2 cont1 cont2
-  Linked4 NonProxyElectEffect reqs1 cont1 -> \case
-    Linked4 NonProxyElectEffect reqs2 cont2 ->
+  Linked4 reqs1 cont1 -> \case
+    Linked4 reqs2 cont2 ->
       ordO4 ordM reqs1 reqs2 cont1 cont2
-  Linked5 NonProxyElectEffect reqs1 cont1 -> \case
-    Linked5 NonProxyElectEffect reqs2 cont2 ->
+  Linked5 reqs1 cont1 -> \case
+    Linked5 reqs2 cont2 ->
       ordO5 ordM reqs1 reqs2 cont1 cont2
 
 ordWithList :: (ret -> ret -> EnvM Ordering) -> WithList ret zone ot -> WithList ret zone ot -> EnvM Ordering

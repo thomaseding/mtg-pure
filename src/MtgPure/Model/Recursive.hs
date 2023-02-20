@@ -31,7 +31,6 @@ module MtgPure.Model.Recursive (
   IsSpecificCard (..),
   IsUser (..),
   List (..),
-  NonProxy (..),
   Requirement (..),
   SetCard (..),
   SetToken (..),
@@ -621,7 +620,6 @@ data Elect (s :: ElectStage) (el :: Type) (ot :: Type) :: Type where
   ActivePlayer :: (ZOPlayer -> Elect s el ot) -> Elect s el ot
   -- TODO: Add `IsZO zone ot` witness and change `'ZBattlefield` to `zone`.
   All :: IsOTN ot => WithMaskedObjects 'ZBattlefield (Elect s el) ot -> Elect s el ot
-  -- TODO: Disallow `Choose` for some types of `el` using a witness arg, in particular Event and EventListener
   Choose ::
     (CoNonIntrinsicStage s, Typeable el, IsZO zone ot) =>
     ZOPlayer ->
@@ -635,7 +633,7 @@ data Elect (s :: ElectStage) (el :: Type) (ot :: Type) :: Type where
     Elect s el ot
   Condition :: Condition -> Elect s Condition ot
   ControllerOf :: IsZO zone OTNAny => ZO zone OTNAny -> (ZOPlayer -> Elect s el ot) -> Elect s el ot
-  Cost :: Cost -> Elect 'IntrinsicStage Cost ot -- XXX: can this constructor be removed?
+  Cost :: Cost -> Elect 'IntrinsicStage Cost ot
   Effect :: Typeable ef => [Effect ef] -> Elect 'ResolveStage (Effect ef) ot
   ElectActivated :: IsZO zone ot => ActivatedAbility zone ot -> Elect 'TargetStage (ActivatedAbility zone ot) ot
   ElectCardFacet :: CardCharacteristic ot -> Elect 'IntrinsicStage (CardCharacteristic ot) ot
@@ -643,7 +641,7 @@ data Elect (s :: ElectStage) (el :: Type) (ot :: Type) :: Type where
   ElectCase :: Case (Elect s el ot) -> Elect s el ot
   EndTargets :: Typeable el => Elect 'ResolveStage el ot -> Elect 'TargetStage (Elect 'ResolveStage el ot) ot
   Event :: Event -> Elect 'ResolveStage Event ot
-  If :: Condition -> Elect s el ot -> Else s el ot -> Elect s el ot -- NOTE: It is probably correct to allow this constructor with CardTypeDef usage in order to encode split cards and such.
+  If :: Condition -> Elect s el ot -> Else s el ot -> Elect s el ot
   Listen :: EventListener -> Elect 'IntrinsicStage EventListener ot
   OwnerOf :: IsZO zone OTNAny => ZO zone OTNAny -> (ZOPlayer -> Elect s el ot) -> Elect s el ot
   PlayerPays :: ZOPlayer -> Cost -> (Variable FinPayment -> Elect 'ResolveStage el ot) -> Elect 'ResolveStage el ot
@@ -799,17 +797,6 @@ newtype List a = List [a]
 instance Applicative List where
   pure = List . pure
   List f <*> List x = List $ f <*> x
-
---------------------------------------------------------------------------------
-
-data NonProxy (liftOT :: Type -> Type) :: Type where
-  NonProxyElectEffect :: NonProxy (Elect s (Effect ef))
-  --NonProxyElectPrePostEffect :: NonProxy (Elect 'Pre (Elect 'Post (Effect 'Continuous) ot))
-  deriving (Typeable)
-
-instance ConsIndex (NonProxy liftOT) where
-  consIndex = \case
-    NonProxyElectEffect -> 1
 
 --------------------------------------------------------------------------------
 
@@ -1115,31 +1102,26 @@ instance ConsIndex (TriggeredAbility zone ot) where
 data WithLinkedObject (zone :: Zone) (liftOT :: Type -> Type) (ot :: Type) :: Type where
   Linked1 ::
     (ot ~ OT1 a, IsOTN ot, Inst1 IsObjectType a) =>
-    NonProxy liftOT ->
     [Requirement zone ot] ->
     (ZO zone ot -> liftOT ot) ->
     WithLinkedObject zone liftOT ot
   Linked2 ::
     (ot ~ OT2 a b, IsOTN ot, Inst2 IsObjectType a b) =>
-    NonProxy liftOT ->
     [Requirement zone ot] ->
     (ZO zone ot -> liftOT ot) ->
     WithLinkedObject zone liftOT ot
   Linked3 ::
     (ot ~ OT3 a b c, IsOTN ot, Inst3 IsObjectType a b c) =>
-    NonProxy liftOT ->
     [Requirement zone ot] ->
     (ZO zone ot -> liftOT ot) ->
     WithLinkedObject zone liftOT ot
   Linked4 ::
     (ot ~ OT4 a b c d, IsOTN ot, Inst4 IsObjectType a b c d) =>
-    NonProxy liftOT ->
     [Requirement zone ot] ->
     (ZO zone ot -> liftOT ot) ->
     WithLinkedObject zone liftOT ot
   Linked5 ::
     (ot ~ OT5 a b c d e, IsOTN ot, Inst5 IsObjectType a b c d e) =>
-    NonProxy liftOT ->
     [Requirement zone ot] ->
     (ZO zone ot -> liftOT ot) ->
     WithLinkedObject zone liftOT ot

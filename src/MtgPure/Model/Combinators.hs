@@ -136,7 +136,6 @@ import safe MtgPure.Model.Recursive (
   EventListener,
   EventListener' (..),
   List,
-  NonProxy (..),
   Requirement (..),
   SomeZone (..),
   StaticAbility (Landwalk),
@@ -199,32 +198,23 @@ instance ToToken AnyToken where
 instance CoPermanent ot => ToToken (Token ot) where
   toToken (Token x) = AnyToken $ Token x
 
-class Typeable x => CoNonProxy x where
-  coNonProxy :: NonProxy x
-
-instance (Typeable s, Typeable ef) => CoNonProxy (Elect s (Effect ef)) where
-  coNonProxy = NonProxyElectEffect
-
--- instance (Typeable ot) => CoNonProxy (Elect 'Pre (Elect 'Post (Effect 'Continuous) ot)) where
---   coNonProxy = NonProxyElectPrePostEffect
-
 class (IsOTN ot, Typeable liftOT) => AsWithLinkedObject ot zone liftOT where
   linked :: [Requirement zone ot] -> (ZO zone ot -> liftOT ot) -> WithLinkedObject zone liftOT ot
 
-instance (CoNonProxy x, Inst1 IsObjectType a) => AsWithLinkedObject (OT1 a) zone x where
-  linked = Linked1 coNonProxy
+instance (Typeable x, Inst1 IsObjectType a) => AsWithLinkedObject (OT1 a) zone x where
+  linked = Linked1
 
-instance (CoNonProxy x, Inst2 IsObjectType a b) => AsWithLinkedObject (OT2 a b) zone x where
-  linked = Linked2 coNonProxy
+instance (Typeable x, Inst2 IsObjectType a b) => AsWithLinkedObject (OT2 a b) zone x where
+  linked = Linked2
 
-instance (CoNonProxy x, Inst3 IsObjectType a b c) => AsWithLinkedObject (OT3 a b c) zone x where
-  linked = Linked3 coNonProxy
+instance (Typeable x, Inst3 IsObjectType a b c) => AsWithLinkedObject (OT3 a b c) zone x where
+  linked = Linked3
 
-instance (CoNonProxy x, Inst4 IsObjectType a b c d) => AsWithLinkedObject (OT4 a b c d) zone x where
-  linked = Linked4 coNonProxy
+instance (Typeable x, Inst4 IsObjectType a b c d) => AsWithLinkedObject (OT4 a b c d) zone x where
+  linked = Linked4
 
-instance (CoNonProxy x, Inst5 IsObjectType a b c d e) => AsWithLinkedObject (OT5 a b c d e) zone x where
-  linked = Linked5 coNonProxy
+instance (Typeable x, Inst5 IsObjectType a b c d e) => AsWithLinkedObject (OT5 a b c d e) zone x where
+  linked = Linked5
 
 class AsWithMaskedObject ot where
   masked :: forall zone liftOT ot'. Typeable (liftOT ot') => [Requirement zone ot] -> (ZO zone ot -> liftOT ot') -> WithMaskedObject zone liftOT ot'
