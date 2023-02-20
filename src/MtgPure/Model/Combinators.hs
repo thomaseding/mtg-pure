@@ -132,7 +132,6 @@ import safe MtgPure.Model.Recursive (
   Effect (..),
   Elect (..),
   ElectOT (..),
-  ElectOneShotEffect,
   ElectTargetedEffect,
   Else (..),
   Event,
@@ -462,9 +461,6 @@ instance Typeable ef => ElectEffect (Effect ef) (ElectTargetedEffect (Effect ef)
   effect = EndTargets . effect
 
 instance Typeable ef => ElectEffect [Effect ef] (ElectTargetedEffect (Effect ef) ot) where
-  effect = EndTargets . effect
-
-instance ElectEffect (Effect 'Continuous) (ElectOneShotEffect ot) where
   effect = EndTargets . effect
 
 class EventLike el where

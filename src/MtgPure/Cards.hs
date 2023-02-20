@@ -222,7 +222,6 @@ import safe MtgPure.Model.Recursive (
     Cost,
     ElectActivated,
     ElectCardFacet',
-    EndTargets,
     Target,
     VariableFromPower,
     VariableInt
@@ -458,18 +457,18 @@ acceptableLosses =
         { sorcery_colors = toColors R
         , sorcery_supertypes = []
         , sorcery_spec =
-            ElectCardFacet'
-              SorceryFacet'
-                { sorcery_cost =
-                    AndCosts
-                      [ manaCost (3, R)
-                      , DiscardRandomCost 1
-                      ]
-                , sorcery_abilities = []
-                , sorcery_effect = thisObject \this ->
-                    Target you $ masked @OTNCreature [] \target ->
+            Target you $ masked @OTNCreature [] \target ->
+              ElectCardFacet'
+                SorceryFacet'
+                  { sorcery_cost =
+                      AndCosts
+                        [ manaCost (3, R)
+                        , DiscardRandomCost 1
+                        ]
+                  , sorcery_abilities = []
+                  , sorcery_effect = thisObject \this ->
                       effect $ dealDamage this target 5
-                }
+                  }
         }
 
 allIsDust :: Card OTNSorcery
@@ -526,14 +525,14 @@ ancestralVision = Card "Ancestral Vision" $
       { sorcery_colors = toColors U
       , sorcery_supertypes = []
       , sorcery_spec =
-          ElectCardFacet'
-            SorceryFacet'
-              { sorcery_cost = noCost
-              , sorcery_abilities = [static \_this -> Suspend 4 $ Cost $ manaCost U]
-              , sorcery_effect = thisObject \_this ->
-                  Target you $ masked [] \target ->
+          Target you $ masked [] \target ->
+            ElectCardFacet'
+              SorceryFacet'
+                { sorcery_cost = noCost
+                , sorcery_abilities = [static \_this -> Suspend 4 $ Cost $ manaCost U]
+                , sorcery_effect = thisObject \_this ->
                     effect $ DrawCards target 3
-              }
+                }
       }
 
 backlash :: Card OTNInstant
@@ -543,18 +542,17 @@ backlash = Card "Backlash" $
       { instant_colors = toColors (B, R)
       , instant_supertypes = []
       , instant_spec =
-          ElectCardFacet'
-            InstantFacet'
-              { instant_cost = manaCost (1, B, R)
-              , instant_abilities = []
-              , instant_effect = thisObject \_this ->
-                  Target you $ masked [Not isTapped] \target ->
-                    EndTargets $
-                      controllerOf target \targetController ->
-                        VariableFromPower target \power ->
-                          effect $
-                            dealDamage target targetController $ VariableDamage power
-              }
+          Target you $ masked [Not isTapped] \target ->
+            ElectCardFacet'
+              InstantFacet'
+                { instant_cost = manaCost (1, B, R)
+                , instant_abilities = []
+                , instant_effect = thisObject \_this ->
+                    controllerOf target \targetController ->
+                      VariableFromPower target \power ->
+                        effect $
+                          dealDamage target targetController $ VariableDamage power
+                }
       }
 
 bayou :: Card OTNLand
@@ -639,14 +637,14 @@ blaze = Card "Blaze" $
       , sorcery_supertypes = []
       , sorcery_spec =
           VariableInt \x ->
-            ElectCardFacet'
-              SorceryFacet'
-                { sorcery_cost = manaCost (VariableMana @ 'NonSnow @ 'Ty1 x, R)
-                , sorcery_abilities = []
-                , sorcery_effect = thisObject \this ->
-                    Target you $ masked @OTNCreaturePlayerPlaneswalker [] \target ->
+            Target you $ masked @OTNCreaturePlayerPlaneswalker [] \target ->
+              ElectCardFacet'
+                SorceryFacet'
+                  { sorcery_cost = manaCost (VariableMana @ 'NonSnow @ 'Ty1 x, R)
+                  , sorcery_abilities = []
+                  , sorcery_effect = thisObject \this ->
                       effect $ dealDamage this target x
-                }
+                  }
       }
 
 bloodMoon :: Card OTNEnchantment
@@ -727,14 +725,14 @@ counterspell = Card "Counterspell" $
       { instant_colors = toColors U
       , instant_supertypes = []
       , instant_spec =
-          ElectCardFacet'
-            InstantFacet'
-              { instant_cost = manaCost (U, U)
-              , instant_abilities = []
-              , instant_effect = thisObject \_this ->
-                  Target you $ masked @OTNSpell [] \target ->
+          Target you $ masked @OTNSpell [] \target ->
+            ElectCardFacet'
+              InstantFacet'
+                { instant_cost = manaCost (U, U)
+                , instant_abilities = []
+                , instant_effect = thisObject \_this ->
                     effect $ counterSpell target
-              }
+                }
       }
 
 cityOfBrass :: Card OTNLand
@@ -945,19 +943,19 @@ dismember = Card "Dismember" $
       { instant_colors = toColors B
       , instant_supertypes = []
       , instant_spec =
-          ElectCardFacet'
-            InstantFacet'
-              { instant_cost = manaCost (1, PB, PB)
-              , instant_abilities = []
-              , instant_effect = thisObject \_this ->
-                  Target you $ masked @OTNCreature [] \target ->
+          Target you $ masked @OTNCreature [] \target ->
+            ElectCardFacet'
+              InstantFacet'
+                { instant_cost = manaCost (1, PB, PB)
+                , instant_abilities = []
+                , instant_effect = thisObject \_this ->
                     effect $
                       untilEndOfTurn $
                         gainAbility target $
                           static' \_this ->
                             StaticContinuous $
                               effect $ StatDelta target (Power (-5)) (Toughness (-5))
-              }
+                }
       }
 
 divination :: Card OTNSorcery
@@ -1014,21 +1012,20 @@ fling = Card "Fling" $
       , instant_supertypes = []
       , instant_spec =
           Choose you $ masked [ControlledBy you] \sacChoice ->
-            ElectCardFacet'
-              InstantFacet'
-                { instant_cost =
-                    AndCosts
-                      [ manaCost (1, R)
-                      , sacrificeCost [is sacChoice]
-                      ]
-                , instant_abilities = []
-                , instant_effect = thisObject \_this ->
-                    Target you $ masked @OTNCreaturePlayer [] \target ->
-                      EndTargets $
-                        VariableFromPower sacChoice \power ->
-                          effect $
-                            dealDamage sacChoice target $ VariableDamage power
-                }
+            Target you $ masked @OTNCreaturePlayer [] \target ->
+              ElectCardFacet'
+                InstantFacet'
+                  { instant_cost =
+                      AndCosts
+                        [ manaCost (1, R)
+                        , sacrificeCost [is sacChoice]
+                        ]
+                  , instant_abilities = []
+                  , instant_effect = thisObject \_this ->
+                      VariableFromPower sacChoice \power ->
+                        effect $
+                          dealDamage sacChoice target $ VariableDamage power
+                  }
       }
 
 forest :: Card OTNLand
@@ -1269,9 +1266,8 @@ manaLeak = Card "Mana Leak" $
                 , instant_abilities = []
                 , instant_effect = thisObject \_this ->
                     controllerOf spell \controller ->
-                      EndTargets $
-                        ifElse (satisfies controller [playerPays $ toManaCost 3]) $
-                          effect $ counterSpell spell
+                      ifElse (satisfies controller [playerPays $ toManaCost 3]) $
+                        effect $ counterSpell spell
                 }
       }
 

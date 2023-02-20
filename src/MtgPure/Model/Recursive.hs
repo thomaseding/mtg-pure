@@ -18,7 +18,6 @@ module MtgPure.Model.Recursive (
   Cost (..),
   Effect (..),
   Elect (..),
-  ElectOneShotEffect,
   ElectOT (..),
   ElectTargetedEffect,
   Else (..),
@@ -698,8 +697,6 @@ instance ConsIndex (Elect s el ot) where
 
 type ElectTargetedEffect ef ot = Elect 'TargetStage (Elect 'ResolveStage ef ot) ot
 
-type ElectOneShotEffect ot = ElectTargetedEffect (Effect 'OneShot) ot
-
 -- | Used to make some higher-kinded `ot` stuff work.
 data ElectOT (s :: ElectStage) (liftOT :: Type -> Type) (ot :: Type) where
   ElectOT :: {unElectOT :: Elect s (liftOT ot) ot} -> ElectOT s liftOT ot
@@ -1307,7 +1304,7 @@ instance ConsIndex (WithThis zone liftOT ot) where
 -- XXX: Can this be changed to ResolveStage if I remove WithThis and use an Elect This constructor?
 type WithThisActivated zone = WithThis (ElectOT 'TargetStage (ActivatedAbility zone)) zone
 
-type WithThisOneShot ot = WithThis (Elect 'TargetStage (Elect 'ResolveStage (Effect 'OneShot) ot)) 'ZStack ot
+type WithThisOneShot ot = WithThis (Elect 'ResolveStage (Effect 'OneShot)) 'ZStack ot
 
 type WithThisStatic zone = WithThis (StaticAbility zone) zone
 

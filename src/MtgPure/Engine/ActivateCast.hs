@@ -501,13 +501,10 @@ playPendingOneShot ::
   WithThisOneShot ot ->
   (Cost ot -> Maybe (Pending (Effect 'OneShot) ot) -> Magic 'Private 'RW m (Maybe x)) ->
   Magic 'Private 'RW m (Maybe x)
-playPendingOneShot zoStack cost withThisElectEffect cont = logCall 'playPendingOneShot do
+playPendingOneShot _zoStack cost withThisElectEffect cont = logCall 'playPendingOneShot do
   thisId <- newObjectId
-  let electTargets = reifyWithThis thisId withThisElectEffect
-  mElectResolve <- performElections zoStack (pure . Just) electTargets
-  case mElectResolve of
-    Nothing -> pure Nothing
-    Just electResolve -> goElectEffect electResolve
+  let electResolve = reifyWithThis thisId withThisElectEffect
+  goElectEffect electResolve
  where
   goElectEffect = cont cost . Just . Pending
 
