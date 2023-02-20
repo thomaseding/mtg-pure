@@ -321,6 +321,8 @@ data CardFacet (ot :: Type) :: Type where
     , artifactCreature_supertypes :: [Supertype OTNArtifactCreature]
     , artifactCreature_artifactTypes :: [ArtifactType]
     , artifactCreature_creatureTypes :: [CreatureType] -- TODO: Non-empty
+    , artifactCreature_power :: Power
+    , artifactCreature_toughness :: Toughness
     , artifactCreature_spec :: CardFacet' OTNArtifactCreature
     } ->
     CardFacet OTNArtifactCreature
@@ -335,6 +337,8 @@ data CardFacet (ot :: Type) :: Type where
     { creature_colors :: Colors
     , creature_supertypes :: [Supertype OTNCreature]
     , creature_creatureTypes :: [CreatureType] -- TODO: Non-empty
+    , creature_power :: Power
+    , creature_toughness :: Toughness
     , creature_spec :: CardFacet' OTNCreature
     } ->
     CardFacet OTNCreature
@@ -350,6 +354,8 @@ data CardFacet (ot :: Type) :: Type where
     , enchantmentCreature_supertypes :: [Supertype OTNEnchantmentCreature]
     , enchantmentCreature_creatureTypes :: [CreatureType] -- TODO: Non-empty
     , enchantmentCreature_enchantmentTypes :: [EnchantmentType OTNEnchantmentCreature]
+    , enchantmentCreature_power :: Power
+    , enchantmentCreature_toughness :: Toughness
     , enchantmentCreature_spec :: CardFacet' OTNEnchantmentCreature
     } ->
     CardFacet OTNEnchantmentCreature
@@ -402,8 +408,6 @@ data CardFacet' (ot :: Type) :: Type where
     CardFacet' OTNArtifact
   ArtifactCreatureFacet' ::
     { artifactCreature_cost :: Cost OTNArtifactCreature
-    , artifactCreature_power :: Power
-    , artifactCreature_toughness :: Toughness
     , -- TODO: artifactCreature_abilities :: [SomeOT (SomeZone WithThisAbility) OTNArtifactCreature]
       artifactCreature_artifactAbilities :: [SomeZone WithThisAbility OTNArtifact]
     , artifactCreature_creatureAbilities :: [SomeZone WithThisAbility OTNCreature]
@@ -418,8 +422,6 @@ data CardFacet' (ot :: Type) :: Type where
     CardFacet' OTNArtifactLand
   CreatureFacet' ::
     { creature_cost :: Cost OTNCreature
-    , creature_power :: Power
-    , creature_toughness :: Toughness
     , creature_abilities :: [SomeZone WithThisAbility OTNCreature]
     } ->
     CardFacet' OTNCreature
@@ -430,8 +432,6 @@ data CardFacet' (ot :: Type) :: Type where
     CardFacet' OTNEnchantment
   EnchantmentCreatureFacet' ::
     { enchantmentCreature_cost :: Cost OTNEnchantmentCreature
-    , enchantmentCreature_power :: Power
-    , enchantmentCreature_toughness :: Toughness
     , enchantmentCreature_creatureAbilities :: [SomeZone WithThisAbility OTNCreature]
     , enchantmentCreature_enchantmentAbilities :: [SomeZone WithThisAbility OTNEnchantment]
     , enchantmentCreature_enchantmentCreatureAbilities :: [SomeZone WithThisAbility OTNEnchantmentCreature]

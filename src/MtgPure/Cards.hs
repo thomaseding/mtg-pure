@@ -579,11 +579,11 @@ birdsOfParadise =
         { creature_colors = toColors G
         , creature_supertypes = []
         , creature_creatureTypes = [Bird]
+        , creature_power = Power 0
+        , creature_toughness = Toughness 1
         , creature_spec =
             CreatureFacet'
               { creature_cost = manaCost G
-              , creature_power = Power 0
-              , creature_toughness = Toughness 1
               , creature_abilities =
                   [ activated @ 'ZBattlefield \this ->
                       controllerOf this \you ->
@@ -607,11 +607,11 @@ birdToken =
           { creature_colors = toColors U
           , creature_supertypes = []
           , creature_creatureTypes = [Bird]
+          , creature_power = Power 2
+          , creature_toughness = Toughness 2
           , creature_spec =
               CreatureFacet'
                 { creature_cost = noCost
-                , creature_power = Power 2
-                , creature_toughness = Toughness 2
                 , creature_abilities = [static \_this -> Flying]
                 }
           }
@@ -694,11 +694,11 @@ borealDruid =
         { creature_colors = toColors G
         , creature_supertypes = [Ty.Snow]
         , creature_creatureTypes = [Elf, Druid]
+        , creature_power = Power 1
+        , creature_toughness = Toughness 1
         , creature_spec =
             CreatureFacet'
               { creature_cost = manaCost G
-              , creature_power = Power 1
-              , creature_toughness = Toughness 1
               , creature_abilities =
                   [ activated @ 'ZBattlefield \this ->
                       controllerOf this \you ->
@@ -910,11 +910,11 @@ deathriteShaman =
         { creature_colors = toColors (B, G)
         , creature_supertypes = []
         , creature_creatureTypes = [Elf, Shaman]
+        , creature_power = Power 1
+        , creature_toughness = Toughness 2
         , creature_spec =
             CreatureFacet'
               { creature_cost = manaCost BG
-              , creature_power = Power 1
-              , creature_toughness = Toughness 2
               , creature_abilities =
                   [ activated @ 'ZBattlefield \this ->
                       controllerOf this \you ->
@@ -1012,11 +1012,11 @@ elvishHexhunter =
         { creature_colors = toColors (G, W)
         , creature_supertypes = []
         , creature_creatureTypes = [Elf, Shaman]
+        , creature_power = Power 1
+        , creature_toughness = Toughness 1
         , creature_spec =
             CreatureFacet'
               { creature_cost = manaCost GW
-              , creature_power = Power 1
-              , creature_toughness = Toughness 1
               , creature_abilities =
                   [ activated @ 'ZBattlefield \this ->
                       controllerOf this \you ->
@@ -1071,11 +1071,11 @@ fulminatorMage =
         { creature_colors = toColors (B, R)
         , creature_supertypes = []
         , creature_creatureTypes = [Elemental, Shaman]
+        , creature_power = Power 2
+        , creature_toughness = Toughness 2
         , creature_spec =
             CreatureFacet'
               { creature_cost = manaCost (1, BR, BR)
-              , creature_power = Power 2
-              , creature_toughness = Toughness 2
               , creature_abilities =
                   [ activated @ 'ZBattlefield \this ->
                       controllerOf this \you ->
@@ -1126,11 +1126,11 @@ gutlessGhoul =
         { creature_colors = toColors B
         , creature_supertypes = [Ty.Snow]
         , creature_creatureTypes = [Zombie]
+        , creature_power = Power 2
+        , creature_toughness = Toughness 2
         , creature_spec =
             CreatureFacet'
               { creature_cost = manaCost (2, B)
-              , creature_power = Power 2
-              , creature_toughness = Toughness 2
               , creature_abilities =
                   [ activated @ 'ZBattlefield \this ->
                       controllerOf this \you ->
@@ -1173,11 +1173,11 @@ grizzlyBears =
         { creature_colors = toColors G
         , creature_supertypes = []
         , creature_creatureTypes = [Bear]
+        , creature_power = Power 2
+        , creature_toughness = Toughness 2
         , creature_spec =
             CreatureFacet'
               { creature_cost = manaCost (1, G)
-              , creature_power = Power 2
-              , creature_toughness = Toughness 2
               , creature_abilities = []
               }
         }
@@ -1216,11 +1216,11 @@ icehideGolem =
         , artifactCreature_supertypes = [Ty.Snow]
         , artifactCreature_artifactTypes = []
         , artifactCreature_creatureTypes = []
+        , artifactCreature_power = Power 2
+        , artifactCreature_toughness = Toughness 2
         , artifactCreature_spec =
             ArtifactCreatureFacet'
               { artifactCreature_cost = manaCost 1
-              , artifactCreature_power = Power 2
-              , artifactCreature_toughness = Toughness 2
               , artifactCreature_artifactAbilities = []
               , artifactCreature_creatureAbilities = []
               , artifactCreature_artifactCreatureAbilities = []
@@ -1241,11 +1241,11 @@ llanowarElves =
         { creature_colors = toColors G
         , creature_supertypes = []
         , creature_creatureTypes = [Elf]
+        , creature_power = Power 1
+        , creature_toughness = Toughness 1
         , creature_spec =
             CreatureFacet'
               { creature_cost = manaCost G
-              , creature_power = Power 1
-              , creature_toughness = Toughness 1
               , creature_abilities =
                   [ activated @ 'ZBattlefield \this ->
                       controllerOf this \you ->
@@ -1323,11 +1323,11 @@ moltensteelDragon =
         , artifactCreature_supertypes = []
         , artifactCreature_artifactTypes = []
         , artifactCreature_creatureTypes = [Dragon]
+        , artifactCreature_power = Power 4
+        , artifactCreature_toughness = Toughness 4
         , artifactCreature_spec =
             ArtifactCreatureFacet'
               { artifactCreature_cost = manaCost (4, PR, PR)
-              , artifactCreature_power = Power 4
-              , artifactCreature_toughness = Toughness 4
               , artifactCreature_artifactAbilities = []
               , artifactCreature_creatureAbilities =
                   [ static \_this -> Flying
@@ -1433,11 +1433,11 @@ nyxbornRollicker =
         , enchantmentCreature_supertypes = []
         , enchantmentCreature_creatureTypes = [Satyr]
         , enchantmentCreature_enchantmentTypes = []
+        , enchantmentCreature_power = Power 1
+        , enchantmentCreature_toughness = Toughness 1
         , enchantmentCreature_spec =
             EnchantmentCreatureFacet'
               { enchantmentCreature_cost = manaCost R
-              , enchantmentCreature_power = Power 1
-              , enchantmentCreature_toughness = Toughness 1
               , enchantmentCreature_creatureAbilities = []
               , enchantmentCreature_enchantmentAbilities = []
               , enchantmentCreature_enchantmentCreatureAbilities =
@@ -1458,11 +1458,11 @@ ornithopter =
         , artifactCreature_supertypes = []
         , artifactCreature_artifactTypes = []
         , artifactCreature_creatureTypes = []
+        , artifactCreature_power = Power 0
+        , artifactCreature_toughness = Toughness 2
         , artifactCreature_spec =
             ArtifactCreatureFacet'
               { artifactCreature_cost = manaCost 0
-              , artifactCreature_power = Power 0
-              , artifactCreature_toughness = Toughness 2
               , artifactCreature_artifactAbilities = []
               , artifactCreature_creatureAbilities = [static \_this -> Flying]
               , artifactCreature_artifactCreatureAbilities = []
@@ -1502,11 +1502,11 @@ porcelainLegionnaire =
         , artifactCreature_supertypes = []
         , artifactCreature_artifactTypes = []
         , artifactCreature_creatureTypes = [Soldier]
+        , artifactCreature_power = Power 3
+        , artifactCreature_toughness = Toughness 1
         , artifactCreature_spec =
             ArtifactCreatureFacet'
               { artifactCreature_cost = manaCost (2, PW)
-              , artifactCreature_power = Power 3
-              , artifactCreature_toughness = Toughness 1
               , artifactCreature_artifactAbilities = []
               , artifactCreature_creatureAbilities = [static \_this -> FirstStrike]
               , artifactCreature_artifactCreatureAbilities = []
@@ -1521,11 +1521,11 @@ pradeshGypsies =
         { creature_colors = toColors G
         , creature_supertypes = []
         , creature_creatureTypes = [Human, Nomad]
+        , creature_power = Power 1
+        , creature_toughness = Toughness 1
         , creature_spec =
             CreatureFacet'
               { creature_cost = manaCost (2, G)
-              , creature_power = Power 1
-              , creature_toughness = Toughness 1
               , creature_abilities =
                   [ activated @ 'ZBattlefield \this ->
                       controllerOf this \you ->
@@ -1558,11 +1558,11 @@ ragingGoblin =
         { creature_colors = toColors R
         , creature_supertypes = []
         , creature_creatureTypes = [Goblin]
+        , creature_power = Power 1
+        , creature_toughness = Toughness 1
         , creature_spec =
             CreatureFacet'
               { creature_cost = manaCost R
-              , creature_power = Power 1
-              , creature_toughness = Toughness 1
               , creature_abilities = [static \_this -> Haste]
               }
         }
@@ -1633,11 +1633,11 @@ slashPanther =
         , artifactCreature_supertypes = []
         , artifactCreature_artifactTypes = []
         , artifactCreature_creatureTypes = [Cat]
+        , artifactCreature_power = Power 4
+        , artifactCreature_toughness = Toughness 2
         , artifactCreature_spec =
             ArtifactCreatureFacet'
               { artifactCreature_cost = manaCost (4, PR)
-              , artifactCreature_power = Power 4
-              , artifactCreature_toughness = Toughness 2
               , artifactCreature_artifactAbilities = []
               , artifactCreature_creatureAbilities = [static \_this -> Haste]
               , artifactCreature_artifactCreatureAbilities = []
@@ -1705,11 +1705,11 @@ soldierToken =
           { creature_colors = toColors W
           , creature_supertypes = []
           , creature_creatureTypes = [Soldier]
+          , creature_power = Power 1
+          , creature_toughness = Toughness 1
           , creature_spec =
               CreatureFacet'
                 { creature_cost = noCost
-                , creature_power = Power 1
-                , creature_toughness = Toughness 1
                 , creature_abilities = []
                 }
           }
@@ -1723,11 +1723,11 @@ spinedThopter =
         , artifactCreature_supertypes = []
         , artifactCreature_artifactTypes = []
         , artifactCreature_creatureTypes = [Thopter]
+        , artifactCreature_power = Power 2
+        , artifactCreature_toughness = Toughness 1
         , artifactCreature_spec =
             ArtifactCreatureFacet'
               { artifactCreature_cost = manaCost (2, PU)
-              , artifactCreature_power = Power 2
-              , artifactCreature_toughness = Toughness 1
               , artifactCreature_artifactAbilities = []
               , artifactCreature_creatureAbilities = [static \_this -> Flying]
               , artifactCreature_artifactCreatureAbilities = []
@@ -1742,11 +1742,11 @@ squallDrifter =
         { creature_colors = toColors W
         , creature_supertypes = [Ty.Snow]
         , creature_creatureTypes = [Elemental]
+        , creature_power = Power 1
+        , creature_toughness = Toughness 1
         , creature_spec =
             CreatureFacet'
               { creature_cost = manaCost (1, W)
-              , creature_power = Power 1
-              , creature_toughness = Toughness 1
               , creature_abilities =
                   [ static \_this -> Flying
                   , activated @ 'ZBattlefield \this ->
@@ -1834,11 +1834,11 @@ stoneThrowingDevils =
         { creature_colors = toColors B
         , creature_supertypes = []
         , creature_creatureTypes = [Devil]
+        , creature_power = Power 1
+        , creature_toughness = Toughness 1
         , creature_spec =
             CreatureFacet'
               { creature_cost = manaCost B
-              , creature_power = Power 1
-              , creature_toughness = Toughness 1
               , creature_abilities = [static \_this -> FirstStrike]
               }
         }
@@ -1905,11 +1905,11 @@ thermopod =
         { creature_colors = toColors R
         , creature_supertypes = [Ty.Snow]
         , creature_creatureTypes = [Slug]
+        , creature_power = Power 4
+        , creature_toughness = Toughness 3
         , creature_spec =
             CreatureFacet'
               { creature_cost = manaCost (1, R)
-              , creature_power = Power 4
-              , creature_toughness = Toughness 3
               , creature_abilities =
                   [ activated @ 'ZBattlefield \this ->
                       ElectActivated $
@@ -1937,11 +1937,11 @@ thunderingTanadon =
         , artifactCreature_supertypes = []
         , artifactCreature_artifactTypes = []
         , artifactCreature_creatureTypes = [Beast]
+        , artifactCreature_power = Power 5
+        , artifactCreature_toughness = Toughness 4
         , artifactCreature_spec =
             ArtifactCreatureFacet'
               { artifactCreature_cost = manaCost (4, PG, PG)
-              , artifactCreature_power = Power 5
-              , artifactCreature_toughness = Toughness 4
               , artifactCreature_artifactAbilities = []
               , artifactCreature_creatureAbilities = [static \_this -> Trample]
               , artifactCreature_artifactCreatureAbilities = []
@@ -1999,11 +1999,11 @@ waspLancer =
         { creature_colors = toColors (U, B)
         , creature_supertypes = []
         , creature_creatureTypes = [Faerie, Soldier]
+        , creature_power = Power 3
+        , creature_toughness = Toughness 2
         , creature_spec =
             CreatureFacet'
               { creature_cost = manaCost (UB, UB, UB)
-              , creature_power = Power 3
-              , creature_toughness = Toughness 2
               , creature_abilities = [static \_this -> Flying]
               }
         }
@@ -2076,11 +2076,11 @@ witchEngine =
         { creature_colors = toColors B
         , creature_supertypes = []
         , creature_creatureTypes = [Horror]
+        , creature_power = Power 4
+        , creature_toughness = Toughness 4
         , creature_spec =
             CreatureFacet'
               { creature_cost = manaCost (5, B)
-              , creature_power = Power 4
-              , creature_toughness = Toughness 4
               , creature_abilities =
                   [ swampwalk
                   , activated @ 'ZBattlefield \this ->

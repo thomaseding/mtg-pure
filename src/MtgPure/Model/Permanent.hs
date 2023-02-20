@@ -225,27 +225,27 @@ facetToArtifact facet = case facet of
   _ -> Nothing
 
 facetToCreature :: CardFacet ot -> CardFacet' ot -> Maybe Creature
-facetToCreature facet facet' = case facet of
+facetToCreature facet _facet' = case facet of
   CreatureFacet{} ->
     Just
       Creature
         { creatureTypes = creature_creatureTypes facet
-        , creaturePower = creature_power facet'
-        , creatureToughness = creature_toughness facet'
+        , creaturePower = creature_power facet
+        , creatureToughness = creature_toughness facet
         }
   ArtifactCreatureFacet{} ->
     Just
       Creature
         { creatureTypes = artifactCreature_creatureTypes facet
-        , creaturePower = artifactCreature_power facet'
-        , creatureToughness = artifactCreature_toughness facet'
+        , creaturePower = artifactCreature_power facet
+        , creatureToughness = artifactCreature_toughness facet
         }
   EnchantmentCreatureFacet{} ->
     Just
       Creature
         { creatureTypes = enchantmentCreature_creatureTypes facet
-        , creaturePower = enchantmentCreature_power facet'
-        , creatureToughness = enchantmentCreature_toughness facet'
+        , creaturePower = enchantmentCreature_power facet
+        , creatureToughness = enchantmentCreature_toughness facet
         }
   _ -> Nothing
 

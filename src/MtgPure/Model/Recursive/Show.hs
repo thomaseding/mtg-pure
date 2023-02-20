@@ -594,12 +594,14 @@ showCardFacet = \case
         <> pure " "
         <> sArtTypes
         <> sSpec
-  ArtifactCreatureFacet colors sups artTypes creatTypes spec ->
+  ArtifactCreatureFacet colors sups artTypes creatTypes power toughness spec ->
     yesParens do
       sColors <- parens <$> showColors colors
       sSups <- parens <$> showSupertypes sups
       sArtTypes <- parens <$> showArtifactTypes artTypes
       sCreatTypes <- parens <$> showCreatureTypes creatTypes
+      sPower <- parens <$> showPower power
+      sToughness <- parens <$> showToughness toughness
       sSpec <- dollar <$> showCardFacet' spec
       pure $
         pure "ArtifactCreatureFacet "
@@ -610,6 +612,10 @@ showCardFacet = \case
           <> sArtTypes
           <> pure " "
           <> sCreatTypes
+          <> pure " "
+          <> sPower
+          <> pure " "
+          <> sToughness
           <> sSpec
   ArtifactLandFacet sups artTypes landTypes spec ->
     yesParens do
@@ -625,11 +631,13 @@ showCardFacet = \case
           <> pure " "
           <> sLandTypes
           <> sSpec
-  CreatureFacet colors sups creatureTypes spec ->
+  CreatureFacet colors sups creatureTypes power toughness spec ->
     yesParens do
       sColors <- parens <$> showColors colors
       sSups <- parens <$> showSupertypes sups
       sCreatureTypes <- parens <$> showCreatureTypes creatureTypes
+      sPower <- parens <$> showPower power
+      sToughness <- parens <$> showToughness toughness
       sSpec <- dollar <$> showCardFacet' spec
       pure $
         pure "CreatureFacet "
@@ -638,6 +646,10 @@ showCardFacet = \case
           <> sSups
           <> pure " "
           <> sCreatureTypes
+          <> pure " "
+          <> sPower
+          <> pure " "
+          <> sToughness
           <> sSpec
   EnchantmentFacet colors sups enchantTypes spec -> yesParens do
     sColors <- parens <$> showColors colors
@@ -652,12 +664,14 @@ showCardFacet = \case
         <> pure " "
         <> sEnchantTypes
         <> sSpec
-  EnchantmentCreatureFacet colors sups creatTypes enchantTypes spec ->
+  EnchantmentCreatureFacet colors sups creatTypes enchantTypes power toughness spec ->
     yesParens do
       sColors <- parens <$> showColors colors
       sSups <- parens <$> showSupertypes sups
       sCreatTypes <- parens <$> showCreatureTypes creatTypes
       sEnchantTypes <- parens <$> showEnchantmentTypes enchantTypes
+      sPower <- parens <$> showPower power
+      sToughness <- parens <$> showToughness toughness
       sSpec <- dollar <$> showCardFacet' spec
       pure $
         pure "EnchantmentCreatureFacet "
@@ -668,6 +682,10 @@ showCardFacet = \case
           <> sCreatTypes
           <> pure " "
           <> sEnchantTypes
+          <> pure " "
+          <> sPower
+          <> pure " "
+          <> sToughness
           <> sSpec
   InstantFacet colors sups spec -> yesParens do
     sColors <- parens <$> showColors colors
@@ -719,21 +737,15 @@ showCardFacet' = \case
       pure "ArtifactFacet' "
         <> sCost
         <> sAbilities
-  ArtifactCreatureFacet' cost power toughness artAbils creatAbils bothAbils ->
+  ArtifactCreatureFacet' cost artAbils creatAbils bothAbils ->
     yesParens do
       sCost <- parens <$> showCost cost
-      sPower <- parens <$> showPower power
-      sToughness <- parens <$> showToughness toughness
       sArtAbils <- parens <$> showListM (showSomeZone (showWithThisAbility "this")) artAbils
       sCreatAbils <- parens <$> showListM (showSomeZone (showWithThisAbility "this")) creatAbils
       sBothAbils <- dollar <$> showListM (showSomeZone (showWithThisAbility "this")) bothAbils
       pure $
         pure "ArtifactCreatureFacet' "
           <> sCost
-          <> pure " "
-          <> sPower
-          <> pure " "
-          <> sToughness
           <> pure " "
           <> sArtAbils
           <> pure " "
@@ -750,19 +762,13 @@ showCardFacet' = \case
           <> pure " "
           <> sLandAbils
           <> sBothAbils
-  CreatureFacet' cost power toughness abilities ->
+  CreatureFacet' cost abilities ->
     yesParens do
       sCost <- parens <$> showCost cost
-      sPower <- parens <$> showPower power
-      sToughness <- parens <$> showToughness toughness
       sAbilities <- dollar <$> showListM (showSomeZone (showWithThisAbility "this")) abilities
       pure $
         pure "CreatureFacet' "
           <> sCost
-          <> pure " "
-          <> sPower
-          <> pure " "
-          <> sToughness
           <> sAbilities
   EnchantmentFacet' cost abilities -> yesParens do
     sCost <- parens <$> showCost cost
@@ -771,21 +777,15 @@ showCardFacet' = \case
       pure "EnchantmentFacet' "
         <> sCost
         <> sAbilities
-  EnchantmentCreatureFacet' cost power toughness creatAbils enchAbils bothAbils ->
+  EnchantmentCreatureFacet' cost creatAbils enchAbils bothAbils ->
     yesParens do
       sCost <- parens <$> showCost cost
-      sPower <- parens <$> showPower power
-      sToughness <- parens <$> showToughness toughness
       sCreatAbils <- parens <$> showListM (showSomeZone (showWithThisAbility "this")) creatAbils
       sEnchAbils <- parens <$> showListM (showSomeZone (showWithThisAbility "this")) enchAbils
       sBothAbils <- dollar <$> showListM (showSomeZone (showWithThisAbility "this")) bothAbils
       pure $
         pure "EnchantmentCreatureFacet' "
           <> sCost
-          <> pure " "
-          <> sPower
-          <> pure " "
-          <> sToughness
           <> pure " "
           <> sCreatAbils
           <> pure " "
