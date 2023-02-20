@@ -60,10 +60,10 @@ island :: Card OTLand   -- Defined in `MtgPure.Cards'
 MtgPure> compare island island
 EQ
 MtgPure> print island
-Card "Island" $ YourLand $ \_you1 -> LandCharacteristic [] [BasicLand Island] []
-MtgPure> island == (Card "Island" $ YourLand $ \_you1 -> LandCharacteristic [] [BasicLand Island] [])
+Card "Island" $ ElectCardFacet $ LandCharacteristic [] [BasicLand Island] $ LandSpec []
+MtgPure> island == (Card "Island" $ ElectCardFacet $ LandCharacteristic [] [BasicLand Island] $ LandSpec [])
 True
-MtgPure> island == (Card "Island" $ YourLand $ \_you1 -> LandCharacteristic [] [BasicLand Mountain] [])
+MtgPure> island == (Card "Island" $ ElectCardFacet $ LandCharacteristic [] [BasicLand Mountain] $ LandSpec [])
 False
 MtgPure> mainStoneRain -- runs Test.Game.StoneRain test demo
 ```
