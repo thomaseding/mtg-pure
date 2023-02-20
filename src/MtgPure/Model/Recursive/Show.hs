@@ -1608,25 +1608,15 @@ showManaPool pool = yesParens do
 
 showNatList :: forall u n x. IsUser u => (x -> EnvM ParenItems) -> NatList u n x -> EnvM ParenItems
 showNatList showX = \case
-  LZ x -> yesParens do
-    sType <-
-      parens <$> do
-        let u = showUserType @u
-            grouping = case words u of
-              [_] -> noParens
-              _ -> yesParens
-        grouping $ pure $ pure (fromString u)
+  LZ u x -> yesParens do
+    let sU = pure $ fromString $ show u
     sX <- dollar <$> showX x
-    pure $ pure "LZ @" <> sType <> sX
-  LS x xs -> yesParens do
+    pure $ pure "LZ (" <> sU <> pure ")" <> sX
+  LS u x xs -> yesParens do
+    let sU = pure $ fromString $ show u
     sX <- parens <$> showX x
     sXs <- dollar <$> showNatList showX xs
-    pure $ pure "LS " <> sX <> sXs
-
--- showNonProxy :: NonProxy x -> EnvM ParenItems
--- showNonProxy = \case
---   NonProxyElectEffectOneShot -> noParens do
---     pure $ pure "NonProxyElectEffectOneShot"
+    pure $ pure "LS (" <> sU <> pure ") " <> sX <> sXs
 
 showO1 ::
   forall zone a z.

@@ -365,8 +365,11 @@ mkHybridFilterLand ::
   CardName ->
   ManaSymbol mt1 ->
   ManaSymbol mt2 ->
+  String ->
+  String ->
+  String ->
   Card OTNLand
-mkHybridFilterLand name sym1 sym2 =
+mkHybridFilterLand name sym1 sym2 sxx sxy syy =
   Card name $
     ElectCardFacet
       LandCharacteristic
@@ -384,23 +387,27 @@ mkHybridFilterLand name sym1 sym2 =
                                   [ manaCost $ toHybrid sym1 sym2
                                   , tapCost [is this]
                                   ]
-                            , activated_effect = ChooseOption @()
+                            , activated_effect = ChooseOption
                                 you
-                                (LS CTrue $ LS CTrue $ LZ CTrue)
+                                (LS sxx CTrue $ LS sxy CTrue $ LZ syy CTrue)
                                 \option ->
                                   effect $
                                     EffectCase
                                       CaseFin
                                         { caseFin = option
                                         , ofFin =
-                                            LS (AddMana you $ toManaPool (sym1, sym1, ())) $
-                                              LS (AddMana you $ toManaPool (sym1, sym2, ())) $
-                                                LZ (AddMana you $ toManaPool (sym2, sym2, ()))
+                                            LS () (AddMana you xx) $
+                                              LS () (AddMana you xy) $
+                                                LZ () (AddMana you yy)
                                         }
                             }
                   ]
               }
         }
+ where
+  xx = toManaPool (sym1, sym1, ())
+  xy = toManaPool (sym1, sym2, ())
+  yy = toManaPool (sym2, sym2, ())
 
 mkFetchLand :: CardName -> BasicLandType -> BasicLandType -> Card OTNLand
 mkFetchLand name ty1 ty2 =
@@ -1667,8 +1674,8 @@ snuffOut = Card "Snuff Out" $
         , instant_spec =
             ChooseOption
               you
-              ( LS CTrue $
-                  LZ (satisfies you [ControlsA $ HasLandType $ BasicLand Swamp])
+              ( LS "pay mana" CTrue $
+                  LZ "pay life" (satisfies you [ControlsA $ HasLandType $ BasicLand Swamp])
               )
               \option ->
                 Target you $ masked [nonBlack] \target ->
@@ -1679,8 +1686,8 @@ snuffOut = Card "Snuff Out" $
                             CaseFin
                               { caseFin = option
                               , ofFin =
-                                  LS (manaCost (3, B)) $
-                                    LZ @() $ PayLife 4
+                                  LS () (manaCost (3, B)) $
+                                    LZ () $ PayLife 4
                               }
                       , instant_abilities = []
                       , instant_effect = thisObject \_this ->
@@ -1857,7 +1864,7 @@ sulfurousMire :: Card OTNLand
 sulfurousMire = mkSnowCoveredTapDualLand "Sulfurous Mire" Swamp Mountain
 
 sunkenRuins :: Card OTNLand
-sunkenRuins = mkHybridFilterLand "Sunken Ruins" U B
+sunkenRuins = mkHybridFilterLand "Sunken Ruins" U B "UU" "UB" "BB"
 
 swamp :: Card OTNLand
 swamp = mkBasicLand Swamp

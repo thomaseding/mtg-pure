@@ -1378,10 +1378,10 @@ ordManaPool x y = pure $ compare x y
 
 ordNatList :: IsUser u => (x -> x -> EnvM Ordering) -> NatList u n x -> NatList u n x -> EnvM Ordering
 ordNatList ordX = \case
-  LZ x1 -> \case
-    LZ x2 -> ordX x1 x2
-  LS x1 xs1 -> \case
-    LS x2 xs2 ->
+  LZ _ x1 -> \case
+    LZ _ x2 -> ordX x1 x2
+  LS _ x1 xs1 -> \case
+    LS _ x2 xs2 ->
       seqM
         [ ordX x1 x2
         , ordNatList ordX xs1 xs2

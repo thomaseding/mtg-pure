@@ -297,8 +297,8 @@ instance IsManaAbilityImpl EventListener where
 
 instance IsManaAbilityImpl x => IsManaAbilityImpl (NatList user n x) where
   isManaAbilityImpl = \case
-    LZ x -> isManaAbilityImpl x
-    LS x xs -> isManaAbilityImpl x <> isManaAbilityImpl xs
+    LZ _ x -> isManaAbilityImpl x
+    LS _ x xs -> isManaAbilityImpl x <> isManaAbilityImpl xs
   isTrivialManaAbilityImpl _ _ = Nothing
 
 instance IsManaAbilityImpl (SomeZone Ability ot) where

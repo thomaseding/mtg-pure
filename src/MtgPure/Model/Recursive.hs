@@ -177,7 +177,7 @@ instance ConsIndex (ActivatedAbility zone ot) where
 --------------------------------------------------------------------------------
 
 -- TODO: Move out of Recursive.hs
-class Typeable (u :: Type) => IsUser u where
+class (Show u, Typeable u) => IsUser (u :: Type) where
   showUserType :: String
   showUserType = show (typeRep (Proxy @u))
 
@@ -186,7 +186,7 @@ instance IsUser () where
 
 instance IsUser Color
 
-instance IsUser (Maybe Cost)
+instance IsUser String
 
 -- TODO: Move out of Recursive.hs
 -- TODO: EnchantmentLand [Urza's Saga]
@@ -482,7 +482,7 @@ data Case (x :: Type) where
   CaseFin ::
     (IsUser u, IsNat n) =>
     { caseFin :: Variable (Fin u n)
-    , ofFin :: NatList u n x
+    , ofFin :: NatList () n x
     } ->
     Case x
   deriving (Typeable)
@@ -787,7 +787,12 @@ instance ConsIndex (EventListener' liftOT) where
 
 --------------------------------------------------------------------------------
 
-type FinPayment = Fin (Maybe Cost) (ToNat 1)
+data Payment = DidNotPay | Paid
+  deriving (Eq, Ord, Show, Typeable)
+
+instance IsUser Payment
+
+type FinPayment = Fin Payment (ToNat 1)
 
 --------------------------------------------------------------------------------
 
@@ -809,7 +814,7 @@ data Requirement (zone :: Zone) (ot :: Type) :: Type where
   IsOpponentOf :: ZOPlayer -> Requirement zone OTNPlayer
   IsTapped :: (CoPermanent ot, IsOTN ot) => Requirement 'ZBattlefield ot
   Not :: IsZO zone ot => Requirement zone ot -> Requirement zone ot
-  OfColors :: IsZO zone ot => Colors -> Requirement zone ot -- needs `WCard a` witness
+  OfColors :: IsZO zone ot => Colors -> Requirement zone ot -- needs `WCard ot` witness
   OwnedBy :: IsZO zone ot => ZOPlayer -> Requirement zone ot
   RAnd :: IsZO zone ot => [Requirement zone ot] -> Requirement zone ot
   ROr :: IsZO zone ot => [Requirement zone ot] -> Requirement zone ot

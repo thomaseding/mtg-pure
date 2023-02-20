@@ -32,7 +32,7 @@ import safe qualified Data.Map.Strict as Map
 import safe Data.Maybe (catMaybes)
 import safe qualified Data.Maybe as Maybe
 import safe Data.Monoid (First (..))
-import safe Data.Nat (Fin, IsNat, NatList, intToFin, natListToList)
+import safe Data.Nat (Fin, IsNat, NatList, intToFin, natListUsers)
 import safe qualified Data.Traversable as T
 import safe Data.Typeable (Typeable)
 import safe MtgPure.Client.Terminal.CommandInput (
@@ -540,17 +540,17 @@ parseManaPool' = \case
   _ -> Nothing
 
 terminalChooseOption ::
-  (IsNat n, Show elem, Typeable user) =>
+  (IsNat n, Show user, Typeable user) =>
   Attempt ->
   OpaqueGameState Terminal ->
   Object 'OTPlayer ->
   NatList user n elem ->
   Terminal (Fin user n)
 terminalChooseOption (Attempt attempt) _opaque _oPlayer natList = do
-  let list = natListToList natList
+  let list = natListUsers natList
   let msg = unlines $ chunk 90 $ show list
   let indices = [0 .. length list - 1]
-  let msg' = "ChooseOption " ++ show indices ++ ":\n> " ++ msg
+  let msg' = msg ++ "\nChooseOption " ++ show indices ++ ":\n> "
   untilJust \(Attempt attempt') -> do
     let attempt'' = attempt + attempt'
     M.liftIO do

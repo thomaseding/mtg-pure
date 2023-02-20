@@ -509,14 +509,14 @@ type FinColor = Fin Color (ToNat 4)
 chooseAnyColor :: CoNonIntrinsicStage s => ZOPlayer -> (Variable FinColor -> Elect s el ot) -> Elect s el ot
 chooseAnyColor player = ChooseOption player list
  where
-  list = LS CTrue $ LS CTrue $ LS CTrue $ LS CTrue $ LZ CTrue
+  list = LS White CTrue $ LS Blue CTrue $ LS Black CTrue $ LS Red CTrue $ LZ Green CTrue
 
 addManaAnyColor :: Variable FinColor -> ZOPlayer -> Int -> Effect 'OneShot
 addManaAnyColor color player amount =
   EffectCase
     CaseFin
       { caseFin = color
-      , ofFin = LS (go W) $ LS (go U) $ LS (go B) $ LS (go R) $ LZ (go G)
+      , ofFin = LS () (go W) $ LS () (go U) $ LS () (go B) $ LS () (go R) $ LZ () (go G)
       }
  where
   go :: ToManaPool 'NonSnow (ManaSymbol mt, Int) => ManaSymbol mt -> Effect 'OneShot
@@ -679,11 +679,11 @@ mkBasicLandwalk ty = static \_this -> Landwalk [HasLandType $ BasicLand ty]
 swampwalk :: SomeZone WithThisAbility OTNCreature
 swampwalk = mkBasicLandwalk Swamp
 
-paidCost :: a -> NatList (Maybe Cost) (ToNat 0) a -> NatList (Maybe Cost) (ToNat 1) a
-paidCost = LS
+paidCost :: a -> NatList () (ToNat 0) a -> NatList () (ToNat 1) a
+paidCost = LS ()
 
-didNotPayCost :: a -> NatList (Maybe Cost) (ToNat 0) a
-didNotPayCost = LZ
+didNotPayCost :: a -> NatList () (ToNat 0) a
+didNotPayCost = LZ ()
 
 class
   ( ToManaPool 'NonSnow (ManaSymbol mt1)

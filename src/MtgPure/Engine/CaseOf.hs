@@ -27,9 +27,9 @@ caseOf ::
   Magic 'Private rw m a
 caseOf cont = logCall 'caseOf \case
   CaseFin (readVariable -> fin) xs ->
-    let go :: Fin u n -> NatList u n x -> Magic 'Private rw m a
+    let go :: Fin u n -> NatList () n x -> Magic 'Private rw m a
         go fin' xs' = case (fin', xs') of
-          (FZ, LZ x) -> cont x
-          (FZ, LS x _) -> cont x
-          (FS fin'', LS _ xs'') -> go fin'' xs''
+          (FZ, LZ _ x) -> cont x
+          (FZ, LS _ x _) -> cont x
+          (FS fin'', LS _ _ xs'') -> go fin'' xs''
      in go fin xs

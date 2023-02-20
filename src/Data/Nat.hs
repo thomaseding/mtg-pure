@@ -10,7 +10,8 @@ module Data.Nat (
   Nat (..),
   NatList (..),
   Fin (..),
-  natListToList,
+  natListElems,
+  natListUsers,
   natToInt,
   finToInt,
   intToFin,
@@ -22,6 +23,7 @@ module Data.Nat (
 
 import safe Control.Exception (assert)
 import safe qualified Data.Char as Char
+import safe Data.Inst (Inst2)
 import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
 import safe qualified GHC.TypeLits as GHC
@@ -45,17 +47,17 @@ instance IsNat n => IsNat ( 'S n) where
 
 data NatList (user :: Type) (n :: Nat) (elem :: Type) where
   -- NOTE: `LZ` has `elem` in it to prevent empty list choices
-  LZ :: forall user elem. Typeable user => elem -> NatList user 'Z elem
-  LS :: (Typeable user, IsNat n) => elem -> NatList user n elem -> NatList user ( 'S n) elem
+  LZ :: forall user elem. (Show user, Typeable user) => user -> elem -> NatList user 'Z elem
+  LS :: (Show user, Typeable user, IsNat n) => user -> elem -> NatList user n elem -> NatList user ( 'S n) elem
   deriving (Typeable)
 
-deriving instance Eq a => Eq (NatList user n a)
+deriving instance Inst2 Eq user elem => Eq (NatList user n elem)
 
 deriving instance Functor (NatList user n)
 
-deriving instance Ord a => Ord (NatList user n a)
+deriving instance Inst2 Ord user elem => Ord (NatList user n elem)
 
-deriving instance Show a => Show (NatList user n a)
+deriving instance Show elem => Show (NatList user n elem)
 
 data Fin (user :: Type) (n :: Nat) where
   FZ :: (Typeable user, IsNat n) => Fin user n
@@ -64,10 +66,15 @@ data Fin (user :: Type) (n :: Nat) where
 
 deriving instance Show (Fin user n)
 
-natListToList :: NatList user n elem -> [elem]
-natListToList = \case
-  LZ x -> [x]
-  LS x xs -> x : natListToList xs
+natListElems :: NatList user n elem -> [elem]
+natListElems = \case
+  LZ _ x -> [x]
+  LS _ x xs -> x : natListElems xs
+
+natListUsers :: NatList user n elem -> [user]
+natListUsers = \case
+  LZ u _ -> [u]
+  LS u _ xs -> u : natListUsers xs
 
 natToInt :: Nat -> Int
 natToInt = \case

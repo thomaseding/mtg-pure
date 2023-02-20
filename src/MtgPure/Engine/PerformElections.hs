@@ -21,7 +21,7 @@ import safe qualified Control.Monad.Trans as M
 import safe Control.Monad.Util (untilJust)
 import safe Data.List.NonEmpty (NonEmpty (..))
 import safe qualified Data.Map.Strict as Map
-import safe Data.Nat (Fin (..), IsNat, NatList (..), finToInt, natListToList)
+import safe Data.Nat (Fin (..), IsNat, NatList (..), finToInt, natListElems)
 import safe Data.Typeable (Typeable)
 import safe MtgPure.Engine.Fwd.Api (
   caseOf,
@@ -143,7 +143,7 @@ performElections' failureX zoStack goTerm = logCall 'performElections' \case
   goTarget = electA Target' zoStack failureX
 
 chooseOption ::
-  (Monad m, IsNat n, Typeable user) =>
+  (Monad m, IsNat n, Typeable user, Show user) =>
   (Elect s el ot -> Magic 'Private 'RW m x) ->
   ZOPlayer ->
   NatList user n Condition ->
@@ -155,7 +155,7 @@ chooseOption goElect zoPlayer choices cont = logCall 'chooseOption do
   prompt <- fromRO $ gets magicPrompt
   fin <- fromRO $ untilJust \attempt -> do
     fin <- M.lift $ promptChooseOption prompt attempt opaque oPlayer choices
-    let choice = natListToList choices !! finToInt fin
+    let choice = natListElems choices !! finToInt fin
     isSatisfied choice >>= \case
       False -> pure Nothing
       True -> pure $ Just fin
