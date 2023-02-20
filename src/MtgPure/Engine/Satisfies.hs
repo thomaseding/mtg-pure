@@ -10,6 +10,7 @@
 {-# HLINT ignore "Redundant pure" #-}
 
 module MtgPure.Engine.Satisfies (
+  isSatisfied,
   satisfies,
   zosSatisfying,
 ) where
@@ -28,7 +29,7 @@ import safe MtgPure.Model.LandType (LandType)
 import safe MtgPure.Model.Object.OTNAliases (OTNLand, OTNPlayer)
 import safe MtgPure.Model.Object.ObjectId (getObjectId)
 import safe MtgPure.Model.Permanent (Permanent (..), Tapped (..))
-import safe MtgPure.Model.Recursive (Requirement (..))
+import safe MtgPure.Model.Recursive (Condition (..), Requirement (..))
 import safe MtgPure.Model.Recursive.Ord ()
 import safe MtgPure.Model.Zone (IsZone (..), SZone (SZBattlefield), Zone (..))
 import safe MtgPure.Model.ZoneObject.Convert (toZO0, zo0ToPermanent)
@@ -36,6 +37,13 @@ import safe MtgPure.Model.ZoneObject.ZoneObject (IsOTN, IsZO, ZO, ZOPlayer)
 
 zosSatisfying :: (Monad m, IsZO zone ot) => Requirement zone ot -> Magic 'Private 'RO m [ZO zone ot]
 zosSatisfying req = allZOs >>= M.filterM (`satisfies` req)
+
+isSatisfied :: Monad m => Condition -> Magic 'Private 'RO m Bool
+isSatisfied = \case
+  CAnd cs -> and <$> mapM isSatisfied cs
+  CNot c -> not <$> isSatisfied c
+  COr cs -> or <$> mapM isSatisfied cs
+  Satisfies zo reqs -> satisfies zo $ RAnd reqs
 
 satisfies ::
   (Monad m, IsZO zone ot) =>

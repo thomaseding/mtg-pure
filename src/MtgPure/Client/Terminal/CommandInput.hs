@@ -22,9 +22,11 @@ module MtgPure.Client.Terminal.CommandInput (
   CIPriorityAction (..),
   CIAttack (..),
   CIBlock (..),
+  CIChoice (..),
   runParseCIPriorityAction,
   runParseCIAttack,
   runParseCIBlock,
+  runParseCIChoice,
 ) where
 
 import safe qualified Control.Monad as M
@@ -88,6 +90,10 @@ data CIAttack :: Type where
 
 data CIBlock :: Type where
   CIBlock :: [(ObjectId {-attacker-}, ObjectId {-blocker-})] -> CIBlock
+  deriving (Show)
+
+data CIChoice :: Type where
+  CIChoice :: Int -> CIChoice
   deriving (Show)
 
 instance Show CIPriorityAction where
@@ -368,6 +374,12 @@ parseCIBlock = parseCommandInput do
     pure (attackerId, blockerId)
   pure $ CIBlock attackerBlockerPairs
 
+parseCIChoice :: Parser CIChoice
+parseCIChoice = parseCommandInput do
+  dotSpaces
+  choiceIndex <- read <$> many1 digit
+  pure $ CIChoice choiceIndex
+
 runParseCIPriorityAction :: ValidatedCommandAliases -> String -> Either ParseError CIPriorityAction
 runParseCIPriorityAction (Validated ca) s = parse (parseCIPriorityAction ca) "(repl)" s'
  where
@@ -380,5 +392,10 @@ runParseCIAttack s = parse parseCIAttack "(repl)" s'
 
 runParseCIBlock :: String -> Either ParseError CIBlock
 runParseCIBlock s = parse parseCIBlock "(repl)" s'
+ where
+  s' = s ++ " "
+
+runParseCIChoice :: String -> Either ParseError CIChoice
+runParseCIChoice s = parse parseCIChoice "(repl)" s'
  where
   s' = s ++ " "

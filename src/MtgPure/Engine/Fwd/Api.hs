@@ -54,6 +54,7 @@ module MtgPure.Engine.Fwd.Api (
   getPlayerWithPriority,
   getTrivialManaAbilities,
   indexToActivated,
+  isSatisfied,
   localNewObjectId,
   modifyPlayer,
   newObjectId,
@@ -139,6 +140,7 @@ import safe MtgPure.Model.Player (Player)
 import safe MtgPure.Model.Recursive (
   AnyCard,
   Case,
+  Condition,
   Cost,
   Effect,
   Elect,
@@ -406,6 +408,9 @@ getTrivialManaAbilities = fwd1 fwd_getTrivialManaAbilities
 
 indexToActivated :: (IsZO zone ot, Monad m) => AbsoluteActivatedAbilityIndex -> Magic 'Private 'RO m (Maybe (SomeActivatedAbility zone ot))
 indexToActivated = fwd1 fwd_indexToActivated
+
+isSatisfied :: Monad m => Condition -> Magic 'Private 'RO m Bool
+isSatisfied = fwd1 fwd_isSatisfied
 
 localNewObjectId :: (IsReadWrite rw, Monad m) => Object 'OTPlayer -> (ObjectId -> Magic 'Private rw m a) -> Magic 'Private rw m a
 localNewObjectId = fwd2 fwd_localNewObjectId

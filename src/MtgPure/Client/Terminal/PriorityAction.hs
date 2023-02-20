@@ -21,7 +21,7 @@ import safe qualified Control.Monad as M
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
 import safe Control.Monad.Trans (MonadIO (..))
 import safe qualified Control.Monad.Trans as M
-import safe Control.Monad.Util (Attempt, Attempt' (..))
+import safe Control.Monad.Util (Attempt, Attempt' (..), untilJust)
 import safe qualified Data.Char as Char
 import safe Data.Functor ((<&>))
 import safe Data.List (foldl')
@@ -32,16 +32,19 @@ import safe qualified Data.Map.Strict as Map
 import safe Data.Maybe (catMaybes)
 import safe qualified Data.Maybe as Maybe
 import safe Data.Monoid (First (..))
-import safe Data.Nat (Fin, NatList)
+import safe Data.Nat (Fin, IsNat, NatList, intToFin, natListToList)
 import safe qualified Data.Traversable as T
+import safe Data.Typeable (Typeable)
 import safe MtgPure.Client.Terminal.CommandInput (
   CIAttack (..),
   CIBlock (..),
+  CIChoice (..),
   CIPriorityAction (..),
   CommandAbilityIndex (..),
   defaultCommandAliases,
   runParseCIAttack,
   runParseCIBlock,
+  runParseCIChoice,
   runParseCIPriorityAction,
  )
 import safe MtgPure.Client.Terminal.Fwd.Api (
@@ -537,8 +540,26 @@ parseManaPool' = \case
   _ -> Nothing
 
 terminalChooseOption ::
+  (IsNat n, Show elem, Typeable user) =>
+  Attempt ->
   OpaqueGameState Terminal ->
   Object 'OTPlayer ->
   NatList user n elem ->
   Terminal (Fin user n)
-terminalChooseOption = undefined
+terminalChooseOption (Attempt attempt) _opaque _oPlayer natList = do
+  let list = natListToList natList
+  let msg = unlines $ chunk 90 $ show list
+  let indices = [0 .. length list - 1]
+  let msg' = "ChooseOption " ++ show indices ++ ":\n> " ++ msg
+  untilJust \(Attempt attempt') -> do
+    let attempt'' = attempt + attempt'
+    M.liftIO do
+      clearScreenWithoutPaging
+      setCursorPosition 0 0
+    liftIO case attempt'' of
+      0 -> pure ()
+      n -> putStrLn $ "Retrying[" ++ show n ++ "]..."
+    text <- prompt msg'
+    pure case runParseCIChoice text of
+      Left _err -> Nothing
+      Right (CIChoice i) -> intToFin i

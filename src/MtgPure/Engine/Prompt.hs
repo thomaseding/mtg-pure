@@ -221,7 +221,7 @@ data Prompt' (opaqueGameState :: (Type -> Type) -> Type) (m :: Type -> Type) = P
   , exceptionZoneObjectDoesNotExist :: forall zone ot. IsZO zone ot => ZO zone ot -> m ()
   , promptChooseAttackers :: Attempt -> opaqueGameState m -> AttackingPlayer -> DefendingPlayer -> m [DeclaredAttacker]
   , promptChooseBlockers :: Attempt -> opaqueGameState m -> AttackingPlayer -> DefendingPlayer -> NonEmpty DeclaredAttacker -> m [DeclaredBlocker]
-  , promptChooseOption :: forall user n elem. (Typeable user, IsNat n) => opaqueGameState m -> Object 'OTPlayer -> NatList user n elem -> m (Fin user n)
+  , promptChooseOption :: forall user n elem. (Typeable user, IsNat n, Show elem) => Attempt -> opaqueGameState m -> Object 'OTPlayer -> NatList user n elem -> m (Fin user n)
   , promptDebugMessage :: Pause -> String -> m ()
   , promptGetStartingPlayer :: Attempt -> PlayerCount -> m PlayerIndex
   , promptLogCallPop :: opaqueGameState m -> CallFrameInfo -> m ()

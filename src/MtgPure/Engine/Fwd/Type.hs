@@ -50,6 +50,7 @@ import safe MtgPure.Model.Player (Player)
 import safe MtgPure.Model.Recursive (
   AnyCard,
   Case,
+  Condition,
   Cost,
   Effect,
   Elect,
@@ -98,6 +99,7 @@ data Fwd' ex st m where
     , fwd_getPlayerWithPriority :: Magic' ex st 'Public 'RO m (Maybe (Object 'OTPlayer))
     , fwd_getTrivialManaAbilities :: forall ot. CanHaveTrivialManaAbility ot => ZO 'ZBattlefield ot -> Magic' ex st 'Private 'RO m [SomeActivatedAbility 'ZBattlefield ot]
     , fwd_indexToActivated :: forall zone ot. IsZO zone ot => AbsoluteActivatedAbilityIndex -> Magic' ex st 'Private 'RO m (Maybe (SomeActivatedAbility zone ot))
+    , fwd_isSatisfied :: Condition -> Magic' ex st 'Private 'RO m Bool
     , fwd_localNewObjectId :: forall rw a. IsReadWrite rw => Object 'OTPlayer -> (ObjectId -> Magic' ex st 'Private rw m a) -> Magic' ex st 'Private rw m a
     , fwd_newObjectId :: Magic' ex st 'Private 'RW m ObjectId
     , fwd_newVariableId :: Magic' ex st 'Private 'RW m VariableId

@@ -75,7 +75,7 @@ import safe MtgPure.Engine.Priority (
   getPlayerWithPriority,
  )
 import safe MtgPure.Engine.Resolve (endTheTurn, resolveElected, resolveTopOfStack)
-import safe MtgPure.Engine.Satisfies (satisfies, zosSatisfying)
+import safe MtgPure.Engine.Satisfies (isSatisfied, satisfies, zosSatisfying)
 import safe MtgPure.Engine.State (Fwd)
 import safe MtgPure.Engine.StateBasedActions (performStateBasedActions)
 import safe MtgPure.Engine.Turn (startGame)
@@ -118,6 +118,7 @@ fwdImpl =
     , fwd_getPlayerWithPriority = getPlayerWithPriority
     , fwd_getTrivialManaAbilities = getTrivialManaAbilities
     , fwd_indexToActivated = indexToActivated
+    , fwd_isSatisfied = isSatisfied
     , fwd_localNewObjectId = localNewObjectId
     , fwd_newObjectId = newObjectId
     , fwd_newVariableId = newVariableId

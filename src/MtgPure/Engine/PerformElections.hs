@@ -21,10 +21,11 @@ import safe qualified Control.Monad.Trans as M
 import safe Control.Monad.Util (untilJust)
 import safe Data.List.NonEmpty (NonEmpty (..))
 import safe qualified Data.Map.Strict as Map
-import safe Data.Nat (Fin (..), IsNat, NatList (..))
+import safe Data.Nat (Fin (..), IsNat, NatList (..), finToInt, natListToList)
 import safe Data.Typeable (Typeable)
 import safe MtgPure.Engine.Fwd.Api (
   caseOf,
+  isSatisfied,
   newVariableId,
   zosSatisfying,
  )
@@ -152,7 +153,12 @@ chooseOption goElect zoPlayer choices cont = logCall 'chooseOption do
   let oPlayer = zo1ToO zoPlayer
   opaque <- fromRO $ gets mkOpaqueGameState
   prompt <- fromRO $ gets magicPrompt
-  fin <- M.lift $ promptChooseOption prompt opaque oPlayer choices
+  fin <- fromRO $ untilJust \attempt -> do
+    fin <- M.lift $ promptChooseOption prompt attempt opaque oPlayer choices
+    let choice = natListToList choices !! finToInt fin
+    isSatisfied choice >>= \case
+      False -> pure Nothing
+      True -> pure $ Just fin
   varId <- newVariableId
   let var = ReifiedVariable varId fin
   goElect $ cont var
