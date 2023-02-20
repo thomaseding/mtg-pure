@@ -195,8 +195,8 @@ import safe MtgPure.Model.Recursive (
   Ability (Static),
   ActivatedAbility (..),
   Card (..),
-  CardFacet (..),
-  CardFacet' (..),
+  CardCharacteristic (..),
+  CardSpec (..),
   Case (CaseFin, caseFin, ofFin),
   Condition (COr),
   Cost (..),
@@ -221,7 +221,7 @@ import safe MtgPure.Model.Recursive (
     Cost,
     ElectActivated,
     ElectCardFacet,
-    ElectCardFacet',
+    ElectCardSpec,
     Target,
     VariableFromPower,
     VariableInt,
@@ -270,11 +270,11 @@ mkBasicImpl :: [Ty.Supertype OTNLand] -> CardName -> BasicLandType -> Card OTNLa
 mkBasicImpl supertypes name ty =
   Card name $
     ElectCardFacet
-      LandFacet
+      LandCharacteristic
         { land_supertypes = supertypes
         , land_landTypes = [BasicLand ty]
         , land_spec =
-            LandFacet'
+            LandSpec
               { land_abilities = []
               }
         }
@@ -293,11 +293,11 @@ mkDualTapImpl :: [Ty.Supertype OTNLand] -> CardName -> BasicLandType -> BasicLan
 mkDualTapImpl supertypes name ty1 ty2 =
   Card name $
     ElectCardFacet
-      LandFacet
+      LandCharacteristic
         { land_supertypes = supertypes
         , land_landTypes = [BasicLand ty1, BasicLand ty2]
         , land_spec =
-            LandFacet'
+            LandSpec
               { land_abilities = [static \_this -> Enters EntersTapped]
               }
         }
@@ -315,11 +315,11 @@ mkTapLandImpl ::
 mkTapLandImpl supertypes name sym1 sym2 =
   Card name $
     ElectCardFacet
-      LandFacet
+      LandCharacteristic
         { land_supertypes = supertypes
         , land_landTypes = []
         , land_spec =
-            LandFacet'
+            LandSpec
               { land_abilities =
                   [ activated @ 'ZBattlefield \this ->
                       controllerOf this \you ->
@@ -351,11 +351,11 @@ mkDualLand :: CardName -> BasicLandType -> BasicLandType -> Card OTNLand
 mkDualLand name ty1 ty2 =
   Card name $
     ElectCardFacet
-      LandFacet
+      LandCharacteristic
         { land_supertypes = []
         , land_landTypes = [BasicLand ty1, BasicLand ty2]
         , land_spec =
-            LandFacet'
+            LandSpec
               { land_abilities = []
               }
         }
@@ -369,11 +369,11 @@ mkHybridFilterLand ::
 mkHybridFilterLand name sym1 sym2 =
   Card name $
     ElectCardFacet
-      LandFacet
+      LandCharacteristic
         { land_supertypes = []
         , land_landTypes = []
         , land_spec =
-            LandFacet'
+            LandSpec
               { land_abilities =
                   [ activated @ 'ZBattlefield \this ->
                       controllerOf this \you ->
@@ -406,11 +406,11 @@ mkFetchLand :: CardName -> BasicLandType -> BasicLandType -> Card OTNLand
 mkFetchLand name ty1 ty2 =
   Card name $
     ElectCardFacet
-      LandFacet
+      LandCharacteristic
         { land_supertypes = []
         , land_landTypes = []
         , land_spec =
-            LandFacet'
+            LandSpec
               { land_abilities =
                   [ activated @ 'ZBattlefield \this ->
                       controllerOf this \you ->
@@ -436,12 +436,12 @@ mkMox :: ToManaPool 'NonSnow (ManaSymbol mt) => CardName -> ManaSymbol mt -> Car
 mkMox name sym =
   Card name $
     ElectCardFacet
-      ArtifactFacet
+      ArtifactCharacteristic
         { artifact_colors = toColors ()
         , artifact_supertypes = []
         , artifact_artifactTypes = []
         , artifact_spec =
-            ArtifactFacet'
+            ArtifactSpec
               { artifact_cost = manaCost 0
               , artifact_abilities =
                   [ activated @ 'ZBattlefield \this ->
@@ -462,13 +462,13 @@ acceptableLosses =
   Card "Acceptable Losses" $
     Your \you ->
       ElectCardFacet
-        SorceryFacet
+        SorceryCharacteristic
           { sorcery_colors = toColors R
           , sorcery_supertypes = []
           , sorcery_spec =
               Target you $ masked @OTNCreature [] \target ->
-                ElectCardFacet'
-                  SorceryFacet'
+                ElectCardSpec
+                  SorcerySpec
                     { sorcery_cost =
                         AndCosts
                           [ manaCost (3, R)
@@ -484,12 +484,12 @@ allIsDust :: Card OTNSorcery
 allIsDust =
   Card "All Is Dust" $
     ElectCardFacet
-      SorceryFacet
+      SorceryCharacteristic
         { sorcery_colors = toColors ()
         , sorcery_supertypes = [Tribal [Eldrazi]]
         , sorcery_spec =
-            ElectCardFacet'
-              SorceryFacet'
+            ElectCardSpec
+              SorcerySpec
                 { sorcery_cost = manaCost 7
                 , sorcery_abilities = []
                 , sorcery_effect = thisObject \_this ->
@@ -516,12 +516,12 @@ ancestralRecall :: Card OTNInstant
 ancestralRecall = Card "Ancestral Recall" $
   Your \you ->
     ElectCardFacet
-      InstantFacet
+      InstantCharacteristic
         { instant_colors = toColors U
         , instant_supertypes = []
         , instant_spec =
-            ElectCardFacet'
-              InstantFacet'
+            ElectCardSpec
+              InstantSpec
                 { instant_cost = noCost
                 , instant_abilities = []
                 , instant_effect = thisObject \_this ->
@@ -533,13 +533,13 @@ ancestralVision :: Card OTNSorcery
 ancestralVision = Card "Ancestral Vision" $
   Your \you ->
     ElectCardFacet
-      SorceryFacet
+      SorceryCharacteristic
         { sorcery_colors = toColors U
         , sorcery_supertypes = []
         , sorcery_spec =
             Target you $ masked [] \target ->
-              ElectCardFacet'
-                SorceryFacet'
+              ElectCardSpec
+                SorcerySpec
                   { sorcery_cost = noCost
                   , sorcery_abilities = [static \_this -> Suspend 4 $ Cost $ manaCost U]
                   , sorcery_effect = thisObject \_this ->
@@ -551,13 +551,13 @@ backlash :: Card OTNInstant
 backlash = Card "Backlash" $
   Your \you ->
     ElectCardFacet
-      InstantFacet
+      InstantCharacteristic
         { instant_colors = toColors (B, R)
         , instant_supertypes = []
         , instant_spec =
             Target you $ masked [Not isTapped] \target ->
-              ElectCardFacet'
-                InstantFacet'
+              ElectCardSpec
+                InstantSpec
                   { instant_cost = manaCost (1, B, R)
                   , instant_abilities = []
                   , instant_effect = thisObject \_this ->
@@ -575,14 +575,14 @@ birdsOfParadise :: Card OTNCreature
 birdsOfParadise =
   Card "Birds of Paradise" $
     ElectCardFacet
-      CreatureFacet
+      CreatureCharacteristic
         { creature_colors = toColors G
         , creature_supertypes = []
         , creature_creatureTypes = [Bird]
         , creature_power = Power 0
         , creature_toughness = Toughness 1
         , creature_spec =
-            CreatureFacet'
+            CreatureSpec
               { creature_cost = manaCost G
               , creature_abilities =
                   [ activated @ 'ZBattlefield \this ->
@@ -603,14 +603,14 @@ birdToken =
   Token $
     Card "Bird Token" $
       ElectCardFacet
-        CreatureFacet
+        CreatureCharacteristic
           { creature_colors = toColors U
           , creature_supertypes = []
           , creature_creatureTypes = [Bird]
           , creature_power = Power 2
           , creature_toughness = Toughness 2
           , creature_spec =
-              CreatureFacet'
+              CreatureSpec
                 { creature_cost = noCost
                 , creature_abilities = [static \_this -> Flying]
                 }
@@ -620,12 +620,12 @@ blackLotus :: Card OTNArtifact
 blackLotus =
   Card "Black Lotus" $
     ElectCardFacet
-      ArtifactFacet
+      ArtifactCharacteristic
         { artifact_colors = toColors ()
         , artifact_supertypes = []
         , artifact_artifactTypes = []
         , artifact_spec =
-            ArtifactFacet'
+            ArtifactSpec
               { artifact_cost = manaCost 0
               , artifact_abilities =
                   [ activated @ 'ZBattlefield \this ->
@@ -649,14 +649,14 @@ blaze :: Card OTNSorcery
 blaze = Card "Blaze" $
   Your \you ->
     ElectCardFacet
-      SorceryFacet
+      SorceryCharacteristic
         { sorcery_colors = toColors R
         , sorcery_supertypes = []
         , sorcery_spec =
             VariableInt \x ->
               Target you $ masked @OTNCreaturePlayerPlaneswalker [] \target ->
-                ElectCardFacet'
-                  SorceryFacet'
+                ElectCardSpec
+                  SorcerySpec
                     { sorcery_cost = manaCost (VariableMana @ 'NonSnow @ 'Ty1 x, R)
                     , sorcery_abilities = []
                     , sorcery_effect = thisObject \this ->
@@ -668,12 +668,12 @@ bloodMoon :: Card OTNEnchantment
 bloodMoon =
   Card "Blood Moon" $
     ElectCardFacet
-      EnchantmentFacet
+      EnchantmentCharacteristic
         { enchantment_colors = toColors R
         , enchantment_supertypes = []
         , enchantment_enchantmentTypes = []
         , enchantment_spec =
-            EnchantmentFacet'
+            EnchantmentSpec
               { enchantment_cost = manaCost (2, R)
               , enchantment_abilities =
                   [ static \_this ->
@@ -690,14 +690,14 @@ borealDruid :: Card OTNCreature
 borealDruid =
   Card "Boreal Druid" $
     ElectCardFacet
-      CreatureFacet
+      CreatureCharacteristic
         { creature_colors = toColors G
         , creature_supertypes = [Ty.Snow]
         , creature_creatureTypes = [Elf, Druid]
         , creature_power = Power 1
         , creature_toughness = Toughness 1
         , creature_spec =
-            CreatureFacet'
+            CreatureSpec
               { creature_cost = manaCost G
               , creature_abilities =
                   [ activated @ 'ZBattlefield \this ->
@@ -719,12 +719,12 @@ braidwoodCup :: Card OTNArtifact
 braidwoodCup =
   Card "Braidwood Cup" $
     ElectCardFacet
-      ArtifactFacet
+      ArtifactCharacteristic
         { artifact_colors = toColors ()
         , artifact_supertypes = []
         , artifact_artifactTypes = []
         , artifact_spec =
-            ArtifactFacet'
+            ArtifactSpec
               { artifact_cost = manaCost 3
               , artifact_abilities =
                   [ activated @ 'ZBattlefield \this ->
@@ -742,13 +742,13 @@ counterspell :: Card OTNInstant
 counterspell = Card "Counterspell" $
   Your \you ->
     ElectCardFacet
-      InstantFacet
+      InstantCharacteristic
         { instant_colors = toColors U
         , instant_supertypes = []
         , instant_spec =
             Target you $ masked @OTNSpell [] \target ->
-              ElectCardFacet'
-                InstantFacet'
+              ElectCardSpec
+                InstantSpec
                   { instant_cost = manaCost (U, U)
                   , instant_abilities = []
                   , instant_effect = thisObject \_this ->
@@ -760,11 +760,11 @@ cityOfBrass :: Card OTNLand
 cityOfBrass =
   Card "City of Brass" $
     ElectCardFacet
-      LandFacet
+      LandCharacteristic
         { land_supertypes = []
         , land_landTypes = []
         , land_spec =
-            LandFacet'
+            LandSpec
               { land_abilities =
                   [ triggered \this ->
                       When $
@@ -789,12 +789,12 @@ cleanse :: Card OTNSorcery
 cleanse =
   Card "Cleanse" $
     ElectCardFacet
-      SorceryFacet
+      SorceryCharacteristic
         { sorcery_colors = toColors W
         , sorcery_supertypes = []
         , sorcery_spec =
-            ElectCardFacet'
-              SorceryFacet'
+            ElectCardSpec
+              SorcerySpec
                 { sorcery_abilities = []
                 , sorcery_cost = manaCost (2, W, W)
                 , sorcery_effect = thisObject \_this ->
@@ -809,12 +809,12 @@ conversion :: Card OTNEnchantment
 conversion =
   Card "Conversion" $
     ElectCardFacet
-      EnchantmentFacet
+      EnchantmentCharacteristic
         { enchantment_colors = toColors W
         , enchantment_supertypes = []
         , enchantment_enchantmentTypes = []
         , enchantment_spec =
-            EnchantmentFacet'
+            EnchantmentSpec
               { enchantment_cost = manaCost (2, W, W)
               , enchantment_abilities =
                   [ triggered \this ->
@@ -845,13 +845,13 @@ corrosiveGale :: Card OTNSorcery
 corrosiveGale =
   Card "Corrosive Gale" $
     ElectCardFacet
-      SorceryFacet
+      SorceryCharacteristic
         { sorcery_colors = toColors G
         , sorcery_supertypes = []
         , sorcery_spec =
             VariableInt \x ->
-              ElectCardFacet'
-                SorceryFacet'
+              ElectCardSpec
+                SorcerySpec
                   { sorcery_cost = manaCost (VariableMana @ 'NonSnow @ 'Ty1 x, PG)
                   , sorcery_abilities = []
                   , sorcery_effect = thisObject \this ->
@@ -866,12 +866,12 @@ damnation :: Card OTNSorcery
 damnation =
   Card "Damnation" $
     ElectCardFacet
-      SorceryFacet
+      SorceryCharacteristic
         { sorcery_colors = toColors B
         , sorcery_supertypes = []
         , sorcery_spec =
-            ElectCardFacet'
-              SorceryFacet'
+            ElectCardSpec
+              SorcerySpec
                 { sorcery_cost = manaCost (2, B, B)
                 , sorcery_abilities = []
                 , sorcery_effect = thisObject \_this ->
@@ -889,12 +889,12 @@ darkRitual :: Card OTNInstant
 darkRitual = Card "Dark Ritual" $
   Your \you ->
     ElectCardFacet
-      InstantFacet
+      InstantCharacteristic
         { instant_colors = toColors B
         , instant_supertypes = []
         , instant_spec =
-            ElectCardFacet'
-              InstantFacet'
+            ElectCardSpec
+              InstantSpec
                 { instant_cost = manaCost B
                 , instant_abilities = []
                 , instant_effect = thisObject \_this ->
@@ -906,14 +906,14 @@ deathriteShaman :: Card OTNCreature
 deathriteShaman =
   Card "Deathrite Shaman" $
     ElectCardFacet
-      CreatureFacet
+      CreatureCharacteristic
         { creature_colors = toColors (B, G)
         , creature_supertypes = []
         , creature_creatureTypes = [Elf, Shaman]
         , creature_power = Power 1
         , creature_toughness = Toughness 2
         , creature_spec =
-            CreatureFacet'
+            CreatureSpec
               { creature_cost = manaCost BG
               , creature_abilities =
                   [ activated @ 'ZBattlefield \this ->
@@ -968,13 +968,13 @@ dismember :: Card OTNInstant
 dismember = Card "Dismember" $
   Your \you ->
     ElectCardFacet
-      InstantFacet
+      InstantCharacteristic
         { instant_colors = toColors B
         , instant_supertypes = []
         , instant_spec =
             Target you $ masked @OTNCreature [] \target ->
-              ElectCardFacet'
-                InstantFacet'
+              ElectCardSpec
+                InstantSpec
                   { instant_cost = manaCost (1, PB, PB)
                   , instant_abilities = []
                   , instant_effect = thisObject \_this ->
@@ -991,12 +991,12 @@ divination :: Card OTNSorcery
 divination = Card "Divination" $
   Your \you ->
     ElectCardFacet
-      SorceryFacet
+      SorceryCharacteristic
         { sorcery_colors = toColors U
         , sorcery_supertypes = []
         , sorcery_spec =
-            ElectCardFacet'
-              SorceryFacet'
+            ElectCardSpec
+              SorcerySpec
                 { sorcery_cost = manaCost (2, U)
                 , sorcery_abilities = []
                 , sorcery_effect = thisObject \_this ->
@@ -1008,14 +1008,14 @@ elvishHexhunter :: Card OTNCreature
 elvishHexhunter =
   Card "Elvish Hexhunter" $
     ElectCardFacet
-      CreatureFacet
+      CreatureCharacteristic
         { creature_colors = toColors (G, W)
         , creature_supertypes = []
         , creature_creatureTypes = [Elf, Shaman]
         , creature_power = Power 1
         , creature_toughness = Toughness 1
         , creature_spec =
-            CreatureFacet'
+            CreatureSpec
               { creature_cost = manaCost GW
               , creature_abilities =
                   [ activated @ 'ZBattlefield \this ->
@@ -1039,14 +1039,14 @@ fling :: Card OTNInstant
 fling = Card "Fling" $
   Your \you ->
     ElectCardFacet
-      InstantFacet
+      InstantCharacteristic
         { instant_colors = toColors R
         , instant_supertypes = []
         , instant_spec =
             Choose you $ masked [ControlledBy you] \sacChoice ->
               Target you $ masked @OTNCreaturePlayer [] \target ->
-                ElectCardFacet'
-                  InstantFacet'
+                ElectCardSpec
+                  InstantSpec
                     { instant_cost =
                         AndCosts
                           [ manaCost (1, R)
@@ -1067,14 +1067,14 @@ fulminatorMage :: Card OTNCreature
 fulminatorMage =
   Card "Fulminator Mage" $
     ElectCardFacet
-      CreatureFacet
+      CreatureCharacteristic
         { creature_colors = toColors (B, R)
         , creature_supertypes = []
         , creature_creatureTypes = [Elemental, Shaman]
         , creature_power = Power 2
         , creature_toughness = Toughness 2
         , creature_spec =
-            CreatureFacet'
+            CreatureSpec
               { creature_cost = manaCost (1, BR, BR)
               , creature_abilities =
                   [ activated @ 'ZBattlefield \this ->
@@ -1096,13 +1096,13 @@ giantGrowth :: Card OTNInstant
 giantGrowth = Card "Giant Growth" $
   Your \you ->
     ElectCardFacet
-      InstantFacet
+      InstantCharacteristic
         { instant_colors = toColors G
         , instant_supertypes = []
         , instant_spec =
             Target you $ masked @OTNCreature [] \target ->
-              ElectCardFacet'
-                InstantFacet'
+              ElectCardSpec
+                InstantSpec
                   { instant_cost = manaCost G
                   , instant_abilities = []
                   , instant_effect = thisObject \_this ->
@@ -1122,14 +1122,14 @@ gutlessGhoul :: Card OTNCreature
 gutlessGhoul =
   Card "Gutless Ghoul" $
     ElectCardFacet
-      CreatureFacet
+      CreatureCharacteristic
         { creature_colors = toColors B
         , creature_supertypes = [Ty.Snow]
         , creature_creatureTypes = [Zombie]
         , creature_power = Power 2
         , creature_toughness = Toughness 2
         , creature_spec =
-            CreatureFacet'
+            CreatureSpec
               { creature_cost = manaCost (2, B)
               , creature_abilities =
                   [ activated @ 'ZBattlefield \this ->
@@ -1151,13 +1151,13 @@ gutShot :: Card OTNInstant
 gutShot = Card "Gut Shot" $
   Your \you ->
     ElectCardFacet
-      InstantFacet
+      InstantCharacteristic
         { instant_colors = toColors R
         , instant_supertypes = []
         , instant_spec =
             Target you $ masked @OTNCreaturePlayer [] \target ->
-              ElectCardFacet'
-                InstantFacet'
+              ElectCardSpec
+                InstantSpec
                   { instant_cost = manaCost PR
                   , instant_abilities = []
                   , instant_effect = thisObject \this ->
@@ -1169,14 +1169,14 @@ grizzlyBears :: Card OTNCreature
 grizzlyBears =
   Card "Grizzly Bears" $
     ElectCardFacet
-      CreatureFacet
+      CreatureCharacteristic
         { creature_colors = toColors G
         , creature_supertypes = []
         , creature_creatureTypes = [Bear]
         , creature_power = Power 2
         , creature_toughness = Toughness 2
         , creature_spec =
-            CreatureFacet'
+            CreatureSpec
               { creature_cost = manaCost (1, G)
               , creature_abilities = []
               }
@@ -1192,7 +1192,7 @@ holyStrength :: Card OTNEnchantment
 holyStrength =
   Card "Holy Strength" $
     ElectCardFacet
-      EnchantmentFacet
+      EnchantmentCharacteristic
         { enchantment_colors = toColors W
         , enchantment_supertypes = []
         , enchantment_enchantmentTypes =
@@ -1201,7 +1201,7 @@ holyStrength =
                   effect $ StatDelta enchanted (Power 1) (Toughness 2)
             ]
         , enchantment_spec =
-            EnchantmentFacet'
+            EnchantmentSpec
               { enchantment_cost = manaCost W
               , enchantment_abilities = []
               }
@@ -1211,7 +1211,7 @@ icehideGolem :: Card OTNArtifactCreature
 icehideGolem =
   Card "Icehide Golem" $
     ElectCardFacet
-      ArtifactCreatureFacet
+      ArtifactCreatureCharacteristic
         { artifactCreature_colors = toColors ()
         , artifactCreature_supertypes = [Ty.Snow]
         , artifactCreature_artifactTypes = []
@@ -1219,7 +1219,7 @@ icehideGolem =
         , artifactCreature_power = Power 2
         , artifactCreature_toughness = Toughness 2
         , artifactCreature_spec =
-            ArtifactCreatureFacet'
+            ArtifactCreatureSpec
               { artifactCreature_cost = manaCost 1
               , artifactCreature_artifactAbilities = []
               , artifactCreature_creatureAbilities = []
@@ -1237,14 +1237,14 @@ llanowarElves :: Card OTNCreature
 llanowarElves =
   Card "Llanowar Elves" $
     ElectCardFacet
-      CreatureFacet
+      CreatureCharacteristic
         { creature_colors = toColors G
         , creature_supertypes = []
         , creature_creatureTypes = [Elf]
         , creature_power = Power 1
         , creature_toughness = Toughness 1
         , creature_spec =
-            CreatureFacet'
+            CreatureSpec
               { creature_cost = manaCost G
               , creature_abilities =
                   [ activated @ 'ZBattlefield \this ->
@@ -1262,13 +1262,13 @@ lavaAxe :: Card OTNSorcery
 lavaAxe = Card "Lava Axe" $
   Your \you ->
     ElectCardFacet
-      SorceryFacet
+      SorceryCharacteristic
         { sorcery_colors = toColors R
         , sorcery_supertypes = []
         , sorcery_spec =
             Target you $ masked @OTNPlayerPlaneswalker [] \target ->
-              ElectCardFacet'
-                SorceryFacet'
+              ElectCardSpec
+                SorcerySpec
                   { sorcery_cost = manaCost (4, R)
                   , sorcery_abilities = []
                   , sorcery_effect = thisObject \this ->
@@ -1280,13 +1280,13 @@ lightningBolt :: Card OTNInstant
 lightningBolt = Card "Lightning Bolt" $
   Your \you ->
     ElectCardFacet
-      InstantFacet
+      InstantCharacteristic
         { instant_colors = toColors R
         , instant_supertypes = []
         , instant_spec =
             Target you $ masked @OTNCreaturePlayerPlaneswalker [] \target ->
-              ElectCardFacet'
-                InstantFacet'
+              ElectCardSpec
+                InstantSpec
                   { instant_cost = manaCost R
                   , instant_abilities = []
                   , instant_effect = thisObject \this ->
@@ -1298,13 +1298,13 @@ manaLeak :: Card OTNInstant
 manaLeak = Card "Mana Leak" $
   Your \you ->
     ElectCardFacet
-      InstantFacet
+      InstantCharacteristic
         { instant_colors = toColors U
         , instant_supertypes = []
         , instant_spec =
             Target you $ masked @OTNSpell [] \spell ->
-              ElectCardFacet'
-                InstantFacet'
+              ElectCardSpec
+                InstantSpec
                   { instant_cost = manaCost (1, U)
                   , instant_abilities = []
                   , instant_effect = thisObject \_this ->
@@ -1318,7 +1318,7 @@ moltensteelDragon :: Card OTNArtifactCreature
 moltensteelDragon =
   Card "Moltensteel Dragon" $
     ElectCardFacet
-      ArtifactCreatureFacet
+      ArtifactCreatureCharacteristic
         { artifactCreature_colors = toColors R
         , artifactCreature_supertypes = []
         , artifactCreature_artifactTypes = []
@@ -1326,7 +1326,7 @@ moltensteelDragon =
         , artifactCreature_power = Power 4
         , artifactCreature_toughness = Toughness 4
         , artifactCreature_spec =
-            ArtifactCreatureFacet'
+            ArtifactCreatureSpec
               { artifactCreature_cost = manaCost (4, PR, PR)
               , artifactCreature_artifactAbilities = []
               , artifactCreature_creatureAbilities =
@@ -1356,11 +1356,11 @@ mouthOfRonom :: Card OTNLand
 mouthOfRonom =
   Card "Mouth of Ronom" $
     ElectCardFacet
-      LandFacet
+      LandCharacteristic
         { land_supertypes = [Ty.Snow]
         , land_landTypes = []
         , land_spec =
-            LandFacet'
+            LandSpec
               { land_abilities =
                   [ activated @ 'ZBattlefield \this ->
                       controllerOf this \you ->
@@ -1405,13 +1405,13 @@ mutagenicGrowth :: Card OTNInstant
 mutagenicGrowth = Card "Mutagenic Growth" $
   Your \you ->
     ElectCardFacet
-      InstantFacet
+      InstantCharacteristic
         { instant_colors = toColors G
         , instant_supertypes = []
         , instant_spec =
             Target you $ masked @OTNCreature [] \target ->
-              ElectCardFacet'
-                InstantFacet'
+              ElectCardSpec
+                InstantSpec
                   { instant_cost = manaCost PG
                   , instant_abilities = []
                   , instant_effect = thisObject \_this ->
@@ -1428,7 +1428,7 @@ nyxbornRollicker :: Card OTNEnchantmentCreature
 nyxbornRollicker =
   Card "Nyxborn Rollicker" $
     ElectCardFacet
-      EnchantmentCreatureFacet
+      EnchantmentCreatureCharacteristic
         { enchantmentCreature_colors = toColors R
         , enchantmentCreature_supertypes = []
         , enchantmentCreature_creatureTypes = [Satyr]
@@ -1436,7 +1436,7 @@ nyxbornRollicker =
         , enchantmentCreature_power = Power 1
         , enchantmentCreature_toughness = Toughness 1
         , enchantmentCreature_spec =
-            EnchantmentCreatureFacet'
+            EnchantmentCreatureSpec
               { enchantmentCreature_cost = manaCost R
               , enchantmentCreature_creatureAbilities = []
               , enchantmentCreature_enchantmentAbilities = []
@@ -1453,7 +1453,7 @@ ornithopter :: Card OTNArtifactCreature
 ornithopter =
   Card "Ornithopter" $
     ElectCardFacet
-      ArtifactCreatureFacet
+      ArtifactCreatureCharacteristic
         { artifactCreature_colors = toColors ()
         , artifactCreature_supertypes = []
         , artifactCreature_artifactTypes = []
@@ -1461,7 +1461,7 @@ ornithopter =
         , artifactCreature_power = Power 0
         , artifactCreature_toughness = Toughness 2
         , artifactCreature_spec =
-            ArtifactCreatureFacet'
+            ArtifactCreatureSpec
               { artifactCreature_cost = manaCost 0
               , artifactCreature_artifactAbilities = []
               , artifactCreature_creatureAbilities = [static \_this -> Flying]
@@ -1476,13 +1476,13 @@ plummet :: Card OTNInstant
 plummet = Card "Plummet" $
   Your \you ->
     ElectCardFacet
-      InstantFacet
+      InstantCharacteristic
         { instant_colors = toColors G
         , instant_supertypes = []
         , instant_spec =
             Target you $ masked [hasAbility $ static \_this -> Flying] \target ->
-              ElectCardFacet'
-                InstantFacet'
+              ElectCardSpec
+                InstantSpec
                   { instant_cost = manaCost (1, G)
                   , instant_abilities = []
                   , instant_effect = thisObject \_this ->
@@ -1497,7 +1497,7 @@ porcelainLegionnaire :: Card OTNArtifactCreature
 porcelainLegionnaire =
   Card "Porcelain Legionnaire" $
     ElectCardFacet
-      ArtifactCreatureFacet
+      ArtifactCreatureCharacteristic
         { artifactCreature_colors = toColors W
         , artifactCreature_supertypes = []
         , artifactCreature_artifactTypes = []
@@ -1505,7 +1505,7 @@ porcelainLegionnaire =
         , artifactCreature_power = Power 3
         , artifactCreature_toughness = Toughness 1
         , artifactCreature_spec =
-            ArtifactCreatureFacet'
+            ArtifactCreatureSpec
               { artifactCreature_cost = manaCost (2, PW)
               , artifactCreature_artifactAbilities = []
               , artifactCreature_creatureAbilities = [static \_this -> FirstStrike]
@@ -1517,14 +1517,14 @@ pradeshGypsies :: Card OTNCreature
 pradeshGypsies =
   Card "Pradesh Gypsies" $
     ElectCardFacet
-      CreatureFacet
+      CreatureCharacteristic
         { creature_colors = toColors G
         , creature_supertypes = []
         , creature_creatureTypes = [Human, Nomad]
         , creature_power = Power 1
         , creature_toughness = Toughness 1
         , creature_spec =
-            CreatureFacet'
+            CreatureSpec
               { creature_cost = manaCost (2, G)
               , creature_abilities =
                   [ activated @ 'ZBattlefield \this ->
@@ -1554,14 +1554,14 @@ ragingGoblin :: Card OTNCreature
 ragingGoblin =
   Card "Raging Goblin" $
     ElectCardFacet
-      CreatureFacet
+      CreatureCharacteristic
         { creature_colors = toColors R
         , creature_supertypes = []
         , creature_creatureTypes = [Goblin]
         , creature_power = Power 1
         , creature_toughness = Toughness 1
         , creature_spec =
-            CreatureFacet'
+            CreatureSpec
               { creature_cost = manaCost R
               , creature_abilities = [static \_this -> Haste]
               }
@@ -1574,13 +1574,13 @@ shatter :: Card OTNInstant
 shatter = Card "Shatter" $
   Your \you ->
     ElectCardFacet
-      InstantFacet
+      InstantCharacteristic
         { instant_colors = toColors R
         , instant_supertypes = []
         , instant_spec =
             Target you $ masked @OTNArtifact [] \target ->
-              ElectCardFacet'
-                InstantFacet'
+              ElectCardSpec
+                InstantSpec
                   { instant_cost = manaCost (1, R)
                   , instant_abilities = []
                   , instant_effect = thisObject \_this ->
@@ -1592,13 +1592,13 @@ shock :: Card OTNInstant
 shock = Card "Shock" $
   Your \you ->
     ElectCardFacet
-      InstantFacet
+      InstantCharacteristic
         { instant_colors = toColors R
         , instant_supertypes = []
         , instant_spec =
             Target you $ masked @OTNCreaturePlayerPlaneswalker [] \target ->
-              ElectCardFacet'
-                InstantFacet'
+              ElectCardSpec
+                InstantSpec
                   { instant_cost = manaCost R
                   , instant_abilities = []
                   , instant_effect = thisObject \this ->
@@ -1610,13 +1610,13 @@ sinkhole :: Card OTNSorcery
 sinkhole = Card "Sinkhole" $
   Your \you ->
     ElectCardFacet
-      SorceryFacet
+      SorceryCharacteristic
         { sorcery_colors = toColors B
         , sorcery_supertypes = []
         , sorcery_spec =
             Target you $ masked @OTNLand [] \target ->
-              ElectCardFacet'
-                SorceryFacet'
+              ElectCardSpec
+                SorcerySpec
                   { sorcery_cost = manaCost (B, B)
                   , sorcery_abilities = []
                   , sorcery_effect = thisObject \_this ->
@@ -1628,7 +1628,7 @@ slashPanther :: Card OTNArtifactCreature
 slashPanther =
   Card "Slash Panther" $
     ElectCardFacet
-      ArtifactCreatureFacet
+      ArtifactCreatureCharacteristic
         { artifactCreature_colors = toColors R
         , artifactCreature_supertypes = []
         , artifactCreature_artifactTypes = []
@@ -1636,7 +1636,7 @@ slashPanther =
         , artifactCreature_power = Power 4
         , artifactCreature_toughness = Toughness 2
         , artifactCreature_spec =
-            ArtifactCreatureFacet'
+            ArtifactCreatureSpec
               { artifactCreature_cost = manaCost (4, PR)
               , artifactCreature_artifactAbilities = []
               , artifactCreature_creatureAbilities = [static \_this -> Haste]
@@ -1651,7 +1651,7 @@ snuffOut :: Card OTNInstant
 snuffOut = Card "Snuff Out" $
   Your \you ->
     ElectCardFacet
-      InstantFacet
+      InstantCharacteristic
         { instant_colors = toColors B
         , instant_supertypes = []
         , instant_spec =
@@ -1662,8 +1662,8 @@ snuffOut = Card "Snuff Out" $
               )
               \option ->
                 Target you $ masked [nonBlack] \target ->
-                  ElectCardFacet'
-                    InstantFacet'
+                  ElectCardSpec
+                    InstantSpec
                       { instant_cost =
                           CostCase
                             CaseFin
@@ -1701,14 +1701,14 @@ soldierToken =
   Token $
     Card "Soldier Token" $
       ElectCardFacet
-        CreatureFacet
+        CreatureCharacteristic
           { creature_colors = toColors W
           , creature_supertypes = []
           , creature_creatureTypes = [Soldier]
           , creature_power = Power 1
           , creature_toughness = Toughness 1
           , creature_spec =
-              CreatureFacet'
+              CreatureSpec
                 { creature_cost = noCost
                 , creature_abilities = []
                 }
@@ -1718,7 +1718,7 @@ spinedThopter :: Card OTNArtifactCreature
 spinedThopter =
   Card "Spined Thopter" $
     ElectCardFacet
-      ArtifactCreatureFacet
+      ArtifactCreatureCharacteristic
         { artifactCreature_colors = toColors U
         , artifactCreature_supertypes = []
         , artifactCreature_artifactTypes = []
@@ -1726,7 +1726,7 @@ spinedThopter =
         , artifactCreature_power = Power 2
         , artifactCreature_toughness = Toughness 1
         , artifactCreature_spec =
-            ArtifactCreatureFacet'
+            ArtifactCreatureSpec
               { artifactCreature_cost = manaCost (2, PU)
               , artifactCreature_artifactAbilities = []
               , artifactCreature_creatureAbilities = [static \_this -> Flying]
@@ -1738,14 +1738,14 @@ squallDrifter :: Card OTNCreature
 squallDrifter =
   Card "Squall Drifter" $
     ElectCardFacet
-      CreatureFacet
+      CreatureCharacteristic
         { creature_colors = toColors W
         , creature_supertypes = [Ty.Snow]
         , creature_creatureTypes = [Elemental]
         , creature_power = Power 1
         , creature_toughness = Toughness 1
         , creature_spec =
-            CreatureFacet'
+            CreatureSpec
               { creature_cost = manaCost (1, W)
               , creature_abilities =
                   [ static \_this -> Flying
@@ -1769,13 +1769,13 @@ squallLine :: Card OTNInstant
 squallLine =
   Card "Squall Line" $
     ElectCardFacet
-      InstantFacet
+      InstantCharacteristic
         { instant_colors = toColors G
         , instant_supertypes = []
         , instant_spec =
             VariableInt \x ->
-              ElectCardFacet'
-                InstantFacet'
+              ElectCardSpec
+                InstantSpec
                   { instant_cost = manaCost (VariableMana @ 'NonSnow @ 'Ty1 x, G, G)
                   , instant_abilities = []
                   , instant_effect = thisObject \this ->
@@ -1794,13 +1794,13 @@ stifle :: Card OTNInstant
 stifle = Card "Stifle" $
   Your \you ->
     ElectCardFacet
-      InstantFacet
+      InstantCharacteristic
         { instant_colors = toColors U
         , instant_supertypes = []
         , instant_spec =
             Target you $ masked @OTNActivatedOrTriggeredAbility [] \target ->
-              ElectCardFacet'
-                InstantFacet'
+              ElectCardSpec
+                InstantSpec
                   { instant_cost = manaCost U
                   , instant_abilities = []
                   , instant_effect = thisObject \_this ->
@@ -1812,13 +1812,13 @@ stoneRain :: Card OTNSorcery
 stoneRain = Card "Stone Rain" $
   Your \you ->
     ElectCardFacet
-      SorceryFacet
+      SorceryCharacteristic
         { sorcery_colors = toColors R
         , sorcery_supertypes = []
         , sorcery_spec =
             Target you $ masked @OTNLand [] \target ->
-              ElectCardFacet'
-                SorceryFacet'
+              ElectCardSpec
+                SorcerySpec
                   { sorcery_cost = manaCost (2, R)
                   , sorcery_abilities = []
                   , sorcery_effect = thisObject \_this ->
@@ -1830,14 +1830,14 @@ stoneThrowingDevils :: Card OTNCreature
 stoneThrowingDevils =
   Card "Stone-Throwing Devils" $
     ElectCardFacet
-      CreatureFacet
+      CreatureCharacteristic
         { creature_colors = toColors B
         , creature_supertypes = []
         , creature_creatureTypes = [Devil]
         , creature_power = Power 1
         , creature_toughness = Toughness 1
         , creature_spec =
-            CreatureFacet'
+            CreatureSpec
               { creature_cost = manaCost B
               , creature_abilities = [static \_this -> FirstStrike]
               }
@@ -1856,14 +1856,14 @@ swanSong :: Card OTNInstant
 swanSong = Card "Swan Song" $
   Your \you ->
     ElectCardFacet
-      InstantFacet
+      InstantCharacteristic
         { instant_colors = toColors U
         , instant_supertypes = []
         , instant_spec =
             Target you $ masked @(OT3 'OTEnchantment 'OTInstant 'OTSorcery) [] \target ->
               controllerOf target \controller ->
-                ElectCardFacet'
-                  InstantFacet'
+                ElectCardSpec
+                  InstantSpec
                     { instant_cost = manaCost U
                     , instant_abilities = []
                     , instant_effect = thisObject \_this ->
@@ -1878,11 +1878,11 @@ teferisIsle :: Card OTNLand
 teferisIsle =
   Card "Teferi's Isle" $
     ElectCardFacet
-      LandFacet
+      LandCharacteristic
         { land_supertypes = [Legendary]
         , land_landTypes = []
         , land_spec =
-            LandFacet'
+            LandSpec
               { land_abilities =
                   [ static \_this -> Phasing
                   , static \_this -> Enters EntersTapped
@@ -1901,14 +1901,14 @@ thermopod :: Card OTNCreature
 thermopod =
   Card "Thermopod" $
     ElectCardFacet
-      CreatureFacet
+      CreatureCharacteristic
         { creature_colors = toColors R
         , creature_supertypes = [Ty.Snow]
         , creature_creatureTypes = [Slug]
         , creature_power = Power 4
         , creature_toughness = Toughness 3
         , creature_spec =
-            CreatureFacet'
+            CreatureSpec
               { creature_cost = manaCost (1, R)
               , creature_abilities =
                   [ activated @ 'ZBattlefield \this ->
@@ -1932,7 +1932,7 @@ thunderingTanadon :: Card OTNArtifactCreature
 thunderingTanadon =
   Card "Thundering Tanadon" $
     ElectCardFacet
-      ArtifactCreatureFacet
+      ArtifactCreatureCharacteristic
         { artifactCreature_colors = toColors G
         , artifactCreature_supertypes = []
         , artifactCreature_artifactTypes = []
@@ -1940,7 +1940,7 @@ thunderingTanadon =
         , artifactCreature_power = Power 5
         , artifactCreature_toughness = Toughness 4
         , artifactCreature_spec =
-            ArtifactCreatureFacet'
+            ArtifactCreatureSpec
               { artifactCreature_cost = manaCost (4, PG, PG)
               , artifactCreature_artifactAbilities = []
               , artifactCreature_creatureAbilities = [static \_this -> Trample]
@@ -1955,7 +1955,7 @@ unholyStrength :: Card OTNEnchantment
 unholyStrength =
   Card "Unholy Strength" $
     ElectCardFacet
-      EnchantmentFacet
+      EnchantmentCharacteristic
         { enchantment_colors = toColors B
         , enchantment_supertypes = []
         , enchantment_enchantmentTypes =
@@ -1964,7 +1964,7 @@ unholyStrength =
                   effect $ StatDelta enchanted (Power 2) (Toughness 1)
             ]
         , enchantment_spec =
-            EnchantmentFacet'
+            EnchantmentSpec
               { enchantment_cost = manaCost B
               , enchantment_abilities = []
               }
@@ -1974,13 +1974,13 @@ vindicate :: Card OTNSorcery
 vindicate = Card "Vindicate" $
   Your \you ->
     ElectCardFacet
-      SorceryFacet
+      SorceryCharacteristic
         { sorcery_colors = toColors (W, B)
         , sorcery_supertypes = []
         , sorcery_spec =
             Target you $ masked @OTNPermanent [] \target ->
-              ElectCardFacet'
-                SorceryFacet'
+              ElectCardSpec
+                SorcerySpec
                   { sorcery_cost = manaCost (1, W, B)
                   , sorcery_abilities = []
                   , sorcery_effect = thisObject \_this ->
@@ -1995,14 +1995,14 @@ waspLancer :: Card OTNCreature
 waspLancer =
   Card "Wasp Lancer" $
     ElectCardFacet
-      CreatureFacet
+      CreatureCharacteristic
         { creature_colors = toColors (U, B)
         , creature_supertypes = []
         , creature_creatureTypes = [Faerie, Soldier]
         , creature_power = Power 3
         , creature_toughness = Toughness 2
         , creature_spec =
-            CreatureFacet'
+            CreatureSpec
               { creature_cost = manaCost (UB, UB, UB)
               , creature_abilities = [static \_this -> Flying]
               }
@@ -2013,11 +2013,11 @@ wastes :: Card OTNLand
 wastes =
   Card "Wastes" $
     ElectCardFacet
-      LandFacet
+      LandCharacteristic
         { land_supertypes = [Ty.Basic]
         , land_landTypes = []
         , land_spec =
-            LandFacet'
+            LandSpec
               { land_abilities =
                   [ activated @ 'ZBattlefield \this ->
                       controllerOf this \you ->
@@ -2037,13 +2037,13 @@ wear_tear = SplitCard wear tear [SomeZone2 $ Static Fuse]
   wear = Card "Wear" $
     Your \you ->
       ElectCardFacet
-        InstantFacet
+        InstantCharacteristic
           { instant_colors = toColors R
           , instant_supertypes = []
           , instant_spec =
               Target you $ masked @OTNArtifact [] \target ->
-                ElectCardFacet'
-                  InstantFacet'
+                ElectCardSpec
+                  InstantSpec
                     { instant_cost = manaCost (1, R)
                     , instant_abilities = []
                     , instant_effect = thisObject \_this ->
@@ -2054,13 +2054,13 @@ wear_tear = SplitCard wear tear [SomeZone2 $ Static Fuse]
   tear = Card "Tear" $
     Your \you ->
       ElectCardFacet
-        InstantFacet
+        InstantCharacteristic
           { instant_colors = toColors W
           , instant_supertypes = []
           , instant_spec =
               Target you $ masked @OTNEnchantment [] \target ->
-                ElectCardFacet'
-                  InstantFacet'
+                ElectCardSpec
+                  InstantSpec
                     { instant_cost = manaCost W
                     , instant_abilities = []
                     , instant_effect = thisObject \_this ->
@@ -2072,14 +2072,14 @@ witchEngine :: Card OTNCreature
 witchEngine =
   Card "Witch Engine" $
     ElectCardFacet
-      CreatureFacet
+      CreatureCharacteristic
         { creature_colors = toColors B
         , creature_supertypes = []
         , creature_creatureTypes = [Horror]
         , creature_power = Power 4
         , creature_toughness = Toughness 4
         , creature_spec =
-            CreatureFacet'
+            CreatureSpec
               { creature_cost = manaCost (5, B)
               , creature_abilities =
                   [ swampwalk
@@ -2109,12 +2109,12 @@ wrathOfGod :: Card OTNSorcery
 wrathOfGod =
   Card "Wrath of God" $
     ElectCardFacet
-      SorceryFacet
+      SorceryCharacteristic
         { sorcery_colors = toColors W
         , sorcery_supertypes = []
         , sorcery_spec =
-            ElectCardFacet'
-              SorceryFacet'
+            ElectCardSpec
+              SorcerySpec
                 { sorcery_cost = manaCost (2, W, W)
                 , sorcery_abilities = []
                 , sorcery_effect = thisObject \_this ->

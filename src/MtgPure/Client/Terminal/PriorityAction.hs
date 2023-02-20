@@ -298,17 +298,17 @@ examineObject objId = do
               Just player -> unlines . chunk' $ show player
             Just perm ->
               let card = either show show $ permanentCard perm
-                  goFacet :: Show a => a -> String
-                  goFacet = show
-                  facets =
+                  goCharacteristic :: Show a => a -> String
+                  goCharacteristic = show
+                  characters =
                     Maybe.catMaybes
-                      [ goFacet <$> permanentArtifact perm
-                      , goFacet <$> permanentEnchantment perm
-                      , goFacet <$> permanentLand perm
-                      , goFacet <$> permanentCreature perm
-                      , goFacet <$> permanentPlaneswalker perm
+                      [ goCharacteristic <$> permanentArtifact perm
+                      , goCharacteristic <$> permanentEnchantment perm
+                      , goCharacteristic <$> permanentLand perm
+                      , goCharacteristic <$> permanentCreature perm
+                      , goCharacteristic <$> permanentPlaneswalker perm
                       ]
-               in List.intercalate "\n\n" $ card : facets
+               in List.intercalate "\n\n" $ card : characters
   let msg' = "Examining [" ++ show (unObjectId objId) ++ "]:\n\n" ++ msg
   M.liftIO $ withHiddenCursor do
     clearScreenWithoutPaging

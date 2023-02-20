@@ -11,8 +11,8 @@ module MtgPure.Model.Recursive (
   AnyCard (..),
   AnyToken (..),
   Card (..),
-  CardFacet (..),
-  CardFacet' (..),
+  CardCharacteristic (..),
+  CardSpec (..),
   Case (..),
   Condition (..),
   Cost (..),
@@ -283,7 +283,7 @@ instance HasCardName AnyToken where
 --------------------------------------------------------------------------------
 
 data Card (ot :: Type) :: Type where
-  Card :: (ot ~ OTN x, IsSpecificCard ot) => CardName -> Elect 'IntrinsicStage (CardFacet ot) ot -> Card ot
+  Card :: (ot ~ OTN x, IsSpecificCard ot) => CardName -> Elect 'IntrinsicStage (CardCharacteristic ot) ot -> Card ot
   DoubleSidedCard :: (ot1 ~ OTN x, ot2 ~ OTN y, Inst2 IsSpecificCard ot1 ot2) => Card ot1 -> Card ot2 -> Card (ot1, ot2)
   SplitCard ::
     (ot1 ~ OTN x, ot2 ~ OTN y, Inst2 IsSpecificCard ot1 ot2) =>
@@ -308,171 +308,171 @@ instance HasCardName (Card ot) where
 
 --------------------------------------------------------------------------------
 
-data CardFacet (ot :: Type) :: Type where
-  ArtifactFacet ::
+data CardCharacteristic (ot :: Type) :: Type where
+  ArtifactCharacteristic ::
     { artifact_colors :: Colors
     , artifact_supertypes :: [Supertype OTNArtifact]
     , artifact_artifactTypes :: [ArtifactType]
-    , artifact_spec :: CardFacet' OTNArtifact
+    , artifact_spec :: CardSpec OTNArtifact
     } ->
-    CardFacet OTNArtifact
-  ArtifactCreatureFacet ::
+    CardCharacteristic OTNArtifact
+  ArtifactCreatureCharacteristic ::
     { artifactCreature_colors :: Colors
     , artifactCreature_supertypes :: [Supertype OTNArtifactCreature]
     , artifactCreature_artifactTypes :: [ArtifactType]
     , artifactCreature_creatureTypes :: [CreatureType] -- TODO: Non-empty
     , artifactCreature_power :: Power
     , artifactCreature_toughness :: Toughness
-    , artifactCreature_spec :: CardFacet' OTNArtifactCreature
+    , artifactCreature_spec :: CardSpec OTNArtifactCreature
     } ->
-    CardFacet OTNArtifactCreature
-  ArtifactLandFacet ::
+    CardCharacteristic OTNArtifactCreature
+  ArtifactLandCharacteristic ::
     { artifactLand_supertypes :: [Supertype OTNArtifactLand]
     , artifactLand_artifactTypes :: [ArtifactType]
     , artifactLand_landTypes :: [LandType]
-    , artifactLand_spec :: CardFacet' OTNArtifactLand
+    , artifactLand_spec :: CardSpec OTNArtifactLand
     } ->
-    CardFacet OTNArtifactLand
-  CreatureFacet ::
+    CardCharacteristic OTNArtifactLand
+  CreatureCharacteristic ::
     { creature_colors :: Colors
     , creature_supertypes :: [Supertype OTNCreature]
     , creature_creatureTypes :: [CreatureType] -- TODO: Non-empty
     , creature_power :: Power
     , creature_toughness :: Toughness
-    , creature_spec :: CardFacet' OTNCreature
+    , creature_spec :: CardSpec OTNCreature
     } ->
-    CardFacet OTNCreature
-  EnchantmentFacet ::
+    CardCharacteristic OTNCreature
+  EnchantmentCharacteristic ::
     { enchantment_colors :: Colors
     , enchantment_supertypes :: [Supertype OTNEnchantment]
     , enchantment_enchantmentTypes :: [EnchantmentType OTNEnchantment]
-    , enchantment_spec :: CardFacet' OTNEnchantment
+    , enchantment_spec :: CardSpec OTNEnchantment
     } ->
-    CardFacet OTNEnchantment
-  EnchantmentCreatureFacet ::
+    CardCharacteristic OTNEnchantment
+  EnchantmentCreatureCharacteristic ::
     { enchantmentCreature_colors :: Colors
     , enchantmentCreature_supertypes :: [Supertype OTNEnchantmentCreature]
     , enchantmentCreature_creatureTypes :: [CreatureType] -- TODO: Non-empty
     , enchantmentCreature_enchantmentTypes :: [EnchantmentType OTNEnchantmentCreature]
     , enchantmentCreature_power :: Power
     , enchantmentCreature_toughness :: Toughness
-    , enchantmentCreature_spec :: CardFacet' OTNEnchantmentCreature
+    , enchantmentCreature_spec :: CardSpec OTNEnchantmentCreature
     } ->
-    CardFacet OTNEnchantmentCreature
-  InstantFacet ::
+    CardCharacteristic OTNEnchantmentCreature
+  InstantCharacteristic ::
     { instant_colors :: Colors
     , instant_supertypes :: [Supertype OTNInstant]
-    , instant_spec :: Elect 'TargetStage (CardFacet' OTNInstant) OTNInstant
+    , instant_spec :: Elect 'TargetStage (CardSpec OTNInstant) OTNInstant
     } ->
-    CardFacet OTNInstant
-  LandFacet ::
+    CardCharacteristic OTNInstant
+  LandCharacteristic ::
     { land_supertypes :: [Supertype OTNLand]
     , land_landTypes :: [LandType]
-    , land_spec :: CardFacet' OTNLand
+    , land_spec :: CardSpec OTNLand
     } ->
-    CardFacet OTNLand
-  PlaneswalkerFacet ::
+    CardCharacteristic OTNLand
+  PlaneswalkerCharacteristic ::
     { planeswalker_colors :: Colors
     , planeswalker_supertypes :: [Supertype OTNPlaneswalker]
-    , planeswalker_spec :: CardFacet' OTNPlaneswalker
+    , planeswalker_spec :: CardSpec OTNPlaneswalker
     } ->
-    CardFacet OTNPlaneswalker
-  SorceryFacet ::
+    CardCharacteristic OTNPlaneswalker
+  SorceryCharacteristic ::
     { sorcery_colors :: Colors
     , sorcery_supertypes :: [Supertype OTNSorcery]
-    , sorcery_spec :: Elect 'TargetStage (CardFacet' OTNSorcery) OTNSorcery
+    , sorcery_spec :: Elect 'TargetStage (CardSpec OTNSorcery) OTNSorcery
     } ->
-    CardFacet OTNSorcery
+    CardCharacteristic OTNSorcery
   deriving (Typeable)
 
-instance ConsIndex (CardFacet ot) where
+instance ConsIndex (CardCharacteristic ot) where
   consIndex = \case
-    ArtifactFacet{} -> 1
-    ArtifactCreatureFacet{} -> 2
-    ArtifactLandFacet{} -> 3
-    CreatureFacet{} -> 4
-    EnchantmentCreatureFacet{} -> 5
-    EnchantmentFacet{} -> 6
-    InstantFacet{} -> 7
-    LandFacet{} -> 8
-    PlaneswalkerFacet{} -> 9
-    SorceryFacet{} -> 10
+    ArtifactCharacteristic{} -> 1
+    ArtifactCreatureCharacteristic{} -> 2
+    ArtifactLandCharacteristic{} -> 3
+    CreatureCharacteristic{} -> 4
+    EnchantmentCreatureCharacteristic{} -> 5
+    EnchantmentCharacteristic{} -> 6
+    InstantCharacteristic{} -> 7
+    LandCharacteristic{} -> 8
+    PlaneswalkerCharacteristic{} -> 9
+    SorceryCharacteristic{} -> 10
 
 --------------------------------------------------------------------------------
 
-data CardFacet' (ot :: Type) :: Type where
-  ArtifactFacet' ::
+data CardSpec (ot :: Type) :: Type where
+  ArtifactSpec ::
     { artifact_cost :: Cost OTNArtifact
     , artifact_abilities :: [SomeZone WithThisAbility OTNArtifact]
     } ->
-    CardFacet' OTNArtifact
-  ArtifactCreatureFacet' ::
+    CardSpec OTNArtifact
+  ArtifactCreatureSpec ::
     { artifactCreature_cost :: Cost OTNArtifactCreature
     , -- TODO: artifactCreature_abilities :: [SomeOT (SomeZone WithThisAbility) OTNArtifactCreature]
       artifactCreature_artifactAbilities :: [SomeZone WithThisAbility OTNArtifact]
     , artifactCreature_creatureAbilities :: [SomeZone WithThisAbility OTNCreature]
     , artifactCreature_artifactCreatureAbilities :: [SomeZone WithThisAbility OTNArtifactCreature]
     } ->
-    CardFacet' OTNArtifactCreature
-  ArtifactLandFacet' ::
+    CardSpec OTNArtifactCreature
+  ArtifactLandSpec ::
     { artifactLand_artifactAbilities :: [SomeZone WithThisAbility OTNArtifact]
     , artifactLand_landAbilities :: [SomeZone WithThisAbility OTNLand]
     , artifactLand_artifactLandAbilities :: [SomeZone WithThisAbility OTNArtifactLand]
     } ->
-    CardFacet' OTNArtifactLand
-  CreatureFacet' ::
+    CardSpec OTNArtifactLand
+  CreatureSpec ::
     { creature_cost :: Cost OTNCreature
     , creature_abilities :: [SomeZone WithThisAbility OTNCreature]
     } ->
-    CardFacet' OTNCreature
-  EnchantmentFacet' ::
+    CardSpec OTNCreature
+  EnchantmentSpec ::
     { enchantment_cost :: Cost OTNEnchantment
     , enchantment_abilities :: [SomeZone WithThisAbility OTNEnchantment]
     } ->
-    CardFacet' OTNEnchantment
-  EnchantmentCreatureFacet' ::
+    CardSpec OTNEnchantment
+  EnchantmentCreatureSpec ::
     { enchantmentCreature_cost :: Cost OTNEnchantmentCreature
     , enchantmentCreature_creatureAbilities :: [SomeZone WithThisAbility OTNCreature]
     , enchantmentCreature_enchantmentAbilities :: [SomeZone WithThisAbility OTNEnchantment]
     , enchantmentCreature_enchantmentCreatureAbilities :: [SomeZone WithThisAbility OTNEnchantmentCreature]
     } ->
-    CardFacet' OTNEnchantmentCreature
-  InstantFacet' ::
+    CardSpec OTNEnchantmentCreature
+  InstantSpec ::
     { instant_cost :: Cost OTNInstant
     , instant_abilities :: [SomeZone WithThisAbility OTNInstant]
     , instant_effect :: WithThisOneShot OTNInstant
     } ->
-    CardFacet' OTNInstant
-  LandFacet' ::
+    CardSpec OTNInstant
+  LandSpec ::
     { land_abilities :: [SomeZone WithThisAbility OTNLand]
     } ->
-    CardFacet' OTNLand
-  PlaneswalkerFacet' ::
+    CardSpec OTNLand
+  PlaneswalkerSpec ::
     { planeswalker_cost :: Cost OTNPlaneswalker
     , planeswalker_loyalty :: Loyalty
     , planeswalker_abilities :: [SomeZone WithThisAbility OTNPlaneswalker]
     } ->
-    CardFacet' OTNPlaneswalker
-  SorceryFacet' ::
+    CardSpec OTNPlaneswalker
+  SorcerySpec ::
     { sorcery_cost :: Cost OTNSorcery
     , sorcery_abilities :: [SomeZone WithThisAbility OTNSorcery]
     , sorcery_effect :: WithThisOneShot OTNSorcery
     } ->
-    CardFacet' OTNSorcery
+    CardSpec OTNSorcery
   deriving (Typeable)
 
-instance ConsIndex (CardFacet' ot) where
+instance ConsIndex (CardSpec ot) where
   consIndex = \case
-    ArtifactFacet'{} -> 1
-    ArtifactCreatureFacet'{} -> 2
-    ArtifactLandFacet'{} -> 3
-    CreatureFacet'{} -> 4
-    EnchantmentCreatureFacet'{} -> 5
-    EnchantmentFacet'{} -> 6
-    InstantFacet'{} -> 7
-    LandFacet'{} -> 8
-    PlaneswalkerFacet'{} -> 9
-    SorceryFacet'{} -> 10
+    ArtifactSpec{} -> 1
+    ArtifactCreatureSpec{} -> 2
+    ArtifactLandSpec{} -> 3
+    CreatureSpec{} -> 4
+    EnchantmentCreatureSpec{} -> 5
+    EnchantmentSpec{} -> 6
+    InstantSpec{} -> 7
+    LandSpec{} -> 8
+    PlaneswalkerSpec{} -> 9
+    SorcerySpec{} -> 10
 
 --------------------------------------------------------------------------------
 
@@ -635,8 +635,8 @@ data Elect (s :: ElectStage) (el :: Type) (ot :: Type) :: Type where
   Cost :: Cost ot -> Elect 'IntrinsicStage (Cost ot) ot -- XXX: can this constructor be removed?
   Effect :: Typeable ef => [Effect ef] -> Elect 'ResolveStage (Effect ef) ot
   ElectActivated :: IsZO zone ot => ActivatedAbility zone ot -> Elect 'TargetStage (ActivatedAbility zone ot) ot
-  ElectCardFacet :: CardFacet ot -> Elect 'IntrinsicStage (CardFacet ot) ot
-  ElectCardFacet' :: CardFacet' ot -> Elect 'TargetStage (CardFacet' ot) ot
+  ElectCardFacet :: CardCharacteristic ot -> Elect 'IntrinsicStage (CardCharacteristic ot) ot
+  ElectCardSpec :: CardSpec ot -> Elect 'TargetStage (CardSpec ot) ot
   ElectCase :: Case (Elect s el ot) -> Elect s el ot
   EndTargets :: Typeable el => Elect 'ResolveStage el ot -> Elect 'TargetStage (Elect 'ResolveStage el ot) ot
   Event :: Event -> Elect 'ResolveStage Event ot
@@ -682,7 +682,7 @@ instance ConsIndex (Elect s el ot) where
     Effect{} -> 8
     ElectActivated{} -> 9
     ElectCardFacet{} -> 10
-    ElectCardFacet'{} -> 11
+    ElectCardSpec{} -> 11
     ElectCase{} -> 12
     EndTargets{} -> 13
     Event{} -> 14
@@ -1251,7 +1251,7 @@ instance ConsIndex (WithMaskedObjects zone liftOT ot) where
 
 --------------------------------------------------------------------------------
 
--- NOTE: At the moment there don't exist any cards with more than 3 facets. That said, extending
+-- NOTE: At the moment there don't exist any cards with more than 3 characters. That said, extending
 -- to This4 and This5, we get OTNPermanent support, which is useful. It lets the engine do some
 -- things by only specifying OTNPermanent and not all the combinations of OT's that constitute
 -- OTNPermanent. Currently this is leveraged to by the UI through `getIntrinsicManaAbilities` to

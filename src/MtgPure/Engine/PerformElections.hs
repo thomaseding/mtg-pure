@@ -106,8 +106,8 @@ performElections' failureX zoStack goTerm = logCall 'performElections' \case
   ControllerOf zo cont -> electControllerOf goRec zo cont
   Cost cost -> goTerm cost
   ElectActivated activated -> goTerm activated
-  ElectCardFacet facet -> goTerm facet
-  ElectCardFacet' facet' -> goTerm facet'
+  ElectCardFacet character -> goTerm character
+  ElectCardSpec spec -> goTerm spec
   ElectCase case_ -> caseOf goRec case_
   Effect effect -> goTerm $ Sequence effect
   EndTargets elect -> goTerm elect

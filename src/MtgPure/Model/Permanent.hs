@@ -37,8 +37,8 @@ import safe MtgPure.Model.Planeswalker (Planeswalker (..))
 import safe MtgPure.Model.Recursive (
   AnyCard,
   AnyToken,
-  CardFacet (..),
-  CardFacet' (..),
+  CardCharacteristic (..),
+  CardSpec (..),
   SomeOT (..),
   SomeTerm (..),
   SomeZone,
@@ -63,7 +63,7 @@ data Permanent :: Type where
     { permanentAbilities :: [SomeOT (SomeZone WithThisAbility) OTNPermanent]
     , permanentArtifact :: Maybe Artifact
     , permanentCard :: Either AnyCard AnyToken -- SomeCardOrToken OTNPermanent
-    , permanentCardFacet :: SomeOT CardFacet OTNPermanent
+    , permanentCardCharacteristic :: SomeOT CardCharacteristic OTNPermanent
     , permanentColors :: Colors
     , permanentCreature :: Maybe Creature
     , permanentCreatureDamage :: Damage 'NoVar -- 120.6
@@ -79,36 +79,36 @@ data Permanent :: Type where
     Permanent
   deriving (Typeable)
 
-getColors :: CardFacet ot -> Colors
+getColors :: CardCharacteristic ot -> Colors
 getColors = \case
-  ArtifactFacet
+  ArtifactCharacteristic
     { artifact_colors = colors
     } -> colors
-  ArtifactCreatureFacet
+  ArtifactCreatureCharacteristic
     { artifactCreature_colors = colors
     } -> colors
-  ArtifactLandFacet
+  ArtifactLandCharacteristic
     {
     } -> mempty
-  CreatureFacet
+  CreatureCharacteristic
     { creature_colors = colors
     } -> colors
-  EnchantmentFacet
+  EnchantmentCharacteristic
     { enchantment_colors = colors
     } -> colors
-  EnchantmentCreatureFacet
+  EnchantmentCreatureCharacteristic
     { enchantmentCreature_colors = colors
     } -> colors
-  InstantFacet
+  InstantCharacteristic
     { instant_colors = colors
     } -> colors
-  LandFacet
+  LandCharacteristic
     {
     } -> mempty
-  PlaneswalkerFacet
+  PlaneswalkerCharacteristic
     { planeswalker_colors = colors
     } -> colors
-  SorceryFacet
+  SorceryCharacteristic
     { sorcery_colors = colors
     } -> colors
 
@@ -136,152 +136,152 @@ someArtifactLand = Some5ad . SomeArtifactLand
 someEnchantmentCreature :: liftOT OTNEnchantmentCreature -> SomeOT liftOT OTNPermanent
 someEnchantmentCreature = Some5bc . SomeEnchantmentCreature
 
--- | Usage requirement: The provided facets must actually be part of the provided AnyCard.
+-- | Usage requirement: The provided characters must actually be part of the provided AnyCard.
 cardToPermanent ::
   AnyCard ->
-  CardFacet ot ->
-  CardFacet' ot ->
+  CardCharacteristic ot ->
+  CardSpec ot ->
   Maybe Permanent
-cardToPermanent card facet facet' = case viewPermanentFacet facet of
+cardToPermanent card character spec = case viewPermanentCharacteristic character of
   Nothing -> Nothing
-  Just someFacet ->
+  Just someCharacteristic ->
     Just
       Permanent
-        { permanentAbilities = permanentAbilitiesOf facet'
-        , permanentArtifact = facetToArtifact facet
+        { permanentAbilities = permanentAbilitiesOf spec
+        , permanentArtifact = characterToArtifact character
         , permanentCard = Left card
-        , permanentCardFacet = someFacet
-        , permanentColors = getColors facet
-        , permanentCreature = facetToCreature facet facet'
+        , permanentCardCharacteristic = someCharacteristic
+        , permanentColors = getColors character
+        , permanentCreature = characterToCreature character spec
         , permanentCreatureDamage = Damage 0
-        , permanentEnchantment = facetToEnchantment facet
+        , permanentEnchantment = characterToEnchantment character
         , permanentFace = FaceUp
         , permanentFlipped = Unflipped
-        , permanentLand = facetToLand facet
+        , permanentLand = characterToLand character
         , permanentPhased = PhasedIn
-        , permanentPlaneswalker = facetToPlaneswalker facet'
+        , permanentPlaneswalker = characterToPlaneswalker spec
         , permanentSummoningSickness = True
         , permanentTapped = Untapped
         }
 
-viewPermanentFacet :: CardFacet ot -> Maybe (SomeOT CardFacet OTNPermanent)
-viewPermanentFacet facet = case facet of
-  InstantFacet{} -> Nothing
-  SorceryFacet{} -> Nothing
-  ArtifactFacet{} -> Just $ someArtifact facet
-  CreatureFacet{} -> Just $ someCreature facet
-  EnchantmentFacet{} -> Just $ someEnchantment facet
-  LandFacet{} -> Just $ someLand facet
-  PlaneswalkerFacet{} -> Just $ somePlaneswalker facet
-  ArtifactCreatureFacet{} -> Just $ someArtifactCreature facet
-  ArtifactLandFacet{} -> Just $ someArtifactLand facet
-  EnchantmentCreatureFacet{} -> Just $ someEnchantmentCreature facet
+viewPermanentCharacteristic :: CardCharacteristic ot -> Maybe (SomeOT CardCharacteristic OTNPermanent)
+viewPermanentCharacteristic character = case character of
+  InstantCharacteristic{} -> Nothing
+  SorceryCharacteristic{} -> Nothing
+  ArtifactCharacteristic{} -> Just $ someArtifact character
+  CreatureCharacteristic{} -> Just $ someCreature character
+  EnchantmentCharacteristic{} -> Just $ someEnchantment character
+  LandCharacteristic{} -> Just $ someLand character
+  PlaneswalkerCharacteristic{} -> Just $ somePlaneswalker character
+  ArtifactCreatureCharacteristic{} -> Just $ someArtifactCreature character
+  ArtifactLandCharacteristic{} -> Just $ someArtifactLand character
+  EnchantmentCreatureCharacteristic{} -> Just $ someEnchantmentCreature character
 
-permanentAbilitiesOf :: CardFacet' ot -> [SomeOT (SomeZone WithThisAbility) OTNPermanent]
-permanentAbilitiesOf facet = case facet of
-  InstantFacet'{} -> []
-  SorceryFacet'{} -> []
-  ArtifactFacet'{} -> map someArtifact $ artifact_abilities facet
-  CreatureFacet'{} -> map someCreature $ creature_abilities facet
-  EnchantmentFacet'{} -> map someEnchantment $ enchantment_abilities facet
-  LandFacet'{} -> map someLand $ land_abilities facet
-  PlaneswalkerFacet'{} -> map somePlaneswalker $ planeswalker_abilities facet
-  ArtifactCreatureFacet'{} ->
+permanentAbilitiesOf :: CardSpec ot -> [SomeOT (SomeZone WithThisAbility) OTNPermanent]
+permanentAbilitiesOf spec = case spec of
+  InstantSpec{} -> []
+  SorcerySpec{} -> []
+  ArtifactSpec{} -> map someArtifact $ artifact_abilities spec
+  CreatureSpec{} -> map someCreature $ creature_abilities spec
+  EnchantmentSpec{} -> map someEnchantment $ enchantment_abilities spec
+  LandSpec{} -> map someLand $ land_abilities spec
+  PlaneswalkerSpec{} -> map somePlaneswalker $ planeswalker_abilities spec
+  ArtifactCreatureSpec{} ->
     concat
-      [ map someArtifact $ artifactCreature_artifactAbilities facet
-      , map someCreature $ artifactCreature_creatureAbilities facet
-      , map someArtifactCreature $ artifactCreature_artifactCreatureAbilities facet
+      [ map someArtifact $ artifactCreature_artifactAbilities spec
+      , map someCreature $ artifactCreature_creatureAbilities spec
+      , map someArtifactCreature $ artifactCreature_artifactCreatureAbilities spec
       ]
-  ArtifactLandFacet'{} ->
+  ArtifactLandSpec{} ->
     concat
-      [ map someArtifact $ artifactLand_artifactAbilities facet
-      , map someLand $ artifactLand_landAbilities facet
-      , map someArtifactLand $ artifactLand_artifactLandAbilities facet
+      [ map someArtifact $ artifactLand_artifactAbilities spec
+      , map someLand $ artifactLand_landAbilities spec
+      , map someArtifactLand $ artifactLand_artifactLandAbilities spec
       ]
-  EnchantmentCreatureFacet'{} ->
+  EnchantmentCreatureSpec{} ->
     concat
-      [ map someEnchantment $ enchantmentCreature_enchantmentAbilities facet
-      , map someCreature $ enchantmentCreature_creatureAbilities facet
-      , map someEnchantmentCreature $ enchantmentCreature_enchantmentCreatureAbilities facet
+      [ map someEnchantment $ enchantmentCreature_enchantmentAbilities spec
+      , map someCreature $ enchantmentCreature_creatureAbilities spec
+      , map someEnchantmentCreature $ enchantmentCreature_enchantmentCreatureAbilities spec
       ]
 
-facetToArtifact :: CardFacet ot -> Maybe Artifact
-facetToArtifact facet = case facet of
-  ArtifactFacet{} ->
+characterToArtifact :: CardCharacteristic ot -> Maybe Artifact
+characterToArtifact character = case character of
+  ArtifactCharacteristic{} ->
     Just
       Artifact
-        { artifactTypes = artifact_artifactTypes facet
+        { artifactTypes = artifact_artifactTypes character
         }
-  ArtifactCreatureFacet{} ->
+  ArtifactCreatureCharacteristic{} ->
     Just
       Artifact
-        { artifactTypes = artifactCreature_artifactTypes facet
+        { artifactTypes = artifactCreature_artifactTypes character
         }
-  ArtifactLandFacet{} ->
+  ArtifactLandCharacteristic{} ->
     Just
       Artifact
-        { artifactTypes = artifactLand_artifactTypes facet
+        { artifactTypes = artifactLand_artifactTypes character
         }
   _ -> Nothing
 
-facetToCreature :: CardFacet ot -> CardFacet' ot -> Maybe Creature
-facetToCreature facet _facet' = case facet of
-  CreatureFacet{} ->
+characterToCreature :: CardCharacteristic ot -> CardSpec ot -> Maybe Creature
+characterToCreature character _spec = case character of
+  CreatureCharacteristic{} ->
     Just
       Creature
-        { creatureTypes = creature_creatureTypes facet
-        , creaturePower = creature_power facet
-        , creatureToughness = creature_toughness facet
+        { creatureTypes = creature_creatureTypes character
+        , creaturePower = creature_power character
+        , creatureToughness = creature_toughness character
         }
-  ArtifactCreatureFacet{} ->
+  ArtifactCreatureCharacteristic{} ->
     Just
       Creature
-        { creatureTypes = artifactCreature_creatureTypes facet
-        , creaturePower = artifactCreature_power facet
-        , creatureToughness = artifactCreature_toughness facet
+        { creatureTypes = artifactCreature_creatureTypes character
+        , creaturePower = artifactCreature_power character
+        , creatureToughness = artifactCreature_toughness character
         }
-  EnchantmentCreatureFacet{} ->
+  EnchantmentCreatureCharacteristic{} ->
     Just
       Creature
-        { creatureTypes = enchantmentCreature_creatureTypes facet
-        , creaturePower = enchantmentCreature_power facet
-        , creatureToughness = enchantmentCreature_toughness facet
+        { creatureTypes = enchantmentCreature_creatureTypes character
+        , creaturePower = enchantmentCreature_power character
+        , creatureToughness = enchantmentCreature_toughness character
         }
   _ -> Nothing
 
-facetToEnchantment :: CardFacet ot -> Maybe Enchantment
-facetToEnchantment facet = case facet of
-  EnchantmentFacet{} ->
+characterToEnchantment :: CardCharacteristic ot -> Maybe Enchantment
+characterToEnchantment character = case character of
+  EnchantmentCharacteristic{} ->
     Just
       Enchantment
-        { enchantmentTypes = map AnyEnchantmentType $ enchantment_enchantmentTypes facet
+        { enchantmentTypes = map AnyEnchantmentType $ enchantment_enchantmentTypes character
         }
-  EnchantmentCreatureFacet{} ->
+  EnchantmentCreatureCharacteristic{} ->
     Just
       Enchantment
-        { enchantmentTypes = map AnyEnchantmentType $ enchantmentCreature_enchantmentTypes facet
+        { enchantmentTypes = map AnyEnchantmentType $ enchantmentCreature_enchantmentTypes character
         }
   _ -> Nothing
 
-facetToLand :: CardFacet ot -> Maybe Land
-facetToLand facet = case facet of
-  LandFacet{} ->
+characterToLand :: CardCharacteristic ot -> Maybe Land
+characterToLand character = case character of
+  LandCharacteristic{} ->
     Just
       Land
-        { landTypes = land_landTypes facet
+        { landTypes = land_landTypes character
         }
-  ArtifactLandFacet{} ->
+  ArtifactLandCharacteristic{} ->
     Just
       Land
-        { landTypes = artifactLand_landTypes facet
+        { landTypes = artifactLand_landTypes character
         }
   _ -> Nothing
 
-facetToPlaneswalker :: CardFacet' ot -> Maybe Planeswalker
-facetToPlaneswalker facet' = case facet' of
-  PlaneswalkerFacet'{} ->
+characterToPlaneswalker :: CardSpec ot -> Maybe Planeswalker
+characterToPlaneswalker spec = case spec of
+  PlaneswalkerSpec{} ->
     Just
       Planeswalker
-        { planeswalkerLoyalty = planeswalker_loyalty facet'
+        { planeswalkerLoyalty = planeswalker_loyalty spec
         }
   _ -> Nothing

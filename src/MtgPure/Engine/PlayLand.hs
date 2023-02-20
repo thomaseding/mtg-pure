@@ -62,8 +62,8 @@ import safe MtgPure.Model.Player (Player (..))
 import safe MtgPure.Model.Recursive (
   AnyCard (..),
   Card (..),
-  CardFacet (..),
-  CardFacet',
+  CardCharacteristic (..),
+  CardSpec,
   Elect,
   IsSpecificCard,
  )
@@ -115,19 +115,19 @@ playLand :: Monad m => Object 'OTPlayer -> SpecialAction PlayLand -> Magic 'Priv
 playLand oPlayer (PlayLand oLand) = logCall 'playLand do
   playLandZO oPlayer oLand
 
-viewLand :: CardFacet ot -> Maybe (CardFacet' ot)
-viewLand facet = case facet of
-  ArtifactLandFacet{} -> Just $ artifactLand_spec facet
-  LandFacet{} -> Just $ land_spec facet
+viewLand :: CardCharacteristic ot -> Maybe (CardSpec ot)
+viewLand character = case character of
+  ArtifactLandCharacteristic{} -> Just $ artifactLand_spec character
+  LandCharacteristic{} -> Just $ land_spec character
   --
-  ArtifactFacet{} -> Nothing
-  ArtifactCreatureFacet{} -> Nothing
-  CreatureFacet{} -> Nothing
-  EnchantmentFacet{} -> Nothing
-  EnchantmentCreatureFacet{} -> Nothing
-  InstantFacet{} -> Nothing
-  PlaneswalkerFacet{} -> Nothing
-  SorceryFacet{} -> Nothing
+  ArtifactCharacteristic{} -> Nothing
+  ArtifactCreatureCharacteristic{} -> Nothing
+  CreatureCharacteristic{} -> Nothing
+  EnchantmentCharacteristic{} -> Nothing
+  EnchantmentCreatureCharacteristic{} -> Nothing
+  InstantCharacteristic{} -> Nothing
+  PlaneswalkerCharacteristic{} -> Nothing
+  SorceryCharacteristic{} -> Nothing
 
 playLandZO ::
   forall m zone.
@@ -186,7 +186,7 @@ playLandZO oPlayer zoLand = logCall 'playLandZO do
   goElectIntrinsic ::
     IsSpecificCard ot =>
     AnyCard ->
-    Elect 'IntrinsicStage (CardFacet ot) ot ->
+    Elect 'IntrinsicStage (CardCharacteristic ot) ot ->
     Magic 'Private 'RW m Legality
   goElectIntrinsic anyCard electIntrinsic = do
     i <- newObjectId
@@ -201,11 +201,11 @@ playLandZO oPlayer zoLand = logCall 'playLandZO do
         { magicControllerMap = Map.insert i oPlayer $ magicControllerMap st'
         , magicOwnerMap = Map.insert i oPlayer $ magicOwnerMap st'
         }
-    mFacet <- fromRO $ performElections zoStack0 (pure . Just) electIntrinsic
-    case mFacet of
+    mCharacteristic <- fromRO $ performElections zoStack0 (pure . Just) electIntrinsic
+    case mCharacteristic of
       Nothing -> pure Illegal
-      Just facet -> do
-        result <- goFacet anyCard facet
+      Just character -> do
+        result <- goCharacteristic anyCard character
         modify \st' ->
           st'
             { magicControllerMap = Map.delete i $ magicControllerMap st'
@@ -213,10 +213,10 @@ playLandZO oPlayer zoLand = logCall 'playLandZO do
             }
         pure result
 
-  goFacet :: AnyCard -> CardFacet ot -> Magic 'Private 'RW m Legality
-  goFacet anyCard facet = logCall' "goFacet" case viewLand facet of
+  goCharacteristic :: AnyCard -> CardCharacteristic ot -> Magic 'Private 'RW m Legality
+  goCharacteristic anyCard character = logCall' "goCharacteristic" case viewLand character of
     Nothing -> pure Illegal
-    Just facet' -> do
+    Just spec -> do
       () <- case singZone @zone of
         SZBattlefield -> error $ show CantHappenByConstruction
         SZExile -> error $ show CantHappenByConstruction
@@ -230,7 +230,7 @@ playLandZO oPlayer zoLand = logCall 'playLandZO do
       modifyPlayer oPlayer \p -> p{playerLandsPlayedThisTurn = playerLandsPlayedThisTurn p + 1}
       i <- newObjectId
       let oLand' = zo0ToPermanent $ toZO0 i
-          perm = case cardToPermanent anyCard facet facet' of
+          perm = case cardToPermanent anyCard character spec of
             Nothing -> error $ show ExpectedCardToBeAPermanentCard
             Just perm' -> perm'
       modify \st' ->

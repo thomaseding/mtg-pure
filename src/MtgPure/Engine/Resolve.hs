@@ -64,7 +64,7 @@ import safe MtgPure.Model.Object.Object (Object)
 import safe MtgPure.Model.Object.ObjectId (getObjectId)
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Permanent (cardToPermanent)
-import safe MtgPure.Model.Recursive (AnyCard (..), CardFacet, CardFacet', Effect (..), Elect (..))
+import safe MtgPure.Model.Recursive (AnyCard (..), CardCharacteristic, CardSpec, Effect (..), Elect (..))
 import safe MtgPure.Model.Stack (Stack (..), stackObjectToZo0)
 import safe MtgPure.Model.Zone (Zone (..))
 import safe MtgPure.Model.ZoneObject.Convert (toZO0, zo0ToPermanent)
@@ -119,8 +119,8 @@ resolveElected zoStack elected = logCall 'resolveElected do
                 ElectedPermanent
                   { electedPermanent_controller = electedSpell_controller elected
                   , electedPermanent_card = card
-                  , electedPermanent_facet = electedSpell_facet elected
-                  , electedPermanent_facet' = electedSpell_facet' elected
+                  , electedPermanent_character = electedSpell_character elected
+                  , electedPermanent_spec = electedSpell_spec elected
                   }
           resolvePermanent electedPerm
           pure PermanentResolved
@@ -156,8 +156,8 @@ data ElectedPermanent (ot :: Type) :: Type where
   ElectedPermanent ::
     { electedPermanent_controller :: Object 'OTPlayer
     , electedPermanent_card :: AnyCard -- TODO: OwnedCard
-    , electedPermanent_facet :: CardFacet ot
-    , electedPermanent_facet' :: CardFacet' ot
+    , electedPermanent_character :: CardCharacteristic ot
+    , electedPermanent_spec :: CardSpec ot
     } ->
     ElectedPermanent ot
   deriving (Typeable)
@@ -166,7 +166,7 @@ resolvePermanent :: (IsOTN ot, Monad m) => ElectedPermanent ot -> Magic 'Private
 resolvePermanent elected = logCall 'resolvePermanent do
   i <- newObjectId
   let oPerm = zo0ToPermanent $ toZO0 i
-      perm = case cardToPermanent card facet facet' of
+      perm = case cardToPermanent card character spec of
         Nothing -> error $ show ExpectedCardToBeAPermanentCard
         Just perm' -> perm'
   modify \st ->
@@ -179,6 +179,6 @@ resolvePermanent elected = logCall 'resolvePermanent do
   ElectedPermanent
     { electedPermanent_controller = oPlayer
     , electedPermanent_card = card
-    , electedPermanent_facet = facet
-    , electedPermanent_facet' = facet'
+    , electedPermanent_character = character
+    , electedPermanent_spec = spec
     } = elected

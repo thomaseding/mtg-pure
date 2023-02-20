@@ -56,7 +56,7 @@ import safe MtgPure.Model.Player (Player (..))
 import safe MtgPure.Model.Recursive (
   Ability,
   Card,
-  CardFacet,
+  CardCharacteristic,
   SomeOT (..),
   SomeTerm (..),
   SomeZone (..),
@@ -352,7 +352,7 @@ deriving instance Show QueryObjectResult
 
 deriving instance Show (SomeOT Card ot)
 
-deriving instance Show (SomeOT CardFacet ot)
+deriving instance Show (SomeOT CardCharacteristic ot)
 
 deriving instance Show (SomeOT (SomeZone Ability) ot)
 
@@ -362,7 +362,7 @@ deriving instance Show (SomeOT Token ot)
 
 deriving instance Show (SomeTerm Card ot)
 
-deriving instance Show (SomeTerm CardFacet ot)
+deriving instance Show (SomeTerm CardCharacteristic ot)
 
 deriving instance Show (SomeTerm (SomeZone Ability) ot)
 

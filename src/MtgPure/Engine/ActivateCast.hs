@@ -96,8 +96,8 @@ import safe MtgPure.Model.Recursive (
   ActivatedAbility (..),
   AnyCard (..),
   Card (..),
-  CardFacet (..),
-  CardFacet' (..),
+  CardCharacteristic (..),
+  CardSpec (..),
   Cost (..),
   Effect (..),
   Elect (..),
@@ -190,8 +190,8 @@ getCastSpellReqs oPlayer = logCall 'getCastSpellReqs do
 
 data CastMeta (ot :: Type) :: Type where
   CastMeta ::
-    { castMeta_effect :: Maybe (CardFacet' ot -> WithThisOneShot ot)
-    , castMeta_cost :: CardFacet' ot -> Cost ot
+    { castMeta_effect :: Maybe (CardSpec ot -> WithThisOneShot ot)
+    , castMeta_cost :: CardSpec ot -> Cost ot
     } ->
     CastMeta ot
 
@@ -318,55 +318,55 @@ castSpellCard zoStack zoSpellCard oCaster card = logCall 'castSpellCard case car
 
   goElectIntrinsic ::
     IsSpecificCard ot =>
-    Elect 'IntrinsicStage (CardFacet ot) ot ->
+    Elect 'IntrinsicStage (CardCharacteristic ot) ot ->
     Magic 'Private 'RW m Legality
   goElectIntrinsic electIntrinsic = do
-    mFacet <- fromRO $ performElections zoStack (pure . Just) electIntrinsic
-    case mFacet of
+    mCharacteristic <- fromRO $ performElections zoStack (pure . Just) electIntrinsic
+    case mCharacteristic of
       Nothing -> pure Illegal
-      Just facet -> maybeToLegality <$> goFacet facet
+      Just character -> maybeToLegality <$> goCharacteristic character
 
-  goFacet :: CardFacet ot -> Magic 'Private 'RW m Legality'
-  goFacet facet = case facet of
-    ArtifactLandFacet{} -> goInvalid
-    LandFacet{} -> goInvalid
+  goCharacteristic :: CardCharacteristic ot -> Magic 'Private 'RW m Legality'
+  goCharacteristic character = case character of
+    ArtifactLandCharacteristic{} -> goInvalid
+    LandCharacteristic{} -> goInvalid
     --
-    InstantFacet{} -> go $ instant_spec facet
-    SorceryFacet{} -> go $ sorcery_spec facet
+    InstantCharacteristic{} -> go $ instant_spec character
+    SorceryCharacteristic{} -> go $ sorcery_spec character
     --
-    ArtifactFacet{} -> goPerm $ artifact_spec facet
-    ArtifactCreatureFacet{} -> goPerm $ artifactCreature_spec facet
-    CreatureFacet{} -> goPerm $ creature_spec facet
-    EnchantmentFacet{} -> goPerm $ enchantment_spec facet
-    EnchantmentCreatureFacet{} -> goPerm $ enchantmentCreature_spec facet
-    PlaneswalkerFacet{} -> goPerm $ planeswalker_spec facet
+    ArtifactCharacteristic{} -> goPerm $ artifact_spec character
+    ArtifactCreatureCharacteristic{} -> goPerm $ artifactCreature_spec character
+    CreatureCharacteristic{} -> goPerm $ creature_spec character
+    EnchantmentCharacteristic{} -> goPerm $ enchantment_spec character
+    EnchantmentCreatureCharacteristic{} -> goPerm $ enchantmentCreature_spec character
+    PlaneswalkerCharacteristic{} -> goPerm $ planeswalker_spec character
    where
-    go = goElectFacet' facet
-    goPerm = go . ElectCardFacet'
+    go = goElectSpec character
+    goPerm = go . ElectCardSpec
 
-  goElectFacet' :: CardFacet ot -> Elect 'TargetStage (CardFacet' ot) ot -> Magic 'Private 'RW m Legality'
-  goElectFacet' facet elect = do
+  goElectSpec :: CardCharacteristic ot -> Elect 'TargetStage (CardSpec ot) ot -> Magic 'Private 'RW m Legality'
+  goElectSpec character elect = do
     seedStackEntryTargets zoStack
-    performElections zoStack (goFacet' facet) elect
+    performElections zoStack (goSpec character) elect
 
-  goFacet' :: CardFacet ot -> CardFacet' ot -> Magic 'Private 'RW m Legality'
-  goFacet' facet facet' = case facet' of
-    ArtifactLandFacet'{} -> undefined -- TODO: Not a spell
-    LandFacet'{} -> undefined -- TODO: Not a spell
+  goSpec :: CardCharacteristic ot -> CardSpec ot -> Magic 'Private 'RW m Legality'
+  goSpec character spec = case spec of
+    ArtifactLandSpec{} -> undefined -- TODO: Not a spell
+    LandSpec{} -> undefined -- TODO: Not a spell
     --
-    ArtifactFacet'{} -> go artifactCastMeta
-    ArtifactCreatureFacet'{} -> go artifactCreatureCastMeta
-    CreatureFacet'{} -> go creatureCastMeta
-    EnchantmentFacet'{} -> go enchantmentCastMeta
-    EnchantmentCreatureFacet'{} -> go enchantmentCreatureCastMeta
-    InstantFacet'{} -> go instantCastMeta
-    PlaneswalkerFacet'{} -> go planeswalkerCastMeta
-    SorceryFacet'{} -> go sorceryCastMeta
+    ArtifactSpec{} -> go artifactCastMeta
+    ArtifactCreatureSpec{} -> go artifactCreatureCastMeta
+    CreatureSpec{} -> go creatureCastMeta
+    EnchantmentSpec{} -> go enchantmentCastMeta
+    EnchantmentCreatureSpec{} -> go enchantmentCreatureCastMeta
+    InstantSpec{} -> go instantCastMeta
+    PlaneswalkerSpec{} -> go planeswalkerCastMeta
+    SorcerySpec{} -> go sorceryCastMeta
    where
-    go = goCommonFacet' facet facet'
+    go = goSpec' character spec
 
-  goCommonFacet' :: CardFacet ot -> CardFacet' ot -> CastMeta ot -> Magic 'Private 'RW m Legality'
-  goCommonFacet' facet facet' meta = do
+  goSpec' :: CardCharacteristic ot -> CardSpec ot -> CastMeta ot -> Magic 'Private 'RW m Legality'
+  goSpec' character spec meta = do
     let anyCard = AnyCard1 card
     let goPay cost mEffect = do
           let electedSpell =
@@ -374,8 +374,8 @@ castSpellCard zoStack zoSpellCard oCaster card = logCall 'castSpellCard case car
                   { electedSpell_originalSource = zoSpellCard
                   , electedSpell_controller = oCaster
                   , electedSpell_card = anyCard
-                  , electedSpell_facet = facet
-                  , electedSpell_facet' = facet'
+                  , electedSpell_character = character
+                  , electedSpell_spec = spec
                   , electedSpell_cost = cost
                   , electedSpell_effect = mEffect
                   }
@@ -400,10 +400,10 @@ castSpellCard zoStack zoSpellCard oCaster card = logCall 'castSpellCard case car
             SorceryCard -> do
               payElectedAndPutOnStack @ 'Cast @ot zoStack electedSpell
     case castMeta_effect meta of
-      Just facetToEffect -> do
-        playPendingOneShot zoStack (castMeta_cost meta facet') (facetToEffect facet') goPay
+      Just characterToEffect -> do
+        playPendingOneShot zoStack (castMeta_cost meta spec) (characterToEffect spec) goPay
       Nothing -> do
-        playPendingPermanent zoStack (castMeta_cost meta facet') goPay
+        playPendingPermanent zoStack (castMeta_cost meta spec) goPay
 
 -- TODO: Generalize for TriggeredAbility as well. Prolly make an AbilityMeta type that is analogous to CastMeta.
 -- NOTE: A TriggeredAbility is basically the same as an ActivatedAbility that the game activates automatically.

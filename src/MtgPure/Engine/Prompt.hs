@@ -75,8 +75,8 @@ import safe MtgPure.Model.Player (Player)
 import safe MtgPure.Model.Recursive (
   AnyCard,
   AnyToken,
-  CardFacet,
-  CardFacet',
+  CardCharacteristic,
+  CardSpec,
   Cost,
   Effect,
   Elect,
@@ -180,8 +180,8 @@ data Elected (s :: ElectStage) (ot :: Type) :: Type where
       electedSpell_originalSource :: ZO zone OTNSpell
     , electedSpell_controller :: Object 'OTPlayer
     , electedSpell_card :: AnyCard -- TODO: OwnedCard?
-    , electedSpell_facet :: CardFacet ot
-    , electedSpell_facet' :: CardFacet' ot
+    , electedSpell_character :: CardCharacteristic ot
+    , electedSpell_spec :: CardSpec ot
     , electedSpell_cost :: Cost ot
     , electedSpell_effect :: Maybe (PendingReady s (Effect 'OneShot) ot)
     } ->

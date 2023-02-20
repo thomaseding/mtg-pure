@@ -69,8 +69,8 @@ import safe MtgPure.Model.Recursive (
   AnyCard (..),
   AnyToken (..),
   Card (..),
-  CardFacet (..),
-  CardFacet' (..),
+  CardCharacteristic (..),
+  CardSpec (..),
   Case (..),
   Condition (..),
   Cost (..),
@@ -127,8 +127,8 @@ instance Eq AnyToken where
 instance Eq (Card ot) where
   (==) x y = runEnvM (ordCard x y) == EQ
 
-instance Eq (CardFacet ot) where
-  (==) x y = runEnvM (ordCardFacet x y) == EQ
+instance Eq (CardCharacteristic ot) where
+  (==) x y = runEnvM (ordCardCharacteristic x y) == EQ
 
 instance Eq Condition where
   (==) x y = runEnvM (ordCondition x y) == EQ
@@ -195,8 +195,8 @@ instance Ord AnyToken where
 instance Ord (Card ot) where
   compare x y = runEnvM (ordCard x y)
 
-instance Ord (CardFacet ot) where
-  compare x y = runEnvM (ordCardFacet x y)
+instance Ord (CardCharacteristic ot) where
+  compare x y = runEnvM (ordCardCharacteristic x y)
 
 instance Ord Condition where
   compare x y = runEnvM (ordCondition x y)
@@ -444,18 +444,18 @@ ordCard x = case x of
         ]
     y -> compareIndexM x y
 
-ordCardFacet :: CardFacet ot -> CardFacet ot -> EnvM Ordering
-ordCardFacet = \case
-  ArtifactFacet colors1 sups1 artTypes1 spec1 -> \case
-    ArtifactFacet colors2 sups2 artTypes2 spec2 ->
+ordCardCharacteristic :: CardCharacteristic ot -> CardCharacteristic ot -> EnvM Ordering
+ordCardCharacteristic = \case
+  ArtifactCharacteristic colors1 sups1 artTypes1 spec1 -> \case
+    ArtifactCharacteristic colors2 sups2 artTypes2 spec2 ->
       seqM
         [ ordColors colors1 colors2
         , pure $ compare sups1 sups2
         , pure $ compare artTypes1 artTypes2
-        , ordCardFacet' spec1 spec2
+        , ordCardSpec spec1 spec2
         ]
-  ArtifactCreatureFacet colors1 sups1 artTypes1 creatTypes1 power1 toughness1 spec1 -> \case
-    ArtifactCreatureFacet colors2 sups2 artTypes2 creatTypes2 power2 toughness2 spec2 ->
+  ArtifactCreatureCharacteristic colors1 sups1 artTypes1 creatTypes1 power1 toughness1 spec1 -> \case
+    ArtifactCreatureCharacteristic colors2 sups2 artTypes2 creatTypes2 power2 toughness2 spec2 ->
       seqM
         [ ordColors colors1 colors2
         , pure $ compare sups1 sups2
@@ -463,36 +463,36 @@ ordCardFacet = \case
         , pure $ compare creatTypes1 creatTypes2
         , pure $ compare power1 power2
         , pure $ compare toughness1 toughness2
-        , ordCardFacet' spec1 spec2
+        , ordCardSpec spec1 spec2
         ]
-  ArtifactLandFacet sups1 artTypes1 landTypes1 spec1 -> \case
-    ArtifactLandFacet sups2 artTypes2 landTypes2 spec2 ->
+  ArtifactLandCharacteristic sups1 artTypes1 landTypes1 spec1 -> \case
+    ArtifactLandCharacteristic sups2 artTypes2 landTypes2 spec2 ->
       seqM
         [ pure $ compare sups1 sups2
         , pure $ compare artTypes1 artTypes2
         , pure $ compare landTypes1 landTypes2
-        , ordCardFacet' spec1 spec2
+        , ordCardSpec spec1 spec2
         ]
-  CreatureFacet colors1 sups1 creatTypes1 power1 toughness1 spec1 -> \case
-    CreatureFacet colors2 sups2 creatTypes2 power2 toughness2 spec2 ->
+  CreatureCharacteristic colors1 sups1 creatTypes1 power1 toughness1 spec1 -> \case
+    CreatureCharacteristic colors2 sups2 creatTypes2 power2 toughness2 spec2 ->
       seqM
         [ ordColors colors1 colors2
         , pure $ compare sups1 sups2
         , pure $ compare creatTypes1 creatTypes2
         , pure $ compare power1 power2
         , pure $ compare toughness1 toughness2
-        , ordCardFacet' spec1 spec2
+        , ordCardSpec spec1 spec2
         ]
-  EnchantmentFacet colors1 sups1 enchantTypes1 spec1 -> \case
-    EnchantmentFacet colors2 sups2 enchantTypes2 spec2 ->
+  EnchantmentCharacteristic colors1 sups1 enchantTypes1 spec1 -> \case
+    EnchantmentCharacteristic colors2 sups2 enchantTypes2 spec2 ->
       seqM
         [ ordColors colors1 colors2
         , pure $ compare sups1 sups2
         , ordEnchantmentTypes enchantTypes1 enchantTypes2
-        , ordCardFacet' spec1 spec2
+        , ordCardSpec spec1 spec2
         ]
-  EnchantmentCreatureFacet colors1 sups1 creatTypes1 enchantTypes1 power1 toughness1 spec1 -> \case
-    EnchantmentCreatureFacet colors2 sups2 creatTypes2 enchantTypes2 power2 toughness2 spec2 ->
+  EnchantmentCreatureCharacteristic colors1 sups1 creatTypes1 enchantTypes1 power1 toughness1 spec1 -> \case
+    EnchantmentCreatureCharacteristic colors2 sups2 creatTypes2 enchantTypes2 power2 toughness2 spec2 ->
       seqM
         [ ordColors colors1 colors2
         , pure $ compare sups1 sups2
@@ -500,101 +500,101 @@ ordCardFacet = \case
         , ordEnchantmentTypes enchantTypes1 enchantTypes2
         , pure $ compare power1 power2
         , pure $ compare toughness1 toughness2
-        , ordCardFacet' spec1 spec2
+        , ordCardSpec spec1 spec2
         ]
-  InstantFacet colors1 sups1 spec1 -> \case
-    InstantFacet colors2 sups2 spec2 ->
+  InstantCharacteristic colors1 sups1 spec1 -> \case
+    InstantCharacteristic colors2 sups2 spec2 ->
       seqM
         [ ordColors colors1 colors2
         , pure $ compare sups1 sups2
         , ordElectEl spec1 spec2
         ]
-  LandFacet sups1 landTypes1 spec1 -> \case
-    LandFacet sups2 landTypes2 spec2 ->
+  LandCharacteristic sups1 landTypes1 spec1 -> \case
+    LandCharacteristic sups2 landTypes2 spec2 ->
       seqM
         [ pure $ compare sups1 sups2
         , pure $ compare landTypes1 landTypes2
-        , ordCardFacet' spec1 spec2
+        , ordCardSpec spec1 spec2
         ]
-  PlaneswalkerFacet colors1 sup1 spec1 -> \case
-    PlaneswalkerFacet colors2 sup2 spec2 ->
+  PlaneswalkerCharacteristic colors1 sup1 spec1 -> \case
+    PlaneswalkerCharacteristic colors2 sup2 spec2 ->
       seqM
         [ ordColors colors1 colors2
         , pure $ compare sup1 sup2
-        , ordCardFacet' spec1 spec2
+        , ordCardSpec spec1 spec2
         ]
-  SorceryFacet colors1 sups1 spec1 -> \case
-    SorceryFacet colors2 sups2 spec2 ->
+  SorceryCharacteristic colors1 sups1 spec1 -> \case
+    SorceryCharacteristic colors2 sups2 spec2 ->
       seqM
         [ ordColors colors1 colors2
         , pure $ compare sups1 sups2
         , ordElectEl spec1 spec2
         ]
 
-ordCardFacet' :: CardFacet' ot -> CardFacet' ot -> EnvM Ordering
-ordCardFacet' = \case
-  ArtifactFacet' cost1 abilities1 -> \case
-    ArtifactFacet' cost2 abilities2 ->
+ordCardSpec :: CardSpec ot -> CardSpec ot -> EnvM Ordering
+ordCardSpec = \case
+  ArtifactSpec cost1 abilities1 -> \case
+    ArtifactSpec cost2 abilities2 ->
       seqM
         [ ordCost cost1 cost2
         , listM ordSomeZoneWithThisAbility abilities1 abilities2
         ]
-  ArtifactCreatureFacet' cost1 artAbils1 creatAbils1 bothAbils1 -> \case
-    ArtifactCreatureFacet' cost2 artAbils2 creatAbils2 bothAbils2 ->
+  ArtifactCreatureSpec cost1 artAbils1 creatAbils1 bothAbils1 -> \case
+    ArtifactCreatureSpec cost2 artAbils2 creatAbils2 bothAbils2 ->
       seqM
         [ ordCost cost1 cost2
         , listM ordSomeZoneWithThisAbility artAbils1 artAbils2
         , listM ordSomeZoneWithThisAbility creatAbils1 creatAbils2
         , listM ordSomeZoneWithThisAbility bothAbils1 bothAbils2
         ]
-  ArtifactLandFacet' artAbils1 landAbils1 bothAbils1 -> \case
-    ArtifactLandFacet' artAbils2 landAbils2 bothAbils2 ->
+  ArtifactLandSpec artAbils1 landAbils1 bothAbils1 -> \case
+    ArtifactLandSpec artAbils2 landAbils2 bothAbils2 ->
       seqM
         [ listM ordSomeZoneWithThisAbility artAbils1 artAbils2
         , listM ordSomeZoneWithThisAbility landAbils1 landAbils2
         , listM ordSomeZoneWithThisAbility bothAbils1 bothAbils2
         ]
-  CreatureFacet' cost1 abilities1 -> \case
-    CreatureFacet' cost2 abilities2 ->
+  CreatureSpec cost1 abilities1 -> \case
+    CreatureSpec cost2 abilities2 ->
       seqM
         [ ordCost cost1 cost2
         , listM ordSomeZoneWithThisAbility abilities1 abilities2
         ]
-  EnchantmentFacet' cost1 abilities1 -> \case
-    EnchantmentFacet' cost2 abilities2 ->
+  EnchantmentSpec cost1 abilities1 -> \case
+    EnchantmentSpec cost2 abilities2 ->
       seqM
         [ ordCost cost1 cost2
         , listM ordSomeZoneWithThisAbility abilities1 abilities2
         ]
-  EnchantmentCreatureFacet' cost1 creatAbils1 enchAbils1 bothAbils1 -> \case
-    EnchantmentCreatureFacet' cost2 creatAbils2 enchAbils2 bothAbils2 ->
+  EnchantmentCreatureSpec cost1 creatAbils1 enchAbils1 bothAbils1 -> \case
+    EnchantmentCreatureSpec cost2 creatAbils2 enchAbils2 bothAbils2 ->
       seqM
         [ ordCost cost1 cost2
         , listM ordSomeZoneWithThisAbility creatAbils1 creatAbils2
         , listM ordSomeZoneWithThisAbility enchAbils1 enchAbils2
         , listM ordSomeZoneWithThisAbility bothAbils1 bothAbils2
         ]
-  InstantFacet' cost1 abilities1 effect1 -> \case
-    InstantFacet' cost2 abilities2 effect2 ->
+  InstantSpec cost1 abilities1 effect1 -> \case
+    InstantSpec cost2 abilities2 effect2 ->
       seqM
         [ ordCost cost1 cost2
         , listM ordSomeZoneWithThisAbility abilities1 abilities2
         , ordWithThis ordElectEl effect1 effect2
         ]
-  LandFacet' abilities1 -> \case
-    LandFacet' abilities2 ->
+  LandSpec abilities1 -> \case
+    LandSpec abilities2 ->
       seqM
         [ listM ordSomeZoneWithThisAbility abilities1 abilities2
         ]
-  PlaneswalkerFacet' cost1 loyalty1 abilities1 -> \case
-    PlaneswalkerFacet' cost2 loyalty2 abilities2 ->
+  PlaneswalkerSpec cost1 loyalty1 abilities1 -> \case
+    PlaneswalkerSpec cost2 loyalty2 abilities2 ->
       seqM
         [ ordCost cost1 cost2
         , pure $ compare loyalty1 loyalty2
         , listM ordSomeZoneWithThisAbility abilities1 abilities2
         ]
-  SorceryFacet' cost1 abilities1 effect1 -> \case
-    SorceryFacet' cost2 abilities2 effect2 ->
+  SorcerySpec cost1 abilities1 effect1 -> \case
+    SorcerySpec cost2 abilities2 effect2 ->
       seqM
         [ ordCost cost1 cost2
         , listM ordSomeZoneWithThisAbility abilities1 abilities2
@@ -1138,10 +1138,10 @@ ordElectEl x = case x of
        in go ability1 ability2
     y -> compareIndexM x y
   ElectCardFacet card1 -> \case
-    ElectCardFacet card2 -> ordCardFacet card1 card2
+    ElectCardFacet card2 -> ordCardCharacteristic card1 card2
     y -> compareIndexM x y
-  ElectCardFacet' card1 -> \case
-    ElectCardFacet' card2 -> ordCardFacet' card1 card2
+  ElectCardSpec card1 -> \case
+    ElectCardSpec card2 -> ordCardSpec card1 card2
     y -> compareIndexM x y
   ElectCase case1 -> \case
     ElectCase case2 -> ordCase ordElectEl case1 case2

@@ -134,7 +134,7 @@ import safe MtgPure.Model.Player (Player (..))
 import safe MtgPure.Model.Recursive (
   AnyCard (..),
   Card (..),
-  CardFacet (..),
+  CardCharacteristic (..),
   Elect,
   SomeZone (..),
   WithThisAbility (..),
@@ -559,7 +559,7 @@ getBasicLandTypes zo = logCall 'getBasicLandTypes do
 
   goAnyCard :: Object 'OTPlayer -> AnyCard -> Magic 'Private 'RO m [BasicLandType]
   goAnyCard oPlayer = \case
-    AnyCard1 (Card _ card) -> goElectFacet oPlayer card
+    AnyCard1 (Card _ card) -> goElectCharacteristic oPlayer card
     AnyCard2 (DoubleSidedCard c1 c2) -> do
       tys1 <- goAnyCard oPlayer $ AnyCard1 c1
       tys2 <- goAnyCard oPlayer $ AnyCard1 c2
@@ -569,23 +569,23 @@ getBasicLandTypes zo = logCall 'getBasicLandTypes do
       tys2 <- goAnyCard oPlayer $ AnyCard1 c2
       pure $ tys1 ++ tys2
 
-  goElectFacet :: Object 'OTPlayer -> Elect 'IntrinsicStage (CardFacet ot') ot' -> Magic 'Private 'RO m [BasicLandType]
-  goElectFacet oPlayer elect = do
+  goElectCharacteristic :: Object 'OTPlayer -> Elect 'IntrinsicStage (CardCharacteristic ot') ot' -> Magic 'Private 'RO m [BasicLandType]
+  goElectCharacteristic oPlayer elect = do
     localNewObjectId oPlayer \i -> do
       let zoStack0 = toZO0 i
-      performElections zoStack0 goFacetM elect <&> \case
+      performElections zoStack0 goCharacteristicM elect <&> \case
         Nothing -> []
         Just tys -> tys
 
-  goFacetM :: CardFacet ot' -> Magic 'Private 'RO m (Maybe [BasicLandType])
-  goFacetM facet = pure $ case goFacet facet of
+  goCharacteristicM :: CardCharacteristic ot' -> Magic 'Private 'RO m (Maybe [BasicLandType])
+  goCharacteristicM character = pure $ case goCharacteristic character of
     [] -> Nothing
     tys -> Just tys
 
-  goFacet :: CardFacet ot' -> [BasicLandType]
-  goFacet = \case
-    ArtifactLandFacet{artifactLand_landTypes = tys} -> fromLandTypes tys
-    LandFacet{land_landTypes = tys} -> fromLandTypes tys
+  goCharacteristic :: CardCharacteristic ot' -> [BasicLandType]
+  goCharacteristic = \case
+    ArtifactLandCharacteristic{artifactLand_landTypes = tys} -> fromLandTypes tys
+    LandCharacteristic{land_landTypes = tys} -> fromLandTypes tys
     _ -> []
 
   fromLandTypes :: [LandType] -> [BasicLandType]
