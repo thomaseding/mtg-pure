@@ -13,7 +13,7 @@
 {-# HLINT ignore "Evaluate" #-}
 {-# HLINT ignore "Use when" #-}
 
-module Demo.AnsiBox (
+module Demo.Ansi.Box (
   main,
   mainAnsiBoxExample,
 ) where

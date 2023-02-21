@@ -13,7 +13,7 @@
 {-# HLINT ignore "Evaluate" #-}
 {-# HLINT ignore "Use when" #-}
 
-module Demo.AnsiMagicBoard (
+module Demo.Ansi.MagicBoard (
   main,
   mainAnsiBoxMagic,
 ) where

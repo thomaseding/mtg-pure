@@ -20,11 +20,11 @@ module MtgPure (
 ) where
 
 import safe Data.Nat (NatList (..))
-import safe Demo.AnsiBox (mainAnsiBoxExample)
-import safe Demo.AnsiMagicBoard (mainAnsiBoxMagic)
-import safe Demo.SerializableMonadApi.ProofOfConcept ()
-import safe Demo.SerializableMonadApi.Variable ()
-import safe Demo.SerializableMonadApi.VariableMonad ()
+import safe Demo.Ansi.Box (mainAnsiBoxExample)
+import safe Demo.Ansi.MagicBoard (mainAnsiBoxMagic)
+import safe Demo.Misc.SerializableMonadApi.ProofOfConcept ()
+import safe Demo.Misc.SerializableMonadApi.Variable ()
+import safe Demo.Misc.SerializableMonadApi.VariableMonad ()
 import safe MtgPure.AllCards
 import safe MtgPure.Cards
 import safe MtgPure.Client.Terminal

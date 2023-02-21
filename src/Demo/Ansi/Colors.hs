@@ -13,7 +13,7 @@
 {-# HLINT ignore "Evaluate" #-}
 {-# HLINT ignore "Use when" #-}
 
-module Demo.AnsiColors (
+module Demo.Ansi.Colors (
   main,
   mainAnsiColors,
 ) where

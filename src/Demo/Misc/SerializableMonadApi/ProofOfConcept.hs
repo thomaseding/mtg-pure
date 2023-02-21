@@ -11,8 +11,8 @@
 {-# HLINT ignore "Redundant pure" #-}
 
 -- https://github.com/stoeffel/haskell-simple-dsl-examples/blob/master/ChatGADT.hs
-module Demo.SerializableMonadApi.ProofOfConcept (
-  module Demo.SerializableMonadApi.ProofOfConcept,
+module Demo.Misc.SerializableMonadApi.ProofOfConcept (
+  module Demo.Misc.SerializableMonadApi.ProofOfConcept,
 ) where
 
 import safe Control.Monad.Identity ()
@@ -20,8 +20,8 @@ import safe qualified Control.Monad.State.Strict as State
 import safe Data.IORef (modifyIORef', newIORef, readIORef)
 import safe Data.Kind (Type)
 import safe qualified Data.Map.Strict as Map
-import safe Demo.SerializableMonadApi.Variable (Env (..), EnvM, EnvShow (..), RS, Var (Lit, Var), VarID, runEnvM)
-import safe qualified Demo.SerializableMonadApi.VariableMonad as X
+import safe Demo.Misc.SerializableMonadApi.Variable (Env (..), EnvM, EnvShow (..), RS, Var (Lit, Var), VarID, runEnvM)
+import safe qualified Demo.Misc.SerializableMonadApi.VariableMonad as X
 
 data InterpM (dsl :: Type -> Type -> Type) (s :: Type) (a :: Type) :: Type where
   Interp :: dsl s a -> InterpM dsl s a

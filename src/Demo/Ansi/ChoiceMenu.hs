@@ -13,7 +13,7 @@
 {-# HLINT ignore "Evaluate" #-}
 {-# HLINT ignore "Use when" #-}
 
-module Demo.AnsiChoiceMenu (
+module Demo.Ansi.ChoiceMenu (
   main,
 ) where
 

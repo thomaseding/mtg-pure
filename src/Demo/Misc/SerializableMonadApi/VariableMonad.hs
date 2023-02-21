@@ -10,12 +10,12 @@
 {-# HLINT ignore "Use if" #-}
 {-# HLINT ignore "Redundant pure" #-}
 
-module Demo.SerializableMonadApi.VariableMonad (
+module Demo.Misc.SerializableMonadApi.VariableMonad (
   Monad (..),
 ) where
 
 import safe Data.Kind (Type)
-import safe Demo.SerializableMonadApi.Variable (RS, Var)
+import safe Demo.Misc.SerializableMonadApi.Variable (RS, Var)
 import safe Prelude ()
 
 class Monad (s :: Type) (m :: Type -> Type -> Type) where

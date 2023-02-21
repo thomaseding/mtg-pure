@@ -10,7 +10,7 @@
 {-# HLINT ignore "Use if" #-}
 {-# HLINT ignore "Redundant pure" #-}
 
-module Demo.SerializableMonadApi.Variable (
+module Demo.Misc.SerializableMonadApi.Variable (
   VarID,
   Var (..),
   DString,
