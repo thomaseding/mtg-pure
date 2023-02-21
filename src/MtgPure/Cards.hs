@@ -90,6 +90,7 @@ module MtgPure.Cards (
   stifle,
   stoneRain,
   stoneThrowingDevils,
+  stripMine,
   sulfurousMire,
   sunkenRuins,
   swamp,
@@ -101,7 +102,9 @@ module MtgPure.Cards (
   unholyStrength,
   vindicate,
   volatileFjord,
+  wallOfEarth,
   waspLancer,
+  wasteland,
   wastes,
   wear_tear,
   witchEngine,
@@ -242,6 +245,7 @@ import safe MtgPure.Model.Recursive (
   SomeZone (SomeZone2),
   StaticAbility (
     Bestow,
+    Defender,
     Enters,
     FirstStrike,
     Flying,
@@ -1860,6 +1864,40 @@ stoneThrowingDevils =
               }
         }
 
+stripMine :: Card OTNLand
+stripMine =
+  Card "Strip Mine" $
+    ElectCardFacet
+      LandCharacteristic
+        { land_supertypes = []
+        , land_landTypes = []
+        , land_spec =
+            LandSpec
+              { land_abilities =
+                  [ activated @ 'ZBattlefield \this ->
+                      controllerOf this \you ->
+                        ElectActivated $
+                          Ability
+                            { activated_cost = tapCost [is this]
+                            , activated_effect = effect $ AddMana you $ toManaPool C
+                            }
+                  , activated @ 'ZBattlefield \this ->
+                      controllerOf this \you ->
+                        Target you $ masked @OTNLand [] \target ->
+                          ElectActivated $
+                            Ability
+                              { activated_cost =
+                                  AndCosts
+                                    [ tapCost [is this]
+                                    , sacrificeCost [is this]
+                                    ]
+                              , activated_effect =
+                                  effect $ destroy target
+                              }
+                  ]
+              }
+        }
+
 sulfurousMire :: Card OTNLand
 sulfurousMire = mkSnowCoveredTapDualLand "Sulfurous Mire" Swamp Mountain
 
@@ -2008,6 +2046,23 @@ vindicate = Card "Vindicate" $
 volatileFjord :: Card OTNLand
 volatileFjord = mkSnowCoveredTapDualLand "Volatile Fjord" Island Mountain
 
+wallOfEarth :: Card OTNCreature
+wallOfEarth =
+  Card "Wall of Earth" $
+    ElectCardFacet
+      CreatureCharacteristic
+        { creature_colors = toColors R
+        , creature_supertypes = []
+        , creature_creatureTypes = [Wall]
+        , creature_power = Power 0
+        , creature_toughness = Toughness 6
+        , creature_spec =
+            CreatureSpec
+              { creature_cost = manaCost (1, R)
+              , creature_abilities = [static \_this -> Defender]
+              }
+        }
+
 waspLancer :: Card OTNCreature
 waspLancer =
   Card "Wasp Lancer" $
@@ -2022,6 +2077,40 @@ waspLancer =
             CreatureSpec
               { creature_cost = manaCost (UB, UB, UB)
               , creature_abilities = [static \_this -> Flying]
+              }
+        }
+
+wasteland :: Card OTNLand
+wasteland =
+  Card "Wasteland" $
+    ElectCardFacet
+      LandCharacteristic
+        { land_supertypes = []
+        , land_landTypes = []
+        , land_spec =
+            LandSpec
+              { land_abilities =
+                  [ activated @ 'ZBattlefield \this ->
+                      controllerOf this \you ->
+                        ElectActivated $
+                          Ability
+                            { activated_cost = tapCost [is this]
+                            , activated_effect = effect $ AddMana you $ toManaPool C
+                            }
+                  , activated @ 'ZBattlefield \this ->
+                      controllerOf this \you ->
+                        Target you $ masked @OTNLand [nonBasic] \target ->
+                          ElectActivated $
+                            Ability
+                              { activated_cost =
+                                  AndCosts
+                                    [ tapCost [is this]
+                                    , sacrificeCost [is this]
+                                    ]
+                              , activated_effect =
+                                  effect $ destroy target
+                              }
+                  ]
               }
         }
 

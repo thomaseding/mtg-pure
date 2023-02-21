@@ -94,6 +94,7 @@ import safe MtgPure.Cards (
   stifle,
   stoneRain,
   stoneThrowingDevils,
+  stripMine,
   sulfurousMire,
   sunkenRuins,
   swamp,
@@ -105,7 +106,9 @@ import safe MtgPure.Cards (
   unholyStrength,
   vindicate,
   volatileFjord,
+  wallOfEarth,
   waspLancer,
+  wasteland,
   wastes,
   wear_tear,
   witchEngine,
@@ -198,6 +201,7 @@ allCards =
   , toCard stifle
   , toCard stoneRain
   , toCard stoneThrowingDevils
+  , toCard stripMine
   , toCard sulfurousMire
   , toCard sunkenRuins
   , toCard swamp
@@ -209,7 +213,9 @@ allCards =
   , toCard unholyStrength
   , toCard vindicate
   , toCard volatileFjord
+  , toCard wallOfEarth
   , toCard waspLancer
+  , toCard wasteland
   , toCard wastes
   , toCard wear_tear
   , toCard witchEngine

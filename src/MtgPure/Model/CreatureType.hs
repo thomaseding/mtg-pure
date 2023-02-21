@@ -34,5 +34,6 @@ data CreatureType
   | Slug
   | Soldier
   | Thopter
+  | Wall
   | Zombie
   deriving (Eq, Ord, Show, Typeable)
