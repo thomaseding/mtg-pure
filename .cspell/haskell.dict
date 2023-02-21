@@ -24,6 +24,7 @@ OVERLAPPABLE
 palettize
 precombat
 readsPrec
+runhaskell
 showsPrec
 succ
 unfoldr

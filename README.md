@@ -43,8 +43,7 @@ Purely functional Haskell "Magic: The Gathering" card model and game engine.
 - [`src/MtgPure/Engine/Fwd/Api.hs`](src/MtgPure/Engine/Fwd/Api.hs)
 - [`src/MtgPure/Engine/Fwd/Impl.hs`](src/MtgPure/Engine/Fwd/Impl.hs)
 - [`src/MtgPure/Engine/State.hs`](src/MtgPure/Engine/State.hs)
-- [`src/Test/Game/Shock.hs`](src/Test/Game/Shock.hs)
-- [`src/Test/Game/StoneRain.hs`](src/Test/Game/StoneRain.hs)
+- [`src/Demo/MtgPure/Gameplay.hs`](src/Demo/MtgPure/Gameplay.hs)
 
 ---
 
@@ -65,7 +64,7 @@ MtgPure> island == (Card "Island" $ ElectCardFacet $ LandCharacteristic [] [Basi
 True
 MtgPure> island == (Card "Island" $ ElectCardFacet $ LandCharacteristic [] [BasicLand Mountain] $ LandSpec [])
 False
-MtgPure> mainStoneRain -- runs Test.Game.StoneRain test demo
+MtgPure> mainDemoGameplay -- runs Demo.MtgPure.Gameplay
 ```
 Notes:
  - Setting `-Wno-type-defaults` so the `Show` instances for cards don't need to constantly specify `Num` types when `Integer` is good enough for authoring. (Too much noise adding annotations for `Integer` or even `Int` or an alias `I`.)
@@ -75,8 +74,11 @@ Notes:
 
 ### Screenshots:
 
-![Test.Game.StoneRain](https://user-images.githubusercontent.com/6971794/216995312-a11023a6-5ec0-4381-88f8-30e595d9ef95.png)
+`Demo.MtgPure.Gameplay`
 
+https://user-images.githubusercontent.com/6971794/220497420-c35cd250-41be-44b8-bd27-16a470732c1c.mp4
+
+`App.AnsiInspector`
 ![App.AnsiInspector](https://user-images.githubusercontent.com/6971794/216997518-b8ee0a7d-cc24-4c4b-8e6c-1a70494f24a4.png)
 
 ### Contributors:

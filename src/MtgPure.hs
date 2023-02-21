@@ -10,6 +10,7 @@ module MtgPure (
   mainAnsiBoxExample,
   mainAnsiBoxMagic,
   mainCodeGenToObjectN,
+  mainDemoGameplay,
   mainHybrid,
   mainManaAbility,
   mainRagingGoblin,
@@ -25,6 +26,7 @@ import safe Demo.Ansi.MagicBoard (mainAnsiBoxMagic)
 import safe Demo.Misc.SerializableMonadApi.ProofOfConcept ()
 import safe Demo.Misc.SerializableMonadApi.Variable ()
 import safe Demo.Misc.SerializableMonadApi.VariableMonad ()
+import safe Demo.MtgPure.Gameplay (mainDemoGameplay)
 import safe MtgPure.AllCards
 import safe MtgPure.Cards
 import safe MtgPure.Client.Terminal
