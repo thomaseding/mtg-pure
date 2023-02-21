@@ -120,6 +120,7 @@ import safe MtgPure.Model.Zone (IsZone, Zone (..))
 import safe MtgPure.Model.ZoneObject.Convert (oToZO1, toZO0, toZO1, toZO2, zo0ToSpell)
 import safe MtgPure.Model.ZoneObject.ZoneObject (IsZO, ZO)
 import safe System.Console.ANSI (clearLine, setCursorPosition)
+import safe System.IO (hFlush, stdout)
 import safe qualified System.IO as IO
 
 chunk :: Int -> [a] -> [[a]]
@@ -317,6 +318,7 @@ examineObject objId = do
     clearScreenWithoutPaging
     setCursorPosition 0 0
     putStrLn msg'
+    hFlush stdout
     pause
   pure $ AskPriorityActionAgain $ Just $ Attempt 0
 
@@ -523,7 +525,7 @@ terminalPromptPayDynamicMana attempt opaque oPlayer dyn = do
           Just p -> p
     pure (pool, text)
   let _ = text -- TODO: log the choice
-  pure mempty{paymentMana = pool}
+  pure mempty{paymentMana = pool} -- TODO: life payments for phyrexian mana
 
 parseManaPool :: String -> Maybe CompleteManaPool
 parseManaPool = parseManaPool' . map Char.toUpper
@@ -537,6 +539,12 @@ parseManaPool' = \case
   'R' : s -> (toCompleteManaPool R <>) <$> parseManaPool' s
   'G' : s -> (toCompleteManaPool G <>) <$> parseManaPool' s
   'C' : s -> (toCompleteManaPool C <>) <$> parseManaPool' s
+  'S' : 'W' : s -> (toCompleteManaPool SW <>) <$> parseManaPool' s
+  'S' : 'U' : s -> (toCompleteManaPool SU <>) <$> parseManaPool' s
+  'S' : 'B' : s -> (toCompleteManaPool SB <>) <$> parseManaPool' s
+  'S' : 'R' : s -> (toCompleteManaPool SR <>) <$> parseManaPool' s
+  'S' : 'G' : s -> (toCompleteManaPool SG <>) <$> parseManaPool' s
+  'S' : 'C' : s -> (toCompleteManaPool SC <>) <$> parseManaPool' s
   _ -> Nothing
 
 terminalChooseOption ::
