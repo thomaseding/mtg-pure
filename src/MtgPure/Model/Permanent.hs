@@ -44,6 +44,7 @@ import safe MtgPure.Model.Recursive (
   SomeZone,
   WithThisAbility,
  )
+import safe MtgPure.Model.Supertype (Supertype)
 import safe MtgPure.Model.Variable (Var (NoVar))
 
 data Tapped = Tapped | Untapped
@@ -74,6 +75,7 @@ data Permanent :: Type where
     , permanentPhased :: Phased
     , permanentPlaneswalker :: Maybe Planeswalker
     , permanentSummoningSickness :: Bool
+    , permanentSupertypes :: [SomeOT Supertype OTNPermanent]
     , permanentTapped :: Tapped
     } ->
     Permanent
@@ -161,6 +163,7 @@ cardToPermanent card character spec = case viewPermanentCharacteristic character
         , permanentPhased = PhasedIn
         , permanentPlaneswalker = characterToPlaneswalker spec
         , permanentSummoningSickness = True
+        , permanentSupertypes = characterToSupertypes character
         , permanentTapped = Untapped
         }
 
@@ -204,6 +207,19 @@ permanentAbilitiesOf spec = case spec of
       , map someCreature $ enchantmentCreature_creatureAbilities spec
       , map someEnchantmentCreature $ enchantmentCreature_enchantmentCreatureAbilities spec
       ]
+
+characterToSupertypes :: CardCharacteristic ot -> [SomeOT Supertype OTNPermanent]
+characterToSupertypes character = case character of
+  InstantCharacteristic{} -> []
+  SorceryCharacteristic{} -> []
+  ArtifactCharacteristic{} -> map someArtifact $ artifact_supertypes character
+  ArtifactCreatureCharacteristic{} -> map someArtifactCreature $ artifactCreature_supertypes character
+  ArtifactLandCharacteristic{} -> map someArtifactLand $ artifactLand_supertypes character
+  CreatureCharacteristic{} -> map someCreature $ creature_supertypes character
+  EnchantmentCharacteristic{} -> map someEnchantment $ enchantment_supertypes character
+  EnchantmentCreatureCharacteristic{} -> map someEnchantmentCreature $ enchantmentCreature_supertypes character
+  LandCharacteristic{} -> map someLand $ land_supertypes character
+  PlaneswalkerCharacteristic{} -> map somePlaneswalker $ planeswalker_supertypes character
 
 characterToArtifact :: CardCharacteristic ot -> Maybe Artifact
 characterToArtifact character = case character of

@@ -29,7 +29,7 @@ import safe MtgPure.Engine.Fwd.Api (
   pay,
   performElections,
   removeHandCard,
-  resolveElected,
+  resolveTopOfStack,
  )
 import safe MtgPure.Engine.Legality (Legality (..), legalityToMaybe, maybeToLegality)
 import safe MtgPure.Engine.Monad (
@@ -384,21 +384,21 @@ castSpellCard zoStack zoSpellCard oCaster card = logCall 'castSpellCard case car
             LandCard{} -> error $ show CantHappenByConstruction
             --
             ArtifactCard{} ->
-              payElectedAndPutOnStack @ 'Cast @ot zoStack electedSpell
+              payElectedAndPutOnStack @ 'Cast zoStack electedSpell
             ArtifactCreatureCard{} -> do
-              payElectedAndPutOnStack @ 'Cast @ot zoStack electedSpell
+              payElectedAndPutOnStack @ 'Cast zoStack electedSpell
             CreatureCard{} -> do
-              payElectedAndPutOnStack @ 'Cast @ot zoStack electedSpell
+              payElectedAndPutOnStack @ 'Cast zoStack electedSpell
             EnchantmentCard{} -> do
-              payElectedAndPutOnStack @ 'Cast @ot zoStack electedSpell
+              payElectedAndPutOnStack @ 'Cast zoStack electedSpell
             EnchantmentCreatureCard{} -> do
-              payElectedAndPutOnStack @ 'Cast @ot zoStack electedSpell
+              payElectedAndPutOnStack @ 'Cast zoStack electedSpell
             InstantCard -> do
-              payElectedAndPutOnStack @ 'Cast @ot zoStack electedSpell
+              payElectedAndPutOnStack @ 'Cast zoStack electedSpell
             PlaneswalkerCard{} -> do
-              payElectedAndPutOnStack @ 'Cast @ot zoStack electedSpell
+              payElectedAndPutOnStack @ 'Cast zoStack electedSpell
             SorceryCard -> do
-              payElectedAndPutOnStack @ 'Cast @ot zoStack electedSpell
+              payElectedAndPutOnStack @ 'Cast zoStack electedSpell
     case castMeta_effect meta of
       Just characterToEffect -> do
         playPendingOneShot zoStack (castMeta_cost meta spec) (characterToEffect spec) goPay
@@ -440,6 +440,11 @@ activateAbility oPlayer = logCall 'activateAbility \case
         goWithThisActivated = do
           abilityId <- newObjectId
           let zoAbility = toZO0 @ 'ZStack abilityId
+          modify \st' ->
+            st'
+              { magicControllerMap = Map.insert abilityId oPlayer $ magicControllerMap st'
+              , magicOwnerMap = Map.insert abilityId oPlayer $ magicOwnerMap st'
+              }
           goElectActivated zoAbility $ unElectOT $ reifyWithThis thisId withThisActivated
 
         goElectActivated :: ZO 'ZStack OT0 -> Elect 'TargetStage (ActivatedAbility zone ot) ot -> Magic 'Private 'RW m ActivateResult
@@ -477,12 +482,12 @@ activateAbility oPlayer = logCall 'activateAbility \case
                     let isManaAbility' = isManaAbility withThisActivated
                     case isManaAbility' of
                       True -> do
-                        legality <- payElectedManaAbilityAndResolve elected
+                        legality <- payElectedManaAbilityAndResolve zoAbility elected
                         pure case legality of
                           ResolvedManaAbility evs -> ActivatedManaAbility evs
                           CantPay -> IllegalActivation
                       False -> do
-                        legality <- payElectedAndPutOnStack @ 'Activate @ot zoAbility elected
+                        legality <- payElectedAndPutOnStack @ 'Activate zoAbility elected
                         pure case legality of
                           Legal -> ActivatedNonManaAbility
                           Illegal -> IllegalActivation
@@ -546,17 +551,19 @@ data ResolvedManaAbility :: Type where
 payElectedManaAbilityAndResolve ::
   forall ot m.
   (IsOTN ot, Monad m) =>
+  ZO 'ZStack OT0 ->
   Elected 'TargetStage ot ->
   Magic 'Private 'RW m ResolvedManaAbility
-payElectedManaAbilityAndResolve elected = logCall 'payElectedManaAbilityAndResolve do
-  payElected elected >>= \case
+payElectedManaAbilityAndResolve zoAbility elected = logCall 'payElectedManaAbilityAndResolve do
+  payElectedAndPutOnStack @ 'Activate @ot zoAbility elected >>= \case
     Illegal -> pure CantPay
     Legal -> do
-      let zoStack = error $ show ManaAbilitiesDontHaveTargetsSoNoZoShouldBeNeeded
-      resolveElected zoStack elected <&> \case
-        ResolvedEffect evs -> ResolvedManaAbility evs
-        Fizzled -> error $ show (undefined :: InternalLogicError) -- mana abilities don't have targets
-        PermanentResolved -> error $ show (undefined :: InternalLogicError) -- mana abilities are abilities
+      resolveTopOfStack <&> \case
+        Nothing -> error $ show (undefined :: InternalLogicError) -- we just pushed it on the stack
+        Just resolution -> case resolution of
+          ResolvedEffect evs -> ResolvedManaAbility evs
+          Fizzled -> error $ show (undefined :: InternalLogicError) -- mana abilities don't have targets
+          PermanentResolved -> error $ show (undefined :: InternalLogicError) -- mana abilities are abilities
 
 data ActivateCast = Activate | Cast
 

@@ -73,6 +73,7 @@ module MtgPure.Engine.Fwd.Api (
   removeHandCard,
   removeLibraryCard,
   resolveTopOfStack,
+  resolveTopOfStackCont,
   resolveElected,
   satisfies,
   setPermanent,
@@ -268,7 +269,7 @@ runCont :: Monad m => ApiCont m v rw bail a -> MagicCont v rw bail m a
 runCont = \case
   AskPriorityAction a -> askPriorityAction a
   GainPriority a -> gainPriority a
-  ResolveTopOfStack -> resolveTopOfStack
+  ResolveTopOfStack -> resolveTopOfStackCont
 
 rewindIllegal :: Monad m => Magic 'Private 'RW m Legality -> Magic 'Private 'RW m Bool
 rewindIllegal = fwd1 fwd_rewindIllegal
@@ -307,10 +308,10 @@ gainPriority a = do
   fwd <- liftCont getFwd
   fwd_gainPriority fwd a
 
-resolveTopOfStack :: Monad m => MagicCont 'Private 'RW PriorityEnd m Void
-resolveTopOfStack = do
+resolveTopOfStackCont :: Monad m => MagicCont 'Private 'RW PriorityEnd m Void
+resolveTopOfStackCont = do
   fwd <- liftCont getFwd
-  fwd_resolveTopOfStack fwd
+  fwd_resolveTopOfStackCont fwd
 
 ----------------------------------------
 
@@ -473,6 +474,9 @@ removeLibraryCard = fwd2 fwd_removeLibraryCard
 
 resolveElected :: (Monad m, IsOTN ot) => ZO 'ZStack OT0 -> Elected 'TargetStage ot -> Magic 'Private 'RW m ResolveElected
 resolveElected = fwd2 fwd_resolveElected
+
+resolveTopOfStack :: Monad m => Magic 'Private 'RW m (Maybe ResolveElected)
+resolveTopOfStack = fwd0 fwd_resolveTopOfStack
 
 satisfies :: (Monad m, IsZO zone ot) => ZO zone ot -> Requirement zone ot -> Magic 'Private 'RO m Bool
 satisfies = fwd2 fwd_satisfies

@@ -10,6 +10,7 @@
 {-# HLINT ignore "Redundant pure" #-}
 
 module MtgPure.Engine.Resolve (
+  resolveTopOfStackCont,
   resolveTopOfStack,
   resolveElected,
   endTheTurn,
@@ -70,24 +71,32 @@ import safe MtgPure.Model.Zone (Zone (..))
 import safe MtgPure.Model.ZoneObject.Convert (toZO0, zo0ToPermanent)
 import safe MtgPure.Model.ZoneObject.ZoneObject (IsOTN, ZO)
 
-resolveTopOfStack :: Monad m => MagicCont 'Private 'RW PriorityEnd m Void
-resolveTopOfStack = M.join $ logCall 'resolveTopOfStack do
-  Stack stack <- liftCont $ fromRO $ gets magicStack
+resolveTopOfStackCont :: Monad m => MagicCont 'Private 'RW PriorityEnd m Void
+resolveTopOfStackCont = M.join $ logCall 'resolveTopOfStackCont do
+  liftCont resolveTopOfStack >>= \case
+    Nothing -> magicContBail $ pure $ Right () -- "if the stack is empty, the phase or step ends"
+    Just result -> do
+      let _ = result -- TODO: sniff events to do stuff like end the turn in cont monad
+      oActive <- liftCont $ fromPublicRO getActivePlayer
+      bailGainPriority oActive
+
+resolveTopOfStack :: Monad m => Magic 'Private 'RW m (Maybe ResolveElected)
+resolveTopOfStack = logCall 'resolveTopOfStack do
+  Stack stack <- fromRO $ gets magicStack
   case stack of -- (117.4) (405.5)
-    [] -> magicContBail $ pure $ Right () -- "if the stack is empty, the phase or step ends"
+    [] -> pure Nothing
     item : items -> do
       let zoStack = stackObjectToZo0 item
-      liftCont $ modify \st -> st{magicStack = Stack items}
-      _result <- liftCont $ resolveStackObject zoStack
-      liftCont $ modify \st ->
+      modify \st -> st{magicStack = Stack items}
+      result <- resolveStackObject zoStack
+      modify \st ->
         st
           { magicStackEntryTargetsMap = Map.delete zoStack $ magicStackEntryTargetsMap st
           , magicStackEntryElectedMap = Map.delete zoStack $ magicStackEntryElectedMap st
           , magicControllerMap = Map.delete (getObjectId zoStack) $ magicControllerMap st
           , magicOwnerMap = Map.delete (getObjectId zoStack) $ magicOwnerMap st
           }
-      oActive <- liftCont $ fromPublicRO getActivePlayer
-      bailGainPriority oActive
+      pure $ Just result
 
 endTheTurn :: Monad m => MagicCont 'Private 'RW Void m Void
 endTheTurn = logCall 'endTheTurn do
@@ -137,12 +146,12 @@ resolveOneShot zoStack mCard elect = logCall 'resolveOneShot do
   case mCard of
     Nothing -> pure ()
     Just (OwnedCard oPlayer card) -> do
-      modify \st ->
-        st
-          { magicControllerMap = Map.delete (getObjectId zoStack) $ magicControllerMap st
-          , magicOwnerMap = Map.delete (getObjectId zoStack) $ magicOwnerMap st
-          }
       M.void $ pushGraveyardCard oPlayer card
+  modify \st ->
+    st
+      { magicControllerMap = Map.delete (getObjectId zoStack) $ magicControllerMap st
+      , magicOwnerMap = Map.delete (getObjectId zoStack) $ magicOwnerMap st
+      }
   pure case mResult of
     Just result -> result
     Nothing -> undefined -- Impossible? If so, may want the return type of performElections be parametrized by the result Pre/Post

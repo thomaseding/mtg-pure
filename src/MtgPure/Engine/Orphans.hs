@@ -66,6 +66,7 @@ import safe MtgPure.Model.Recursive (
 import safe MtgPure.Model.Recursive.Show ()
 import safe MtgPure.Model.Sideboard (Sideboard (..))
 import safe MtgPure.Model.Stack (Stack (..), StackObject (..))
+import safe MtgPure.Model.Supertype (Supertype)
 import safe MtgPure.Model.Variable (ForceVars (forceVars), Var (NoVar))
 
 newtype Bulleted a = Bulleted a
@@ -358,6 +359,8 @@ deriving instance Show (SomeOT (SomeZone Ability) ot)
 
 deriving instance Show (SomeOT (SomeZone WithThisAbility) ot)
 
+deriving instance Show (SomeOT Supertype ot)
+
 deriving instance Show (SomeOT Token ot)
 
 deriving instance Show (SomeTerm Card ot)
@@ -367,6 +370,8 @@ deriving instance Show (SomeTerm CardCharacteristic ot)
 deriving instance Show (SomeTerm (SomeZone Ability) ot)
 
 deriving instance Show (SomeTerm (SomeZone WithThisAbility) ot)
+
+deriving instance Show (SomeTerm Supertype ot)
 
 deriving instance Show (SomeTerm Token ot)
 

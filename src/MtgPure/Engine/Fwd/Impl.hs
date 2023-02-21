@@ -74,7 +74,12 @@ import safe MtgPure.Engine.Priority (
   getHasPriority,
   getPlayerWithPriority,
  )
-import safe MtgPure.Engine.Resolve (endTheTurn, resolveElected, resolveTopOfStack)
+import safe MtgPure.Engine.Resolve (
+  endTheTurn,
+  resolveElected,
+  resolveTopOfStack,
+  resolveTopOfStackCont,
+ )
 import safe MtgPure.Engine.Satisfies (isSatisfied, satisfies, zosSatisfying)
 import safe MtgPure.Engine.State (Fwd)
 import safe MtgPure.Engine.StateBasedActions (performStateBasedActions)
@@ -137,6 +142,7 @@ fwdImpl =
     , fwd_removeLibraryCard = removeLibraryCard
     , fwd_resolveElected = resolveElected
     , fwd_resolveTopOfStack = resolveTopOfStack
+    , fwd_resolveTopOfStackCont = resolveTopOfStackCont
     , fwd_rewindIllegal = rewindIllegal
     , fwd_rewindIllegalActivation = rewindIllegalActivation
     , fwd_rewindNothing = rewindNothing

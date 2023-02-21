@@ -34,7 +34,7 @@ import safe MtgPure.Engine.Fwd.Api (
   getAlivePlayerCount,
   performStateBasedActions,
   playLand,
-  resolveTopOfStack,
+  resolveTopOfStackCont,
   rewindIllegal,
   rewindIllegalActivation,
  )
@@ -94,7 +94,7 @@ bailEndTheTurn :: Monad m => MagicCont 'Private 'RW PriorityEnd m ()
 bailEndTheTurn = magicContBail $ toPriorityEnd endTheTurn
 
 bailResolveTopOfStack :: Monad m => MagicCont 'Private 'RW PriorityEnd m Void
-bailResolveTopOfStack = magicContBail $ fmap Left resolveTopOfStack
+bailResolveTopOfStack = magicContBail $ fmap Left resolveTopOfStackCont
 
 runPriorityQueue :: Monad m => MagicCont 'Private 'RW PriorityEnd m Void
 runPriorityQueue = M.join $ logCall 'runPriorityQueue do

@@ -117,7 +117,8 @@ data Fwd' ex st m where
     , fwd_removeHandCard :: Object 'OTPlayer -> ZO 'ZHand OTNCard -> Magic' ex st 'Private 'RW m (Maybe AnyCard)
     , fwd_removeLibraryCard :: Object 'OTPlayer -> ZO 'ZLibrary OTNCard -> Magic' ex st 'Private 'RW m (Maybe AnyCard)
     , fwd_resolveElected :: forall ot. IsOTN ot => ZO 'ZStack OT0 -> Elected 'TargetStage ot -> Magic' ex st 'Private 'RW m ResolveElected
-    , fwd_resolveTopOfStack :: MagicCont' ex st 'Private 'RW PriorityEnd m Void
+    , fwd_resolveTopOfStack :: Monad m => Magic' ex st 'Private 'RW m (Maybe ResolveElected)
+    , fwd_resolveTopOfStackCont :: MagicCont' ex st 'Private 'RW PriorityEnd m Void
     , fwd_rewindIllegal :: Magic' ex st 'Private 'RW m Legality -> Magic' ex st 'Private 'RW m Bool
     , fwd_rewindIllegalActivation :: Magic' ex st 'Private 'RW m ActivateResult -> Magic' ex st 'Private 'RW m ActivateResult
     , fwd_rewindNothing :: forall a. Magic' ex st 'Private 'RW m (Maybe a) -> Magic' ex st 'Private 'RW m (Maybe a)

@@ -499,9 +499,13 @@ takeBalanced' n (c : cs)
 hackyGetManaCost :: AnyCard -> Maybe String
 hackyGetManaCost card = case dropWhileNotPrefix "toManaCost" $ show card of
   "" -> Nothing
-  s -> Just case takeBalanced $ takeWhile (/= ' ') $ drop 11 s of
+  s -> Just $ dropTrailingComma case takeMana $ dropToManaCost s of
     s'@('(' : _) -> s'
     s' -> '(' : s' <> ")"
+ where
+  dropTrailingComma = reverse . dropWhile (== ',') . reverse
+  dropToManaCost = drop 11
+  takeMana = takeBalanced . takeWhile (/= ' ')
 
 mkHandCardBox :: Object 'OTPlayer -> Int -> ZO 'ZHand OTNCard -> Magic 'Public 'RO Terminal Box
 mkHandCardBox oPlayer y zoCard = do

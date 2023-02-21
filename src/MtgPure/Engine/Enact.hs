@@ -13,11 +13,13 @@ module MtgPure.Engine.Enact (
   enact,
 ) where
 
+import safe Control.Exception (assert)
 import safe qualified Control.Monad as M
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
 import safe qualified Control.Monad.Trans as M
 import safe Control.Monad.Util (untilJust)
 import safe qualified Data.Foldable as F
+import safe Data.Functor ((<&>))
 import safe qualified Data.List as List
 import safe qualified Data.Map.Strict as Map
 import safe MtgPure.Engine.Fwd.Api (
@@ -35,13 +37,16 @@ import safe MtgPure.Engine.Fwd.Api (
   setPlayer,
  )
 import safe MtgPure.Engine.Monad (fromPublic, fromPublicRO, fromRO, gets)
-import safe MtgPure.Engine.Orphans ()
+import safe MtgPure.Engine.Orphans (mapManaPool)
 import safe MtgPure.Engine.Prompt (
+  AnyElected (..),
   CardCount (..),
   CardIndex (..),
+  Elected (..),
   Ev (..),
   InternalLogicError (..),
   Prompt' (..),
+  SomeActivatedAbility (..),
   SourceZO (..),
   TriggerTime (..),
  )
@@ -50,6 +55,7 @@ import safe MtgPure.Model.Damage (Damage, Damage' (..))
 import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.IsCardList (IsCardList (..), popCard)
 import safe MtgPure.Model.Life (Life (..))
+import safe MtgPure.Model.Mana.Mana (freezeMana)
 import safe MtgPure.Model.Mana.ManaPool (CompleteManaPool (..), ManaPool (..))
 import safe MtgPure.Model.Mana.Snow (Snow (..))
 import safe MtgPure.Model.Object.OTNAliases (OTNDamageSource)
@@ -59,7 +65,9 @@ import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Object.Singleton.Permanent (CoPermanent)
 import safe MtgPure.Model.Permanent (Permanent (..), Tapped (..))
 import safe MtgPure.Model.Player (Player (..))
-import safe MtgPure.Model.Recursive (Effect (..))
+import safe MtgPure.Model.Recursive (CardCharacteristic (..), Effect (..), fromSomeOT)
+import safe MtgPure.Model.Supertype (Supertype)
+import safe qualified MtgPure.Model.Supertype as Ty
 import safe MtgPure.Model.Variable (forceVars)
 import safe MtgPure.Model.Zone (Zone (..))
 import safe MtgPure.Model.ZoneObject.Convert (toZO0, zo0ToPermanent, zo1ToO)
@@ -113,13 +121,46 @@ enact' mSource = logCall 'enact' \case
   WithList{} -> undefined
 
 addMana' :: Monad m => Maybe SourceZO -> ZOPlayer -> ManaPool 'NonSnow -> Magic 'Private 'RW m [Ev]
-addMana' _mSource oPlayer mana = logCall 'addMana' do
+addMana' mSource oPlayer mana = logCall 'addMana' do
   fromRO (findPlayer $ zo1ToO oPlayer) >>= \case
     Nothing -> pure () -- Don't complain. This can naturally happen if a player in a multiplayer game loses before `enact'` resolves.
     Just player -> do
-      let mana' = playerMana player + mempty{poolNonSnow = mana}
+      isSnow <- case mSource of
+        Nothing -> pure False
+        Just (SourceZO zoStack) -> do
+          let zoStack0 = toZO0 $ getObjectId zoStack
+          entry <- fromRO $ gets $ Map.lookup zoStack0 . magicStackEntryElectedMap
+          case entry of
+            Nothing -> assert False $ pure False -- XXX: Can this happen?
+            Just (AnyElected elected) -> case elected of
+              ElectedActivatedAbility{electedActivatedAbility_ability = someZo} -> goAbilitySource someZo
+              ElectedSpell{electedSpell_character = character} -> pure $ goSpell character
+      let mana' =
+            playerMana player + case isSnow of
+              True -> mempty{poolSnow = mapManaPool freezeMana mana}
+              False -> mempty{poolNonSnow = mana}
       setPlayer (zo1ToO oPlayer) player{playerMana = mana'}
   pure mempty
+ where
+  goSupertypes :: [Supertype ot] -> Bool
+  goSupertypes = any \case
+    Ty.Snow -> True
+    _ -> False
+
+  goSpell character = case character of
+    InstantCharacteristic{instant_supertypes = supertypes} -> goSupertypes supertypes
+    SorceryCharacteristic{sorcery_supertypes = supertypes} -> goSupertypes supertypes
+    _ -> assert False False
+
+  goAbilitySource someZo = case someZo of
+    SomeActivatedAbility{someActivatedZO = zo} -> do
+      let i = getObjectId zo
+      let zoPerm0 = zo0ToPermanent $ toZO0 i
+      fromRO (findPermanent zoPerm0) <&> \case
+        Nothing -> False
+        Just perm -> (`any` permanentSupertypes perm) \ty -> fromSomeOT ty \case
+          Ty.Snow -> True
+          _ -> False
 
 dealDamage' ::
   Monad m =>
