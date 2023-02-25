@@ -644,6 +644,7 @@ data Elect (s :: ElectStage) (el :: Type) (ot :: Type) :: Type where
   If :: Condition -> Elect s el ot -> Else s el ot -> Elect s el ot
   Listen :: EventListener -> Elect 'IntrinsicStage EventListener ot
   OwnerOf :: IsZO zone OTNAny => ZO zone OTNAny -> (ZOPlayer -> Elect s el ot) -> Elect s el ot
+  -- XXX: This could be generalized to `NatList user n Cost -> (Variable (FinPayment user n) -> Elect 'ResolveStage el ot)`
   PlayerPays :: ZOPlayer -> Cost -> (Variable FinPayment -> Elect 'ResolveStage el ot) -> Elect 'ResolveStage el ot
   -- TODO: Add `IsZO zone ot` witness and change `'ZBattlefield` to `zone`.
   -- TODO: Prolly allow both 'Pre and 'Post

@@ -74,6 +74,7 @@ import safe MtgPure.Engine.Priority (
   getHasPriority,
   getPlayerWithPriority,
  )
+import safe MtgPure.Engine.PutOntoBattlefield (putOntoBattlefield)
 import safe MtgPure.Engine.Resolve (
   endTheTurn,
   resolveElected,
@@ -136,6 +137,7 @@ fwdImpl =
     , fwd_pushGraveyardCard = pushGraveyardCard
     , fwd_pushHandCard = pushHandCard
     , fwd_pushLibraryCard = pushLibraryCard
+    , fwd_putOntoBattlefield = putOntoBattlefield
     , fwd_queryObjectId = queryObjectId
     , fwd_removeGraveyardCard = removeGraveyardCard
     , fwd_removeHandCard = removeHandCard

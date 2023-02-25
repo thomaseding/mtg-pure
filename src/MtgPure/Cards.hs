@@ -144,7 +144,7 @@ import safe MtgPure.Model.Combinators (
   gainAbility,
   gainControl,
   hasAbility,
-  ifElse,
+  ifThen,
   is,
   isTapped,
   manaCost,
@@ -832,19 +832,18 @@ conversion =
                       When $
                         ActivePlayer \active ->
                           controllerOf this \you ->
-                            let isNotYourTurn = satisfies you [Not $ is active]
-                             in ifElse isNotYourTurn $
-                                  event $
-                                    TimePoint (StepBegin UpkeepStep) $
-                                      PlayerPays you (manaCost (W, W)) \option ->
-                                        effect $
-                                          EffectCase
-                                            CaseFin
-                                              { caseFin = option
-                                              , ofFin =
-                                                  paidCost (Sequence []) $
-                                                    didNotPayCost $ sacrifice you [is this]
-                                              }
+                            ifThen (satisfies you [is active]) $
+                              event $
+                                TimePoint (StepBegin UpkeepStep) $
+                                  PlayerPays you (manaCost (W, W)) \option ->
+                                    effect $
+                                      EffectCase
+                                        CaseFin
+                                          { caseFin = option
+                                          , ofFin =
+                                              paidCost (Sequence []) $
+                                                didNotPayCost $ sacrifice you [is this]
+                                          }
                   , static \_this ->
                       StaticContinuous $
                         All $ maskeds [hasLandType Mountain] \lands ->

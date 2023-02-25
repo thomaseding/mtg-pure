@@ -22,11 +22,7 @@ import safe MtgPure.Engine.Fwd.Api (
   getActivePlayer,
   getHasPriority,
   getPlayer,
-  modifyPlayer,
-  newObjectId,
-  performElections,
-  removeHandCard,
-  setPermanent,
+  putOntoBattlefield,
  )
 import safe MtgPure.Engine.Legality (Legality (..))
 import safe MtgPure.Engine.Monad (
@@ -35,11 +31,9 @@ import safe MtgPure.Engine.Monad (
   get,
   gets,
   internalFromPrivate,
-  modify,
  )
 import safe MtgPure.Engine.Orphans ()
 import safe MtgPure.Engine.Prompt (
-  InternalLogicError (..),
   InvalidPlayLand (..),
   PlayLand,
   Prompt' (..),
@@ -51,25 +45,15 @@ import safe MtgPure.Engine.State (
   logCall,
   mkOpaqueGameState,
  )
-import safe MtgPure.Model.ElectStage (ElectStage (..))
 import safe MtgPure.Model.IsCardList (containsCard)
 import safe MtgPure.Model.Object.OTNAliases (OTNLand)
 import safe MtgPure.Model.Object.Object (Object)
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
-import safe MtgPure.Model.Permanent (cardToPermanent)
 import safe MtgPure.Model.PhaseStep (PhaseStep (..))
 import safe MtgPure.Model.Player (Player (..))
-import safe MtgPure.Model.Recursive (
-  AnyCard (..),
-  Card (..),
-  CardCharacteristic (..),
-  CardSpec,
-  Elect,
-  IsSpecificCard,
- )
 import safe MtgPure.Model.Stack (Stack (..))
 import safe MtgPure.Model.Zone (IsZone (..), SZone (..))
-import safe MtgPure.Model.ZoneObject.Convert (asCard, toZO0, zo0ToPermanent)
+import safe MtgPure.Model.ZoneObject.Convert (asCard, toZO0)
 import safe MtgPure.Model.ZoneObject.ZoneObject (ZO)
 
 data PlayLandReqs = PlayLandReqs
@@ -115,20 +99,6 @@ playLand :: Monad m => Object 'OTPlayer -> SpecialAction PlayLand -> Magic 'Priv
 playLand oPlayer (PlayLand oLand) = logCall 'playLand do
   playLandZO oPlayer oLand
 
-viewLand :: CardCharacteristic ot -> Maybe (CardSpec ot)
-viewLand character = case character of
-  ArtifactLandCharacteristic{} -> Just $ artifactLand_spec character
-  LandCharacteristic{} -> Just $ land_spec character
-  --
-  ArtifactCharacteristic{} -> Nothing
-  ArtifactCreatureCharacteristic{} -> Nothing
-  CreatureCharacteristic{} -> Nothing
-  EnchantmentCharacteristic{} -> Nothing
-  EnchantmentCreatureCharacteristic{} -> Nothing
-  InstantCharacteristic{} -> Nothing
-  PlaneswalkerCharacteristic{} -> Nothing
-  SorceryCharacteristic{} -> Nothing
-
 playLandZO ::
   forall m zone.
   (Monad m, IsZone zone) =>
@@ -161,15 +131,11 @@ playLandZO oPlayer zoLand = logCall 'playLandZO do
           mCard <- fromRO $ gets $ Map.lookup (toZO0 zoLand) . magicHandCards
           case mCard of
             Nothing -> invalid PlayLand_NotInZone
-            Just anyCard -> do
+            Just{} -> do
               case containsCard (asCard zoLand) hand of
                 False -> invalid PlayLand_NotOwned
-                True -> case anyCard of
-                  AnyCard1 card -> goCard anyCard card
-                  AnyCard2 card -> goCard anyCard card
+                True -> putOntoBattlefield oPlayer zoLand
  where
-  logCall' s = logCall ('playLandZO, s :: String)
-
   invalid :: (ZO zone OTNLand -> InvalidPlayLand) -> Magic 'Private 'RW m Legality
   invalid ex = do
     st <- internalFromPrivate $ fromRO get
@@ -177,66 +143,3 @@ playLandZO oPlayer zoLand = logCall 'playLandZO do
         prompt = magicPrompt st
     lift $ exceptionInvalidPlayLand prompt opaque oPlayer $ ex zoLand
     pure Illegal
-
-  goCard :: AnyCard -> Card ot -> Magic 'Private 'RW m Legality
-  goCard anyCard card = case card of
-    Card _name elect -> goElectIntrinsic anyCard elect
-    _ -> undefined
-
-  goElectIntrinsic ::
-    IsSpecificCard ot =>
-    AnyCard ->
-    Elect 'IntrinsicStage (CardCharacteristic ot) ot ->
-    Magic 'Private 'RW m Legality
-  goElectIntrinsic anyCard electIntrinsic = do
-    i <- newObjectId
-    -- Yes, lands don't use the stack, but we make a faux stack object anyway
-    -- so elections like `Your` work for free. If this ends up being too hokey
-    -- the type of `performElections` would need to be changed. Prolly would
-    -- change the `ZO 'ZStack OT0` to be the result of a type family for the
-    -- non-intrinsic `ElectStage` cases and `ZOPlayer` for `IntrinsicStage`.
-    let zoStack0 = toZO0 i
-    modify \st' ->
-      st'
-        { magicControllerMap = Map.insert i oPlayer $ magicControllerMap st'
-        , magicOwnerMap = Map.insert i oPlayer $ magicOwnerMap st'
-        }
-    mCharacteristic <- fromRO $ performElections zoStack0 (pure . Just) electIntrinsic
-    case mCharacteristic of
-      Nothing -> pure Illegal
-      Just character -> do
-        result <- goCharacteristic anyCard character
-        modify \st' ->
-          st'
-            { magicControllerMap = Map.delete i $ magicControllerMap st'
-            , magicOwnerMap = Map.delete i $ magicOwnerMap st'
-            }
-        pure result
-
-  goCharacteristic :: AnyCard -> CardCharacteristic ot -> Magic 'Private 'RW m Legality
-  goCharacteristic anyCard character = logCall' "goCharacteristic" case viewLand character of
-    Nothing -> pure Illegal
-    Just spec -> do
-      () <- case singZone @zone of
-        SZBattlefield -> error $ show CantHappenByConstruction
-        SZExile -> error $ show CantHappenByConstruction
-        SZLibrary -> error $ show CantHappenByConstruction
-        SZStack -> error $ show CantHappenByConstruction
-        SZGraveyard -> undefined -- TODO: [Crucible of Worlds]
-        SZHand -> do
-          removeHandCard oPlayer (asCard zoLand) >>= \case
-            Nothing -> error $ show $ ObjectIdExistsAndAlsoDoesNotExist zoLand
-            Just{} -> pure ()
-      modifyPlayer oPlayer \p -> p{playerLandsPlayedThisTurn = playerLandsPlayedThisTurn p + 1}
-      i <- newObjectId
-      let oLand' = zo0ToPermanent $ toZO0 i
-          perm = case cardToPermanent anyCard character spec of
-            Nothing -> error $ show ExpectedCardToBeAPermanentCard
-            Just perm' -> perm'
-      modify \st' ->
-        st'
-          { magicControllerMap = Map.insert i oPlayer $ magicControllerMap st'
-          , magicOwnerMap = Map.insert i oPlayer $ magicOwnerMap st'
-          }
-      setPermanent oLand' $ Just perm
-      pure Legal

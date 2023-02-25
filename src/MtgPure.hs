@@ -35,6 +35,7 @@ import safe MtgPure.Engine hiding (
   ControllerOf,
   Satisfies,
   controllerOf,
+  putOntoBattlefield,
   satisfies,
  )
 import safe MtgPure.Model

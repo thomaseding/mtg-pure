@@ -68,6 +68,7 @@ module MtgPure.Engine.Fwd.Api (
   pushGraveyardCard,
   pushHandCard,
   pushLibraryCard,
+  putOntoBattlefield,
   queryObjectId,
   removeGraveyardCard,
   removeHandCard,
@@ -136,6 +137,7 @@ import safe MtgPure.Model.Object.OTNAliases (OTNCard, OTNPermanent)
 import safe MtgPure.Model.Object.Object (Object)
 import safe MtgPure.Model.Object.ObjectId (ObjectId)
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
+import safe MtgPure.Model.Object.Singleton.Permanent (CoPermanent)
 import safe MtgPure.Model.Permanent (Permanent)
 import safe MtgPure.Model.Player (Player)
 import safe MtgPure.Model.Recursive (
@@ -459,6 +461,13 @@ pushHandCard = fwd2 fwd_pushHandCard
 
 pushLibraryCard :: Monad m => Object 'OTPlayer -> AnyCard -> Magic 'Private 'RW m (ZO 'ZLibrary OTNCard)
 pushLibraryCard = fwd2 fwd_pushLibraryCard
+
+putOntoBattlefield ::
+  (IsZO zone ot, CoPermanent ot, Monad m) =>
+  Object 'OTPlayer ->
+  ZO zone ot ->
+  Magic 'Private 'RW m Legality
+putOntoBattlefield = fwd2 fwd_putOntoBattlefield
 
 queryObjectId :: Monad m => ObjectId -> Magic 'Private 'RO m (Maybe QueryObjectResult)
 queryObjectId = fwd1 fwd_queryObjectId

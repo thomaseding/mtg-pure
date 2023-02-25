@@ -307,7 +307,7 @@ allZOs = logCall 'allZOs case singZone @zone of
             pure $ DList.fromList oPerms <> DList.fromList oPlayers <> oRecs
      in DList.toList <$> case indexOT @ot of
           [ots] -> goRec ots
-          otts -> goRec $ List.nub $ concat otts
+          otss -> goRec $ List.nub $ concat otss
   _ -> undefined -- XXX: sung zone
  where
   castOToZO :: IsObjectType z => Object z -> Maybe (ZO zone ot)

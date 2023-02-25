@@ -291,7 +291,7 @@ electA sel zoStack failureX goElect oPlayer = logCall 'electA \case
               True -> Just zo
         zo' <- case sel of
           Choose' -> pure zo
-          Target' -> newTarget zoStack zo $ RAnd reqs
+          Target' -> newTarget zoStack zo $ RAnd reqs -- TODO: Add a req to prevent targeting self.
         let elect = zoToElect zo'
         goElect elect
 

@@ -117,6 +117,8 @@ buildTree config = runTreeM config . buildTreeM
 --  * Generate JSON
 --  * Pretty-printing
 --  * Easier control of use of parens vs dollar sign
+--  * Control on whether or not combinators/smart-constructors are used vs raw constructors.
+--  * Control on whether or not OTNAliases are used vs explicit OTN types.
 --
 -- XXX: Prolly want to keep the `ot` types since IndexOT exists and the strong types are useful.
 -- In the future, if there is need, there can be a `UntypedTree` variant that doesn't have the `ot` types.
