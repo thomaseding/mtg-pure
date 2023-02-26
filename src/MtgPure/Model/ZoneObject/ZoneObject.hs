@@ -80,7 +80,6 @@ import safe MtgPure.Model.Zone (IsZone (..), SZone (..), Zone (..))
 type ZO = ZoneObject
 
 data ZoneObject (zone :: Zone) (ot :: Type) :: Type where
-  -- XXX: Want something like `ot ~ OTN x`... perhaps it's time to refactor to avoid the `x`
   ZO :: SZone zone -> ObjectN ot -> ZoneObject zone ot
   deriving (Typeable)
 

@@ -305,16 +305,16 @@ instance IsZO zone (OT5 a b c d e) => AsWithThis zone (OT5 a b c d e) where
   thisObject1 = case litOTN @(OT5 a b c d e) of
     OT5 -> \goThis1 -> This5 \(a, _, _, _, _) -> goThis1 a
 
-activatedOT' :: (AsWithThis zone ot, ot ~ OTN x) => (ThisFromOTN zone ot -> ElectOT 'TargetStage (ActivatedAbility zone) ot) -> WithThisAbility zone ot
+activatedOT' :: AsWithThis zone ot => (ThisFromOTN zone ot -> ElectOT 'TargetStage (ActivatedAbility zone) ot) -> WithThisAbility zone ot
 activatedOT' = WithThisActivated . thisObject
 
-activated' :: (AsWithThis zone ot, ot ~ OTN x) => (ThisFromOTN zone ot -> Elect 'TargetStage (ActivatedAbility zone ot) ot) -> WithThisAbility zone ot
+activated' :: AsWithThis zone ot => (ThisFromOTN zone ot -> Elect 'TargetStage (ActivatedAbility zone ot) ot) -> WithThisAbility zone ot
 activated' = activatedOT' . (ElectOT .)
 
 activated :: (AsWithThis zone ot, ot ~ OTN x) => (ThisFromOTN zone ot -> Elect 'TargetStage (ActivatedAbility zone ot) ot) -> SomeZone WithThisAbility ot
 activated = SomeZone . activated'
 
-static' :: (AsWithThis zone ot, ot ~ OTN x) => (ThisFromOTN zone ot -> StaticAbility zone ot) -> WithThisAbility zone ot
+static' :: AsWithThis zone ot => (ThisFromOTN zone ot -> StaticAbility zone ot) -> WithThisAbility zone ot
 static' = WithThisStatic . thisObject
 
 static :: (AsWithThis zone ot, ot ~ OTN x) => (ThisFromOTN zone ot -> StaticAbility zone ot) -> SomeZone WithThisAbility ot
@@ -324,7 +324,7 @@ static = SomeZone . static'
 static_ :: (AsWithThis zone ot, ot ~ OTN x) => (ThisFromOTN zone ot -> StaticAbility zone ot) -> SomeZone WithThisAbility ot
 static_ = static
 
-triggered' :: (AsWithThis zone ot, ot ~ OTN x) => (ThisFromOTN zone ot -> TriggeredAbility zone ot) -> WithThisAbility zone ot
+triggered' :: AsWithThis zone ot => (ThisFromOTN zone ot -> TriggeredAbility zone ot) -> WithThisAbility zone ot
 triggered' = WithThisTriggered . thisObject
 
 triggered :: (AsWithThis zone ot, ot ~ OTN x) => (ThisFromOTN zone ot -> TriggeredAbility zone ot) -> SomeZone WithThisAbility ot
@@ -379,7 +379,7 @@ sacrifice ::
 sacrifice = Sacrifice
 
 changeTo ::
-  (AsPermanent ot, CoPermanent ot, ot ~ OTN x) =>
+  (AsPermanent ot, CoPermanent ot) =>
   ZO 'ZBattlefield ot ->
   Card ot ->
   Effect 'Continuous

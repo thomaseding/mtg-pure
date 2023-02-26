@@ -1,6 +1,7 @@
 combinators
 injectivity
 Monoid
+monomorphism
 Semigroup
 SRGB
 uncurry

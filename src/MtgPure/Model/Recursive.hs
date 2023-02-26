@@ -555,7 +555,7 @@ data Effect (ef :: EffectType) :: Type where
   AddMana :: ZOPlayer -> ManaPool 'NonSnow -> Effect 'OneShot -- NOTE: Engine will reinterpret as Snow when source is Snow.
   AddToBattlefield :: (CoPermanent ot, IsOTN ot) => ZOPlayer -> Token ot -> Effect 'OneShot
   CantBeRegenerated :: ZOCreature -> Effect 'Continuous
-  ChangeTo :: (ot ~ OTN x, CoPermanent ot, IsOTN ot) => ZOPermanent -> Card ot -> Effect 'Continuous
+  ChangeTo :: (CoPermanent ot, IsOTN ot) => ZOPermanent -> Card ot -> Effect 'Continuous
   CounterAbility :: ZO 'ZStack OTNActivatedOrTriggeredAbility -> Effect 'OneShot
   CounterSpell :: ZO 'ZStack OTNSpell -> Effect 'OneShot
   DealDamage :: IsZO zone OTNDamageSource => ZO zone OTNDamageSource -> ZOCreaturePlayerPlaneswalker -> Damage 'Var -> Effect 'OneShot
@@ -1040,7 +1040,7 @@ instance ConsIndex (SomeZone liftZOT ot) where
 --------------------------------------------------------------------------------
 
 data StaticAbility (zone :: Zone) (ot :: Type) :: Type where
-  As :: (ot ~ OTN x, IsOTN ot) => Elect 'ResolveStage EventListener ot -> StaticAbility 'ZBattlefield ot -- 603.6d: not a triggered ability
+  As :: IsOTN ot => Elect 'ResolveStage EventListener ot -> StaticAbility 'ZBattlefield ot -- 603.6d: not a triggered ability
   -- XXX: BestowPre and BestowPost
   Bestow :: ot ~ OTNEnchantmentCreature => Elect 'IntrinsicStage Cost ot -> Enchant 'ZBattlefield OTNCreature -> StaticAbility 'ZBattlefield ot
   CantBlock :: ot ~ OTNCreature => StaticAbility 'ZBattlefield ot
@@ -1052,9 +1052,9 @@ data StaticAbility (zone :: Zone) (ot :: Type) :: Type where
   Haste :: ot ~ OTNCreature => StaticAbility 'ZBattlefield ot
   Landwalk :: ot ~ OTNCreature => [Requirement 'ZBattlefield OTNLand] -> StaticAbility 'ZBattlefield ot
   Phasing :: CoPermanent ot => StaticAbility 'ZBattlefield ot
-  StaticContinuous :: (ot ~ OTN x, IsOTN ot) => Elect 'ResolveStage (Effect 'Continuous) ot -> StaticAbility 'ZBattlefield ot -- 611.3
+  StaticContinuous :: IsOTN ot => Elect 'ResolveStage (Effect 'Continuous) ot -> StaticAbility 'ZBattlefield ot -- 611.3
   -- XXX: SuspendPre and SuspendPost
-  Suspend :: (ot ~ OTN x, IsOTN ot) => Int -> Elect 'IntrinsicStage Cost ot -> StaticAbility 'ZBattlefield ot -- PositiveInt
+  Suspend :: IsOTN ot => Int -> Elect 'IntrinsicStage Cost ot -> StaticAbility 'ZBattlefield ot -- PositiveInt
   Trample :: ot ~ OTNCreature => StaticAbility 'ZBattlefield ot
   deriving (Typeable)
 

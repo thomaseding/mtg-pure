@@ -83,6 +83,9 @@ type ON11 a b c d e f g h i j k = ObjectN (OT11 a b c d e f g h i j k)
 
 type ON12 a b c d e f g h i j k l = ObjectN (OT12 a b c d e f g h i j k l)
 
+-- NOTE: There is no need to use something like `(otk :: OTK)`.
+-- That just makes the types harder to pass around. Use `ViewObjectN` to
+-- get easy access to the `ObjectN` type.
 data ObjectN (otn :: Type) :: Type where
   O0 :: UntypedObject -> ON0
   --
