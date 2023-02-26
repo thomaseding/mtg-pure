@@ -40,7 +40,7 @@ import safe MtgPure.Model.Object.OTN (
   OT7,
   OT8,
   OT9,
-  OTN,
+  OTN (..),
   mkOT1,
   mkOT10,
   mkOT11,
@@ -54,9 +54,7 @@ import safe MtgPure.Model.Object.OTN (
   mkOT8,
   mkOT9,
  )
-import safe MtgPure.Model.Object.OTN_ (OTN' (..))
-import safe MtgPure.Model.Object.ObjectN (ObjectN)
-import safe MtgPure.Model.Object.ObjectN_ (ObjectN' (..))
+import safe MtgPure.Model.Object.ObjectN (ObjectN (..))
 
 viewOTN' ::
   forall ret otn.

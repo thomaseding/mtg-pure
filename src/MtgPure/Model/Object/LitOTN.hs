@@ -38,9 +38,8 @@ import safe MtgPure.Model.Object.OTN (
   OT7,
   OT8,
   OT9,
-  OTN,
+  OTN (..),
  )
-import safe MtgPure.Model.Object.OTN_ (OTN' (..))
 
 class LitOTN (ot :: Type) where
   litOTN :: ot

@@ -57,8 +57,7 @@ import safe MtgPure.Model.Object.ObjectId (
   getObjectId,
   pattern DefaultObjectDiscriminant,
  )
-import safe MtgPure.Model.Object.ObjectN (ObjectN)
-import safe MtgPure.Model.Object.ObjectN_ (ObjectN' (..))
+import safe MtgPure.Model.Object.ObjectN (ObjectN (..))
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Object.ToObjectN.Classes (ToObject1' (toObject1'))
 import safe MtgPure.Model.Object.ToObjectN.Instances ()

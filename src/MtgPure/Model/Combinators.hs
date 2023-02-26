@@ -107,14 +107,13 @@ import safe MtgPure.Model.Object.OTN (
   OT4,
   OT5,
   OT6,
-  OTN,
+  OTN (..),
  )
 import safe MtgPure.Model.Object.OTNAliases (
   OTNCreature,
   OTNDamageSource,
   OTNLand,
  )
-import safe MtgPure.Model.Object.OTN_ (OTN' (..))
 import safe MtgPure.Model.Object.Singleton.Any (CoAny (..))
 import safe MtgPure.Model.Object.Singleton.Card (CoCard (..))
 import safe MtgPure.Model.Object.Singleton.Permanent (CoPermanent (..))

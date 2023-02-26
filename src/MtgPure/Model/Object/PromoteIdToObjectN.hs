@@ -45,8 +45,7 @@ import safe MtgPure.Model.Object.ObjectId (
   UntypedObject (..),
   pattern DefaultObjectDiscriminant,
  )
-import safe MtgPure.Model.Object.ObjectN (ObjectN)
-import safe MtgPure.Model.Object.ObjectN_ (ObjectN' (..))
+import safe MtgPure.Model.Object.ObjectN (ObjectN (..))
 
 class PromoteIdToObjectN ot where
   promoteIdToObjectN :: ObjectId -> ObjectN ot

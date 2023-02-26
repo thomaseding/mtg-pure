@@ -29,13 +29,24 @@ import safe MtgPure.Model.Object.OTN (
   OT7,
   OT8,
   OT9,
-  OTN,
+  OTN (..),
  )
-import safe MtgPure.Model.Object.OTN_ (OTN' (..))
 import safe MtgPure.Model.Object.Object (Object (..))
 import safe MtgPure.Model.Object.ObjectId (GetObjectId (..))
-import safe MtgPure.Model.Object.ObjectN (ON10, ON11, ON12, ON2, ON3, ON4, ON5, ON6, ON7, ON8, ON9, ObjectN)
-import safe MtgPure.Model.Object.ObjectN_ (ObjectN' (..))
+import safe MtgPure.Model.Object.ObjectN (
+  ON10,
+  ON11,
+  ON12,
+  ON2,
+  ON3,
+  ON4,
+  ON5,
+  ON6,
+  ON7,
+  ON8,
+  ON9,
+  ObjectN (..),
+ )
 import safe MtgPure.Model.Object.ObjectType (ObjectType (OTLand))
 import safe MtgPure.Model.Object.ViewObjectN (viewOTN, viewOTN')
 

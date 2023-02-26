@@ -45,14 +45,11 @@ module MtgPure.Model (
   module MtgPure.Model.Object.LitOTN,
   module MtgPure.Model.Object.MapObjectN,
   module MtgPure.Model.Object.OTKN,
-  module MtgPure.Model.Object.OTKN_,
   module MtgPure.Model.Object.OTN,
   module MtgPure.Model.Object.OTNAliases,
-  module MtgPure.Model.Object.OTN_,
   module MtgPure.Model.Object.Object,
   module MtgPure.Model.Object.ObjectId,
   module MtgPure.Model.Object.ObjectN,
-  module MtgPure.Model.Object.ObjectN_,
   module MtgPure.Model.Object.ObjectType,
   module MtgPure.Model.Object.ObjectTypeN,
   module MtgPure.Model.Object.PromoteIdToObjectN,
@@ -134,14 +131,11 @@ import safe MtgPure.Model.Object.IsObjectType
 import safe MtgPure.Model.Object.LitOTN
 import safe MtgPure.Model.Object.MapObjectN
 import safe MtgPure.Model.Object.OTKN
-import safe MtgPure.Model.Object.OTKN_
 import safe MtgPure.Model.Object.OTN
 import safe MtgPure.Model.Object.OTNAliases
-import safe MtgPure.Model.Object.OTN_
 import safe MtgPure.Model.Object.Object
 import safe MtgPure.Model.Object.ObjectId
 import safe MtgPure.Model.Object.ObjectN
-import safe MtgPure.Model.Object.ObjectN_
 import safe MtgPure.Model.Object.ObjectType
 import safe MtgPure.Model.Object.ObjectTypeN
 import safe MtgPure.Model.Object.PromoteIdToObjectN

@@ -79,6 +79,7 @@ import safe MtgPure.Model.Object.OTN (
   OT7,
   OT8,
   OT9,
+  OTN (..),
  )
 import safe MtgPure.Model.Object.OTNAliases (
   OTNActivatedOrTriggeredAbility,
@@ -89,7 +90,6 @@ import safe MtgPure.Model.Object.OTNAliases (
   OTNPermanent,
   OTNSpell,
  )
-import safe MtgPure.Model.Object.OTN_ (OTN' (..))
 import safe MtgPure.Model.Object.Object (Object (..))
 import safe MtgPure.Model.Object.ObjectId (
   GetObjectId (..),
@@ -98,88 +98,7 @@ import safe MtgPure.Model.Object.ObjectId (
   getObjectId,
   pattern DefaultObjectDiscriminant,
  )
-import safe MtgPure.Model.Object.ObjectN (
-  ObjectN,
-  mkO1,
-  mkO10a,
-  mkO10b,
-  mkO10c,
-  mkO10d,
-  mkO10e,
-  mkO10f,
-  mkO10g,
-  mkO10h,
-  mkO10i,
-  mkO10j,
-  mkO11a,
-  mkO11b,
-  mkO11c,
-  mkO11d,
-  mkO11e,
-  mkO11f,
-  mkO11g,
-  mkO11h,
-  mkO11i,
-  mkO11j,
-  mkO11k,
-  mkO12a,
-  mkO12b,
-  mkO12c,
-  mkO12d,
-  mkO12e,
-  mkO12f,
-  mkO12g,
-  mkO12h,
-  mkO12i,
-  mkO12j,
-  mkO12k,
-  mkO12l,
-  mkO2a,
-  mkO2b,
-  mkO3a,
-  mkO3b,
-  mkO3c,
-  mkO4a,
-  mkO4b,
-  mkO4c,
-  mkO4d,
-  mkO5a,
-  mkO5b,
-  mkO5c,
-  mkO5d,
-  mkO5e,
-  mkO6a,
-  mkO6b,
-  mkO6c,
-  mkO6d,
-  mkO6e,
-  mkO6f,
-  mkO7a,
-  mkO7b,
-  mkO7c,
-  mkO7d,
-  mkO7e,
-  mkO7f,
-  mkO7g,
-  mkO8a,
-  mkO8b,
-  mkO8c,
-  mkO8d,
-  mkO8e,
-  mkO8f,
-  mkO8g,
-  mkO8h,
-  mkO9a,
-  mkO9b,
-  mkO9c,
-  mkO9d,
-  mkO9e,
-  mkO9f,
-  mkO9g,
-  mkO9h,
-  mkO9i,
- )
-import safe MtgPure.Model.Object.ObjectN_ (ObjectN' (..))
+import safe MtgPure.Model.Object.ObjectN (ObjectN (..))
 import safe MtgPure.Model.Object.ObjectType (
   ObjectType (..),
  )
@@ -312,149 +231,149 @@ castOToON o = objN
           Object _ u -> u
       ot@OT1 ->
         let go :: forall a. Inst1 IsObjectType a => OT1 a -> MaybeObjectN (OT1 a)
-            go _ = MaybeObjectN $ goCast $ mkO1 @a
+            go _ = MaybeObjectN $ goCast $ O1 @a
          in go ot
       ot@OT2 ->
         let go :: forall a b. Inst2 IsObjectType a b => OT2 a b -> MaybeObjectN (OT2 a b)
             go _ =
               goConcat
-                [ goCast $ mkO2a @a @b
-                , goCast $ mkO2b @a @b
+                [ goCast $ O2a @a @b
+                , goCast $ O2b @a @b
                 ]
          in go ot
       ot@OT3 ->
         let go :: forall a b c. Inst3 IsObjectType a b c => OT3 a b c -> MaybeObjectN (OT3 a b c)
             go _ =
               goConcat
-                [ goCast $ mkO3a @a @b @c
-                , goCast $ mkO3b @a @b @c
-                , goCast $ mkO3c @a @b @c
+                [ goCast $ O3a @a @b @c
+                , goCast $ O3b @a @b @c
+                , goCast $ O3c @a @b @c
                 ]
          in go ot
       ot@OT4 ->
         let go :: forall a b c d. Inst4 IsObjectType a b c d => OT4 a b c d -> MaybeObjectN (OT4 a b c d)
             go _ =
               goConcat
-                [ goCast $ mkO4a @a @b @c @d
-                , goCast $ mkO4b @a @b @c @d
-                , goCast $ mkO4c @a @b @c @d
-                , goCast $ mkO4d @a @b @c @d
+                [ goCast $ O4a @a @b @c @d
+                , goCast $ O4b @a @b @c @d
+                , goCast $ O4c @a @b @c @d
+                , goCast $ O4d @a @b @c @d
                 ]
          in go ot
       ot@OT5 ->
         let go :: forall a b c d e. Inst5 IsObjectType a b c d e => OT5 a b c d e -> MaybeObjectN (OT5 a b c d e)
             go _ =
               goConcat
-                [ goCast $ mkO5a @a @b @c @d @e
-                , goCast $ mkO5b @a @b @c @d @e
-                , goCast $ mkO5c @a @b @c @d @e
-                , goCast $ mkO5d @a @b @c @d @e
-                , goCast $ mkO5e @a @b @c @d @e
+                [ goCast $ O5a @a @b @c @d @e
+                , goCast $ O5b @a @b @c @d @e
+                , goCast $ O5c @a @b @c @d @e
+                , goCast $ O5d @a @b @c @d @e
+                , goCast $ O5e @a @b @c @d @e
                 ]
          in go ot
       ot@OT6 ->
         let go :: forall a b c d e f. Inst6 IsObjectType a b c d e f => OT6 a b c d e f -> MaybeObjectN (OT6 a b c d e f)
             go _ =
               goConcat
-                [ goCast $ mkO6a @a @b @c @d @e @f
-                , goCast $ mkO6b @a @b @c @d @e @f
-                , goCast $ mkO6c @a @b @c @d @e @f
-                , goCast $ mkO6d @a @b @c @d @e @f
-                , goCast $ mkO6e @a @b @c @d @e @f
-                , goCast $ mkO6f @a @b @c @d @e @f
+                [ goCast $ O6a @a @b @c @d @e @f
+                , goCast $ O6b @a @b @c @d @e @f
+                , goCast $ O6c @a @b @c @d @e @f
+                , goCast $ O6d @a @b @c @d @e @f
+                , goCast $ O6e @a @b @c @d @e @f
+                , goCast $ O6f @a @b @c @d @e @f
                 ]
          in go ot
       ot@OT7 ->
         let go :: forall a b c d e f g. Inst7 IsObjectType a b c d e f g => OT7 a b c d e f g -> MaybeObjectN (OT7 a b c d e f g)
             go _ =
               goConcat
-                [ goCast $ mkO7a @a @b @c @d @e @f @g
-                , goCast $ mkO7b @a @b @c @d @e @f @g
-                , goCast $ mkO7c @a @b @c @d @e @f @g
-                , goCast $ mkO7d @a @b @c @d @e @f @g
-                , goCast $ mkO7e @a @b @c @d @e @f @g
-                , goCast $ mkO7f @a @b @c @d @e @f @g
-                , goCast $ mkO7g @a @b @c @d @e @f @g
+                [ goCast $ O7a @a @b @c @d @e @f @g
+                , goCast $ O7b @a @b @c @d @e @f @g
+                , goCast $ O7c @a @b @c @d @e @f @g
+                , goCast $ O7d @a @b @c @d @e @f @g
+                , goCast $ O7e @a @b @c @d @e @f @g
+                , goCast $ O7f @a @b @c @d @e @f @g
+                , goCast $ O7g @a @b @c @d @e @f @g
                 ]
          in go ot
       ot@OT8 ->
         let go :: forall a b c d e f g h. Inst8 IsObjectType a b c d e f g h => OT8 a b c d e f g h -> MaybeObjectN (OT8 a b c d e f g h)
             go _ =
               goConcat
-                [ goCast $ mkO8a @a @b @c @d @e @f @g @h
-                , goCast $ mkO8b @a @b @c @d @e @f @g @h
-                , goCast $ mkO8c @a @b @c @d @e @f @g @h
-                , goCast $ mkO8d @a @b @c @d @e @f @g @h
-                , goCast $ mkO8e @a @b @c @d @e @f @g @h
-                , goCast $ mkO8f @a @b @c @d @e @f @g @h
-                , goCast $ mkO8g @a @b @c @d @e @f @g @h
-                , goCast $ mkO8h @a @b @c @d @e @f @g @h
+                [ goCast $ O8a @a @b @c @d @e @f @g @h
+                , goCast $ O8b @a @b @c @d @e @f @g @h
+                , goCast $ O8c @a @b @c @d @e @f @g @h
+                , goCast $ O8d @a @b @c @d @e @f @g @h
+                , goCast $ O8e @a @b @c @d @e @f @g @h
+                , goCast $ O8f @a @b @c @d @e @f @g @h
+                , goCast $ O8g @a @b @c @d @e @f @g @h
+                , goCast $ O8h @a @b @c @d @e @f @g @h
                 ]
          in go ot
       ot@OT9 ->
         let go :: forall a b c d e f g h i. Inst9 IsObjectType a b c d e f g h i => OT9 a b c d e f g h i -> MaybeObjectN (OT9 a b c d e f g h i)
             go _ =
               goConcat
-                [ goCast $ mkO9a @a @b @c @d @e @f @g @h @i
-                , goCast $ mkO9b @a @b @c @d @e @f @g @h @i
-                , goCast $ mkO9c @a @b @c @d @e @f @g @h @i
-                , goCast $ mkO9d @a @b @c @d @e @f @g @h @i
-                , goCast $ mkO9e @a @b @c @d @e @f @g @h @i
-                , goCast $ mkO9f @a @b @c @d @e @f @g @h @i
-                , goCast $ mkO9g @a @b @c @d @e @f @g @h @i
-                , goCast $ mkO9h @a @b @c @d @e @f @g @h @i
-                , goCast $ mkO9i @a @b @c @d @e @f @g @h @i
+                [ goCast $ O9a @a @b @c @d @e @f @g @h @i
+                , goCast $ O9b @a @b @c @d @e @f @g @h @i
+                , goCast $ O9c @a @b @c @d @e @f @g @h @i
+                , goCast $ O9d @a @b @c @d @e @f @g @h @i
+                , goCast $ O9e @a @b @c @d @e @f @g @h @i
+                , goCast $ O9f @a @b @c @d @e @f @g @h @i
+                , goCast $ O9g @a @b @c @d @e @f @g @h @i
+                , goCast $ O9h @a @b @c @d @e @f @g @h @i
+                , goCast $ O9i @a @b @c @d @e @f @g @h @i
                 ]
          in go ot
       ot@OT10 ->
         let go :: forall a b c d e f g h i j. Inst10 IsObjectType a b c d e f g h i j => OT10 a b c d e f g h i j -> MaybeObjectN (OT10 a b c d e f g h i j)
             go _ =
               goConcat
-                [ goCast $ mkO10a @a @b @c @d @e @f @g @h @i @j
-                , goCast $ mkO10b @a @b @c @d @e @f @g @h @i @j
-                , goCast $ mkO10c @a @b @c @d @e @f @g @h @i @j
-                , goCast $ mkO10d @a @b @c @d @e @f @g @h @i @j
-                , goCast $ mkO10e @a @b @c @d @e @f @g @h @i @j
-                , goCast $ mkO10f @a @b @c @d @e @f @g @h @i @j
-                , goCast $ mkO10g @a @b @c @d @e @f @g @h @i @j
-                , goCast $ mkO10h @a @b @c @d @e @f @g @h @i @j
-                , goCast $ mkO10i @a @b @c @d @e @f @g @h @i @j
-                , goCast $ mkO10j @a @b @c @d @e @f @g @h @i @j
+                [ goCast $ O10a @a @b @c @d @e @f @g @h @i @j
+                , goCast $ O10b @a @b @c @d @e @f @g @h @i @j
+                , goCast $ O10c @a @b @c @d @e @f @g @h @i @j
+                , goCast $ O10d @a @b @c @d @e @f @g @h @i @j
+                , goCast $ O10e @a @b @c @d @e @f @g @h @i @j
+                , goCast $ O10f @a @b @c @d @e @f @g @h @i @j
+                , goCast $ O10g @a @b @c @d @e @f @g @h @i @j
+                , goCast $ O10h @a @b @c @d @e @f @g @h @i @j
+                , goCast $ O10i @a @b @c @d @e @f @g @h @i @j
+                , goCast $ O10j @a @b @c @d @e @f @g @h @i @j
                 ]
          in go ot
       ot@OT11 ->
         let go :: forall a b c d e f g h i j k. Inst11 IsObjectType a b c d e f g h i j k => OT11 a b c d e f g h i j k -> MaybeObjectN (OT11 a b c d e f g h i j k)
             go _ =
               goConcat
-                [ goCast $ mkO11a @a @b @c @d @e @f @g @h @i @j @k
-                , goCast $ mkO11b @a @b @c @d @e @f @g @h @i @j @k
-                , goCast $ mkO11c @a @b @c @d @e @f @g @h @i @j @k
-                , goCast $ mkO11d @a @b @c @d @e @f @g @h @i @j @k
-                , goCast $ mkO11e @a @b @c @d @e @f @g @h @i @j @k
-                , goCast $ mkO11f @a @b @c @d @e @f @g @h @i @j @k
-                , goCast $ mkO11g @a @b @c @d @e @f @g @h @i @j @k
-                , goCast $ mkO11h @a @b @c @d @e @f @g @h @i @j @k
-                , goCast $ mkO11i @a @b @c @d @e @f @g @h @i @j @k
-                , goCast $ mkO11j @a @b @c @d @e @f @g @h @i @j @k
-                , goCast $ mkO11k @a @b @c @d @e @f @g @h @i @j @k
+                [ goCast $ O11a @a @b @c @d @e @f @g @h @i @j @k
+                , goCast $ O11b @a @b @c @d @e @f @g @h @i @j @k
+                , goCast $ O11c @a @b @c @d @e @f @g @h @i @j @k
+                , goCast $ O11d @a @b @c @d @e @f @g @h @i @j @k
+                , goCast $ O11e @a @b @c @d @e @f @g @h @i @j @k
+                , goCast $ O11f @a @b @c @d @e @f @g @h @i @j @k
+                , goCast $ O11g @a @b @c @d @e @f @g @h @i @j @k
+                , goCast $ O11h @a @b @c @d @e @f @g @h @i @j @k
+                , goCast $ O11i @a @b @c @d @e @f @g @h @i @j @k
+                , goCast $ O11j @a @b @c @d @e @f @g @h @i @j @k
+                , goCast $ O11k @a @b @c @d @e @f @g @h @i @j @k
                 ]
          in go ot
       ot@OT12 ->
         let go :: forall a b c d e f g h i j k l. Inst12 IsObjectType a b c d e f g h i j k l => OT12 a b c d e f g h i j k l -> MaybeObjectN (OT12 a b c d e f g h i j k l)
             go _ =
               goConcat
-                [ goCast $ mkO12a @a @b @c @d @e @f @g @h @i @j @k @l
-                , goCast $ mkO12b @a @b @c @d @e @f @g @h @i @j @k @l
-                , goCast $ mkO12c @a @b @c @d @e @f @g @h @i @j @k @l
-                , goCast $ mkO12d @a @b @c @d @e @f @g @h @i @j @k @l
-                , goCast $ mkO12e @a @b @c @d @e @f @g @h @i @j @k @l
-                , goCast $ mkO12f @a @b @c @d @e @f @g @h @i @j @k @l
-                , goCast $ mkO12g @a @b @c @d @e @f @g @h @i @j @k @l
-                , goCast $ mkO12h @a @b @c @d @e @f @g @h @i @j @k @l
-                , goCast $ mkO12i @a @b @c @d @e @f @g @h @i @j @k @l
-                , goCast $ mkO12j @a @b @c @d @e @f @g @h @i @j @k @l
-                , goCast $ mkO12k @a @b @c @d @e @f @g @h @i @j @k @l
-                , goCast $ mkO12l @a @b @c @d @e @f @g @h @i @j @k @l
+                [ goCast $ O12a @a @b @c @d @e @f @g @h @i @j @k @l
+                , goCast $ O12b @a @b @c @d @e @f @g @h @i @j @k @l
+                , goCast $ O12c @a @b @c @d @e @f @g @h @i @j @k @l
+                , goCast $ O12d @a @b @c @d @e @f @g @h @i @j @k @l
+                , goCast $ O12e @a @b @c @d @e @f @g @h @i @j @k @l
+                , goCast $ O12f @a @b @c @d @e @f @g @h @i @j @k @l
+                , goCast $ O12g @a @b @c @d @e @f @g @h @i @j @k @l
+                , goCast $ O12h @a @b @c @d @e @f @g @h @i @j @k @l
+                , goCast $ O12i @a @b @c @d @e @f @g @h @i @j @k @l
+                , goCast $ O12j @a @b @c @d @e @f @g @h @i @j @k @l
+                , goCast $ O12k @a @b @c @d @e @f @g @h @i @j @k @l
+                , goCast $ O12l @a @b @c @d @e @f @g @h @i @j @k @l
                 ]
          in go ot
    where

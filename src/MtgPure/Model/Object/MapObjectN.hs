@@ -12,8 +12,7 @@ module MtgPure.Model.Object.MapObjectN (
 import safe MtgPure.Model.Object.IsObjectType (IsObjectType (singObjectType))
 import safe MtgPure.Model.Object.Object (Object (..))
 import safe MtgPure.Model.Object.ObjectId (UntypedObject (..))
-import safe MtgPure.Model.Object.ObjectN (ObjectN)
-import safe MtgPure.Model.Object.ObjectN_ (ObjectN' (..))
+import safe MtgPure.Model.Object.ObjectN (ObjectN (..))
 import safe MtgPure.Model.Object.ObjectType (ObjectType (OTLand))
 
 type OTArbitrary = 'OTLand

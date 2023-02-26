@@ -4,8 +4,9 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
+-- NOTE: OTN stands for ObjectTypeN
 module MtgPure.Model.Object.OTN (
-  OTN,
+  OTN (..),
   OT0,
   OT1,
   OT2,
@@ -48,6 +49,7 @@ import safe Data.Inst (
   Inst8,
   Inst9,
  )
+import safe Data.Kind (Type)
 import safe MtgPure.Model.Object.IsObjectType (IsObjectType)
 import safe MtgPure.Model.Object.OTKN (
   OTK0,
@@ -64,10 +66,21 @@ import safe MtgPure.Model.Object.OTKN (
   OTK8,
   OTK9,
  )
-import safe MtgPure.Model.Object.OTN_ (OTN' (..))
-import safe MtgPure.Model.Object.ObjectType (ObjectType)
 
-type OTN = OTN' ObjectType IsObjectType
+data OTN (otk :: k) :: Type where
+  OT0 :: OTN OTK0
+  OT1 :: Inst1 IsObjectType a => OTN (OTK1 a)
+  OT2 :: Inst2 IsObjectType a b => OTN (OTK2 a b)
+  OT3 :: Inst3 IsObjectType a b c => OTN (OTK3 a b c)
+  OT4 :: Inst4 IsObjectType a b c d => OTN (OTK4 a b c d)
+  OT5 :: Inst5 IsObjectType a b c d e => OTN (OTK5 a b c d e)
+  OT6 :: Inst6 IsObjectType a b c d e f => OTN (OTK6 a b c d e f)
+  OT7 :: Inst7 IsObjectType a b c d e f g => OTN (OTK7 a b c d e f g)
+  OT8 :: Inst8 IsObjectType a b c d e f g h => OTN (OTK8 a b c d e f g h)
+  OT9 :: Inst9 IsObjectType a b c d e f g h i => OTN (OTK9 a b c d e f g h i)
+  OT10 :: Inst10 IsObjectType a b c d e f g h i j => OTN (OTK10 a b c d e f g h i j)
+  OT11 :: Inst11 IsObjectType a b c d e f g h i j k => OTN (OTK11 a b c d e f g h i j k)
+  OT12 :: Inst12 IsObjectType a b c d e f g h i j k l => OTN (OTK12 a b c d e f g h i j k l)
 
 type OT0 = OTN OTK0
 

@@ -4,6 +4,7 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
+-- NOTE: OTKN stands for ObjectTypeKindN
 module MtgPure.Model.Object.OTKN (
   OTK0,
   OTK1,
@@ -20,45 +21,32 @@ module MtgPure.Model.Object.OTKN (
   OTK12,
 ) where
 
-import safe MtgPure.Model.Object.OTKN_ (
-  OTK0',
-  OTK1',
-  OTK10',
-  OTK11',
-  OTK12',
-  OTK2',
-  OTK3',
-  OTK4',
-  OTK5',
-  OTK6',
-  OTK7',
-  OTK8',
-  OTK9',
- )
 import safe MtgPure.Model.Object.ObjectType (ObjectType)
 
-type OTK0 = OTK0' ObjectType
+type OT = ObjectType
 
-type OTK1 a = OTK1' ObjectType a
+type OTK0 = '()
 
-type OTK2 a b = OTK2' ObjectType a b
+type OTK1 a = '( '(), a :: OT)
 
-type OTK3 a b c = OTK3' ObjectType a b c
+type OTK2 a b = '( '(), a :: OT, b :: OT)
 
-type OTK4 a b c d = OTK4' ObjectType a b c d
+type OTK3 a b c = '( '(), a :: OT, b :: OT, c :: OT)
 
-type OTK5 a b c d e = OTK5' ObjectType a b c d e
+type OTK4 a b c d = '( '(), a :: OT, b :: OT, c :: OT, d :: OT)
 
-type OTK6 a b c d e f = OTK6' ObjectType a b c d e f
+type OTK5 a b c d e = '( '(), a :: OT, b :: OT, c :: OT, d :: OT, e :: OT)
 
-type OTK7 a b c d e f g = OTK7' ObjectType a b c d e f g
+type OTK6 a b c d e f = '( '(), a :: OT, b :: OT, c :: OT, d :: OT, e :: OT, f :: OT)
 
-type OTK8 a b c d e f g h = OTK8' ObjectType a b c d e f g h
+type OTK7 a b c d e f g = '( '(), a :: OT, b :: OT, c :: OT, d :: OT, e :: OT, f :: OT, g :: OT)
 
-type OTK9 a b c d e f g h i = OTK9' ObjectType a b c d e f g h i
+type OTK8 a b c d e f g h = '( '(), a :: OT, b :: OT, c :: OT, d :: OT, e :: OT, f :: OT, g :: OT, h :: OT)
 
-type OTK10 a b c d e f g h i j = OTK10' ObjectType a b c d e f g h i j
+type OTK9 a b c d e f g h i = '( '(), a :: OT, b :: OT, c :: OT, d :: OT, e :: OT, f :: OT, g :: OT, h :: OT, i :: OT)
 
-type OTK11 a b c d e f g h i j k = OTK11' ObjectType a b c d e f g h i j k
+type OTK10 a b c d e f g h i j = '( '(), a :: OT, b :: OT, c :: OT, d :: OT, e :: OT, f :: OT, g :: OT, h :: OT, i :: OT, j :: OT)
 
-type OTK12 a b c d e f g h i j k l = OTK12' ObjectType a b c d e f g h i j k l
+type OTK11 a b c d e f g h i j k = '( '(), a :: OT, b :: OT, c :: OT, d :: OT, e :: OT, f :: OT, g :: OT, h :: OT, i :: OT, j :: OT, k :: OT)
+
+type OTK12 a b c d e f g h i j k l = '( '(), a :: OT, b :: OT, c :: OT, d :: OT, e :: OT, f :: OT, g :: OT, h :: OT, i :: OT, j :: OT, k :: OT, l :: OT)

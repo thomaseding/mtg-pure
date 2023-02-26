@@ -67,8 +67,7 @@ import safe MtgPure.Model.Object.OTN (
 import safe MtgPure.Model.Object.Object (
   Object (..),
  )
-import safe MtgPure.Model.Object.ObjectN (ObjectN)
-import safe MtgPure.Model.Object.ObjectN_ (ObjectN' (O0, O1))
+import safe MtgPure.Model.Object.ObjectN (ObjectN (O0, O1))
 
 class (IsObjectType z, Inst1 IsObjectType a) => ToObject1' z a where
   -- NOTE: This is the same as `O1` for N=1, but uniqueness is not guaranteed
