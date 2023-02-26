@@ -18,7 +18,14 @@ module Test.Game.Shock (
 ) where
 
 import safe MtgPure.Cards (mountain, shock)
-import safe MtgPure.Client.Terminal (TerminalInput (..), fwdImpl, playTerminalGame, runTerminal)
+import safe MtgPure.Client.Terminal.Fwd.Impl (fwdImpl)
+import safe MtgPure.Client.Terminal.Monad (
+  TerminalInput (..),
+  runTerminal,
+ )
+import safe MtgPure.Client.Terminal.PriorityAction (
+  playTerminalGame,
+ )
 import safe MtgPure.Engine.State (GameCheats (..), noGameCheats)
 import safe MtgPure.Model.Deck (Deck (..))
 import safe MtgPure.Model.Recursive (AnyCard (..))
