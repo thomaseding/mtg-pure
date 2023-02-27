@@ -21,7 +21,9 @@ import safe Control.Monad.Util (untilJust)
 import safe qualified Data.Foldable as F
 import safe Data.Functor ((<&>))
 import safe qualified Data.List as List
+import safe Data.List.NonEmpty (NonEmpty (..))
 import safe qualified Data.Map.Strict as Map
+import safe qualified Data.Set as Set
 import safe MtgPure.Engine.Fwd.Api (
   caseOf,
   findPermanent,
@@ -30,11 +32,14 @@ import safe MtgPure.Engine.Fwd.Api (
   getPermanent,
   getPlayer,
   ownerOf,
+  performElections,
   pushGraveyardCard,
   pushHandCard,
   removeLibraryCard,
+  rewindNothing,
   setPermanent,
   setPlayer,
+  zosSatisfying,
  )
 import safe MtgPure.Engine.Monad (fromPublic, fromPublicRO, fromRO, gets)
 import safe MtgPure.Engine.Orphans (mapManaPool)
@@ -50,28 +55,55 @@ import safe MtgPure.Engine.Prompt (
   SourceZO (..),
   TriggerTime (..),
  )
-import safe MtgPure.Engine.State (GameState (..), Magic, logCall)
+import safe MtgPure.Engine.PutOntoBattlefield (putOntoBattlefield)
+import safe MtgPure.Engine.State (GameState (..), Magic, logCall, mkOpaqueGameState)
 import safe MtgPure.Model.Damage (Damage, Damage' (..))
 import safe MtgPure.Model.EffectType (EffectType (..))
+import safe MtgPure.Model.ElectStage (ElectStage (..))
 import safe MtgPure.Model.IsCardList (IsCardList (..), popCard)
+import safe MtgPure.Model.Library (Library (..))
 import safe MtgPure.Model.Life (Life (..))
 import safe MtgPure.Model.Mana.Mana (freezeMana)
 import safe MtgPure.Model.Mana.ManaPool (CompleteManaPool (..), ManaPool (..))
 import safe MtgPure.Model.Mana.Snow (Snow (..))
 import safe MtgPure.Model.Object.OTNAliases (OTNDamageSource)
 import safe MtgPure.Model.Object.Object (Object)
-import safe MtgPure.Model.Object.ObjectId (getObjectId)
+import safe MtgPure.Model.Object.ObjectId (GetObjectId (getUntypedObject), getObjectId)
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
+import safe MtgPure.Model.Object.Singleton.Card (CoCard)
 import safe MtgPure.Model.Object.Singleton.Permanent (CoPermanent)
 import safe MtgPure.Model.Permanent (Permanent (..), Tapped (..))
 import safe MtgPure.Model.Player (Player (..))
-import safe MtgPure.Model.Recursive (CardCharacteristic (..), Effect (..), fromSomeOT)
+import safe MtgPure.Model.Recursive (
+  CardCharacteristic (..),
+  Effect (..),
+  Elect,
+  Requirement (..),
+  WithLinkedObject,
+  fromSomeOT,
+ )
+import MtgPure.Model.Stack (Stack (..), stackObjectToZo0)
 import safe MtgPure.Model.Supertype (Supertype)
 import safe qualified MtgPure.Model.Supertype as Ty
 import safe MtgPure.Model.Variable (forceVars)
-import safe MtgPure.Model.Zone (Zone (..))
-import safe MtgPure.Model.ZoneObject.Convert (toZO0, zo0ToPermanent, zo1ToO)
-import safe MtgPure.Model.ZoneObject.ZoneObject (ZO, ZOCreaturePlayerPlaneswalker, ZOPermanent, ZOPlayer)
+import safe MtgPure.Model.Zone (SZone (SZLibrary), Zone (..))
+import safe MtgPure.Model.ZoneObject.Convert (
+  getWithLinkedObjectRequirements,
+  reifyWithLinkedObject,
+  toZO0,
+  uoToON,
+  zo0ToPermanent,
+  zo1ToO,
+ )
+import safe MtgPure.Model.ZoneObject.ZoneObject (
+  IsOTN,
+  IsZO,
+  ZO,
+  ZOCreaturePlayerPlaneswalker,
+  ZOPermanent,
+  ZOPlayer,
+  ZoneObject (..),
+ )
 
 -- XXX: Is it appropriate to trigger these at the end of resolution instead of as they occur?
 -- Replacement effects need to be done immediately... but will they be encoded as `EvListener`?
@@ -96,6 +128,8 @@ enact mSource effect = logCall 'enact do
   triggerEvListeners AfterResolution evs
   pure evs
 
+-- XXX: This might need to return `Maybe [ev]` because elections might fail in a recursive
+-- call and might need to rewind state. Need to distinguish [] from Nothing.
 enact' :: Monad m => Maybe SourceZO -> Effect 'OneShot -> Magic 'Private 'RW m [Ev]
 enact' mSource = logCall 'enact' \case
   AddMana oPlayer mana -> addMana' mSource oPlayer mana
@@ -111,9 +145,9 @@ enact' mSource = logCall 'enact' \case
   Exile{} -> undefined
   GainLife{} -> undefined
   LoseLife{} -> undefined
-  PutOntoBattlefield{} -> undefined
+  PutOntoBattlefield oPlayer zo -> putOntoBattlefield' (zo1ToO oPlayer) zo
   Sacrifice{} -> undefined
-  SearchLibrary{} -> undefined
+  SearchLibrary searcher searchee cont -> searchLibrary' mSource (zo1ToO searcher) (zo1ToO searchee) cont
   Sequence effects -> mconcat <$> mapM (enact' mSource) effects
   ShuffleLibrary oPlayer -> shuffleLibrary' mSource $ zo1ToO oPlayer
   Tap oPerm -> tap' mSource oPerm
@@ -214,6 +248,62 @@ destroy' _mSource oPerm = logCall 'destroy' do
           M.void $ pushGraveyardCard owner anyCard
       setPermanent oPerm Nothing
   pure mempty
+
+putOntoBattlefield' ::
+  (IsZO zone ot, CoPermanent ot, Monad m) =>
+  Object 'OTPlayer ->
+  ZO zone ot ->
+  Magic 'Private 'RW m [Ev]
+putOntoBattlefield' oPlayer zo = logCall 'putOntoBattlefield' do
+  rewindNothing (putOntoBattlefield oPlayer zo) >>= \case
+    Nothing -> pure mempty
+    Just zoPerm -> pure [EvEntersBattlefield zoPerm]
+
+searchLibrary' ::
+  forall ot m.
+  (CoCard ot, IsOTN ot, Monad m) =>
+  Maybe SourceZO ->
+  Object 'OTPlayer ->
+  Object 'OTPlayer ->
+  WithLinkedObject (Elect 'ResolveStage (Effect 'OneShot)) 'ZLibrary ot ->
+  Magic 'Private 'RW m [Ev]
+searchLibrary' mSource oSearcher oSearchee zoLibToElectEffect = logCall 'searchLibrary' do
+  fromRO (findPlayer oSearchee) >>= \case
+    Nothing -> pure mempty -- Don't complain. This can naturally happen if a player in a multiplayer game loses before `enact'` resolves.
+    Just searchee -> do
+      let library = playerLibrary searchee
+      case library of
+        Library zoLibs -> do
+          let req = RAnd $ getWithLinkedObjectRequirements zoLibToElectEffect
+          zoCandidates <- fromRO (zosSatisfying @ 'ZLibrary @ot req)
+          let iCandidates = Set.fromList $ map getObjectId zoCandidates
+          let zoLibs' = filter (\zo -> getObjectId zo `Set.member` iCandidates) zoLibs
+          case zoLibs' of
+            [] -> pure mempty
+            zo : zos -> do
+              prompt <- fromRO $ gets magicPrompt
+              opaque <- fromRO $ gets mkOpaqueGameState
+              zoLib <- untilJust \attempt -> do
+                zoLib <- M.lift $ promptPickZO prompt attempt opaque oSearcher $ zo :| zos
+                case zoLib `elem` zoLibs' of
+                  True -> pure $ Just zoLib
+                  False -> pure Nothing
+              let library' = Library $ filter (/= zoLib) zoLibs
+              setPlayer oSearchee searchee{playerLibrary = library'}
+              let uLib = getUntypedObject zoLib
+              let zoLib' = ZO SZLibrary $ uoToON @ot uLib
+              let electEffect = reifyWithLinkedObject zoLib' zoLibToElectEffect
+              stack <- fromRO $ gets magicStack
+              case stack of
+                Stack [] -> undefined -- XXX: Can't happen?
+                Stack (top : _) -> do
+                  let top' = stackObjectToZo0 top
+                  let go = fmap Just . enact' mSource
+                  mEvs <- rewindNothing $ performElections top' go electEffect
+                  setPlayer oSearchee searchee{playerLibrary = library}
+                  pure case mEvs of
+                    Nothing -> []
+                    Just evs -> evs
 
 shuffleLibrary' :: Monad m => Maybe SourceZO -> Object 'OTPlayer -> Magic 'Private 'RW m [Ev]
 shuffleLibrary' _mSource oPlayer = logCall 'shuffleLibrary' do

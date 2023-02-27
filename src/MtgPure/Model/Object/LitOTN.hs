@@ -43,7 +43,7 @@ import safe MtgPure.Model.Object.OTN (
 
 class LitOTN (ot :: Type) where
   litOTN :: ot
-  mapOTN :: (forall k (otk :: k). OTN otk -> liftOT (OTN otk)) -> liftOT ot
+  mapOTN :: (forall k (otk :: k). ot ~ OTN otk => OTN otk -> liftOT (OTN otk)) -> liftOT ot
 
 instance LitOTN OT0 where
   litOTN = OT0

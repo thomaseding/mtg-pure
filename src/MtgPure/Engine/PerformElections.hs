@@ -138,7 +138,7 @@ performElections' failureX zoStack goTerm = logCall 'performElections' \case
     IsZO zone ot =>
     (Elect s el ot -> Magic 'Private 'RW m x) ->
     ZOPlayer ->
-    WithMaskedObject zone (Elect s el) ot ->
+    WithMaskedObject (Elect s el) zone ot ->
     Magic 'Private 'RW m x
   goTarget = electA Target' zoStack failureX
 
@@ -262,7 +262,7 @@ electA ::
   x ->
   (Elect s el ot -> Magic 'Private 'RW m x) ->
   ZOPlayer ->
-  WithMaskedObject zone (Elect s el) ot ->
+  WithMaskedObject (Elect s el) zone ot ->
   Magic 'Private 'RW m x
 electA sel zoStack failureX goElect oPlayer = logCall 'electA \case
   Masked1 reqs zoToElect -> go reqs zoToElect
@@ -299,7 +299,7 @@ electAll ::
   forall zone m s el ot x.
   (IsZO zone ot, Monad m, IsReadWrite (RW s)) =>
   (Elect s el ot -> Magic 'Private (RW s) m x) ->
-  WithMaskedObjects zone (Elect s el) ot ->
+  WithMaskedObjects (Elect s el) zone ot ->
   Magic 'Private (RW s) m x
 electAll goElect = logCall 'electAll \case
   Maskeds1 reqs zosToElect -> go reqs zosToElect

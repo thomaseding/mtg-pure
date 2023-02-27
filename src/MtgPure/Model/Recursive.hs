@@ -573,7 +573,7 @@ data Effect (ef :: EffectType) :: Type where
   LoseLife :: ZOPlayer -> Int -> Effect 'OneShot -- TODO: PositiveInt
   PutOntoBattlefield :: (CoPermanent ot, IsZO zone ot) => ZOPlayer -> ZO zone ot -> Effect 'OneShot -- TODO: zone /= 'ZBattlefield
   Sacrifice :: (CoPermanent ot, IsOTN ot) => ZOPlayer -> [Requirement 'ZBattlefield ot] -> Effect 'OneShot
-  SearchLibrary :: (CoCard ot, IsOTN ot) => ZOPlayer {-searcher-} -> ZOPlayer {-searchee-} -> WithLinkedObject 'ZLibrary (Elect 'ResolveStage (Effect 'OneShot)) ot -> Effect 'OneShot
+  SearchLibrary :: (CoCard ot, IsOTN ot) => ZOPlayer {-searcher-} -> ZOPlayer {-searchee-} -> WithLinkedObject (Elect 'ResolveStage (Effect 'OneShot)) 'ZLibrary ot -> Effect 'OneShot
   Sequence :: [Effect ef] -> Effect ef
   ShuffleLibrary :: ZOPlayer -> Effect 'OneShot
   StatDelta :: ZOCreature -> Power -> Toughness -> Effect 'Continuous
@@ -619,11 +619,11 @@ instance ConsIndex (Effect ef) where
 data Elect (s :: ElectStage) (el :: Type) (ot :: Type) :: Type where
   ActivePlayer :: (ZOPlayer -> Elect s el ot) -> Elect s el ot
   -- TODO: Add `IsZO zone ot` witness and change `'ZBattlefield` to `zone`.
-  All :: IsOTN ot => WithMaskedObjects 'ZBattlefield (Elect s el) ot -> Elect s el ot
+  All :: IsOTN ot => WithMaskedObjects (Elect s el) 'ZBattlefield ot -> Elect s el ot
   Choose ::
     (CoNonIntrinsicStage s, Typeable el, IsZO zone ot) =>
     ZOPlayer ->
-    WithMaskedObject zone (Elect s el) ot ->
+    WithMaskedObject (Elect s el) zone ot ->
     Elect s el ot
   ChooseOption ::
     (IsUser u, IsNat n, CoNonIntrinsicStage s) =>
@@ -655,14 +655,14 @@ data Elect (s :: ElectStage) (el :: Type) (ot :: Type) :: Type where
   --      (3) Say that this is OK and say that Random must come before All if want it unified. Seems good actually...
   Random ::
     IsOTN ot =>
-    WithMaskedObject 'ZBattlefield (Elect 'ResolveStage el) ot ->
+    WithMaskedObject (Elect 'ResolveStage el) 'ZBattlefield ot ->
     Elect 'ResolveStage el ot -- Interpreted as "Arbitrary" in some contexts, such as Event and EventListener
 
   -- TODO: Disallow `Target` for some types of `el` using a witness arg, in particular Event and EventListener
   Target ::
     (Typeable el, IsZO zone ot) =>
     ZOPlayer ->
-    WithMaskedObject zone (Elect 'TargetStage el) ot ->
+    WithMaskedObject (Elect 'TargetStage el) zone ot ->
     Elect 'TargetStage el ot
   VariableFromPower :: ZOCreature -> (Variable Int -> Elect 'ResolveStage el ot) -> Elect 'ResolveStage el ot
   -- TODO: It is actually possible to allow this to be IntrinsicStage by defaulting X to 0... but then `performElections`
@@ -728,7 +728,7 @@ instance ConsIndex (Else s el ot) where
 --------------------------------------------------------------------------------
 
 data Enchant (zone :: Zone) (ot :: Type) :: Type where
-  Enchant :: IsZO zone ot => WithLinkedObject zone (Elect 'ResolveStage (Effect 'Continuous)) ot -> Enchant zone ot
+  Enchant :: IsZO zone ot => WithLinkedObject (Elect 'ResolveStage (Effect 'Continuous)) zone ot -> Enchant zone ot
   deriving (Typeable)
 
 instance ConsIndex (Enchant zone ot) where
@@ -769,11 +769,11 @@ type Event = EventListener' Proxy
 type EventListener = EventListener' (Elect 'ResolveStage (Effect 'OneShot))
 
 data EventListener' (liftOT :: Type -> Type) :: Type where
-  BecomesTapped :: (CoPermanent ot, IsOTN ot, Typeable liftOT) => WithLinkedObject 'ZBattlefield liftOT ot -> EventListener' liftOT
-  EntersBattlefield :: (CoPermanent ot, IsOTN ot, Typeable liftOT) => WithLinkedObject 'ZBattlefield liftOT ot -> EventListener' liftOT
-  EntersNonBattlefield :: (CoNonBattlefield zone, CoCard ot, Typeable liftOT) => WithLinkedObject zone liftOT ot -> EventListener' liftOT
+  BecomesTapped :: (CoPermanent ot, IsOTN ot, Typeable liftOT) => WithLinkedObject liftOT 'ZBattlefield ot -> EventListener' liftOT
+  EntersBattlefield :: (CoPermanent ot, IsOTN ot, Typeable liftOT) => WithLinkedObject liftOT 'ZBattlefield ot -> EventListener' liftOT
+  EntersNonBattlefield :: (CoNonBattlefield zone, CoCard ot, Typeable liftOT) => WithLinkedObject liftOT zone ot -> EventListener' liftOT
   Events :: [EventListener' liftOT] -> EventListener' liftOT
-  SpellIsCast :: (CoSpell ot, IsOTN ot) => WithLinkedObject 'ZBattlefield liftOT ot -> EventListener' liftOT
+  SpellIsCast :: (CoSpell ot, IsOTN ot) => WithLinkedObject liftOT 'ZBattlefield ot -> EventListener' liftOT
   TimePoint :: Typeable p => TimePoint p -> liftOT OTNPlayer -> EventListener' liftOT
   deriving (Typeable)
 
@@ -1105,35 +1105,35 @@ instance ConsIndex (TriggeredAbility zone ot) where
 
 -- "Linked" is used to denote that the object fed into the continuation has the same `ot`
 -- as WithLinkedObject's `ot` type.
-data WithLinkedObject (zone :: Zone) (liftOT :: Type -> Type) (ot :: Type) :: Type where
+data WithLinkedObject (liftOT :: Type -> Type) (zone :: Zone) (ot :: Type) :: Type where
   Linked1 ::
     (ot ~ OT1 a, IsOTN ot, Inst1 IsObjectType a) =>
     [Requirement zone ot] ->
     (ZO zone ot -> liftOT ot) ->
-    WithLinkedObject zone liftOT ot
+    WithLinkedObject liftOT zone ot
   Linked2 ::
     (ot ~ OT2 a b, IsOTN ot, Inst2 IsObjectType a b) =>
     [Requirement zone ot] ->
     (ZO zone ot -> liftOT ot) ->
-    WithLinkedObject zone liftOT ot
+    WithLinkedObject liftOT zone ot
   Linked3 ::
     (ot ~ OT3 a b c, IsOTN ot, Inst3 IsObjectType a b c) =>
     [Requirement zone ot] ->
     (ZO zone ot -> liftOT ot) ->
-    WithLinkedObject zone liftOT ot
+    WithLinkedObject liftOT zone ot
   Linked4 ::
     (ot ~ OT4 a b c d, IsOTN ot, Inst4 IsObjectType a b c d) =>
     [Requirement zone ot] ->
     (ZO zone ot -> liftOT ot) ->
-    WithLinkedObject zone liftOT ot
+    WithLinkedObject liftOT zone ot
   Linked5 ::
     (ot ~ OT5 a b c d e, IsOTN ot, Inst5 IsObjectType a b c d e) =>
     [Requirement zone ot] ->
     (ZO zone ot -> liftOT ot) ->
-    WithLinkedObject zone liftOT ot
+    WithLinkedObject liftOT zone ot
   deriving (Typeable)
 
-instance ConsIndex (WithLinkedObject zone liftOT ot) where
+instance ConsIndex (WithLinkedObject liftOT zone ot) where
   consIndex = \case
     Linked1{} -> 1
     Linked2{} -> 2
@@ -1158,40 +1158,40 @@ instance ConsIndex (WithList ret zone ot) where
 
 -- "Masked" is used to denote that the object fed into the continuation has an `ot'` that
 -- is independent from WithMaskedObject's `ot` type (aka the `ot` in the continuation result).
-data WithMaskedObject (zone :: Zone) (liftOT :: Type -> Type) (ot :: Type) :: Type where
+data WithMaskedObject (liftOT :: Type -> Type) (zone :: Zone) (ot :: Type) :: Type where
   Masked1 ::
     (Typeable (liftOT ot), ot' ~ OT1 a, IsOTN ot', Inst1 IsObjectType a) =>
     [Requirement zone ot'] ->
     (ZO zone ot' -> liftOT ot) ->
-    WithMaskedObject zone liftOT ot
+    WithMaskedObject liftOT zone ot
   Masked2 ::
     (Typeable (liftOT ot), ot' ~ OT2 a b, IsOTN ot', Inst2 IsObjectType a b) =>
     [Requirement zone ot'] ->
     (ZO zone ot' -> liftOT ot) ->
-    WithMaskedObject zone liftOT ot
+    WithMaskedObject liftOT zone ot
   Masked3 ::
     (Typeable (liftOT ot), ot' ~ OT3 a b c, IsOTN ot', Inst3 IsObjectType a b c) =>
     [Requirement zone ot'] ->
     (ZO zone ot' -> liftOT ot) ->
-    WithMaskedObject zone liftOT ot
+    WithMaskedObject liftOT zone ot
   Masked4 ::
     (Typeable (liftOT ot), ot' ~ OT4 a b c d, IsOTN ot', Inst4 IsObjectType a b c d) =>
     [Requirement zone ot'] ->
     (ZO zone ot' -> liftOT ot) ->
-    WithMaskedObject zone liftOT ot
+    WithMaskedObject liftOT zone ot
   Masked5 ::
     (Typeable (liftOT ot), ot' ~ OT5 a b c d e, IsOTN ot', Inst5 IsObjectType a b c d e) =>
     [Requirement zone ot'] ->
     (ZO zone ot' -> liftOT ot) ->
-    WithMaskedObject zone liftOT ot
+    WithMaskedObject liftOT zone ot
   Masked6 ::
     (Typeable (liftOT ot), ot' ~ OT6 a b c d e f, IsOTN ot', Inst6 IsObjectType a b c d e f) =>
     [Requirement zone ot'] ->
     (ZO zone ot' -> liftOT ot) ->
-    WithMaskedObject zone liftOT ot
+    WithMaskedObject liftOT zone ot
   deriving (Typeable)
 
-instance ConsIndex (WithMaskedObject zone liftOT ot) where
+instance ConsIndex (WithMaskedObject liftOT zone ot) where
   consIndex = \case
     Masked1{} -> 1
     Masked2{} -> 2
@@ -1202,40 +1202,40 @@ instance ConsIndex (WithMaskedObject zone liftOT ot) where
 
 --------------------------------------------------------------------------------
 
-data WithMaskedObjects (zone :: Zone) (liftOT :: Type -> Type) (ot :: Type) :: Type where
+data WithMaskedObjects (liftOT :: Type -> Type) (zone :: Zone) (ot :: Type) :: Type where
   Maskeds1 ::
     (Typeable (liftOT ot), ot' ~ OT1 a, IsOTN ot', Inst1 IsObjectType a) =>
     [Requirement zone ot'] ->
     (List (ZO zone ot') -> liftOT ot) ->
-    WithMaskedObjects zone liftOT ot
+    WithMaskedObjects liftOT zone ot
   Maskeds2 ::
     (Typeable (liftOT ot), ot' ~ OT2 a b, IsOTN ot', Inst2 IsObjectType a b) =>
     [Requirement zone ot'] ->
     (List (ZO zone ot') -> liftOT ot) ->
-    WithMaskedObjects zone liftOT ot
+    WithMaskedObjects liftOT zone ot
   Maskeds3 ::
     (Typeable (liftOT ot), ot' ~ OT3 a b c, IsOTN ot', Inst3 IsObjectType a b c) =>
     [Requirement zone ot'] ->
     (List (ZO zone ot') -> liftOT ot) ->
-    WithMaskedObjects zone liftOT ot
+    WithMaskedObjects liftOT zone ot
   Maskeds4 ::
     (Typeable (liftOT ot), ot' ~ OT4 a b c d, IsOTN ot', Inst4 IsObjectType a b c d) =>
     [Requirement zone ot'] ->
     (List (ZO zone ot') -> liftOT ot) ->
-    WithMaskedObjects zone liftOT ot
+    WithMaskedObjects liftOT zone ot
   Maskeds5 ::
     (Typeable (liftOT ot), ot' ~ OT5 a b c d e, IsOTN ot', Inst5 IsObjectType a b c d e) =>
     [Requirement zone ot'] ->
     (List (ZO zone ot') -> liftOT ot) ->
-    WithMaskedObjects zone liftOT ot
+    WithMaskedObjects liftOT zone ot
   Maskeds6 ::
     (Typeable (liftOT ot), ot' ~ OT6 a b c d e f, IsOTN ot', Inst6 IsObjectType a b c d e f) =>
     [Requirement zone ot'] ->
     (List (ZO zone ot') -> liftOT ot) ->
-    WithMaskedObjects zone liftOT ot
+    WithMaskedObjects liftOT zone ot
   deriving (Typeable)
 
-instance ConsIndex (WithMaskedObjects zone liftOT ot) where
+instance ConsIndex (WithMaskedObjects liftOT zone ot) where
   consIndex = \case
     Maskeds1{} -> 1
     Maskeds2{} -> 2

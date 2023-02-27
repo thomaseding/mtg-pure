@@ -16,6 +16,7 @@ module MtgPure.Engine.PlayLand (
 import safe Control.Exception (assert)
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
 import safe Control.Monad.Trans (lift)
+import safe Data.Functor ((<&>))
 import safe qualified Data.Map.Strict as Map
 import safe Data.Typeable (Typeable)
 import safe MtgPure.Engine.Fwd.Api (
@@ -134,7 +135,10 @@ playLandZO oPlayer zoLand = logCall 'playLandZO do
             Just{} -> do
               case containsCard (asCard zoLand) hand of
                 False -> invalid PlayLand_NotOwned
-                True -> putOntoBattlefield oPlayer zoLand
+                True ->
+                  putOntoBattlefield oPlayer zoLand <&> \case
+                    Nothing -> Illegal
+                    Just{} -> Legal
  where
   invalid :: (ZO zone OTNLand -> InvalidPlayLand) -> Magic 'Private 'RW m Legality
   invalid ex = do

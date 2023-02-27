@@ -3,9 +3,11 @@
 
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
+{-# HLINT ignore "Use if" #-}
 
 module MtgPure.Model.Object.IndexOT (
   IndexOT (..),
+  areObjectTypesSatisfied,
 ) where
 
 import safe Data.Inst (
@@ -171,3 +173,27 @@ instance
       , idx @l
       ]
     ]
+
+-- | Examples:
+--  * `areObjectTypesSatisfied \@OTNArtifact \@OTNArtifact => True`
+--  * `areObjectTypesSatisfied \@OTNArtifact \@OTNCreature => False`
+--  * `areObjectTypesSatisfied \@OTNArtifact \@OTNArtifactCreature => True`
+--  * `areObjectTypesSatisfied \@OTNArtifactCreature \@OTNArtifact => False`
+--  * `areObjectTypesSatisfied \@OTNArtifactCreature \@OTNArtifactCreature => True`
+areObjectTypesSatisfied :: forall ot ot'. (IndexOT ot, IndexOT ot') => Bool
+areObjectTypesSatisfied = gos (indexOT @ot) (indexOT @ot')
+ where
+  gos :: [[ObjectType]] -> [[ObjectType]] -> Bool
+  gos [] [] = True
+  gos [] _ = False
+  gos _ [] = False
+  gos (ot : ots) (ot' : ots') = case go ot ot' of
+    True -> gos ots ots'
+    False -> False
+
+  go :: [ObjectType] -> [ObjectType] -> Bool
+  go [] _ = True
+  go _ [] = False
+  go (ot : ots) (ot' : ots') = case ot == ot' of
+    True -> go ots ots'
+    False -> go (ot : ots) ots'

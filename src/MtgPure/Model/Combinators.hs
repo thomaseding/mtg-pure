@@ -198,7 +198,7 @@ instance CoPermanent ot => ToToken (Token ot) where
   toToken (Token x) = AnyToken $ Token x
 
 class (IsOTN ot, Typeable liftOT) => AsWithLinkedObject ot zone liftOT where
-  linked :: [Requirement zone ot] -> (ZO zone ot -> liftOT ot) -> WithLinkedObject zone liftOT ot
+  linked :: [Requirement zone ot] -> (ZO zone ot -> liftOT ot) -> WithLinkedObject liftOT zone ot
 
 instance (Typeable x, Inst1 IsObjectType a) => AsWithLinkedObject (OT1 a) zone x where
   linked = Linked1
@@ -216,7 +216,12 @@ instance (Typeable x, Inst5 IsObjectType a b c d e) => AsWithLinkedObject (OT5 a
   linked = Linked5
 
 class AsWithMaskedObject ot where
-  masked :: forall zone liftOT ot'. Typeable (liftOT ot') => [Requirement zone ot] -> (ZO zone ot -> liftOT ot') -> WithMaskedObject zone liftOT ot'
+  masked ::
+    forall zone liftOT ot'.
+    Typeable (liftOT ot') =>
+    [Requirement zone ot] ->
+    (ZO zone ot -> liftOT ot') ->
+    WithMaskedObject liftOT zone ot'
 
 instance Inst1 IsObjectType a => AsWithMaskedObject (OT1 a) where
   masked = Masked1
@@ -237,7 +242,12 @@ instance Inst6 IsObjectType a b c d e f => AsWithMaskedObject (OT6 a b c d e f) 
   masked = Masked6
 
 class AsWithMaskedObjects ot where
-  maskeds :: forall zone liftOT ot'. Typeable (liftOT ot') => [Requirement zone ot] -> (List (ZO zone ot) -> liftOT ot') -> WithMaskedObjects zone liftOT ot'
+  maskeds ::
+    forall zone liftOT ot'.
+    Typeable (liftOT ot') =>
+    [Requirement zone ot] ->
+    (List (ZO zone ot) -> liftOT ot') ->
+    WithMaskedObjects liftOT zone ot'
 
 instance Inst1 IsObjectType a => AsWithMaskedObjects (OT1 a) where
   maskeds = Maskeds1
@@ -566,7 +576,7 @@ hasAbility = HasAbility
 
 becomesTapped ::
   CoPermanent ot =>
-  WithLinkedObject 'ZBattlefield (Elect 'ResolveStage (Effect 'OneShot)) ot ->
+  WithLinkedObject (Elect 'ResolveStage (Effect 'OneShot)) 'ZBattlefield ot ->
   EventListener
 becomesTapped = BecomesTapped
 
@@ -600,7 +610,7 @@ searchLibrary ::
   CoCard ot =>
   ZOPlayer ->
   ZOPlayer ->
-  WithLinkedObject 'ZLibrary (Elect 'ResolveStage (Effect 'OneShot)) ot ->
+  WithLinkedObject (Elect 'ResolveStage (Effect 'OneShot)) 'ZLibrary ot ->
   Effect 'OneShot
 searchLibrary = SearchLibrary
 

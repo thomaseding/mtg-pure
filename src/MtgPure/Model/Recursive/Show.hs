@@ -241,7 +241,7 @@ instance Show (Token ot) where
 instance Show (TriggeredAbility zone ot) where
   show = runEnvM defaultDepthLimit . showTriggeredAbility
 
-instance IsZO zone ot => Show (WithMaskedObject zone (Elect s e) ot) where
+instance IsZO zone ot => Show (WithMaskedObject (Elect s e) zone ot) where
   show = runEnvM defaultDepthLimit . showWithMaskedObject showElect "obj"
 
 instance IsOTN ot => Show (SomeZone WithThisAbility ot) where
@@ -2111,11 +2111,11 @@ showTypeOf _ = conditionalParens do
     False -> noParens
 
 showWithLinkedObject ::
-  forall zone x ot.
+  forall liftOT zone ot.
   IsZO zone ot =>
-  (forall ot'. x ot' -> EnvM ParenItems) ->
+  (forall ot'. liftOT ot' -> EnvM ParenItems) ->
   String ->
-  WithLinkedObject zone x ot ->
+  WithLinkedObject liftOT zone ot ->
   EnvM ParenItems
 showWithLinkedObject showM memo = \case
   Linked1 reqs cont ->
@@ -2169,11 +2169,11 @@ showWithList showRet = \case
     pure $ pure "SuchThat " <> sReqs <> sWithList
 
 showWithMaskedObject ::
-  forall zone liftOT ot.
+  forall liftOT zone ot.
   IsZone zone =>
   (liftOT ot -> EnvM ParenItems) ->
   String ->
-  WithMaskedObject zone liftOT ot ->
+  WithMaskedObject liftOT zone ot ->
   EnvM ParenItems
 showWithMaskedObject showM memo = \case
   Masked1 reqs cont ->
@@ -2201,11 +2201,11 @@ showWithMaskedObject showM memo = \case
     pure $ pure "masked @" <> sTy <> pure " " <> sReqs <> sCont'
 
 showWithMaskedObjects ::
-  forall zone liftOT ot.
+  forall liftOT zone ot.
   IsZone zone =>
   (liftOT ot -> EnvM ParenItems) ->
   String ->
-  WithMaskedObjects zone liftOT ot ->
+  WithMaskedObjects liftOT zone ot ->
   EnvM ParenItems
 showWithMaskedObjects showM memo = \case
   Maskeds1 reqs cont ->

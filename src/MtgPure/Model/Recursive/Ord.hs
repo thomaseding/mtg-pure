@@ -167,7 +167,7 @@ instance Eq (Token ot) where
 instance IndexOT ot => Eq (TriggeredAbility zone ot) where
   (==) x y = runEnvM (ordTriggeredAbility x y) == EQ
 
-instance (Typeable el, Typeable s, IsZO zone ot) => Eq (WithMaskedObject zone (Elect s el) ot) where
+instance (Typeable el, Typeable s, IsZO zone ot) => Eq (WithMaskedObject (Elect s el) zone ot) where
   (==) x y = runEnvM (ordWithMaskedObjectElectEl x y) == EQ
 
 instance IsZO zone ot => Eq (WithThis (Ability zone) zone ot) where
@@ -235,7 +235,7 @@ instance Ord (Token ot) where
 instance IndexOT ot => Ord (TriggeredAbility zone ot) where
   compare x y = runEnvM (ordTriggeredAbility x y)
 
-instance (Typeable el, Typeable s, IsZO zone ot) => Ord (WithMaskedObject zone (Elect s el) ot) where
+instance (Typeable el, Typeable s, IsZO zone ot) => Ord (WithMaskedObject (Elect s el) zone ot) where
   compare x y = runEnvM (ordWithMaskedObjectElectEl x y)
 
 instance IsZO zone ot => Ord (WithThis (Ability zone) zone ot) where
@@ -955,8 +955,8 @@ ordEffect x = case x of
             forall ot1 ot2.
             IsOTN ot1 =>
             IsOTN ot2 =>
-            WithLinkedObject 'ZLibrary (Elect 'ResolveStage (Effect 'OneShot)) ot1 ->
-            WithLinkedObject 'ZLibrary (Elect 'ResolveStage (Effect 'OneShot)) ot2 ->
+            WithLinkedObject (Elect 'ResolveStage (Effect 'OneShot)) 'ZLibrary ot1 ->
+            WithLinkedObject (Elect 'ResolveStage (Effect 'OneShot)) 'ZLibrary ot2 ->
             EnvM Ordering
           go _ _ = case cast withCard2 of
             Nothing -> compareOT @ot1 @ot2
@@ -1055,8 +1055,8 @@ ordElectEl x = case x of
             Typeable el =>
             IsZO zone1 ot =>
             IsZO zone2 ot =>
-            WithMaskedObject zone1 (Elect s el) ot ->
-            WithMaskedObject zone2 (Elect s el) ot ->
+            WithMaskedObject (Elect s el) zone1 ot ->
+            WithMaskedObject (Elect s el) zone2 ot ->
             EnvM Ordering
           go _ _ = case cast with2 of
             Nothing -> compareZoneOT @zone1 @zone2 @ot @ot
@@ -1200,8 +1200,8 @@ ordElectEl x = case x of
             Typeable el =>
             IsZO zone1 ot =>
             IsZO zone2 ot =>
-            WithMaskedObject zone1 (Elect 'TargetStage el) ot ->
-            WithMaskedObject zone2 (Elect 'TargetStage el) ot ->
+            WithMaskedObject (Elect 'TargetStage el) zone1 ot ->
+            WithMaskedObject (Elect 'TargetStage el) zone2 ot ->
             EnvM Ordering
           go _ _ = case cast with2 of
             Nothing -> compareZoneOT @zone1 @zone2 @ot @ot
@@ -1299,8 +1299,8 @@ ordEventListener' ordM x = case x of
             zone2 ~ 'ZBattlefield =>
             IsZO zone1 ot1 =>
             IsZO zone2 ot2 =>
-            WithLinkedObject zone1 liftOT ot1 ->
-            WithLinkedObject zone2 liftOT ot2 ->
+            WithLinkedObject liftOT zone1 ot1 ->
+            WithLinkedObject liftOT zone2 ot2 ->
             EnvM Ordering
           go _ _ = case cast with2 of
             Nothing -> compareZoneOT @zone1 @zone2 @ot1 @ot2
@@ -1315,8 +1315,8 @@ ordEventListener' ordM x = case x of
             zone2 ~ 'ZBattlefield =>
             IsZO zone1 ot1 =>
             IsZO zone2 ot2 =>
-            WithLinkedObject zone1 liftOT ot1 ->
-            WithLinkedObject zone2 liftOT ot2 ->
+            WithLinkedObject liftOT zone1 ot1 ->
+            WithLinkedObject liftOT zone2 ot2 ->
             EnvM Ordering
           go _ _ = case cast with2 of
             Nothing -> compareZoneOT @zone1 @zone2 @ot1 @ot2
@@ -1329,8 +1329,8 @@ ordEventListener' ordM x = case x of
             forall zone1 zone2 ot1 ot2.
             IsZO zone1 ot1 =>
             IsZO zone2 ot2 =>
-            WithLinkedObject zone1 liftOT ot1 ->
-            WithLinkedObject zone2 liftOT ot2 ->
+            WithLinkedObject liftOT zone1 ot1 ->
+            WithLinkedObject liftOT zone2 ot2 ->
             EnvM Ordering
           go _ _ = case cast with2 of
             Nothing -> compareZoneOT @zone1 @zone2 @ot1 @ot2
@@ -1348,8 +1348,8 @@ ordEventListener' ordM x = case x of
             zone2 ~ 'ZBattlefield =>
             IsZO zone1 ot1 =>
             IsZO zone2 ot2 =>
-            WithLinkedObject zone1 liftOT ot1 ->
-            WithLinkedObject zone2 liftOT ot2 ->
+            WithLinkedObject liftOT zone1 ot1 ->
+            WithLinkedObject liftOT zone2 ot2 ->
             EnvM Ordering
           go _ _ = case cast with2 of
             Nothing -> compareZoneOT @zone1 @zone2 @ot1 @ot2
@@ -1936,10 +1936,10 @@ ordVariable = \case
     ReifiedVariable vid2 _ -> pure $ compare vid1 vid2
 
 ordWithLinkedObject ::
-  (Typeable x, IsZO zone ot) =>
-  (x ot -> x ot -> EnvM Ordering) ->
-  WithLinkedObject zone x ot ->
-  WithLinkedObject zone x ot ->
+  (Typeable liftOT, IsZO zone ot) =>
+  (liftOT ot -> liftOT ot -> EnvM Ordering) ->
+  WithLinkedObject liftOT zone ot ->
+  WithLinkedObject liftOT zone ot ->
   EnvM Ordering
 ordWithLinkedObject ordM x = case x of
   Linked1 reqs1 cont1 -> \case
@@ -1988,8 +1988,8 @@ ordWithMaskedObjectElectEl ::
   Typeable s =>
   Typeable el =>
   IsZO zone ot =>
-  WithMaskedObject zone (Elect s el) ot ->
-  WithMaskedObject zone (Elect s el) ot ->
+  WithMaskedObject (Elect s el) zone ot ->
+  WithMaskedObject (Elect s el) zone ot ->
   EnvM Ordering
 ordWithMaskedObjectElectEl x = case x of
   Masked1 reqs1 cont1 -> \case
@@ -2017,8 +2017,8 @@ ordWithMaskedObjectsElectEl ::
   Typeable s =>
   Typeable el =>
   IsZO zone ot =>
-  WithMaskedObjects zone (Elect s el) ot ->
-  WithMaskedObjects zone (Elect s el) ot ->
+  WithMaskedObjects (Elect s el) zone ot ->
+  WithMaskedObjects (Elect s el) zone ot ->
   EnvM Ordering
 ordWithMaskedObjectsElectEl x = case x of
   Maskeds1 reqs1 cont1 -> \case

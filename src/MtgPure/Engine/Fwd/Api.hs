@@ -466,7 +466,7 @@ putOntoBattlefield ::
   (IsZO zone ot, CoPermanent ot, Monad m) =>
   Object 'OTPlayer ->
   ZO zone ot ->
-  Magic 'Private 'RW m Legality
+  Magic 'Private 'RW m (Maybe (ZO 'ZBattlefield OTNPermanent))
 putOntoBattlefield = fwd2 fwd_putOntoBattlefield
 
 queryObjectId :: Monad m => ObjectId -> Magic 'Private 'RO m (Maybe QueryObjectResult)
@@ -481,13 +481,13 @@ removeHandCard = fwd2 fwd_removeHandCard
 removeLibraryCard :: Monad m => Object 'OTPlayer -> ZO 'ZLibrary OTNCard -> Magic 'Private 'RW m (Maybe AnyCard)
 removeLibraryCard = fwd2 fwd_removeLibraryCard
 
-resolveElected :: (Monad m, IsOTN ot) => ZO 'ZStack OT0 -> Elected 'TargetStage ot -> Magic 'Private 'RW m ResolveElected
+resolveElected :: (IsOTN ot, Monad m) => ZO 'ZStack OT0 -> Elected 'TargetStage ot -> Magic 'Private 'RW m ResolveElected
 resolveElected = fwd2 fwd_resolveElected
 
 resolveTopOfStack :: Monad m => Magic 'Private 'RW m (Maybe ResolveElected)
 resolveTopOfStack = fwd0 fwd_resolveTopOfStack
 
-satisfies :: (Monad m, IsZO zone ot) => ZO zone ot -> Requirement zone ot -> Magic 'Private 'RO m Bool
+satisfies :: (IsZO zone ot, Monad m) => ZO zone ot -> Requirement zone ot -> Magic 'Private 'RO m Bool
 satisfies = fwd2 fwd_satisfies
 
 setPermanent :: Monad m => ZO 'ZBattlefield OTNPermanent -> Maybe Permanent -> Magic 'Private 'RW m ()
@@ -508,5 +508,5 @@ toZO = fwd1 fwd_toZO
 triggeredAbilitiesOf :: (IsZO zone ot, Monad m) => ZO zone ot -> Magic 'Private 'RO m [SomeTriggeredAbility zone ot]
 triggeredAbilitiesOf = fwd1 fwd_triggeredAbilitiesOf
 
-zosSatisfying :: (Monad m, IsZO zone ot) => Requirement zone ot -> Magic 'Private 'RO m [ZO zone ot]
+zosSatisfying :: (IsZO zone ot, Monad m) => Requirement zone ot -> Magic 'Private 'RO m [ZO zone ot]
 zosSatisfying = fwd1 fwd_zosSatisfying

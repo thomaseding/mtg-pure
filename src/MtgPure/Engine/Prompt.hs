@@ -428,6 +428,7 @@ data TriggerTime :: Type where
 
 -- | "Ev" is short for "Event". (Avoids name conflict with Model.Event)
 data Ev :: Type where
+  EvEntersBattlefield :: ZO 'ZBattlefield OTNPermanent -> Ev
   -- | `Just source` is the spell or effect that caused the tapping to happen.
   -- It's `Nothing` when the game state does it on its own, such as untap step.
   EvTapped :: Maybe SourceZO -> ZO 'ZBattlefield OTNPermanent -> Ev

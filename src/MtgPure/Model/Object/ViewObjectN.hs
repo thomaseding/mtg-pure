@@ -41,33 +41,22 @@ import safe MtgPure.Model.Object.OTN (
   OT8,
   OT9,
   OTN (..),
-  mkOT1,
-  mkOT10,
-  mkOT11,
-  mkOT12,
-  mkOT2,
-  mkOT3,
-  mkOT4,
-  mkOT5,
-  mkOT6,
-  mkOT7,
-  mkOT8,
-  mkOT9,
  )
 import safe MtgPure.Model.Object.ObjectN (ObjectN (..))
 
 viewOTN' ::
   forall ret otn.
   ObjectN otn ->
-  (forall k (otk :: k). ObjectN (OTN otk) -> OTN otk -> ret) ->
+  (forall k (otk :: k). otn ~ OTN otk => ObjectN (OTN otk) -> OTN otk -> ret) ->
   ret
 viewOTN' objN = viewOTN objN objN
 
 viewOTN ::
   forall user ret otn.
+  -- | This is useful as to keep some user-level type in lock with the discovered OTN.
   user otn ->
   ObjectN otn ->
-  (forall k (otk :: k). user (OTN otk) -> OTN otk -> ret) ->
+  (forall k (otk :: k). otn ~ OTN otk => user (OTN otk) -> OTN otk -> ret) ->
   ret
 viewOTN user' objN cont = case objN of
   O0{} -> go0 user'
@@ -239,89 +228,89 @@ viewOTN user' objN cont = case objN of
   ON12k{} -> go12 user'
   ON12l{} -> go12 user'
  where
-  go0 :: user OT0 -> ret
+  go0 :: otn ~ OT0 => user OT0 -> ret
   go0 user = cont user OT0
 
   go1 ::
     forall a.
-    Inst1 IsObjectType a =>
+    (Inst1 IsObjectType a, otn ~ OT1 a) =>
     user (OT1 a) ->
     ret
-  go1 user = cont user $ mkOT1 @a
+  go1 user = cont user $ OT1 @a
 
   go2 ::
     forall a b.
-    Inst2 IsObjectType a b =>
+    (Inst2 IsObjectType a b, otn ~ OT2 a b) =>
     user (OT2 a b) ->
     ret
-  go2 user = cont user $ mkOT2 @a @b
+  go2 user = cont user $ OT2 @a @b
 
   go3 ::
     forall a b c.
-    Inst3 IsObjectType a b c =>
+    (Inst3 IsObjectType a b c, otn ~ OT3 a b c) =>
     user (OT3 a b c) ->
     ret
-  go3 user = cont user $ mkOT3 @a @b @c
+  go3 user = cont user $ OT3 @a @b @c
 
   go4 ::
     forall a b c d.
-    Inst4 IsObjectType a b c d =>
+    (Inst4 IsObjectType a b c d, otn ~ OT4 a b c d) =>
     user (OT4 a b c d) ->
     ret
-  go4 user = cont user $ mkOT4 @a @b @c @d
+  go4 user = cont user $ OT4 @a @b @c @d
 
   go5 ::
     forall a b c d e.
-    Inst5 IsObjectType a b c d e =>
+    (Inst5 IsObjectType a b c d e, otn ~ OT5 a b c d e) =>
     user (OT5 a b c d e) ->
     ret
-  go5 user = cont user $ mkOT5 @a @b @c @d @e
+  go5 user = cont user $ OT5 @a @b @c @d @e
 
   go6 ::
     forall a b c d e f.
-    Inst6 IsObjectType a b c d e f =>
+    (Inst6 IsObjectType a b c d e f, otn ~ OT6 a b c d e f) =>
     user (OT6 a b c d e f) ->
     ret
-  go6 user = cont user $ mkOT6 @a @b @c @d @e @f
+  go6 user = cont user $ OT6 @a @b @c @d @e @f
 
   go7 ::
     forall a b c d e f g.
-    Inst7 IsObjectType a b c d e f g =>
+    (Inst7 IsObjectType a b c d e f g, otn ~ OT7 a b c d e f g) =>
     user (OT7 a b c d e f g) ->
     ret
-  go7 user = cont user $ mkOT7 @a @b @c @d @e @f @g
+  go7 user = cont user $ OT7 @a @b @c @d @e @f @g
 
   go8 ::
     forall a b c d e f g h.
-    Inst8 IsObjectType a b c d e f g h =>
+    (Inst8 IsObjectType a b c d e f g h, otn ~ OT8 a b c d e f g h) =>
     user (OT8 a b c d e f g h) ->
     ret
-  go8 user = cont user $ mkOT8 @a @b @c @d @e @f @g @h
+  go8 user = cont user $ OT8 @a @b @c @d @e @f @g @h
 
   go9 ::
     forall a b c d e f g h i.
-    Inst9 IsObjectType a b c d e f g h i =>
+    (Inst9 IsObjectType a b c d e f g h i, otn ~ OT9 a b c d e f g h i) =>
     user (OT9 a b c d e f g h i) ->
     ret
-  go9 user = cont user $ mkOT9 @a @b @c @d @e @f @g @h @i
+  go9 user = cont user $ OT9 @a @b @c @d @e @f @g @h @i
 
   go10 ::
     forall a b c d e f g h i j.
-    Inst10 IsObjectType a b c d e f g h i j =>
+    (Inst10 IsObjectType a b c d e f g h i j, otn ~ OT10 a b c d e f g h i j) =>
     user (OT10 a b c d e f g h i j) ->
     ret
-  go10 user = cont user $ mkOT10 @a @b @c @d @e @f @g @h @i @j
+  go10 user = cont user $ OT10 @a @b @c @d @e @f @g @h @i @j
 
   go11 ::
     forall a b c d e f g h i j k.
-    Inst11 IsObjectType a b c d e f g h i j k =>
+    (Inst11 IsObjectType a b c d e f g h i j k, otn ~ OT11 a b c d e f g h i j k) =>
     user (OT11 a b c d e f g h i j k) ->
     ret
-  go11 user = cont user $ mkOT11 @a @b @c @d @e @f @g @h @i @j @k
+  go11 user = cont user $ OT11 @a @b @c @d @e @f @g @h @i @j @k
 
   go12 ::
     forall a b c d e f g h i j k l.
-    Inst12 IsObjectType a b c d e f g h i j k l =>
+    (Inst12 IsObjectType a b c d e f g h i j k l, otn ~ OT12 a b c d e f g h i j k l) =>
     user (OT12 a b c d e f g h i j k l) ->
     ret
-  go12 user = cont user $ mkOT12 @a @b @c @d @e @f @g @h @i @j @k @l
+  go12 user = cont user $ OT12 @a @b @c @d @e @f @g @h @i @j @k @l

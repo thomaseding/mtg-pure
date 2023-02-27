@@ -6,6 +6,19 @@
 {-# HLINT ignore "Redundant multi-way if" #-}
 
 module MtgPure.Model.Object.SmartConstructors (
+  mkOT0,
+  mkOT1,
+  mkOT2,
+  mkOT3,
+  mkOT4,
+  mkOT5,
+  mkOT6,
+  mkOT7,
+  mkOT8,
+  mkOT9,
+  mkOT10,
+  mkOT11,
+  mkOT12,
   mkO0,
   mkO1,
   mkO2a,
@@ -179,6 +192,22 @@ import safe Data.Inst (
   Inst9,
  )
 import safe MtgPure.Model.Object.IsObjectType (IsObjectType)
+import safe MtgPure.Model.Object.OTN (
+  OT0,
+  OT1,
+  OT10,
+  OT11,
+  OT12,
+  OT2,
+  OT3,
+  OT4,
+  OT5,
+  OT6,
+  OT7,
+  OT8,
+  OT9,
+  OTN (..),
+ )
 import safe MtgPure.Model.Object.Object (Object)
 import safe MtgPure.Model.Object.ObjectId (UntypedObject)
 import safe MtgPure.Model.Object.ObjectN (
@@ -197,6 +226,45 @@ import safe MtgPure.Model.Object.ObjectN (
   ON9,
   ObjectN (..),
  )
+
+mkOT0 :: OT0
+mkOT0 = OT0
+
+mkOT1 :: Inst1 IsObjectType a => OT1 a
+mkOT1 = OT1
+
+mkOT2 :: Inst2 IsObjectType a b => OT2 a b
+mkOT2 = OT2
+
+mkOT3 :: Inst3 IsObjectType a b c => OT3 a b c
+mkOT3 = OT3
+
+mkOT4 :: Inst4 IsObjectType a b c d => OT4 a b c d
+mkOT4 = OT4
+
+mkOT5 :: Inst5 IsObjectType a b c d e => OT5 a b c d e
+mkOT5 = OT5
+
+mkOT6 :: Inst6 IsObjectType a b c d e f => OT6 a b c d e f
+mkOT6 = OT6
+
+mkOT7 :: Inst7 IsObjectType a b c d e f g => OT7 a b c d e f g
+mkOT7 = OT7
+
+mkOT8 :: Inst8 IsObjectType a b c d e f g h => OT8 a b c d e f g h
+mkOT8 = OT8
+
+mkOT9 :: Inst9 IsObjectType a b c d e f g h i => OT9 a b c d e f g h i
+mkOT9 = OT9
+
+mkOT10 :: Inst10 IsObjectType a b c d e f g h i j => OT10 a b c d e f g h i j
+mkOT10 = OT10
+
+mkOT11 :: Inst11 IsObjectType a b c d e f g h i j k => OT11 a b c d e f g h i j k
+mkOT11 = OT11
+
+mkOT12 :: Inst12 IsObjectType a b c d e f g h i j k l => OT12 a b c d e f g h i j k l
+mkOT12 = OT12
 
 mkO0 :: UntypedObject -> ON0
 mkO0 = O0

@@ -113,7 +113,7 @@ data Fwd' ex st m where
     , fwd_pushGraveyardCard :: Object 'OTPlayer -> AnyCard -> Magic' ex st 'Private 'RW m (ZO 'ZGraveyard OTNCard)
     , fwd_pushHandCard :: Object 'OTPlayer -> AnyCard -> Magic' ex st 'Private 'RW m (ZO 'ZHand OTNCard)
     , fwd_pushLibraryCard :: Object 'OTPlayer -> AnyCard -> Magic' ex st 'Private 'RW m (ZO 'ZLibrary OTNCard)
-    , fwd_putOntoBattlefield :: forall zone ot. (IsZO zone ot, CoPermanent ot) => Object 'OTPlayer -> ZO zone ot -> Magic' ex st 'Private 'RW m Legality
+    , fwd_putOntoBattlefield :: forall zone ot. (IsZO zone ot, CoPermanent ot) => Object 'OTPlayer -> ZO zone ot -> Magic' ex st 'Private 'RW m (Maybe (ZO 'ZBattlefield OTNPermanent))
     , fwd_queryObjectId :: ObjectId -> Magic' ex st 'Private 'RO m (Maybe QueryObjectResult)
     , fwd_removeGraveyardCard :: Object 'OTPlayer -> ZO 'ZGraveyard OTNCard -> Magic' ex st 'Private 'RW m (Maybe AnyCard)
     , fwd_removeHandCard :: Object 'OTPlayer -> ZO 'ZHand OTNCard -> Magic' ex st 'Private 'RW m (Maybe AnyCard)
