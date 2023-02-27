@@ -28,7 +28,7 @@ import safe MtgPure.Engine.Fwd.Api (
   getActivePlayer,
   newObjectId,
   ownerOf,
-  performElections,
+  performResolveElections,
   pushGraveyardCard,
   setPermanent,
  )
@@ -46,6 +46,7 @@ import safe MtgPure.Engine.Orphans ()
 import safe MtgPure.Engine.Prompt (
   AnyElected (..),
   Elected (..),
+  ElectionInput (..),
   InternalLogicError (..),
   OwnedCard (..),
   PendingReady (..),
@@ -65,7 +66,13 @@ import safe MtgPure.Model.Object.Object (Object)
 import safe MtgPure.Model.Object.ObjectId (getObjectId)
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Permanent (cardToPermanent)
-import safe MtgPure.Model.Recursive (AnyCard (..), CardCharacteristic, CardSpec, Effect (..), Elect (..))
+import safe MtgPure.Model.Recursive (
+  AnyCard (..),
+  CardCharacteristic,
+  CardSpec,
+  Effect (..),
+  Elect (..),
+ )
 import safe MtgPure.Model.Stack (Stack (..), stackObjectToZo0)
 import safe MtgPure.Model.Zone (Zone (..))
 import safe MtgPure.Model.ZoneObject.Convert (toZO0, zo0ToPermanent)
@@ -87,7 +94,7 @@ resolveTopOfStack = logCall 'resolveTopOfStack do
     [] -> pure Nothing
     item : items -> do
       let zoStack = stackObjectToZo0 item
-      modify \st -> st{magicStack = Stack items}
+      modify \st -> st{magicStack = Stack items} -- This happens before resolving due to triggered stuff being put onto stack
       result <- resolveStackObject zoStack
       modify \st ->
         st
@@ -142,7 +149,7 @@ resolveOneShot ::
   Elect 'ResolveStage (Effect 'OneShot) ot ->
   Magic 'Private 'RW m ResolveElected
 resolveOneShot zoStack mCard elect = logCall 'resolveOneShot do
-  mResult <- performElections zoStack goEffect elect
+  mResult <- performResolveElections (ResolveInput zoStack) goEffect elect
   case mCard of
     Nothing -> pure ()
     Just (OwnedCard oPlayer card) -> do

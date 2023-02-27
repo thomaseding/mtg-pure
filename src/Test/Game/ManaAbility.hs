@@ -85,7 +85,17 @@ side =
       []
 
 replayLog :: Maybe FilePath
-replayLog = Nothing -- Just "replay-ManaAbility.log"
+replayLog = Just "replay-ManaAbility.log"
 
 replayInputs :: [String]
-replayInputs = []
+replayInputs =
+  [ "Pass # O=1 UpkeepStep Turn1"
+  , "Pass # O=2 UpkeepStep Turn1"
+  , "Pass # O=1 DrawStep Turn1"
+  , "Pass # O=2 DrawStep Turn1"
+  , "PlayLand 80 # O=1 PreCombatMainPhase Turn1"
+  , "ActivateAbility 89 0 # O=1 PreCombatMainPhase Turn1"
+  , "Pass # O=1 PreCombatMainPhase Turn1"
+  , "Pass # O=2 PreCombatMainPhase Turn1"
+  , "23 # PickZO"
+  ]

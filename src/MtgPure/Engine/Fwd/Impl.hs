@@ -65,7 +65,13 @@ import safe MtgPure.Engine.Core (
 import safe MtgPure.Engine.Enact (enact)
 import safe MtgPure.Engine.Fwd.Type (Fwd' (..))
 import safe MtgPure.Engine.Pay (pay)
-import safe MtgPure.Engine.PerformElections (controllerOf, ownerOf, performElections)
+import safe MtgPure.Engine.PerformElections (
+  controllerOf,
+  ownerOf,
+  performIntrinsicElections,
+  performResolveElections,
+  performTargetElections,
+ )
 import safe MtgPure.Engine.PlayLand (playLand)
 import safe MtgPure.Engine.Priority (
   askPriorityAction,
@@ -130,7 +136,9 @@ fwdImpl =
     , fwd_newVariableId = newVariableId
     , fwd_ownerOf = ownerOf
     , fwd_pay = pay
-    , fwd_performElections = performElections
+    , fwd_performIntrinsicElections = performIntrinsicElections
+    , fwd_performResolveElections = performResolveElections
+    , fwd_performTargetElections = performTargetElections
     , fwd_performStateBasedActions = performStateBasedActions
     , fwd_pickOneZO = pickOneZO
     , fwd_playLand = playLand

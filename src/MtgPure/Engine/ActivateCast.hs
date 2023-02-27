@@ -27,7 +27,8 @@ import safe MtgPure.Engine.Fwd.Api (
   getPlayer,
   newObjectId,
   pay,
-  performElections,
+  performIntrinsicElections,
+  performTargetElections,
   removeHandCard,
   resolveTopOfStack,
  )
@@ -45,6 +46,7 @@ import safe MtgPure.Engine.Prompt (
   AnyElected (..),
   CastSpell,
   Elected (..),
+  ElectionInput (..),
   Ev,
   InternalLogicError (..),
   InvalidCastSpell (..),
@@ -321,10 +323,8 @@ castSpellCard zoStack zoSpellCard oCaster card = logCall 'castSpellCard case car
     Elect 'IntrinsicStage (CardCharacteristic ot) ot ->
     Magic 'Private 'RW m Legality
   goElectIntrinsic electIntrinsic = do
-    mCharacteristic <- fromRO $ performElections zoStack (pure . Just) electIntrinsic
-    case mCharacteristic of
-      Nothing -> pure Illegal
-      Just character -> maybeToLegality <$> goCharacteristic character
+    character <- fromRO $ performIntrinsicElections (IntrinsicInput oCaster) pure electIntrinsic
+    maybeToLegality <$> goCharacteristic character
 
   goCharacteristic :: CardCharacteristic ot -> Magic 'Private 'RW m Legality'
   goCharacteristic character = case character of
@@ -347,7 +347,7 @@ castSpellCard zoStack zoSpellCard oCaster card = logCall 'castSpellCard case car
   goElectSpec :: CardCharacteristic ot -> Elect 'TargetStage (CardSpec ot) ot -> Magic 'Private 'RW m Legality'
   goElectSpec character elect = do
     seedStackEntryTargets zoStack
-    performElections zoStack (goSpec character) elect
+    performTargetElections (TargetInput zoStack) (goSpec character) elect
 
   goSpec :: CardCharacteristic ot -> CardSpec ot -> Magic 'Private 'RW m Legality'
   goSpec character spec = case spec of
@@ -450,7 +450,7 @@ activateAbility oPlayer = logCall 'activateAbility \case
         goElectActivated :: ZO 'ZStack OT0 -> Elect 'TargetStage (ActivatedAbility zone ot) ot -> Magic 'Private 'RW m ActivateResult
         goElectActivated zoAbility elect = logCall' "goElectedActivated" do
           seedStackEntryTargets zoAbility
-          performElections zoAbility (goActivated zoAbility) elect <&> \case
+          performTargetElections (TargetInput zoAbility) (goActivated zoAbility) elect <&> \case
             Nothing -> IllegalActivation
             Just result -> result
 

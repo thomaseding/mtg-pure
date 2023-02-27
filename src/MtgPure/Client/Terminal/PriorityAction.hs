@@ -32,7 +32,7 @@ import safe qualified Data.Map.Strict as Map
 import safe Data.Maybe (catMaybes)
 import safe qualified Data.Maybe as Maybe
 import safe Data.Monoid (First (..))
-import safe Data.Nat (Fin, IsNat, NatList, intToFin, natListUsers)
+import safe Data.Nat (Fin, IsNat, NatList, finToInt, intToFin, natListUsers)
 import safe qualified Data.Traversable as T
 import safe Data.Typeable (Typeable)
 import safe MtgPure.Client.Terminal.CommandInput (
@@ -172,18 +172,6 @@ gameInput cheats decks =
           , promptShuffle = \_attempt (CardCount n) _player -> pure $ map CardIndex [0 .. n - 1]
           }
     }
-
-terminalPickZo ::
-  IsZO zone ot =>
-  Attempt ->
-  OpaqueGameState Terminal ->
-  Object 'OTPlayer ->
-  NonEmpty (ZO zone ot) ->
-  Terminal (ZO zone ot)
-terminalPickZo _attempt _opaque _p zos = case zos of
-  zo :| _ -> do
-    liftIO $ print ("picked", zo, "from", NonEmpty.toList zos)
-    pure zo
 
 parsePriorityAction :: CIPriorityAction -> Magic 'Public 'RO Terminal (PriorityAction ())
 parsePriorityAction = \case
@@ -525,7 +513,7 @@ terminalPromptPayDynamicMana attempt opaque oPlayer dyn = do
           Just p -> p
     pure (pool, text)
   let _ = text -- TODO: log the choice
-  pure mempty{paymentMana = pool} -- TODO: life payments for phyrexian mana
+  pure mempty{paymentMana = pool}
 
 parseManaPool :: String -> Maybe CompleteManaPool
 parseManaPool = parseManaPool' . map Char.toUpper
@@ -545,7 +533,40 @@ parseManaPool' = \case
   'S' : 'R' : s -> (toCompleteManaPool SR <>) <$> parseManaPool' s
   'S' : 'G' : s -> (toCompleteManaPool SG <>) <$> parseManaPool' s
   'S' : 'C' : s -> (toCompleteManaPool SC <>) <$> parseManaPool' s
-  _ -> Nothing
+  _ -> Nothing -- TODO: life payments for phyrexian mana
+
+terminalPickZo ::
+  IsZO zone ot =>
+  Attempt ->
+  OpaqueGameState Terminal ->
+  Object 'OTPlayer ->
+  NonEmpty (ZO zone ot) ->
+  Terminal (ZO zone ot)
+terminalPickZo (Attempt attempt) _opaque _p zos = case zos of
+  zo :| [] -> pure zo
+  _ -> do
+    let list = NonEmpty.toList zos
+    let msg = unlines $ chunk 90 $ show list
+    let msg' = msg ++ "\nPick Zone Object:\n> "
+    zo <- untilJust \(Attempt attempt') -> do
+      let attempt'' = attempt + attempt'
+      M.liftIO do
+        clearScreenWithoutPaging
+        setCursorPosition 0 0
+      liftIO case attempt'' of
+        0 -> pure ()
+        n -> putStrLn $ "Retrying[" ++ show n ++ "]..."
+      text <- prompt msg'
+      pure case runParseCIChoice text of
+        Left _err -> Nothing
+        Right (CIChoice i) -> case List.find (\zo -> ObjectId i == getObjectId zo) list of
+          Nothing -> Nothing
+          Just zo -> Just zo
+    getsTerminalState terminal_replayLog >>= \case
+      Nothing -> pure ()
+      Just file -> do
+        liftIO $ appendFile file $ show (unObjectId $ getObjectId zo) ++ " # PickZO\n"
+    pure zo
 
 terminalChooseOption ::
   (IsNat n, Show user, Typeable user) =>
@@ -559,7 +580,7 @@ terminalChooseOption (Attempt attempt) _opaque _oPlayer natList = do
   let msg = unlines $ chunk 90 $ show list
   let indices = [0 .. length list - 1]
   let msg' = msg ++ "\nChooseOption " ++ show indices ++ ":\n> "
-  untilJust \(Attempt attempt') -> do
+  fin <- untilJust \(Attempt attempt') -> do
     let attempt'' = attempt + attempt'
     M.liftIO do
       clearScreenWithoutPaging
@@ -571,3 +592,8 @@ terminalChooseOption (Attempt attempt) _opaque _oPlayer natList = do
     pure case runParseCIChoice text of
       Left _err -> Nothing
       Right (CIChoice i) -> intToFin i
+  getsTerminalState terminal_replayLog >>= \case
+    Nothing -> pure ()
+    Just file -> do
+      liftIO $ appendFile file $ show (finToInt fin) ++ " # ChooseOption\n"
+  pure fin

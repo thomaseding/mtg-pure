@@ -17,6 +17,7 @@ module MtgPure.Engine.Prompt (
   DeclaredAttacker (..),
   DeclaredBlocker (..),
   DefendingPlayer (..),
+  ElectionInput (..),
   InternalLogicError (..),
   InvalidCastSpell (..),
   InvalidPlayLand (..),
@@ -60,6 +61,7 @@ import safe MtgPure.Model.Mana.ManaCost (DynamicManaCost)
 import safe MtgPure.Model.Mana.ManaPool (CompleteManaPool, ManaPayment)
 import safe MtgPure.Model.Mana.ManaType (ManaType (..))
 import safe MtgPure.Model.Mana.Snow (Snow (..))
+import MtgPure.Model.Object.OTN (OT0)
 import safe MtgPure.Model.Object.OTNAliases (
   OTNCreature,
   OTNLand,
@@ -207,6 +209,21 @@ newtype AttackingPlayer = AttackingPlayer {unAttackingPlayer :: Object 'OTPlayer
 
 newtype DefendingPlayer = DefendingPlayer {unDefendingPlayer :: Object 'OTPlayer}
   deriving (Eq, Ord, Show)
+
+data ElectionInput (s :: ElectStage) :: Type where
+  IntrinsicInput ::
+    { intrinsicYou :: Object 'OTPlayer
+    } ->
+    ElectionInput 'IntrinsicStage
+  TargetInput ::
+    { targetStackZO :: ZO 'ZStack OT0
+    } ->
+    ElectionInput 'TargetStage
+  ResolveInput ::
+    { resolveStackZO :: ZO 'ZStack OT0
+    } ->
+    ElectionInput 'ResolveStage
+  deriving (Typeable)
 
 data Pause = Pause | NoPause
   deriving (Eq, Ord, Show)

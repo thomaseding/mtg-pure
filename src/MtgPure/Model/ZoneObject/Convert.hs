@@ -23,7 +23,7 @@ module MtgPure.Model.ZoneObject.Convert (
   toZO12,
   castOToON,
   castONToON,
-  castON0ToON,
+  castO0ToON,
   oToZO1,
   uoToON,
   AsActivatedOrTriggeredAbility,
@@ -227,10 +227,10 @@ oToZO1 :: (IsZone zone, IsObjectType a) => Object a -> ZO zone (OT1 a)
 oToZO1 = toZone . O1
 
 uoToON :: IsOTN ot => UntypedObject -> ObjectN ot
-uoToON = castON0ToON . O0
+uoToON = castO0ToON . O0
 
-castON0ToON :: forall ot. IsOTN ot => ObjectN OT0 -> ObjectN ot
-castON0ToON objN = mapOTN @ot \case
+castO0ToON :: forall ot. IsOTN ot => ObjectN OT0 -> ObjectN ot
+castO0ToON objN = mapOTN @ot \case
   OT0 -> O0 u
   ot@OT1 ->
     let go :: forall a. ot ~ OT1 a => ot -> ObjectN ot
@@ -285,7 +285,7 @@ castON0ToON objN = mapOTN @ot \case
 
 castONToON :: forall ot ot'. (IsOTN ot, IsOTN ot') => ObjectN ot -> Maybe (ObjectN ot')
 castONToON objN = viewOTN' objN $ curry \case
-  (_, OT0) -> Just $ castON0ToON @ot' objN
+  (_, OT0) -> Just $ castO0ToON @ot' objN
   (_, ot@OT1) ->
     let go :: forall a. Inst1 IsObjectType a => OT1 a -> Maybe (ObjectN ot')
         go _ = goCast @a

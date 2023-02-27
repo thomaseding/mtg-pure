@@ -24,6 +24,7 @@ import safe MtgPure.Engine.Prompt (
   ActivateResult,
   CastSpell,
   Elected,
+  ElectionInput,
   Ev,
   PlayLand,
   PlayerCount (..),
@@ -39,7 +40,7 @@ import safe MtgPure.Engine.Prompt (
 import safe MtgPure.Model.BasicLandType (BasicLandType)
 import safe MtgPure.Model.Combinators (CanHaveTrivialManaAbility)
 import safe MtgPure.Model.EffectType (EffectType (..))
-import safe MtgPure.Model.ElectStage (ElectStage (..), ElectStageRW)
+import safe MtgPure.Model.ElectStage (ElectStage (..))
 import safe MtgPure.Model.Object.OTN (OT0)
 import safe MtgPure.Model.Object.OTNAliases (OTNCard, OTNPermanent)
 import safe MtgPure.Model.Object.Object (Object)
@@ -106,7 +107,9 @@ data Fwd' ex st m where
     , fwd_newVariableId :: Magic' ex st 'Private 'RW m VariableId
     , fwd_ownerOf :: forall zone ot. IsZO zone ot => ZO zone ot -> Magic' ex st 'Private 'RO m (Object 'OTPlayer)
     , fwd_pay :: Object 'OTPlayer -> Cost -> Magic' ex st 'Private 'RW m Legality
-    , fwd_performElections :: forall ot s el x. IsReadWrite (ElectStageRW s) => ZO 'ZStack OT0 -> (el -> Magic' ex st 'Private (ElectStageRW s) m (Maybe x)) -> Elect s el ot -> Magic' ex st 'Private (ElectStageRW s) m (Maybe x)
+    , fwd_performIntrinsicElections :: forall ot el x. ElectionInput 'IntrinsicStage -> (el -> Magic' ex st 'Private 'RO m x) -> Elect 'IntrinsicStage el ot -> Magic' ex st 'Private 'RO m x
+    , fwd_performResolveElections :: forall ot el x. ElectionInput 'ResolveStage -> (el -> Magic' ex st 'Private 'RW m (Maybe x)) -> Elect 'ResolveStage el ot -> Magic' ex st 'Private 'RW m (Maybe x)
+    , fwd_performTargetElections :: forall ot el x. ElectionInput 'TargetStage -> (el -> Magic' ex st 'Private 'RW m (Maybe x)) -> Elect 'TargetStage el ot -> Magic' ex st 'Private 'RW m (Maybe x)
     , fwd_performStateBasedActions :: Magic' ex st 'Private 'RW m ()
     , fwd_pickOneZO :: forall zone ot. IsZO zone ot => Object 'OTPlayer -> [ZO zone ot] -> Magic' ex st 'Public 'RW m (Maybe (ZO zone ot))
     , fwd_playLand :: Object 'OTPlayer -> SpecialAction PlayLand -> Magic' ex st 'Private 'RW m Legality

@@ -61,8 +61,10 @@ module MtgPure.Engine.Fwd.Api (
   newVariableId,
   ownerOf,
   pay,
-  performElections,
+  performIntrinsicElections,
+  performResolveElections,
   performStateBasedActions,
+  performTargetElections,
   pickOneZO,
   playLand,
   pushGraveyardCard,
@@ -87,7 +89,6 @@ module MtgPure.Engine.Fwd.Api (
 ) where
 
 import safe Control.Monad.Access (IsReadWrite, ReadWrite (..), Visibility (..))
-import safe Control.Monad.Util (AndLike)
 import safe qualified Data.Foldable as F
 import safe Data.Kind (Type)
 import safe qualified Data.Stream as Stream
@@ -108,6 +109,7 @@ import safe MtgPure.Engine.Prompt (
   ActivateResult,
   CastSpell,
   Elected,
+  ElectionInput,
   Ev,
   PlayLand,
   PlayerCount (..),
@@ -131,7 +133,7 @@ import safe MtgPure.Engine.State (
 import safe MtgPure.Model.BasicLandType (BasicLandType)
 import safe MtgPure.Model.Combinators (CanHaveTrivialManaAbility)
 import safe MtgPure.Model.EffectType (EffectType (..))
-import safe MtgPure.Model.ElectStage (ElectStage (..), ElectStageRW)
+import safe MtgPure.Model.ElectStage (ElectStage (..))
 import safe MtgPure.Model.Object.OTN (OT0)
 import safe MtgPure.Model.Object.OTNAliases (OTNCard, OTNPermanent)
 import safe MtgPure.Model.Object.Object (Object)
@@ -207,7 +209,6 @@ data Api (m :: Type -> Type) (v :: Visibility) (rw :: ReadWrite) (ret :: Type) :
   ModifyPlayer :: Object 'OTPlayer -> (Player -> Player) -> Api m 'Private 'RW ()
   NewObjectId :: Api m 'Private 'RW ObjectId
   Pay :: Object 'OTPlayer -> Cost -> Api m 'Private 'RW Legality
-  PerformElections :: AndLike (Maybe ret) => ZO 'ZStack OT0 -> (el -> Api m 'Private (ElectStageRW s) (Maybe ret)) -> Elect s el ot -> Api m 'Private (ElectStageRW s) (Maybe ret)
   PerformStateBasedActions :: Api m 'Private 'RW ()
   PlayerWithPriority :: Api m 'Public 'RO (Maybe (Object 'OTPlayer))
   PushHandCard :: Object 'OTPlayer -> AnyCard -> Api m 'Private 'RW (ZO 'ZHand OTNCard)
@@ -253,7 +254,6 @@ run = \case
   ModifyPlayer a b -> modifyPlayer a b
   NewObjectId -> newObjectId
   Pay a b -> pay a b
-  PerformElections a b c -> performElections a (run . b) c
   PerformStateBasedActions -> performStateBasedActions
   PlayerWithPriority -> getPlayerWithPriority
   PushHandCard a b -> pushHandCard a b
@@ -435,17 +435,35 @@ ownerOf = fwd1 fwd_ownerOf
 pay :: Monad m => Object 'OTPlayer -> Cost -> Magic 'Private 'RW m Legality
 pay = fwd2 fwd_pay
 
-performElections ::
-  forall ot m s el x.
-  (IsReadWrite (ElectStageRW s), Monad m) =>
-  ZO 'ZStack OT0 ->
-  (el -> Magic 'Private (ElectStageRW s) m (Maybe x)) ->
-  Elect s el ot ->
-  Magic 'Private (ElectStageRW s) m (Maybe x)
-performElections = fwd3 fwd_performElections
+performIntrinsicElections ::
+  forall ot m el x.
+  Monad m =>
+  ElectionInput 'IntrinsicStage ->
+  (el -> Magic 'Private 'RO m x) ->
+  Elect 'IntrinsicStage el ot ->
+  Magic 'Private 'RO m x
+performIntrinsicElections = fwd3 fwd_performIntrinsicElections
+
+performResolveElections ::
+  forall ot m el x.
+  Monad m =>
+  ElectionInput 'ResolveStage ->
+  (el -> Magic 'Private 'RW m (Maybe x)) ->
+  Elect 'ResolveStage el ot ->
+  Magic 'Private 'RW m (Maybe x)
+performResolveElections = fwd3 fwd_performResolveElections
 
 performStateBasedActions :: Monad m => Magic 'Private 'RW m ()
 performStateBasedActions = fwd0 fwd_performStateBasedActions
+
+performTargetElections ::
+  forall ot m el x.
+  Monad m =>
+  ElectionInput 'TargetStage ->
+  (el -> Magic 'Private 'RW m (Maybe x)) ->
+  Elect 'TargetStage el ot ->
+  Magic 'Private 'RW m (Maybe x)
+performTargetElections = fwd3 fwd_performTargetElections
 
 pickOneZO :: (IsZO zone ot, Monad m) => Object 'OTPlayer -> [ZO zone ot] -> Magic 'Public 'RW m (Maybe (ZO zone ot))
 pickOneZO = fwd2 fwd_pickOneZO

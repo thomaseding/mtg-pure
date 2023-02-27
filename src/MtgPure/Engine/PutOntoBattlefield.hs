@@ -15,8 +15,9 @@ module MtgPure.Engine.PutOntoBattlefield (
 
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
 import safe qualified Data.Map.Strict as Map
-import safe MtgPure.Engine.Fwd.Api (newObjectId, ownerOf, performElections, removeHandCard, setPermanent)
+import safe MtgPure.Engine.Fwd.Api (newObjectId, ownerOf, performIntrinsicElections, removeHandCard, removeLibraryCard, setPermanent)
 import safe MtgPure.Engine.Monad (fromRO, modify)
+import safe MtgPure.Engine.Prompt (ElectionInput (..))
 import safe MtgPure.Engine.State (GameState (..), Magic, logCall)
 import safe MtgPure.Model.ElectStage (ElectStage (..))
 import safe MtgPure.Model.Object.IndexOT (areObjectTypesSatisfied)
@@ -41,6 +42,7 @@ putOntoBattlefield oPlayer zo = logCall 'putOntoBattlefield do
   mAnyCard <- case singZone @zone of
     SZBattlefield -> pure Nothing -- Do something else
     SZHand -> removeHandCard owner $ zo0ToCard $ toZO0 zo
+    SZLibrary -> removeLibraryCard owner $ zo0ToCard $ toZO0 zo
     _ -> undefined -- TODO: other zones
   case mAnyCard of
     Nothing -> pure Nothing
@@ -67,29 +69,8 @@ putOntoBattlefield oPlayer zo = logCall 'putOntoBattlefield do
     Elect 'IntrinsicStage (CardCharacteristic ot') ot' ->
     Magic 'Private 'RW m (Maybe (ZO 'ZBattlefield OTNPermanent))
   goElectIntrinsic anyCard electIntrinsic = logCall' "goElectIntrinsic" do
-    i <- newObjectId
-    -- Yes, lands don't use the stack, but we make a faux stack object anyway
-    -- so elections like `Your` work for free. If this ends up being too hokey
-    -- the type of `performElections` would need to be changed. Prolly would
-    -- change the `ZO 'ZStack OT0` to be the result of a type family for the
-    -- non-intrinsic `ElectStage` cases and `ZOPlayer` for `IntrinsicStage`.
-    let zoStack0 = toZO0 i
-    modify \st' ->
-      st'
-        { magicControllerMap = Map.insert i oPlayer $ magicControllerMap st'
-        , magicOwnerMap = Map.insert i oPlayer $ magicOwnerMap st'
-        }
-    mCharacteristic <- fromRO $ performElections zoStack0 (pure . Just) electIntrinsic
-    case mCharacteristic of
-      Nothing -> pure Nothing
-      Just character -> do
-        result <- goCharacteristic anyCard character
-        modify \st' ->
-          st'
-            { magicControllerMap = Map.delete i $ magicControllerMap st'
-            , magicOwnerMap = Map.delete i $ magicOwnerMap st'
-            }
-        pure result
+    character <- fromRO $ performIntrinsicElections (IntrinsicInput oPlayer) pure electIntrinsic
+    goCharacteristic anyCard character
 
   goCharacteristic :: AnyCard -> CardCharacteristic ot' -> Magic 'Private 'RW m (Maybe (ZO 'ZBattlefield OTNPermanent))
   goCharacteristic anyCard character = logCall' "goCharacteristic" case character of

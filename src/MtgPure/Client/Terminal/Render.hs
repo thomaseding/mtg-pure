@@ -37,6 +37,7 @@ import safe Ansi.Box (
   Box (..),
   FixedOrRatio (..),
   addPopup,
+  clearScreenByPaging,
   drawBox,
   fromAbsolute,
  )
@@ -48,6 +49,7 @@ import safe Ansi.Compile (
   renderAnsiString,
   renderedCellsToAnsi,
  )
+import safe qualified Control.Monad as M
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
 import qualified Control.Monad.State.Class as State
 import safe qualified Control.Monad.Trans as M
@@ -159,6 +161,8 @@ printGameState opaque mPopup = queryMagic opaque do
   let viewport' = renderedCellsToAnsi diffCells
   M.lift $ State.modify' \st -> st{terminal_prevGameRender = cells}
   M.liftIO do
+    let debugHistory = False
+    M.when debugHistory clearScreenByPaging
     setCursorPosition 0 0
     putStr $ ansiToString if True then viewport else viewport' -- TODO
     hFlush stdout

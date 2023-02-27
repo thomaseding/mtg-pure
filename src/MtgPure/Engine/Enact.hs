@@ -32,7 +32,7 @@ import safe MtgPure.Engine.Fwd.Api (
   getPermanent,
   getPlayer,
   ownerOf,
-  performElections,
+  performResolveElections,
   pushGraveyardCard,
   pushHandCard,
   removeLibraryCard,
@@ -48,6 +48,7 @@ import safe MtgPure.Engine.Prompt (
   CardCount (..),
   CardIndex (..),
   Elected (..),
+  ElectionInput (..),
   Ev (..),
   InternalLogicError (..),
   Prompt' (..),
@@ -82,7 +83,6 @@ import safe MtgPure.Model.Recursive (
   WithLinkedObject,
   fromSomeOT,
  )
-import MtgPure.Model.Stack (Stack (..), stackObjectToZo0)
 import safe MtgPure.Model.Supertype (Supertype)
 import safe qualified MtgPure.Model.Supertype as Ty
 import safe MtgPure.Model.Variable (forceVars)
@@ -278,9 +278,9 @@ searchLibrary' mSource oSearcher oSearchee zoLibToElectEffect = logCall 'searchL
           zoCandidates <- fromRO (zosSatisfying @ 'ZLibrary @ot req)
           let iCandidates = Set.fromList $ map getObjectId zoCandidates
           let zoLibs' = filter (\zo -> getObjectId zo `Set.member` iCandidates) zoLibs
-          case zoLibs' of
+          mEvs <- case zoLibs' of
             [] -> pure mempty
-            zo : zos -> do
+            zo : zos -> rewindNothing do
               prompt <- fromRO $ gets magicPrompt
               opaque <- fromRO $ gets mkOpaqueGameState
               zoLib <- untilJust \attempt -> do
@@ -288,22 +288,17 @@ searchLibrary' mSource oSearcher oSearchee zoLibToElectEffect = logCall 'searchL
                 case zoLib `elem` zoLibs' of
                   True -> pure $ Just zoLib
                   False -> pure Nothing
-              let library' = Library $ filter (/= zoLib) zoLibs
-              setPlayer oSearchee searchee{playerLibrary = library'}
               let uLib = getUntypedObject zoLib
               let zoLib' = ZO SZLibrary $ uoToON @ot uLib
               let electEffect = reifyWithLinkedObject zoLib' zoLibToElectEffect
-              stack <- fromRO $ gets magicStack
-              case stack of
-                Stack [] -> undefined -- XXX: Can't happen?
-                Stack (top : _) -> do
-                  let top' = stackObjectToZo0 top
-                  let go = fmap Just . enact' mSource
-                  mEvs <- rewindNothing $ performElections top' go electEffect
-                  setPlayer oSearchee searchee{playerLibrary = library}
-                  pure case mEvs of
-                    Nothing -> []
-                    Just evs -> evs
+              let stackZO = case mSource of
+                    Nothing -> undefined -- impossible?
+                    Just (SourceZO sourceZO) -> toZO0 $ getObjectId sourceZO
+              let go = fmap Just . enact' mSource
+              performResolveElections (ResolveInput stackZO) go electEffect
+          pure case mEvs of
+            Nothing -> []
+            Just evs -> evs
 
 shuffleLibrary' :: Monad m => Maybe SourceZO -> Object 'OTPlayer -> Magic 'Private 'RW m [Ev]
 shuffleLibrary' _mSource oPlayer = logCall 'shuffleLibrary' do

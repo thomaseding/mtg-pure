@@ -71,7 +71,7 @@ import safe qualified Data.Stream as Stream
 import safe qualified Data.Traversable as T
 import safe Data.Typeable (cast)
 import safe Data.Void (Void)
-import safe MtgPure.Engine.Fwd.Api (controllerOf, eachLogged, ownerOf, performElections)
+import safe MtgPure.Engine.Fwd.Api (controllerOf, eachLogged, ownerOf, performIntrinsicElections)
 import safe MtgPure.Engine.Legality (Legality (..))
 import safe MtgPure.Engine.Monad (
   fromPublic,
@@ -88,6 +88,7 @@ import safe MtgPure.Engine.Monad (
 import safe MtgPure.Engine.Prompt (
   AbsoluteActivatedAbilityIndex (..),
   ActivateResult (..),
+  ElectionInput (IntrinsicInput),
   InternalLogicError (..),
   PlayerCount (..),
   Prompt' (..),
@@ -114,12 +115,13 @@ import safe MtgPure.Model.Land (Land (..))
 import safe MtgPure.Model.LandType (LandType (..))
 import safe MtgPure.Model.Library (Library (..))
 import safe MtgPure.Model.Mana.IsManaAbility (isTrivialManaAbility)
-import safe MtgPure.Model.Object.IndexOT (IndexOT (..))
+import safe MtgPure.Model.Object.IndexOT (IndexOT (..), areObjectTypesSatisfied)
 import safe MtgPure.Model.Object.IsObjectType (IsObjectType (..))
 import safe MtgPure.Model.Object.OTN (OT0)
 import safe MtgPure.Model.Object.OTNAliases (OTNCard, OTNLand, OTNPermanent)
 import safe MtgPure.Model.Object.Object (Object (..))
 import safe MtgPure.Model.Object.ObjectId (
+  GetObjectId (getUntypedObject),
   ObjectId (..),
   UntypedObject (..),
   getObjectId,
@@ -149,6 +151,7 @@ import safe MtgPure.Model.ZoneObject.Convert (
   ToZO0,
   castOToON,
   toZO0,
+  uoToON,
   zo0ToCard,
   zo0ToPermanent,
  )
@@ -178,11 +181,17 @@ allControlledPermanentsOf ::
   Monad m =>
   Object 'OTPlayer ->
   Magic 'Public 'RO m [ZO 'ZBattlefield OTNPermanent]
-allControlledPermanentsOf oPlayer =
-  logCall 'allControlledPermanentsOf $
-    allPermanents >>= M.filterM \zoPerm -> do
-      controller <- internalFromPrivate $ controllerOf zoPerm
-      pure $ controller == oPlayer
+allControlledPermanentsOf oPlayer = logCall 'allControlledPermanentsOf do
+  internalFromPrivate . filterControlledBy oPlayer =<< allPermanents
+
+filterControlledBy ::
+  (IsZO zone ot, Monad m) =>
+  Object 'OTPlayer ->
+  [ZO zone ot] ->
+  Magic 'Private 'RO m [ZO zone ot]
+filterControlledBy oPlayer = M.filterM \zo -> do
+  controller <- internalFromPrivate $ controllerOf zo
+  pure $ controller == oPlayer
 
 rewindLeft :: Monad m => ex -> Magic 'Private 'RW m (Either ex a) -> Magic 'Private 'RW m (Either ex a)
 rewindLeft ex m = logCall 'rewindLeft do
@@ -307,10 +316,31 @@ allZOs = logCall 'allZOs case singZone @zone of
      in DList.toList <$> case indexOT @ot of
           [ots] -> goRec ots
           otss -> goRec $ List.nub $ concat otss
+  SZGraveyard -> do
+    zoToAnyCard <- gets magicGraveyardCards
+    goCardMap zoToAnyCard
+  SZLibrary -> do
+    zoToAnyCard <- gets magicLibraryCards
+    goCardMap zoToAnyCard
   _ -> undefined -- XXX: sung zone
  where
   castOToZO :: IsObjectType z => Object z -> Maybe (ZO zone ot)
   castOToZO = fmap toZone . castOToON
+
+  goCardMap :: Map.Map (ZO zone OT0) AnyCard -> Magic 'Private 'RO m [ZO zone ot]
+  goCardMap zoToAnyCard = do
+    let goCard :: forall ot'. ZO zone OT0 -> Card ot' -> Magic 'Private 'RO m (Maybe (ZO zone ot))
+        goCard zo card' = pure case card' of
+          Card{} -> case cast card' of
+            Nothing -> Nothing
+            Just (_ :: Card ot) -> case areObjectTypesSatisfied @ot @ot' of
+              False -> Nothing
+              True -> Just $ ZO (singZone @zone) $ uoToON $ getUntypedObject zo
+          DoubleSidedCard{} -> undefined
+          SplitCard{} -> undefined
+    catMaybes <$> T.for (Map.assocs zoToAnyCard) \(zo, anyCard) -> case anyCard of
+      AnyCard1 card -> goCard zo card
+      AnyCard2 card -> goCard zo card
 
 toZO :: (IsZO zone ot, Monad m) => ObjectId -> Magic 'Private 'RO m (Maybe (ZO zone ot))
 toZO i = logCall 'toZO do
@@ -571,16 +601,7 @@ getBasicLandTypes zo = logCall 'getBasicLandTypes do
 
   goElectCharacteristic :: Object 'OTPlayer -> Elect 'IntrinsicStage (CardCharacteristic ot') ot' -> Magic 'Private 'RO m [BasicLandType]
   goElectCharacteristic oPlayer elect = do
-    localNewObjectId oPlayer \i -> do
-      let zoStack0 = toZO0 i
-      performElections zoStack0 goCharacteristicM elect <&> \case
-        Nothing -> []
-        Just tys -> tys
-
-  goCharacteristicM :: CardCharacteristic ot' -> Magic 'Private 'RO m (Maybe [BasicLandType])
-  goCharacteristicM character = pure $ case goCharacteristic character of
-    [] -> Nothing
-    tys -> Just tys
+    performIntrinsicElections (IntrinsicInput oPlayer) (pure . goCharacteristic) elect
 
   goCharacteristic :: CardCharacteristic ot' -> [BasicLandType]
   goCharacteristic = \case
