@@ -36,6 +36,7 @@ import safe MtgPure.Engine.Orphans ()
 import safe MtgPure.Engine.Prompt (
   ElectionInput (..),
   InternalLogicError (..),
+  PickVariety (..),
   Prompt' (..),
  )
 import safe MtgPure.Engine.State (
@@ -305,7 +306,7 @@ electA sel zoStack failureX goElect oPlayer = logCall 'electA \case
         opaque <- fromRO $ gets mkOpaqueGameState
         zo <- fromPublic $ fromRO do
           untilJust \attempt -> do
-            zo <- M.lift $ promptPickZO prompt attempt opaque (zo1ToO oPlayer) $ zosHead :| zosTail
+            zo <- M.lift $ promptPick prompt attempt opaque (zo1ToO oPlayer) PickZO $ zosHead :| zosTail
             pure case zo `elem` zos of
               False -> Nothing
               True -> Just zo

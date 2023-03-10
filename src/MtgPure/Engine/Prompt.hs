@@ -36,6 +36,7 @@ module MtgPure.Engine.Prompt (
   SpecialAction (..),
   PendingReady (..),
   Pending,
+  PickVariety (..),
   Ready,
   Elected (..),
   electedObject_controller,
@@ -228,6 +229,9 @@ data ElectionInput (s :: ElectStage) :: Type where
 data Pause = Pause | NoPause
   deriving (Eq, Ord, Show)
 
+data PickVariety (a :: Type) :: Type where
+  PickZO :: IsZO zone ot => PickVariety (ZO zone ot)
+
 data Prompt' (opaqueGameState :: (Type -> Type) -> Type) (m :: Type -> Type) = Prompt
   { exceptionCantBeginGameWithoutPlayers :: m ()
   , exceptionInvalidCastSpell :: opaqueGameState m -> Object 'OTPlayer -> InvalidCastSpell -> m ()
@@ -245,7 +249,7 @@ data Prompt' (opaqueGameState :: (Type -> Type) -> Type) (m :: Type -> Type) = P
   , promptLogCallPush :: opaqueGameState m -> CallFrameInfo -> m ()
   , promptPayDynamicMana :: Attempt -> opaqueGameState m -> Object 'OTPlayer -> DynamicManaCost 'NoVar -> m ManaPayment
   , promptPerformMulligan :: Attempt -> Object 'OTPlayer -> [AnyCard] -> m Bool -- TODO: Encode limited game state about players' mulligan states and [Serum Powder].
-  , promptPickZO :: forall zone ot. IsZO zone ot => Attempt -> opaqueGameState m -> Object 'OTPlayer -> NonEmpty (ZO zone ot) -> m (ZO zone ot)
+  , promptPick :: forall a. Attempt -> opaqueGameState m -> Object 'OTPlayer -> PickVariety a -> NonEmpty a -> m a
   , promptPriorityAction :: Attempt -> opaqueGameState m -> Object 'OTPlayer -> m (PriorityAction ())
   , promptShuffle :: Attempt -> CardCount -> Object 'OTPlayer -> m [CardIndex]
   }

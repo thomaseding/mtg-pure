@@ -306,7 +306,7 @@ headlessPrompt =
     , promptLogCallPush = \_ _ -> pure ()
     , promptPayDynamicMana = \_ _ _ _ -> undefined -- TODO: take first N manas from input pool to satisfy
     , promptPerformMulligan = \_ _ _ -> pure False
-    , promptPickZO = \_ _ _ -> pure . NonEmpty.head
+    , promptPick = \_ _ _ _ -> pure . NonEmpty.head
     , promptPriorityAction = \_ _ _ -> pure PassPriority
     , promptShuffle = \_ (CardCount count) _ -> pure $ map CardIndex [0 .. count - 1]
     }

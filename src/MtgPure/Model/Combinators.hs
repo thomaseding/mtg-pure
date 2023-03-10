@@ -501,6 +501,7 @@ ifThenElse cond then_ else_ = If cond then_ $ liftElse else_
 isBasic :: IsZone zone => Requirement zone OTNLand
 isBasic = ROr $ map (HasLandType . BasicLand) [minBound ..]
 
+-- XXX: Fixme. Non-basic lands can have basic land types.
 nonBasic :: IsZone zone => Requirement zone OTNLand
 nonBasic = RAnd $ map (Not . HasLandType . BasicLand) [minBound ..]
 

@@ -88,7 +88,8 @@ paySacrificeCost ::
   Requirement 'ZBattlefield ot ->
   Magic 'Private 'RW m Legality
 paySacrificeCost oPlayer req = logCall 'paySacrificeCost do
-  fromRO (zosSatisfying req') >>= (\zos -> fromPublic $ pickOneZO oPlayer zos) >>= \case
+  zos <- fromRO $ zosSatisfying req'
+  fromPublic (pickOneZO oPlayer zos) >>= \case
     Nothing -> pure Illegal
     Just zo -> do
       let zoPerm = zo0ToPermanent $ toZO0 zo
@@ -111,7 +112,8 @@ payTapCost ::
   Requirement 'ZBattlefield ot ->
   Magic 'Private 'RW m Legality
 payTapCost oPlayer req = logCall 'payTapCost do
-  fromRO (zosSatisfying req') >>= (\zos -> fromPublic $ pickOneZO oPlayer zos) >>= \case
+  zos <- fromRO (zosSatisfying req')
+  fromPublic (pickOneZO oPlayer zos) >>= \case
     Nothing -> pure Illegal
     Just zo -> do
       let zoPerm = zo0ToPermanent $ toZO0 zo

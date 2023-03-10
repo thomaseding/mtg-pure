@@ -46,7 +46,9 @@ instance IsNat n => IsNat ( 'S n) where
   litFin = FS (litFin @n)
 
 data NatList (user :: Type) (n :: Nat) (elem :: Type) where
-  -- NOTE: `LZ` has `elem` in it to prevent empty list choices
+  -- NOTE: `LZ` has `elem` in it to prevent empty list choices. Otherwise would
+  -- want to provide a way to encode that `n` is non-zero, since this is the use
+  -- case in authoring Magic cards. Seems like an unneeded pain point, so why bother.
   LZ :: forall user elem. (Show user, Typeable user) => user -> elem -> NatList user 'Z elem
   LS :: (Show user, Typeable user, IsNat n) => user -> elem -> NatList user n elem -> NatList user ( 'S n) elem
   deriving (Typeable)

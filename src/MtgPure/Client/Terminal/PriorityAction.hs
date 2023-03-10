@@ -78,6 +78,7 @@ import safe MtgPure.Engine.Prompt (
   DeclaredBlocker (..),
   DefendingPlayer (..),
   Pause (..),
+  PickVariety (..),
   PlayerIndex (PlayerIndex),
   PriorityAction (..),
   Prompt' (..),
@@ -108,7 +109,7 @@ import safe MtgPure.Model.Object.OTNAliases (
   OTNPermanent,
  )
 import safe MtgPure.Model.Object.Object (Object (..))
-import safe MtgPure.Model.Object.ObjectId (ObjectId (..), getObjectId)
+import safe MtgPure.Model.Object.ObjectId (GetObjectId, ObjectId (..), getObjectId)
 import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Object.ToObjectN.Instances ()
 import safe MtgPure.Model.Permanent (Permanent (..))
@@ -118,7 +119,6 @@ import safe MtgPure.Model.Sideboard (Sideboard (..))
 import safe MtgPure.Model.Variable (Var (..))
 import safe MtgPure.Model.Zone (IsZone, Zone (..))
 import safe MtgPure.Model.ZoneObject.Convert (oToZO1, toZO0, toZO1, toZO2, zo0ToSpell)
-import safe MtgPure.Model.ZoneObject.ZoneObject (IsZO, ZO)
 import safe System.Console.ANSI (clearLine, setCursorPosition)
 import safe System.IO (hFlush, stdout)
 import safe qualified System.IO as IO
@@ -167,7 +167,7 @@ gameInput cheats decks =
           , promptLogCallPush = terminalLogCallPush
           , promptPayDynamicMana = terminalPromptPayDynamicMana
           , promptPerformMulligan = \_attempt _p _hand -> pure False
-          , promptPickZO = terminalPickZo
+          , promptPick = terminalPick
           , promptPriorityAction = terminalPriorityAction
           , promptShuffle = \_attempt (CardCount n) _player -> pure $ map CardIndex [0 .. n - 1]
           }
@@ -535,38 +535,86 @@ parseManaPool' = \case
   'S' : 'C' : s -> (toCompleteManaPool SC <>) <$> parseManaPool' s
   _ -> Nothing -- TODO: life payments for phyrexian mana
 
-terminalPickZo ::
-  IsZO zone ot =>
+terminalPick ::
   Attempt ->
   OpaqueGameState Terminal ->
   Object 'OTPlayer ->
-  NonEmpty (ZO zone ot) ->
-  Terminal (ZO zone ot)
-terminalPickZo (Attempt attempt) _opaque _p zos = case zos of
-  zo :| [] -> pure zo
-  _ -> do
-    let list = NonEmpty.toList zos
-    let msg = unlines $ chunk 90 $ show list
-    let msg' = msg ++ "\nPick Zone Object:\n> "
-    zo <- untilJust \(Attempt attempt') -> do
-      let attempt'' = attempt + attempt'
-      M.liftIO do
-        clearScreenWithoutPaging
-        setCursorPosition 0 0
-      liftIO case attempt'' of
-        0 -> pure ()
-        n -> putStrLn $ "Retrying[" ++ show n ++ "]..."
-      text <- prompt msg'
-      pure case runParseCIChoice text of
-        Left _err -> Nothing
-        Right (CIChoice i) -> case List.find (\zo -> ObjectId i == getObjectId zo) list of
-          Nothing -> Nothing
-          Just zo -> Just zo
-    getsTerminalState terminal_replayLog >>= \case
-      Nothing -> pure ()
-      Just file -> do
-        liftIO $ appendFile file $ show (unObjectId $ getObjectId zo) ++ " # PickZO\n"
-    pure zo
+  PickVariety a ->
+  NonEmpty a ->
+  Terminal a
+terminalPick attempt opaque oPlayer variety xs = case xs of
+  x :| [] -> pure x
+  _ -> case variety of
+    PickZO -> terminalPickByObjectId attempt opaque oPlayer tag xs
+ where
+  tag :: String
+  tag = case variety of
+    PickZO -> "PickZO"
+
+terminalPickByObjectId ::
+  GetObjectId a =>
+  Attempt ->
+  OpaqueGameState Terminal ->
+  Object 'OTPlayer ->
+  String ->
+  NonEmpty a ->
+  Terminal a
+terminalPickByObjectId (Attempt attempt) _opaque _oPlayer tag xs = do
+  let list = NonEmpty.toList xs
+  let msg = unlines $ chunk 90 $ show $ map getObjectId list
+  let msg' = msg ++ "\n" ++ tag ++ ":\n> "
+  x <- untilJust \(Attempt attempt') -> do
+    let attempt'' = attempt + attempt'
+    M.liftIO do
+      clearScreenWithoutPaging
+      setCursorPosition 0 0
+    liftIO case attempt'' of
+      0 -> pure ()
+      n -> putStrLn $ "Retrying[" ++ show n ++ "]..."
+    text <- prompt msg'
+    pure case runParseCIChoice text of
+      Left _err -> Nothing
+      Right (CIChoice i) -> case List.find (\x -> ObjectId i == getObjectId x) list of
+        Nothing -> Nothing
+        Just x -> Just x
+  getsTerminalState terminal_replayLog >>= \case
+    Nothing -> pure ()
+    Just file -> do
+      liftIO $ appendFile file $ show (unObjectId $ getObjectId x) ++ " # " ++ tag ++ "\n"
+  pure x
+
+_terminalPickByListIndex ::
+  Show a =>
+  Attempt ->
+  OpaqueGameState Terminal ->
+  Object 'OTPlayer ->
+  String ->
+  NonEmpty a ->
+  Terminal a
+_terminalPickByListIndex (Attempt attempt) _opaque _oPlayer tag xs = do
+  let list = NonEmpty.toList xs
+  let msg = unlines $ chunk 90 $ show list
+  let indices = [0 .. length list - 1]
+  let msg' = msg ++ "\n" ++ tag ++ " " ++ show indices ++ ":\n> "
+  (x, i) <- untilJust \(Attempt attempt') -> do
+    let attempt'' = attempt + attempt'
+    M.liftIO do
+      clearScreenWithoutPaging
+      setCursorPosition 0 0
+    liftIO case attempt'' of
+      0 -> pure ()
+      n -> putStrLn $ "Retrying[" ++ show n ++ "]..."
+    text <- prompt msg'
+    pure case runParseCIChoice text of
+      Left _err -> Nothing
+      Right (CIChoice i) -> case 0 <= i && i < length list of
+        False -> Nothing
+        True -> Just (list !! i, i)
+  getsTerminalState terminal_replayLog >>= \case
+    Nothing -> pure ()
+    Just file -> do
+      liftIO $ appendFile file $ show i ++ " # " ++ tag ++ "\n"
+  pure x
 
 terminalChooseOption ::
   (IsNat n, Show user, Typeable user) =>

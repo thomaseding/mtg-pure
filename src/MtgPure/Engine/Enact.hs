@@ -51,6 +51,7 @@ import safe MtgPure.Engine.Prompt (
   ElectionInput (..),
   Ev (..),
   InternalLogicError (..),
+  PickVariety (..),
   Prompt' (..),
   SomeActivatedAbility (..),
   SourceZO (..),
@@ -284,7 +285,7 @@ searchLibrary' mSource oSearcher oSearchee zoLibToElectEffect = logCall 'searchL
               prompt <- fromRO $ gets magicPrompt
               opaque <- fromRO $ gets mkOpaqueGameState
               zoLib <- untilJust \attempt -> do
-                zoLib <- M.lift $ promptPickZO prompt attempt opaque oSearcher $ zo :| zos
+                zoLib <- M.lift $ promptPick prompt attempt opaque oSearcher PickZO $ zo :| zos
                 case zoLib `elem` zoLibs' of
                   True -> pure $ Just zoLib
                   False -> pure Nothing

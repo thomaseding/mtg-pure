@@ -90,6 +90,7 @@ import safe MtgPure.Engine.Prompt (
   ActivateResult (..),
   ElectionInput (IntrinsicInput),
   InternalLogicError (..),
+  PickVariety (..),
   PlayerCount (..),
   Prompt' (..),
   QueryObjectResult (..),
@@ -273,7 +274,7 @@ pickOneZO oPlayer = \case
     prompt <- internalFromPrivate $ fromRO $ gets magicPrompt
     opaque <- internalFromPrivate $ fromRO $ gets mkOpaqueGameState
     Just <$> untilJust \attempt -> fromRO do
-      zo <- M.lift $ promptPickZO prompt attempt opaque oPlayer $ zosHead :| zosTail
+      zo <- M.lift $ promptPick prompt attempt opaque oPlayer PickZO $ zosHead :| zosTail
       pure case zo `elem` zos of
         False -> Nothing
         True -> Just zo
