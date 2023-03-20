@@ -40,6 +40,7 @@ import safe MtgPure.Model.Mana.ManaCost (ManaCost)
 import safe MtgPure.Model.Mana.ManaPool (ManaPool)
 import safe MtgPure.Model.Object.IndexOT (IndexOT (indexOT))
 import safe MtgPure.Model.Object.IsObjectType (IsObjectType (..))
+import safe MtgPure.Model.Object.OT (OT (..))
 import safe MtgPure.Model.Object.OTN (
   OT0,
   OT1,
@@ -58,7 +59,6 @@ import safe MtgPure.Model.Object.ObjectId (
   pattern DefaultObjectDiscriminant,
  )
 import safe MtgPure.Model.Object.ObjectN (ObjectN (..))
-import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Object.ToObjectN.Classes (ToObject1' (toObject1'))
 import safe MtgPure.Model.Object.ToObjectN.Instances ()
 import safe MtgPure.Model.Object.VisitObjectN (visitObjectN')
@@ -323,7 +323,7 @@ newObjectN make = do
   pure objN
 
 withObjectCont ::
-  forall (a :: ObjectType) ot' x.
+  forall (a :: OT) ot' x.
   (IsObjectType a, IsOTN ot') =>
   (x -> x -> EnvM Ordering) ->
   (Object a -> ObjectN ot') ->

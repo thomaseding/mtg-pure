@@ -70,6 +70,7 @@ import safe MtgPure.Model.ElectStage (ElectStage (..))
 import safe MtgPure.Model.IsCardList (containsCard)
 import safe MtgPure.Model.Mana.IsManaAbility (isManaAbility)
 import safe MtgPure.Model.Object.IsObjectType (IsObjectType (..))
+import safe MtgPure.Model.Object.OT (OT (..))
 import safe MtgPure.Model.Object.OTN (OT0, OTN)
 import safe MtgPure.Model.Object.OTNAliases (
   OTNArtifact,
@@ -89,7 +90,6 @@ import safe MtgPure.Model.Object.ObjectId (
   getObjectId,
   pattern DefaultObjectDiscriminant,
  )
-import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Object.PromoteIdToObjectN (promoteIdToObjectN)
 import safe MtgPure.Model.Object.ToObjectN.Classes (ToObject2' (..), ToObject6' (..))
 import safe MtgPure.Model.PhaseStep (PhaseStep (..))
@@ -110,7 +110,7 @@ import safe MtgPure.Model.Recursive (
   WithThisOneShot,
  )
 import safe MtgPure.Model.Stack (Stack (..), StackObject (..))
-import safe MtgPure.Model.Zone (IsZone (..), SZone (..), Zone (..))
+import safe MtgPure.Model.Zone (IsZone (..), SingZone (..), Zone (..))
 import safe MtgPure.Model.ZoneObject.Convert (AsSpell', asCard, reifyWithThis, toZO0, zo0ToCard)
 import safe MtgPure.Model.ZoneObject.ZoneObject (IsOTN, IsZO, ZO, ZoneObject (..))
 
@@ -277,12 +277,12 @@ castSpell oCaster = logCall 'castSpell \case
       CastSpellReqs
         { castSpellReqs_hasPriority = True
         } -> assert (reqs == CastSpellReqs_Satisfied) case singZone @zone of
-          SZBattlefield -> invalid undefined
-          SZExile -> invalid undefined -- TODO: [Misthollow Griffin]
-          SZLibrary -> invalid undefined -- TODO: [Panglacial Wurm]
-          SZStack -> invalid undefined
-          SZGraveyard -> invalid undefined -- TODO: [Gravecrawler]
-          SZHand -> do
+          SingZBattlefield -> invalid undefined
+          SingZExile -> invalid undefined -- TODO: [Misthollow Griffin]
+          SingZLibrary -> invalid undefined -- TODO: [Panglacial Wurm]
+          SingZStack -> invalid undefined
+          SingZGraveyard -> invalid undefined -- TODO: [Gravecrawler]
+          SingZHand -> do
             mCard <- fromRO $ gets $ Map.lookup (toZO0 zoSpell) . magicHandCards
             case mCard of
               Nothing -> invalid CastSpell_NotInZone
@@ -616,7 +616,7 @@ payElectedAndPutOnStackAbility ::
 payElectedAndPutOnStackAbility zo = payElectedAndPutOnStackImpl zo \i ->
   let toObjectActivatedTriggered' = toObject2'
       o = idToObject @ 'OTActivatedAbility $ UntypedObject DefaultObjectDiscriminant i
-   in StackAbility $ ZO SZStack $ toObjectActivatedTriggered' o
+   in StackAbility $ ZO SingZStack $ toObjectActivatedTriggered' o
 
 payElectedAndPutOnStackSpell ::
   forall a ot m.
@@ -627,7 +627,7 @@ payElectedAndPutOnStackSpell ::
 payElectedAndPutOnStackSpell zo = payElectedAndPutOnStackImpl zo \i ->
   let toObjectSpell' = toObject6'
       o = idToObject @a $ UntypedObject DefaultObjectDiscriminant i
-   in StackSpell $ ZO SZStack $ toObjectSpell' o
+   in StackSpell $ ZO SingZStack $ toObjectSpell' o
 
 payElectedAndPutOnStackImpl ::
   forall ot m.
@@ -658,7 +658,7 @@ payElectedAndPutOnStackImpl zoStack idToStackObject elected = do
       ElectedSpell{electedSpell_originalSource = zoSource} -> do
         let go :: forall zone. IsZone zone => ZO zone OTNSpell -> ZO zone OT0 -> Magic 'Private 'RW m ()
             go _ zoSource0 = case singZone @zone of
-              SZHand -> do
+              SingZHand -> do
                 removedCard <- removeHandCard (electedObject_controller elected) $ zo0ToCard zoSource0
                 case removedCard of
                   Nothing -> undefined -- cant happen? ... if it can legitly happen, return Illegal instead

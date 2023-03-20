@@ -38,14 +38,14 @@ import safe MtgPure.Engine.State (
  )
 import safe MtgPure.Model.Combinators (isTapped)
 import safe MtgPure.Model.Life (Life (..))
+import safe MtgPure.Model.Object.OT (OT (..))
 import safe MtgPure.Model.Object.Object (Object)
 import safe MtgPure.Model.Object.ObjectN (ObjectN (..))
-import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Object.Singleton.Permanent (CoPermanent)
 import safe MtgPure.Model.Permanent (Permanent (..))
 import safe MtgPure.Model.Player (Player (..))
 import safe MtgPure.Model.Recursive (Cost (..), Effect (..), Requirement (..))
-import safe MtgPure.Model.Zone (SZone (..), Zone (..))
+import safe MtgPure.Model.Zone (SingZone (..), Zone (..))
 import safe MtgPure.Model.ZoneObject.Convert (oToZO1, toZO0, zo0ToPermanent)
 import safe MtgPure.Model.ZoneObject.ZoneObject (IsZO, ZoneObject (..))
 
@@ -102,7 +102,7 @@ paySacrificeCost oPlayer req = logCall 'paySacrificeCost do
  where
   req' =
     RAnd
-      [ ControlledBy $ ZO SZBattlefield $ O1 oPlayer
+      [ ControlledBy $ ZO SingZBattlefield $ O1 oPlayer
       , req
       ]
 
@@ -123,7 +123,7 @@ payTapCost oPlayer req = logCall 'payTapCost do
  where
   req' =
     RAnd
-      [ ControlledBy $ ZO SZBattlefield $ O1 oPlayer
+      [ ControlledBy $ ZO SingZBattlefield $ O1 oPlayer
       , Not isTapped
       , req
       ]

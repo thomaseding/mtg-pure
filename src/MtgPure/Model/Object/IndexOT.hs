@@ -26,6 +26,7 @@ import safe Data.Inst (
  )
 import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.Object.IsObjectType (IsObjectType (..))
+import safe MtgPure.Model.Object.OT (OT)
 import safe MtgPure.Model.Object.OTN (
   OT0,
   OT1,
@@ -41,14 +42,13 @@ import safe MtgPure.Model.Object.OTN (
   OT8,
   OT9,
  )
-import safe MtgPure.Model.Object.ObjectType (ObjectType)
 
-idx :: forall ot. IsObjectType ot => ObjectType
+idx :: forall ot. IsObjectType ot => OT
 idx = litObjectType @ot
 
 class Typeable ot => IndexOT ot where
   -- | Prerequisite: Inner lists may not contain duplicate entries. Inner lists are also sorted.
-  indexOT :: [[ObjectType]]
+  indexOT :: [[OT]]
 
 instance Inst2 IndexOT ot1 ot2 => IndexOT (ot1, ot2) where
   indexOT = indexOT @ot1 ++ indexOT @ot2
@@ -183,7 +183,7 @@ instance
 areObjectTypesSatisfied :: forall ot ot'. (IndexOT ot, IndexOT ot') => Bool
 areObjectTypesSatisfied = gos (indexOT @ot) (indexOT @ot')
  where
-  gos :: [[ObjectType]] -> [[ObjectType]] -> Bool
+  gos :: [[OT]] -> [[OT]] -> Bool
   gos [] [] = True
   gos [] _ = False
   gos _ [] = False
@@ -191,7 +191,7 @@ areObjectTypesSatisfied = gos (indexOT @ot) (indexOT @ot')
     True -> gos ots ots'
     False -> False
 
-  go :: [ObjectType] -> [ObjectType] -> Bool
+  go :: [OT] -> [OT] -> Bool
   go [] _ = True
   go _ [] = False
   go (ot : ots) (ot' : ots') = case ot == ot' of

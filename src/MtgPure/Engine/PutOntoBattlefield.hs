@@ -21,13 +21,13 @@ import safe MtgPure.Engine.Prompt (ElectionInput (..))
 import safe MtgPure.Engine.State (GameState (..), Magic, logCall)
 import safe MtgPure.Model.ElectStage (ElectStage (..))
 import safe MtgPure.Model.Object.IndexOT (areObjectTypesSatisfied)
+import safe MtgPure.Model.Object.OT (OT (..))
 import safe MtgPure.Model.Object.OTNAliases (OTNPermanent)
 import safe MtgPure.Model.Object.Object (Object)
-import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Object.Singleton.Permanent (CoPermanent)
 import safe MtgPure.Model.Permanent (cardToPermanent)
 import safe MtgPure.Model.Recursive (AnyCard (..), Card (..), CardCharacteristic (..), CardSpec, Elect)
-import safe MtgPure.Model.Zone (IsZone (..), SZone (..), Zone (..))
+import safe MtgPure.Model.Zone (IsZone (..), SingZone (..), Zone (..))
 import safe MtgPure.Model.ZoneObject.Convert (ToZO0 (..), zo0ToCard, zo0ToPermanent)
 import safe MtgPure.Model.ZoneObject.ZoneObject (IsZO, ZO)
 
@@ -40,9 +40,9 @@ putOntoBattlefield ::
 putOntoBattlefield oPlayer zo = logCall 'putOntoBattlefield do
   owner <- fromRO $ ownerOf zo
   mAnyCard <- case singZone @zone of
-    SZBattlefield -> pure Nothing -- Do something else
-    SZHand -> removeHandCard owner $ zo0ToCard $ toZO0 zo
-    SZLibrary -> removeLibraryCard owner $ zo0ToCard $ toZO0 zo
+    SingZBattlefield -> pure Nothing -- Do something else
+    SingZHand -> removeHandCard owner $ zo0ToCard $ toZO0 zo
+    SingZLibrary -> removeLibraryCard owner $ zo0ToCard $ toZO0 zo
     _ -> undefined -- TODO: other zones
   case mAnyCard of
     Nothing -> pure Nothing

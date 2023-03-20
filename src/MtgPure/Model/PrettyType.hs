@@ -28,6 +28,9 @@ import safe Data.Typeable (TypeRep, Typeable, typeRep)
 import safe MtgPure.Model.Object.IsObjectType (
   IsObjectType (litObjectType),
  )
+import safe MtgPure.Model.Object.OT (
+  OT (..),
+ )
 import safe MtgPure.Model.Object.OTN (
   OT0,
   OT1,
@@ -54,9 +57,6 @@ import safe MtgPure.Model.Object.OTNAliases (
   OTNPermanent,
   OTNPlayerPlaneswalker,
   OTNSpell,
- )
-import safe MtgPure.Model.Object.ObjectType (
-  ObjectType (..),
  )
 
 class Typeable ty => PrettyType ty where

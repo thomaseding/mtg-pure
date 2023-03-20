@@ -45,7 +45,7 @@ import safe MtgPure.Model.Recursive (
   Requirement (..),
  )
 import safe MtgPure.Model.Recursive.Ord ()
-import safe MtgPure.Model.Zone (IsZone (..), SZone (..), Zone (..))
+import safe MtgPure.Model.Zone (IsZone (..), SingZone (..), Zone (..))
 import safe MtgPure.Model.ZoneObject.Convert (toZO0, zo0ToPermanent)
 import safe MtgPure.Model.ZoneObject.ZoneObject (IsOTN, IsZO, ZO, ZOPlayer)
 
@@ -89,15 +89,15 @@ hasLandType' ::
   LandType ->
   Magic 'Private 'RO m Bool
 hasLandType' zo landType = logCall 'hasLandType' case singZone @zone of
-  SZBattlefield -> do
+  SingZBattlefield -> do
     perm <- getPermanent $ zo0ToPermanent $ toZO0 zo
     pure case permanentLand perm of
       Nothing -> False
       Just land -> landType `elem` landTypes land
-  SZGraveyard -> do
+  SingZGraveyard -> do
     zoToAnyCard <- gets magicGraveyardCards
     goMap zoToAnyCard
-  SZLibrary -> do
+  SingZLibrary -> do
     zoToAnyCard <- gets magicLibraryCards
     goMap zoToAnyCard
   _ -> undefined -- XXX: sung zone

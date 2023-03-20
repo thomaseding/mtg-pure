@@ -5,8 +5,9 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 
-module MtgPure.Model.Object.ObjectType (
-  ObjectType (..),
+-- NOTE: OT stands for ObjectType
+module MtgPure.Model.Object.OT (
+  OT (..),
 ) where
 
 import safe Data.Typeable (Typeable)
@@ -17,7 +18,7 @@ import safe Data.Typeable (Typeable)
 --
 -- If combinatorial explosion starts to be an issue, just stop the ToObjectN limit to that of 12 or so and also special case those
 -- types to directly jump to ToObjectAny. Then it's the client's responsibility to provide any obtuse instances for ToObjectN.
-data ObjectType
+data OT
   = OTActivatedAbility
   | OTArtifact
   | OTCreature

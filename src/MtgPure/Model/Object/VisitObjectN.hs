@@ -15,6 +15,7 @@ import safe Data.Kind (Type)
 import safe MtgPure.Model.Object.IsObjectType (
   IsObjectType (singObjectType),
  )
+import safe MtgPure.Model.Object.OT (OT (OTLand))
 import safe MtgPure.Model.Object.OTN (
   OT0,
   OT1,
@@ -47,7 +48,6 @@ import safe MtgPure.Model.Object.ObjectN (
   ON9,
   ObjectN (..),
  )
-import safe MtgPure.Model.Object.ObjectType (ObjectType (OTLand))
 import safe MtgPure.Model.Object.ViewObjectN (viewOTN, viewOTN')
 
 type OTArbitrary = 'OTLand

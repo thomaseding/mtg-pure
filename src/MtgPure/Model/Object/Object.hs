@@ -10,21 +10,19 @@ module MtgPure.Model.Object.Object (
 
 import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
+import safe MtgPure.Model.Object.OT (
+  OT,
+ )
 import safe MtgPure.Model.Object.ObjectId (
   GetObjectId (..),
   ObjectDiscriminant' (..),
   ObjectId (ObjectId),
   UntypedObject (..),
  )
-import safe MtgPure.Model.Object.ObjectType (
-  ObjectType,
- )
-import safe MtgPure.Model.Object.SObjectType (
-  SObjectType,
- )
+import safe MtgPure.Model.Object.SingOT (SingOT)
 
-data Object :: ObjectType -> Type where
-  Object :: SObjectType a -> UntypedObject -> Object a
+data Object :: OT -> Type where
+  Object :: SingOT a -> UntypedObject -> Object a
   deriving (Typeable)
 
 instance Eq (Object ot) where

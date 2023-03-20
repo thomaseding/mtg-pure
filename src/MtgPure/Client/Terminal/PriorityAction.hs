@@ -104,13 +104,13 @@ import safe MtgPure.Model.Mana.ManaPool (CompleteManaPool, ManaPayment (..))
 import safe MtgPure.Model.Mana.ManaSymbol (ManaSymbol (..))
 import safe MtgPure.Model.Mana.ToManaPool (toCompleteManaPool)
 import safe MtgPure.Model.Mulligan (Mulligan (..))
+import safe MtgPure.Model.Object.OT (OT (..))
 import safe MtgPure.Model.Object.OTNAliases (
   OTNAny,
   OTNPermanent,
  )
 import safe MtgPure.Model.Object.Object (Object (..))
 import safe MtgPure.Model.Object.ObjectId (GetObjectId, ObjectId (..), getObjectId)
-import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Object.ToObjectN.Instances ()
 import safe MtgPure.Model.Permanent (Permanent (..))
 import safe MtgPure.Model.PhaseStep (prettyPhaseStep)

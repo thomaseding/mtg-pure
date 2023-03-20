@@ -47,13 +47,13 @@ import safe MtgPure.Engine.State (
   mkOpaqueGameState,
  )
 import safe MtgPure.Model.IsCardList (containsCard)
+import safe MtgPure.Model.Object.OT (OT (..))
 import safe MtgPure.Model.Object.OTNAliases (OTNLand)
 import safe MtgPure.Model.Object.Object (Object)
-import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.PhaseStep (PhaseStep (..))
 import safe MtgPure.Model.Player (Player (..))
 import safe MtgPure.Model.Stack (Stack (..))
-import safe MtgPure.Model.Zone (IsZone (..), SZone (..))
+import safe MtgPure.Model.Zone (IsZone (..), SingZone (..))
 import safe MtgPure.Model.ZoneObject.Convert (asCard, toZO0)
 import safe MtgPure.Model.ZoneObject.ZoneObject (ZO)
 
@@ -123,12 +123,12 @@ playLandZO oPlayer zoLand = logCall 'playLandZO do
       , playLandReqs_stackEmpty = True
       , playLandReqs_atMaxLands = False
       } -> assert (reqs == PlayLandReqs_Satisfied) case singZone @zone of
-        SZBattlefield -> invalid PlayLand_CannotPlayFromZone
-        SZExile -> invalid PlayLand_CannotPlayFromZone
-        SZLibrary -> invalid PlayLand_CannotPlayFromZone
-        SZStack -> invalid PlayLand_CannotPlayFromZone
-        SZGraveyard -> invalid PlayLand_CannotPlayFromZone -- TODO: [Crucible of Worlds]
-        SZHand -> do
+        SingZBattlefield -> invalid PlayLand_CannotPlayFromZone
+        SingZExile -> invalid PlayLand_CannotPlayFromZone
+        SingZLibrary -> invalid PlayLand_CannotPlayFromZone
+        SingZStack -> invalid PlayLand_CannotPlayFromZone
+        SingZGraveyard -> invalid PlayLand_CannotPlayFromZone -- TODO: [Crucible of Worlds]
+        SingZHand -> do
           mCard <- fromRO $ gets $ Map.lookup (toZO0 zoLand) . magicHandCards
           case mCard of
             Nothing -> invalid PlayLand_NotInZone

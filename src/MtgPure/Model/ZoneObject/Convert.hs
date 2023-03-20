@@ -70,6 +70,9 @@ import safe Data.Monoid (First (..))
 import safe Data.Typeable (Typeable, cast)
 import safe MtgPure.Model.Object.IsObjectType (IsObjectType (..))
 import safe MtgPure.Model.Object.LitOTN (LitOTN (..))
+import safe MtgPure.Model.Object.OT (
+  OT (..),
+ )
 import safe MtgPure.Model.Object.OTN (
   OT0,
   OT1,
@@ -104,11 +107,8 @@ import safe MtgPure.Model.Object.ObjectId (
   pattern DefaultObjectDiscriminant,
  )
 import safe MtgPure.Model.Object.ObjectN (ObjectN (..))
-import safe MtgPure.Model.Object.ObjectType (
-  ObjectType (..),
- )
-import safe MtgPure.Model.Object.SObjectType (
-  SObjectType (..),
+import safe MtgPure.Model.Object.SingOT (
+  SingOT (..),
  )
 import safe MtgPure.Model.Object.ToObjectN.Classes (
   ToObject1 (..),
@@ -129,7 +129,7 @@ import MtgPure.Model.Object.ViewObjectN (viewOTN, viewOTN')
 import safe MtgPure.Model.Object.VisitObjectN (visitObjectN')
 import safe MtgPure.Model.Recursive (Requirement, WithLinkedObject (..), WithThis (..))
 import safe MtgPure.Model.Recursive.Ord ()
-import safe MtgPure.Model.Zone (IsZone (..), SZone (..), Zone (..))
+import safe MtgPure.Model.Zone (IsZone (..), SingZone (..), Zone (..))
 import safe MtgPure.Model.ZoneObject.ZoneObject (
   IsOTN,
   IsZO,
@@ -633,16 +633,16 @@ asAny0 :: ZO zone OT0 -> ZO zone OTNAny
 asAny0 = asAny . toZO1 @OT0 @ 'OTArtifact
 
 zo0ToPermanent :: ZO 'ZBattlefield OT0 -> ZO 'ZBattlefield OTNPermanent
-zo0ToPermanent = asPermanent . ZO SZBattlefield . O1 . Object SLand . getUntypedObject
+zo0ToPermanent = asPermanent . ZO SingZBattlefield . O1 . Object SingLand . getUntypedObject
 
 zo0ToSpell :: forall zone. IsZone zone => ZO zone OT0 -> ZO zone OTNSpell
-zo0ToSpell = asSpell . ZO (singZone @zone) . O1 . Object SArtifact . getUntypedObject
+zo0ToSpell = asSpell . ZO (singZone @zone) . O1 . Object SingArtifact . getUntypedObject
 
 zo0ToCard :: forall zone. IsZone zone => ZO zone OT0 -> ZO zone OTNCard
-zo0ToCard = asCard . ZO (singZone @zone) . O1 . Object SLand . getUntypedObject
+zo0ToCard = asCard . ZO (singZone @zone) . O1 . Object SingLand . getUntypedObject
 
 zo0ToAny :: forall zone. IsZone zone => ZO zone OT0 -> ZO zone OTNAny
-zo0ToAny = asAny . ZO (singZone @zone) . O1 . Object SLand . getUntypedObject
+zo0ToAny = asAny . ZO (singZone @zone) . O1 . Object SingLand . getUntypedObject
 
 reifyWithThis ::
   forall zone ot liftOT.

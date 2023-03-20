@@ -22,6 +22,7 @@ import safe MtgPure.Model.CardType (
   SCardType (..),
  )
 import safe MtgPure.Model.Object.IsObjectType (IsObjectType)
+import safe MtgPure.Model.Object.OT (OT (..))
 import safe MtgPure.Model.Object.OTN (
   OT1,
   OT2,
@@ -37,7 +38,6 @@ import safe MtgPure.Model.Object.OTNAliases (
   OTNPlaneswalker,
   OTNSorcery,
  )
-import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.ZoneObject.ZoneObject (IsOTN, ZO)
 
 -- Witness type

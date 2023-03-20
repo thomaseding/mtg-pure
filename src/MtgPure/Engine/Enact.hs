@@ -68,10 +68,10 @@ import safe MtgPure.Model.Life (Life (..))
 import safe MtgPure.Model.Mana.Mana (freezeMana)
 import safe MtgPure.Model.Mana.ManaPool (CompleteManaPool (..), ManaPool (..))
 import safe MtgPure.Model.Mana.Snow (Snow (..))
+import safe MtgPure.Model.Object.OT (OT (..))
 import safe MtgPure.Model.Object.OTNAliases (OTNDamageSource)
 import safe MtgPure.Model.Object.Object (Object)
 import safe MtgPure.Model.Object.ObjectId (GetObjectId (getUntypedObject), getObjectId)
-import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Object.Singleton.Card (CoCard)
 import safe MtgPure.Model.Object.Singleton.Permanent (CoPermanent)
 import safe MtgPure.Model.Permanent (Permanent (..), Tapped (..))
@@ -87,7 +87,7 @@ import safe MtgPure.Model.Recursive (
 import safe MtgPure.Model.Supertype (Supertype)
 import safe qualified MtgPure.Model.Supertype as Ty
 import safe MtgPure.Model.Variable (forceVars)
-import safe MtgPure.Model.Zone (SZone (SZLibrary), Zone (..))
+import safe MtgPure.Model.Zone (SingZone (SingZLibrary), Zone (..))
 import safe MtgPure.Model.ZoneObject.Convert (
   getWithLinkedObjectRequirements,
   reifyWithLinkedObject,
@@ -290,7 +290,7 @@ searchLibrary' mSource oSearcher oSearchee zoLibToElectEffect = logCall 'searchL
                   True -> pure $ Just zoLib
                   False -> pure Nothing
               let uLib = getUntypedObject zoLib
-              let zoLib' = ZO SZLibrary $ uoToON @ot uLib
+              let zoLib' = ZO SingZLibrary $ uoToON @ot uLib
               let electEffect = reifyWithLinkedObject zoLib' zoLibToElectEffect
               let stackZO = case mSource of
                     Nothing -> undefined -- impossible?

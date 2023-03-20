@@ -15,12 +15,12 @@ module MtgPure.Engine.Orphans.ZO (
 
 import safe MtgPure.Model.Object.Object (Object (Object))
 import safe MtgPure.Model.Object.ObjectId (GetObjectId (..))
-import safe MtgPure.Model.Object.SObjectType (SObjectType (SLand))
+import safe MtgPure.Model.Object.SingOT (SingOT (..))
 import safe MtgPure.Model.Object.VisitObjectN ()
 import safe MtgPure.Model.ZoneObject.ZoneObject (ZO)
 
 instance Show (ZO zone ot) where
   show zo = "Z" ++ show o
    where
-    arb = SLand
+    arb = SingLand
     o = Object arb $ getUntypedObject zo

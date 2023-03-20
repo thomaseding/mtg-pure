@@ -75,12 +75,12 @@ import safe MtgPure.Model.Object.ObjectN (ObjectN)
 import safe MtgPure.Model.Object.PromoteIdToObjectN (PromoteIdToObjectN)
 import safe MtgPure.Model.Object.VisitObjectN ()
 import safe MtgPure.Model.PrettyType (PrettyType (..))
-import safe MtgPure.Model.Zone (IsZone (..), SZone (..), Zone (..))
+import safe MtgPure.Model.Zone (IsZone (..), SingZone (..), Zone (..))
 
 type ZO = ZoneObject
 
 data ZoneObject (zone :: Zone) (ot :: Type) :: Type where
-  ZO :: SZone zone -> ObjectN ot -> ZoneObject zone ot
+  ZO :: SingZone zone -> ObjectN ot -> ZoneObject zone ot
   deriving (Typeable)
 
 zoToObjectN :: ZO zone ot -> ObjectN ot

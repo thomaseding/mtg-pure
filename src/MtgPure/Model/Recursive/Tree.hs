@@ -123,7 +123,7 @@ buildTree config = runTreeM config . buildTreeM
 -- XXX: Prolly want to keep the `ot` types since IndexOT exists and the strong types are useful.
 -- In the future, if there is need, there can be a `UntypedTree` variant that doesn't have the `ot` types.
 -- To create an `UntypedTree`, build one of these `Tree ot`s and then convert that to an `UntypedTree`.
--- Each UntypedTree constructor can have a lazy field for the `ot` object types as `[ObjectType]`.
+-- Each UntypedTree constructor can have a lazy field for the `ot` object types as `[OT]`.
 data family Tree (a :: Type) :: Type
 
 data instance Tree (ActivatedAbility zone ot) where

@@ -40,21 +40,21 @@ module MtgPure.Model.Object.OTNAliases (
   OTNTriggeredAbility,
 ) where
 
-import safe MtgPure.Model.Object.OTN (OTN)
-import safe MtgPure.Model.Object.ObjectType (
-  ObjectType (..),
+import safe MtgPure.Model.Object.OT (
+  OT (..),
  )
+import safe MtgPure.Model.Object.OTN (OTN)
 
 -- GHC doesn't seem to do the injectivity... simplify for bug report
 --
 -- type family MkOT (x :: k1) = (y :: k2) | y -> x where
---   MkOT a = '(OTN, a :: ObjectType)
---   MkOT '(a, b) = '(OTN, a :: ObjectType, b :: ObjectType)
---   MkOT '(a, b, c) = '(OTN, a :: ObjectType, b :: ObjectType, c :: ObjectType)
---   MkOT '(a, b, c, d) = '(OTN, a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType)
---   MkOT '(a, b, c, d, e) = '(OTN, a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType)
---   MkOT '(a, b, c, d, e, f) = '(OTN, a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType)
---   MkOT '(a, b, c, d, e, f, g) = '(OTN, a :: ObjectType, b :: ObjectType, c :: ObjectType, d :: ObjectType, e :: ObjectType, f :: ObjectType, g :: ObjectType)
+--   MkOT a = '(OTN, a :: OT)
+--   MkOT '(a, b) = '(OTN, a :: OT, b :: OT)
+--   MkOT '(a, b, c) = '(OTN, a :: OT, b :: OT, c :: OT)
+--   MkOT '(a, b, c, d) = '(OTN, a :: OT, b :: OT, c :: OT, d :: OT)
+--   MkOT '(a, b, c, d, e) = '(OTN, a :: OT, b :: OT, c :: OT, d :: OT, e :: OT)
+--   MkOT '(a, b, c, d, e, f) = '(OTN, a :: OT, b :: OT, c :: OT, d :: OT, e :: OT, f :: OT)
+--   MkOT '(a, b, c, d, e, f, g) = '(OTN, a :: OT, b :: OT, c :: OT, d :: OT, e :: OT, f :: OT, g :: OT)
 
 type OTNActivatedAbility = OTN '( '(), 'OTActivatedAbility)
 

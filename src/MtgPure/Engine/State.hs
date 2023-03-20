@@ -96,12 +96,12 @@ import safe MtgPure.Engine.Prompt (
 import safe MtgPure.Model.Deck (Deck (..))
 import safe MtgPure.Model.ElectStage (ElectStage (..))
 import safe MtgPure.Model.Mulligan (Mulligan)
+import safe MtgPure.Model.Object.OT (
+  OT (..),
+ )
 import safe MtgPure.Model.Object.OTN (OT0)
 import safe MtgPure.Model.Object.Object (Object)
 import safe MtgPure.Model.Object.ObjectId (ObjectDiscriminant, ObjectId (..))
-import safe MtgPure.Model.Object.ObjectType (
-  ObjectType (..),
- )
 import safe MtgPure.Model.Permanent (Permanent)
 import safe MtgPure.Model.PhaseStep (PhaseStep (..))
 import safe MtgPure.Model.Player (Player (..))

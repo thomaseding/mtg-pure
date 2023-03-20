@@ -70,8 +70,8 @@ import safe MtgPure.Engine.State (
   mkOpaqueGameState,
   runMagicCont,
  )
+import safe MtgPure.Model.Object.OT (OT (..))
 import safe MtgPure.Model.Object.Object (Object)
-import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 
 gainPriority :: Monad m => Object 'OTPlayer -> MagicCont 'Private 'RW Void m ()
 gainPriority oPlayer = do

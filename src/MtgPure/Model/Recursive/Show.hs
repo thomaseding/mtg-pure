@@ -60,6 +60,7 @@ import safe MtgPure.Model.Mana.ManaCost (
 import safe MtgPure.Model.Mana.ManaPool (CompleteManaPool (..), ManaPool (..))
 import safe MtgPure.Model.Mana.ManaSymbol (ManaSymbol (..))
 import safe MtgPure.Model.Object.IsObjectType (IsObjectType (..))
+import safe MtgPure.Model.Object.OT (OT (..))
 import safe MtgPure.Model.Object.OTN (OT1, OT2, OT3, OT4, OT5, OTN (..))
 import safe MtgPure.Model.Object.OTNAliases (
   OTNAny,
@@ -94,7 +95,6 @@ import safe MtgPure.Model.Object.ObjectN (
   ON9,
   ObjectN (..),
  )
-import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Object.ViewObjectN (viewOTN')
 import safe MtgPure.Model.Object.VisitObjectN (visitObjectN')
 import safe MtgPure.Model.Power (Power)

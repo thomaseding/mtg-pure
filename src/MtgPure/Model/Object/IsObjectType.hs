@@ -11,14 +11,12 @@ module MtgPure.Model.Object.IsObjectType (
 ) where
 
 import safe Data.Typeable (Typeable)
+import safe MtgPure.Model.Object.OT (
+  OT (..),
+ )
 import safe MtgPure.Model.Object.Object (Object (..))
 import safe MtgPure.Model.Object.ObjectId (ObjectId, UntypedObject (..))
-import safe MtgPure.Model.Object.ObjectType (
-  ObjectType (..),
- )
-import safe MtgPure.Model.Object.SObjectType (
-  SObjectType (..),
- )
+import safe MtgPure.Model.Object.SingOT (SingOT (..))
 
 data ObjectVisitor a = ObjectVisitor
   { visitOActivatedAbility :: Object 'OTActivatedAbility -> a
@@ -36,11 +34,11 @@ data ObjectVisitor a = ObjectVisitor
   }
   deriving (Typeable)
 
-class Typeable a => IsObjectType (a :: ObjectType) where
+class Typeable a => IsObjectType (a :: OT) where
   idToObject :: UntypedObject -> Object a
   objectToId :: Object a -> ObjectId
-  singObjectType :: SObjectType a
-  litObjectType :: ObjectType
+  singObjectType :: SingOT a
+  litObjectType :: OT
   visitObject :: ObjectVisitor b -> Object a -> b
 
 visitObject' ::
@@ -51,85 +49,85 @@ visitObject' ::
 visitObject' f = visitObject $ ObjectVisitor f f f f f f f f f f f f
 
 instance IsObjectType 'OTActivatedAbility where
-  idToObject = Object SActivatedAbility
-  objectToId (Object SActivatedAbility (UntypedObject _ i)) = i
-  singObjectType = SActivatedAbility
+  idToObject = Object SingActivatedAbility
+  objectToId (Object SingActivatedAbility (UntypedObject _ i)) = i
+  singObjectType = SingActivatedAbility
   litObjectType = OTActivatedAbility
   visitObject = visitOActivatedAbility
 
 instance IsObjectType 'OTArtifact where
-  idToObject = Object SArtifact
-  objectToId (Object SArtifact (UntypedObject _ i)) = i
-  singObjectType = SArtifact
+  idToObject = Object SingArtifact
+  objectToId (Object SingArtifact (UntypedObject _ i)) = i
+  singObjectType = SingArtifact
   litObjectType = OTArtifact
   visitObject = visitOArtifact
 
 instance IsObjectType 'OTCreature where
-  idToObject = Object SCreature
-  objectToId (Object SCreature (UntypedObject _ i)) = i
-  singObjectType = SCreature
+  idToObject = Object SingCreature
+  objectToId (Object SingCreature (UntypedObject _ i)) = i
+  singObjectType = SingCreature
   litObjectType = OTCreature
   visitObject = visitOCreature
 
 instance IsObjectType 'OTEmblem where
-  idToObject = Object SEmblem
-  objectToId (Object SEmblem (UntypedObject _ i)) = i
-  singObjectType = SEmblem
+  idToObject = Object SingEmblem
+  objectToId (Object SingEmblem (UntypedObject _ i)) = i
+  singObjectType = SingEmblem
   litObjectType = OTEmblem
   visitObject = visitOEmblem
 
 instance IsObjectType 'OTEnchantment where
-  idToObject = Object SEnchantment
-  objectToId (Object SEnchantment (UntypedObject _ i)) = i
-  singObjectType = SEnchantment
+  idToObject = Object SingEnchantment
+  objectToId (Object SingEnchantment (UntypedObject _ i)) = i
+  singObjectType = SingEnchantment
   litObjectType = OTEnchantment
   visitObject = visitOEnchantment
 
 instance IsObjectType 'OTInstant where
-  idToObject = Object SInstant
-  objectToId (Object SInstant (UntypedObject _ i)) = i
-  singObjectType = SInstant
+  idToObject = Object SingInstant
+  objectToId (Object SingInstant (UntypedObject _ i)) = i
+  singObjectType = SingInstant
   litObjectType = OTInstant
   visitObject = visitOInstant
 
 instance IsObjectType 'OTLand where
-  idToObject = Object SLand
-  objectToId (Object SLand (UntypedObject _ i)) = i
-  singObjectType = SLand
+  idToObject = Object SingLand
+  objectToId (Object SingLand (UntypedObject _ i)) = i
+  singObjectType = SingLand
   litObjectType = OTLand
   visitObject = visitOLand
 
 instance IsObjectType 'OTPlaneswalker where
-  idToObject = Object SPlaneswalker
-  objectToId (Object SPlaneswalker (UntypedObject _ i)) = i
-  singObjectType = SPlaneswalker
+  idToObject = Object SingPlaneswalker
+  objectToId (Object SingPlaneswalker (UntypedObject _ i)) = i
+  singObjectType = SingPlaneswalker
   litObjectType = OTPlaneswalker
   visitObject = visitOPlaneswalker
 
 instance IsObjectType 'OTPlayer where
-  idToObject = Object SPlayer
-  objectToId (Object SPlayer (UntypedObject _ i)) = i
-  singObjectType = SPlayer
+  idToObject = Object SingPlayer
+  objectToId (Object SingPlayer (UntypedObject _ i)) = i
+  singObjectType = SingPlayer
   litObjectType = OTPlayer
   visitObject = visitOPlayer
 
 instance IsObjectType 'OTSorcery where
-  idToObject = Object SSorcery
-  objectToId (Object SSorcery (UntypedObject _ i)) = i
-  singObjectType = SSorcery
+  idToObject = Object SingSorcery
+  objectToId (Object SingSorcery (UntypedObject _ i)) = i
+  singObjectType = SingSorcery
   litObjectType = OTSorcery
   visitObject = visitOSorcery
 
 instance IsObjectType 'OTStaticAbility where
-  idToObject = Object SStaticAbility
-  objectToId (Object SStaticAbility (UntypedObject _ i)) = i
-  singObjectType = SStaticAbility
+  idToObject = Object SingStaticAbility
+  objectToId (Object SingStaticAbility (UntypedObject _ i)) = i
+  singObjectType = SingStaticAbility
   litObjectType = OTStaticAbility
   visitObject = visitOStaticAbility
 
 instance IsObjectType 'OTTriggeredAbility where
-  idToObject = Object STriggeredAbility
-  objectToId (Object STriggeredAbility (UntypedObject _ i)) = i
-  singObjectType = STriggeredAbility
+  idToObject = Object SingTriggeredAbility
+  objectToId (Object SingTriggeredAbility (UntypedObject _ i)) = i
+  singObjectType = SingTriggeredAbility
   litObjectType = OTTriggeredAbility
   visitObject = visitOTriggeredAbility

@@ -6,8 +6,8 @@
 
 module MtgPure.Model.Zone (
   Zone (..),
-  SZone (..),
   IsZone (..),
+  SingZone (..),
 ) where
 
 import safe Data.Kind (Type)
@@ -22,45 +22,45 @@ data Zone :: Type where
   ZStack :: Zone
   deriving (Eq, Ord, Show, Typeable)
 
-data SZone :: Zone -> Type where
-  SZBattlefield :: SZone 'ZBattlefield
-  SZExile :: SZone 'ZExile
-  SZGraveyard :: SZone 'ZGraveyard
-  SZHand :: SZone 'ZHand
-  SZLibrary :: SZone 'ZLibrary
-  SZStack :: SZone 'ZStack
+data SingZone (zone :: Zone) :: Type where
+  SingZBattlefield :: SingZone 'ZBattlefield
+  SingZExile :: SingZone 'ZExile
+  SingZGraveyard :: SingZone 'ZGraveyard
+  SingZHand :: SingZone 'ZHand
+  SingZLibrary :: SingZone 'ZLibrary
+  SingZStack :: SingZone 'ZStack
   deriving (Typeable)
 
-deriving instance Eq (SZone zone)
+deriving instance Eq (SingZone zone)
 
-deriving instance Ord (SZone zone)
+deriving instance Ord (SingZone zone)
 
-deriving instance Show (SZone zone)
+deriving instance Show (SingZone zone)
 
 class Typeable zone => IsZone zone where
-  singZone :: SZone zone
+  singZone :: SingZone zone
   litZone :: Zone
 
 instance IsZone 'ZBattlefield where
-  singZone = SZBattlefield
+  singZone = SingZBattlefield
   litZone = ZBattlefield
 
 instance IsZone 'ZExile where
-  singZone = SZExile
+  singZone = SingZExile
   litZone = ZExile
 
 instance IsZone 'ZGraveyard where
-  singZone = SZGraveyard
+  singZone = SingZGraveyard
   litZone = ZGraveyard
 
 instance IsZone 'ZHand where
-  singZone = SZHand
+  singZone = SingZHand
   litZone = ZHand
 
 instance IsZone 'ZLibrary where
-  singZone = SZLibrary
+  singZone = SingZLibrary
   litZone = ZLibrary
 
 instance IsZone 'ZStack where
-  singZone = SZStack
+  singZone = SingZStack
   litZone = ZStack

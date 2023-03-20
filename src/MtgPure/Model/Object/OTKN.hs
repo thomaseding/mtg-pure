@@ -21,9 +21,7 @@ module MtgPure.Model.Object.OTKN (
   OTK12,
 ) where
 
-import safe MtgPure.Model.Object.ObjectType (ObjectType)
-
-type OT = ObjectType
+import safe MtgPure.Model.Object.OT (OT)
 
 type OTK0 = '()
 

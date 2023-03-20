@@ -9,9 +9,9 @@ module MtgPure.Model.Object.ToObjectN (
   toObjectNAny,
 ) where
 
+import safe MtgPure.Model.Object.OT (OT (..))
 import safe MtgPure.Model.Object.OTNAliases (OTNAny)
 import safe MtgPure.Model.Object.ObjectN (ObjectN)
-import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Object.ToObjectN.Classes
 import safe MtgPure.Model.Object.ToObjectN.Instances ()
 

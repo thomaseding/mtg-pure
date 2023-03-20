@@ -53,6 +53,7 @@ import safe MtgPure.Model.ElectStage (
   NonIntrinsicStage (..),
  )
 import safe MtgPure.Model.Object.MapObjectN (mapObjectN)
+import safe MtgPure.Model.Object.OT (OT (..))
 import safe MtgPure.Model.Object.OTN (OT0)
 import safe MtgPure.Model.Object.OTNAliases (OTNAny)
 import safe MtgPure.Model.Object.Object (Object (..))
@@ -61,7 +62,6 @@ import safe MtgPure.Model.Object.ObjectId (
   getObjectId,
   pattern DefaultObjectDiscriminant,
  )
-import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Recursive (
   Condition,
   Effect (..),

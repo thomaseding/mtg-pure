@@ -12,7 +12,7 @@ module MtgPure.Model.CardType (
 
 import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
-import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
+import safe MtgPure.Model.Object.OT (OT (..))
 
 data CardType :: Type where
   CTArtifact :: CardType
@@ -34,7 +34,7 @@ data SCardType (ct :: CardType) :: Type where
   SCTSorcery :: SCardType 'CTSorcery
   deriving (Typeable)
 
-type family ObjectTypeToCardType (a :: ObjectType) = (ct :: CardType) | ct -> a where
+type family ObjectTypeToCardType (a :: OT) = (ct :: CardType) | ct -> a where
   ObjectTypeToCardType 'OTArtifact = 'CTArtifact
   ObjectTypeToCardType 'OTCreature = 'CTCreature
   ObjectTypeToCardType 'OTEnchantment = 'CTEnchantment

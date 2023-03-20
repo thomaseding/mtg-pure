@@ -62,6 +62,7 @@ import safe MtgPure.Model.Mana.ManaCost (DynamicManaCost)
 import safe MtgPure.Model.Mana.ManaPool (CompleteManaPool, ManaPayment)
 import safe MtgPure.Model.Mana.ManaType (ManaType (..))
 import safe MtgPure.Model.Mana.Snow (Snow (..))
+import safe MtgPure.Model.Object.OT (OT (..))
 import MtgPure.Model.Object.OTN (OT0)
 import safe MtgPure.Model.Object.OTNAliases (
   OTNCreature,
@@ -72,7 +73,6 @@ import safe MtgPure.Model.Object.OTNAliases (
  )
 import safe MtgPure.Model.Object.Object (Object)
 import safe MtgPure.Model.Object.ObjectId (GetObjectId (getUntypedObject), ObjectId)
-import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Permanent (Permanent)
 import safe MtgPure.Model.Player (Player)
 import safe MtgPure.Model.Recursive (

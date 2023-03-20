@@ -173,6 +173,7 @@ import safe MtgPure.Model.Mana.ManaSymbol (ManaSymbol (..))
 import safe MtgPure.Model.Mana.ManaType (ManaType (..))
 import safe MtgPure.Model.Mana.Snow (Snow (..))
 import safe MtgPure.Model.Mana.ToManaPool (ToManaPool (..))
+import safe MtgPure.Model.Object.OT (OT (..))
 import safe MtgPure.Model.Object.OTN (OT2, OT3)
 import safe MtgPure.Model.Object.OTNAliases (
   OTNActivatedOrTriggeredAbility,
@@ -191,7 +192,6 @@ import safe MtgPure.Model.Object.OTNAliases (
   OTNSorcery,
   OTNSpell,
  )
-import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Object.ToObjectN.Instances ()
 import safe MtgPure.Model.Power (Power (..))
 import safe MtgPure.Model.Recursive (

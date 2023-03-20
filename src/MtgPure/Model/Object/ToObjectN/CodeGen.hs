@@ -19,7 +19,7 @@ module MtgPure.Model.Object.ToObjectN.CodeGen (
 import safe Data.List (intercalate, sort, sortBy, subsequences, (\\))
 import safe Data.Maybe (catMaybes)
 import safe qualified Data.Set as Set
-import safe MtgPure.Model.Object.ObjectType (ObjectType)
+import safe MtgPure.Model.Object.OT (OT)
 
 -- runhaskell MtgPure/Model/Object/ToObjectN/CodeGen.hs > MtgPure/Model/Object/ToObjectN/Instances.hs
 main :: IO ()
@@ -112,7 +112,7 @@ header =
 
 limit :: Int
 --limit = 3
-limit = 1 + fromEnum (maxBound :: ObjectType)
+limit = 1 + fromEnum (maxBound :: OT)
 
 newtype Sym = Sym Int
   deriving (Eq, Ord, Show)
@@ -126,8 +126,8 @@ interpretSym desc (Sym n) = case desc of
   SymLetter -> [['a' ..] !! n]
 
 allSyms :: [Sym]
---allSyms = map Sym [0 .. limit - 1] -- fromEnum (maxBound :: ObjectType)]
-allSyms = map Sym [0 .. fromEnum (maxBound :: ObjectType)]
+--allSyms = map Sym [0 .. limit - 1] -- fromEnum (maxBound :: OT)]
+allSyms = map Sym [0 .. fromEnum (maxBound :: OT)]
 
 objectTypeDescs :: [SymDesc]
 objectTypeDescs =
@@ -140,7 +140,7 @@ objectTypeDescs =
   p xs = not (null xs) && length xs <= limit
 
 objectTypes :: [String]
-objectTypes = map f [minBound :: ObjectType .. maxBound]
+objectTypes = map f [minBound :: OT .. maxBound]
  where
   f o = [['A' ..] !! fromEnum o]
 

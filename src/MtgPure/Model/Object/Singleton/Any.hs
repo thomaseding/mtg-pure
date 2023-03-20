@@ -5,13 +5,12 @@
 {-# HLINT ignore "Use const" #-}
 
 module MtgPure.Model.Object.Singleton.Any (
-  WAny (..),
   IsAnyType,
   CoAny (..),
+  SingCoAny (..),
 ) where
 
 import safe Data.Inst (Inst2, Inst3, Inst4, Inst5, Inst6)
-import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.Object.IsObjectType (IsObjectType)
 import safe MtgPure.Model.Object.OTN (OT2, OT3, OT4, OT5, OT6)
@@ -28,63 +27,62 @@ import safe MtgPure.Model.Object.OTNAliases (
  )
 import safe MtgPure.Model.ZoneObject.ZoneObject (IsOTN)
 
--- Witness type
-data WAny :: Type -> Type where
-  WAnyArtifact :: WAny OTNArtifact
-  WAnyCreature :: WAny OTNCreature
-  WAnyEnchantment :: WAny OTNEnchantment
-  WAnyInstant :: WAny OTNInstant
-  WAnyLand :: WAny OTNLand
-  WAnyPlaneswalker :: WAny OTNPlaneswalker
-  WAnyPlayer :: WAny OTNPlayer
-  WAnySorcery :: WAny OTNSorcery
-  WAny :: WAny OTNAny
-  WAny2 :: Inst2 IsAnyType a b => WAny (OT2 a b)
-  WAny3 :: Inst3 IsAnyType a b c => WAny (OT3 a b c)
-  WAny4 :: Inst4 IsAnyType a b c d => WAny (OT4 a b c d)
-  WAny5 :: Inst5 IsAnyType a b c d e => WAny (OT5 a b c d e)
-  WAny6 :: Inst6 IsAnyType a b c d e f => WAny (OT6 a b c d e f)
+data SingCoAny ot where
+  CoAnyArtifact :: SingCoAny OTNArtifact
+  CoAnyCreature :: SingCoAny OTNCreature
+  CoAnyEnchantment :: SingCoAny OTNEnchantment
+  CoAnyInstant :: SingCoAny OTNInstant
+  CoAnyLand :: SingCoAny OTNLand
+  CoAnyPlaneswalker :: SingCoAny OTNPlaneswalker
+  CoAnyPlayer :: SingCoAny OTNPlayer
+  CoAnySorcery :: SingCoAny OTNSorcery
+  CoAny :: SingCoAny OTNAny
+  CoAny2 :: Inst2 IsAnyType a b => SingCoAny (OT2 a b)
+  CoAny3 :: Inst3 IsAnyType a b c => SingCoAny (OT3 a b c)
+  CoAny4 :: Inst4 IsAnyType a b c d => SingCoAny (OT4 a b c d)
+  CoAny5 :: Inst5 IsAnyType a b c d e => SingCoAny (OT5 a b c d e)
+  CoAny6 :: Inst6 IsAnyType a b c d e f => SingCoAny (OT6 a b c d e f)
   deriving (Typeable)
 
-deriving instance Show (WAny ot)
+deriving instance Show (SingCoAny ot)
 
 type IsAnyType = IsObjectType
 
 class IsOTN ot => CoAny ot where
-  coAny :: WAny ot
+  coAny :: SingCoAny ot
 
 instance CoAny OTNInstant where
-  coAny = WAnyInstant
+  coAny = CoAnyInstant
 
 instance CoAny OTNSorcery where
-  coAny = WAnySorcery
+  coAny = CoAnySorcery
 
 instance CoAny OTNPlayer where
-  coAny = WAnyPlayer
+  coAny = CoAnyPlayer
 
 instance CoAny OTNArtifact where
-  coAny = WAnyArtifact
+  coAny = CoAnyArtifact
 
 instance CoAny OTNCreature where
-  coAny = WAnyCreature
+  coAny = CoAnyCreature
 
 instance CoAny OTNEnchantment where
-  coAny = WAnyEnchantment
+  coAny = CoAnyEnchantment
 
 instance CoAny OTNLand where
-  coAny = WAnyLand
+  coAny = CoAnyLand
 
 instance CoAny OTNPlaneswalker where
-  coAny = WAnyPlaneswalker
+  coAny = CoAnyPlaneswalker
 
 instance Inst2 IsAnyType a b => CoAny (OT2 a b) where
-  coAny = WAny2
+  coAny = CoAny2
 
 instance Inst3 IsAnyType a b c => CoAny (OT3 a b c) where
-  coAny = WAny3
+  coAny = CoAny3
 
 instance Inst4 IsAnyType a b c d => CoAny (OT4 a b c d) where
-  coAny = WAny4
+  coAny = CoAny4
 
 instance Inst5 IsAnyType a b c d e => CoAny (OT5 a b c d e) where
-  coAny = WAny5
+  coAny = CoAny5

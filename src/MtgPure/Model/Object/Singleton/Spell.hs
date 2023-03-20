@@ -18,6 +18,7 @@ import safe Data.Kind (Type)
 import safe Data.Proxy (Proxy)
 import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.Object.IsObjectType (IsObjectType)
+import safe MtgPure.Model.Object.OT (OT (..))
 import safe MtgPure.Model.Object.OTN (
   OT1,
   OT2,
@@ -33,7 +34,6 @@ import safe MtgPure.Model.Object.OTNAliases (
   OTNSorcery,
   OTNSpell,
  )
-import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.ZoneObject.ZoneObject (IsOTN, ZO)
 
 data SpellType

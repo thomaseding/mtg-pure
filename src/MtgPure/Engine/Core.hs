@@ -118,6 +118,7 @@ import safe MtgPure.Model.Library (Library (..))
 import safe MtgPure.Model.Mana.IsManaAbility (isTrivialManaAbility)
 import safe MtgPure.Model.Object.IndexOT (IndexOT (..), areObjectTypesSatisfied)
 import safe MtgPure.Model.Object.IsObjectType (IsObjectType (..))
+import safe MtgPure.Model.Object.OT (OT (..))
 import safe MtgPure.Model.Object.OTN (OT0)
 import safe MtgPure.Model.Object.OTNAliases (OTNCard, OTNLand, OTNPermanent)
 import safe MtgPure.Model.Object.Object (Object (..))
@@ -129,8 +130,7 @@ import safe MtgPure.Model.Object.ObjectId (
   pattern DefaultObjectDiscriminant,
  )
 import safe MtgPure.Model.Object.ObjectN (ObjectN (O0))
-import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
-import safe MtgPure.Model.Object.SObjectType (SObjectType (..))
+import safe MtgPure.Model.Object.SingOT (SingOT (..))
 import safe MtgPure.Model.Object.ToObjectN (toObject1, toObjectNAny)
 import safe MtgPure.Model.Permanent (Permanent (..))
 import safe MtgPure.Model.Player (Player (..))
@@ -147,7 +147,7 @@ import safe MtgPure.Model.Recursive (
   fromSomeOT,
  )
 import safe MtgPure.Model.Variable (VariableId, VariableId' (..))
-import safe MtgPure.Model.Zone (IsZone (..), SZone (..), Zone (..))
+import safe MtgPure.Model.Zone (IsZone (..), SingZone (..), Zone (..))
 import safe MtgPure.Model.ZoneObject.Convert (
   ToZO0,
   castOToON,
@@ -281,8 +281,8 @@ pickOneZO oPlayer = \case
 
 allZOs :: forall zone ot m. (Monad m, IsZO zone ot) => Magic 'Private 'RO m [ZO zone ot]
 allZOs = logCall 'allZOs case singZone @zone of
-  SZBattlefield ->
-    let goPerms :: ObjectType -> Magic 'Private 'RO m [ZO zone ot]
+  SingZBattlefield ->
+    let goPerms :: OT -> Magic 'Private 'RO m [ZO zone ot]
         goPerms ot = do
           perms <- fromPublic allPermanents
           catMaybes <$> eachLogged perms \oPerm -> do
@@ -302,11 +302,11 @@ allZOs = logCall 'allZOs case singZone @zone of
               OTLand -> goPerm @ 'OTLand permanentLand
               --OTPlaneswalker -> goPerm @ 'OTPlaneswalker undefined
               _ -> Nothing
-        goPlayers :: ObjectType -> Magic 'Private 'RO m [ZO zone ot]
+        goPlayers :: OT -> Magic 'Private 'RO m [ZO zone ot]
         goPlayers = \case
           OTPlayer -> mapMaybe castOToZO <$> fromPublic getAlivePlayers
           _ -> pure []
-        goRec :: [ObjectType] -> Magic 'Private 'RO m (DList.DList (ZO zone ot))
+        goRec :: [OT] -> Magic 'Private 'RO m (DList.DList (ZO zone ot))
         goRec = \case
           [] -> pure DList.empty
           ot : ots -> do
@@ -317,10 +317,10 @@ allZOs = logCall 'allZOs case singZone @zone of
      in DList.toList <$> case indexOT @ot of
           [ots] -> goRec ots
           otss -> goRec $ List.nub $ concat otss
-  SZGraveyard -> do
+  SingZGraveyard -> do
     zoToAnyCard <- gets magicGraveyardCards
     goCardMap zoToAnyCard
-  SZLibrary -> do
+  SingZLibrary -> do
     zoToAnyCard <- gets magicLibraryCards
     goCardMap zoToAnyCard
   _ -> undefined -- XXX: sung zone
@@ -368,12 +368,12 @@ doesObjectNExist :: forall ot m. (IsOTN ot, Monad m) => ObjectN ot -> Magic 'Pri
 doesObjectNExist o = logCall 'doesObjectNExist do
   or -- XXX: Use monadic `orM`
     <$> sequence
-      [ doesZoneObjectExist $ ZO SZBattlefield o
-      , doesZoneObjectExist $ ZO SZExile o
-      , doesZoneObjectExist $ ZO SZGraveyard o
-      , doesZoneObjectExist $ ZO SZHand o
-      , doesZoneObjectExist $ ZO SZLibrary o
-      , doesZoneObjectExist $ ZO SZStack o
+      [ doesZoneObjectExist $ ZO SingZBattlefield o
+      , doesZoneObjectExist $ ZO SingZExile o
+      , doesZoneObjectExist $ ZO SingZGraveyard o
+      , doesZoneObjectExist $ ZO SingZHand o
+      , doesZoneObjectExist $ ZO SingZLibrary o
+      , doesZoneObjectExist $ ZO SingZStack o
       ]
 
 type OTArbitrary = 'OTLand
@@ -393,7 +393,7 @@ activatedAbilitiesOf ::
 activatedAbilitiesOf zo = logCall 'activatedAbilitiesOf do
   -- XXX: Being lazy at the moment and assuming it's a permanent
   case singZone @zone of
-    SZBattlefield -> do
+    SingZBattlefield -> do
       let zoPerm = zo0ToPermanent $ toZO0 zo
       findPermanent zoPerm <&> \case
         Nothing -> []
@@ -426,7 +426,7 @@ staticAbilitiesOf ::
 staticAbilitiesOf zo = logCall 'staticAbilitiesOf do
   -- XXX: Being lazy at the moment and assuming it's a permanent
   case singZone @zone of
-    SZBattlefield -> do
+    SingZBattlefield -> do
       let zoPerm = zo0ToPermanent $ toZO0 zo
       findPermanent zoPerm <&> \case
         Nothing -> []
@@ -459,7 +459,7 @@ triggeredAbilitiesOf ::
 triggeredAbilitiesOf zo = logCall 'triggeredAbilitiesOf do
   -- XXX: Being lazy at the moment and assuming it's a permanent
   case singZone @zone of
-    SZBattlefield -> do
+    SingZBattlefield -> do
       let zoPerm = zo0ToPermanent $ toZO0 zo
       findPermanent zoPerm <&> \case
         Nothing -> []
@@ -563,16 +563,16 @@ getIntrinsicManaAbilities zo = do
 getBasicLandTypes :: forall zone ot m. (IsZO zone ot, Monad m) => ZO zone ot -> Magic 'Private 'RO m [BasicLandType]
 getBasicLandTypes zo = logCall 'getBasicLandTypes do
   case singZone @zone of
-    SZBattlefield -> do
+    SingZBattlefield -> do
       let zoPerm = zo0ToPermanent $ toZO0 zo
       findPermanent zoPerm <&> \case
         Nothing -> []
         Just perm -> case permanentLand perm of
           Nothing -> []
           Just land -> fromLandTypes $ landTypes land
-    SZHand -> goFindCard findHandCard
-    SZLibrary -> goFindCard findLibraryCard
-    SZGraveyard -> goFindCard findGraveyardCard
+    SingZHand -> goFindCard findHandCard
+    SingZLibrary -> goFindCard findLibraryCard
+    SingZGraveyard -> goFindCard findGraveyardCard
     _ -> undefined -- XXX: sung zone
  where
   uniquify = List.nub . List.sort
@@ -693,7 +693,7 @@ queryObjectId i = do
 
   goZones
  where
-  oCard = Object SArtifact $ UntypedObject DefaultObjectDiscriminant i
+  oCard = Object SingArtifact $ UntypedObject DefaultObjectDiscriminant i
   zoLibrary = zo0ToCard $ toZO0 oCard
   zoHand = zo0ToCard $ toZO0 oCard
   zoGrave = zo0ToCard $ toZO0 oCard

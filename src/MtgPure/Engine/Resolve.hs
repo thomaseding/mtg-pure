@@ -61,10 +61,10 @@ import safe MtgPure.Engine.State (
  )
 import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.ElectStage (ElectStage (..))
+import safe MtgPure.Model.Object.OT (OT (..))
 import safe MtgPure.Model.Object.OTN (OT0)
 import safe MtgPure.Model.Object.Object (Object)
 import safe MtgPure.Model.Object.ObjectId (getObjectId)
-import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
 import safe MtgPure.Model.Permanent (cardToPermanent)
 import safe MtgPure.Model.Recursive (
   AnyCard (..),

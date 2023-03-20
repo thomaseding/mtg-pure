@@ -18,14 +18,14 @@ import safe MtgPure.Model.Hand (Hand)
 import safe MtgPure.Model.Library (Library)
 import safe MtgPure.Model.Life (Life (..))
 import safe MtgPure.Model.Mana.ManaPool (CompleteManaPool)
+import safe MtgPure.Model.Object.OT (OT (..))
 import safe MtgPure.Model.Object.Object (Object (..))
 import safe MtgPure.Model.Object.ObjectId (
   ObjectId (..),
   UntypedObject (..),
   pattern DefaultObjectDiscriminant,
  )
-import safe MtgPure.Model.Object.ObjectType (ObjectType (..))
-import safe MtgPure.Model.Object.SObjectType (SObjectType (SPlayer))
+import safe MtgPure.Model.Object.SingOT (SingOT (..))
 import safe MtgPure.Model.Sideboard (Sideboard)
 
 data Player :: Type where
@@ -62,7 +62,7 @@ emptyPlayer =
     , playerLife = Life 0
     , playerLost = False
     , playerMana = mempty
-    , playerObject = Object SPlayer (UntypedObject DefaultObjectDiscriminant (ObjectId 0))
+    , playerObject = Object SingPlayer (UntypedObject DefaultObjectDiscriminant (ObjectId 0))
     , playerStartingDeck = mempty
     , playerStartingHandSize = 0
     , playerStartingLife = Life 0
