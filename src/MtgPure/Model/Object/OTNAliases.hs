@@ -56,190 +56,171 @@ import safe MtgPure.Model.Object.OTN (OTN)
 --   MkOT '(a, b, c, d, e, f) = '(OTN, a :: OT, b :: OT, c :: OT, d :: OT, e :: OT, f :: OT)
 --   MkOT '(a, b, c, d, e, f, g) = '(OTN, a :: OT, b :: OT, c :: OT, d :: OT, e :: OT, f :: OT, g :: OT)
 
-type OTNActivatedAbility = OTN '( '(), 'OTActivatedAbility)
+type OTNActivatedAbility = OTN '[ 'OTActivatedAbility]
 
-type OTNArtifact = OTN '( '(), 'OTArtifact)
+type OTNArtifact = OTN '[ 'OTArtifact]
 
-type OTNCreature = OTN '( '(), 'OTCreature)
+type OTNCreature = OTN '[ 'OTCreature]
 
-type OTNEmblem = OTN '( '(), 'OTEmblem)
+type OTNEmblem = OTN '[ 'OTEmblem]
 
-type OTNEnchantment = OTN '( '(), 'OTEnchantment)
+type OTNEnchantment = OTN '[ 'OTEnchantment]
 
-type OTNInstant = OTN '( '(), 'OTInstant)
+type OTNInstant = OTN '[ 'OTInstant]
 
-type OTNLand = OTN '( '(), 'OTLand)
+type OTNLand = OTN '[ 'OTLand]
 
-type OTNPlaneswalker = OTN '( '(), 'OTPlaneswalker)
+type OTNPlaneswalker = OTN '[ 'OTPlaneswalker]
 
-type OTNPlayer = OTN '( '(), 'OTPlayer)
+type OTNPlayer = OTN '[ 'OTPlayer]
 
-type OTNSorcery = OTN '( '(), 'OTSorcery)
+type OTNSorcery = OTN '[ 'OTSorcery]
 
-type OTNStaticAbility = OTN '( '(), 'OTStaticAbility)
+type OTNStaticAbility = OTN '[ 'OTStaticAbility]
 
-type OTNTriggeredAbility = OTN '( '(), 'OTTriggeredAbility)
+type OTNTriggeredAbility = OTN '[ 'OTTriggeredAbility]
 
 type OTNToken = OTNPermanent
 
 type OTNAbility =
   OTN
-    '( '()
-     , 'OTActivatedAbility
+    '[ 'OTActivatedAbility
      , 'OTStaticAbility
      , 'OTTriggeredAbility
-     )
+     ]
 
 type OTNActivatedOrTriggeredAbility =
   OTN
-    '( '()
-     , 'OTActivatedAbility
+    '[ 'OTActivatedAbility
      , 'OTTriggeredAbility
-     )
+     ]
 
 type OTNArtifactCreature =
   OTN
-    '( '()
-     , 'OTArtifact
+    '[ 'OTArtifact
      , 'OTCreature
-     )
+     ]
 
 type OTNArtifactLand =
   OTN
-    '( '()
-     , 'OTArtifact
+    '[ 'OTArtifact
      , 'OTLand
-     )
+     ]
 
 type OTNCreaturePlayer =
   OTN
-    '( '()
-     , 'OTCreature
+    '[ 'OTCreature
      , 'OTPlayer
-     )
+     ]
 
 type OTNCreaturePlaneswalker =
   OTN
-    '( '()
-     , 'OTCreature
+    '[ 'OTCreature
      , 'OTPlaneswalker
-     )
+     ]
 
 type OTNPlayerPlaneswalker =
   OTN
-    '( '()
-     , 'OTPlaneswalker
+    '[ 'OTPlaneswalker
      , 'OTPlayer
-     )
+     ]
 
 type OTNEnchantmentCreature =
   OTN
-    '( '()
-     , 'OTCreature
+    '[ 'OTCreature
      , 'OTEnchantment
-     )
+     ]
 
 type OTNCreaturePlayerPlaneswalker =
   OTN
-    '( '()
-     , 'OTCreature
+    '[ 'OTCreature
      , 'OTPlaneswalker
      , 'OTPlayer
-     )
+     ]
 
 type OTNNonArtifactPermanent =
   OTN
-    '( '()
-     , 'OTCreature
+    '[ 'OTCreature
      , 'OTEnchantment
      , 'OTLand
      , 'OTPlaneswalker
-     )
+     ]
 
 type OTNNonCreaturePermanent =
   OTN
-    '( '()
-     , 'OTArtifact
+    '[ 'OTArtifact
      , 'OTEnchantment
      , 'OTLand
      , 'OTPlaneswalker
-     )
+     ]
 
 type OTNNonEnchantmentPermanent =
   OTN
-    '( '()
-     , 'OTArtifact
+    '[ 'OTArtifact
      , 'OTCreature
      , 'OTLand
      , 'OTPlaneswalker
-     )
+     ]
 
 type OTNNonLandPermanent =
   OTN
-    '( '()
-     , 'OTArtifact
+    '[ 'OTArtifact
      , 'OTCreature
      , 'OTEnchantment
      , 'OTPlaneswalker
-     )
+     ]
 
 type OTNNonPlaneswalkerPermanent =
   OTN
-    '( '()
-     , 'OTArtifact
+    '[ 'OTArtifact
      , 'OTCreature
      , 'OTEnchantment
      , 'OTLand
-     )
+     ]
 
 type OTNPermanent =
   OTN
-    '( '()
-     , 'OTArtifact
+    '[ 'OTArtifact
      , 'OTCreature
      , 'OTEnchantment
      , 'OTLand
      , 'OTPlaneswalker
-     )
+     ]
 
 type OTNNonCreature =
   OTN
-    '( '()
-     , 'OTArtifact
+    '[ 'OTArtifact
      , 'OTEnchantment
      , 'OTInstant
      , 'OTLand
      , 'OTPlaneswalker
      , 'OTSorcery
-     )
+     ]
 
 type OTNSpell =
   OTN
-    '( '()
-     , 'OTArtifact
+    '[ 'OTArtifact
      , 'OTCreature
      , 'OTEnchantment
      , 'OTInstant
      , 'OTPlaneswalker
      , 'OTSorcery
-     )
+     ]
 
 type OTNCard =
   OTN
-    '( '()
-     , 'OTArtifact
+    '[ 'OTArtifact
      , 'OTCreature
      , 'OTEnchantment
      , 'OTInstant
      , 'OTLand
      , 'OTPlaneswalker
      , 'OTSorcery
-     )
+     ]
 
 type OTNDamageSource =
   OTN
-    '( '()
-     , 'OTArtifact
+    '[ 'OTArtifact
      , 'OTCreature
      , 'OTEnchantment
      , 'OTInstant
@@ -247,12 +228,11 @@ type OTNDamageSource =
      , 'OTPlaneswalker
      , 'OTPlayer
      , 'OTSorcery
-     )
+     ]
 
 type OTNAny =
   OTN
-    '( '()
-     , 'OTActivatedAbility
+    '[ 'OTActivatedAbility
      , 'OTArtifact
      , 'OTCreature
      , 'OTEmblem
@@ -264,4 +244,4 @@ type OTNAny =
      , 'OTSorcery
      , 'OTStaticAbility
      , 'OTTriggeredAbility
-     )
+     ]

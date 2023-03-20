@@ -96,7 +96,6 @@ header =
   \  )\n\
   \\n\
   \type ON = ObjectN\n\
-  \type Z = '()\n\
   \to2 = toObject2\n\
   \to3 = toObject3\n\
   \to4 = toObject4\n\
@@ -266,7 +265,7 @@ generateObjectMToObjectN desc symsM symsN =
     unwords $
       ["instance", "Inst" ++ show n, "IsObjectType"]
         ++ map (interpretSym desc) symsN
-        ++ ["=>", "ToObject" ++ show n, "(OTN '(Z, " ++ seqSymsM ++ "))"]
+        ++ ["=>", "ToObject" ++ show n, "(OTN '[" ++ seqSymsM ++ "])"]
         ++ map (interpretSym desc) symsN
         ++ ["where"]
 
@@ -281,7 +280,7 @@ telescopeToObjectN desc acc symsM symsN = case m < n of
   newSym = head $ symsN \\ symsM
   symsSucc = sort $ newSym : symsM
   typeSucc =
-    "(ON (OTN '(Z, " ++ commas (map (interpretSym desc) symsSucc) ++ ")))"
+    "(ON (OTN '[" ++ commas (map (interpretSym desc) symsSucc) ++ "]))"
   acc' = "(" ++ toObjectSucc ++ " " ++ acc ++ " :: " ++ typeSucc ++ ")"
 
 commas :: [String] -> String

@@ -100,11 +100,11 @@ instance Inst2 IsObjectType a b => PrettyType (OT2 a b) where
         | rep == getRep @OTNPlayerPlaneswalker ->
           "OTNPlayerPlaneswalker"
         | otherwise ->
-          "OTN '( '(), "
+          "OTN '["
             ++ show (getRep @a)
             ++ ", "
             ++ show (getRep @b)
-            ++ ")"
+            ++ "]"
    where
     rep = getRep @(OT2 a b)
 
@@ -114,13 +114,13 @@ instance Inst3 IsObjectType a b c => PrettyType (OT3 a b c) where
         | rep == getRep @OTNCreaturePlayerPlaneswalker ->
           "OTNCreaturePlayerPlaneswalker"
         | otherwise ->
-          "OTN '( '(), "
+          "OTN '["
             ++ show (getRep @a)
             ++ ", "
             ++ show (getRep @b)
             ++ ", "
             ++ show (getRep @c)
-            ++ ")"
+            ++ "]"
    where
     rep = getRep @(OT3 a b c)
 
@@ -128,7 +128,7 @@ instance Inst4 IsObjectType a b c d => PrettyType (OT4 a b c d) where
   prettyType =
     if
         | otherwise ->
-          "OTN '( '(), "
+          "OTN '["
             ++ show (getRep @a)
             ++ ", "
             ++ show (getRep @b)
@@ -136,7 +136,7 @@ instance Inst4 IsObjectType a b c d => PrettyType (OT4 a b c d) where
             ++ show (getRep @c)
             ++ ", "
             ++ show (getRep @d)
-            ++ ")"
+            ++ "]"
    where
     _rep = getRep @(OT4 a b c d)
 
@@ -146,7 +146,7 @@ instance Inst5 IsObjectType a b c d e => PrettyType (OT5 a b c d e) where
         | rep == getRep @OTNPermanent ->
           "OTNPermanent"
         | otherwise ->
-          "OTN '( '(), "
+          "OTN '["
             ++ show (getRep @a)
             ++ ", "
             ++ show (getRep @b)
@@ -156,7 +156,7 @@ instance Inst5 IsObjectType a b c d e => PrettyType (OT5 a b c d e) where
             ++ show (getRep @d)
             ++ ", "
             ++ show (getRep @e)
-            ++ ")"
+            ++ "]"
    where
     rep = getRep @(OT5 a b c d e)
 
@@ -166,7 +166,7 @@ instance Inst6 IsObjectType a b c d e f => PrettyType (OT6 a b c d e f) where
         | rep == getRep @OTNSpell ->
           "OTNSpell"
         | otherwise ->
-          "OTN '( '(), "
+          "OTN '["
             ++ show (getRep @a)
             ++ ", "
             ++ show (getRep @b)
@@ -178,7 +178,7 @@ instance Inst6 IsObjectType a b c d e f => PrettyType (OT6 a b c d e f) where
             ++ show (getRep @e)
             ++ ", "
             ++ show (getRep @f)
-            ++ ")"
+            ++ "]"
    where
     rep = getRep @(OT6 a b c d e f)
 
@@ -186,7 +186,7 @@ instance Inst7 IsObjectType a b c d e f g => PrettyType (OT7 a b c d e f g) wher
   prettyType =
     if
         | otherwise ->
-          "OTN '(),  '("
+          "OTN '["
             ++ show (getRep @a)
             ++ ", "
             ++ show (getRep @b)
@@ -200,7 +200,7 @@ instance Inst7 IsObjectType a b c d e f g => PrettyType (OT7 a b c d e f g) wher
             ++ show (getRep @f)
             ++ ", "
             ++ show (getRep @g)
-            ++ ")"
+            ++ "]"
    where
     _rep = getRep @(OT7 a b c d e f g)
 
@@ -210,7 +210,7 @@ instance Inst8 IsObjectType a b c d e f g h => PrettyType (OT8 a b c d e f g h) 
         | rep == getRep @OTNDamageSource ->
           "OTNDamageSource"
         | otherwise ->
-          "OTN '( '(), "
+          "OTN '["
             ++ show (getRep @a)
             ++ ", "
             ++ show (getRep @b)
@@ -226,7 +226,7 @@ instance Inst8 IsObjectType a b c d e f g h => PrettyType (OT8 a b c d e f g h) 
             ++ show (getRep @g)
             ++ ", "
             ++ show (getRep @h)
-            ++ ")"
+            ++ "]"
    where
     rep = getRep @(OT8 a b c d e f g h)
 
@@ -234,7 +234,7 @@ instance Inst9 IsObjectType a b c d e f g h i => PrettyType (OT9 a b c d e f g h
   prettyType =
     if
         | otherwise ->
-          "OTN '( '(), "
+          "OTN '["
             ++ show (getRep @a)
             ++ ", "
             ++ show (getRep @b)
@@ -252,7 +252,7 @@ instance Inst9 IsObjectType a b c d e f g h i => PrettyType (OT9 a b c d e f g h
             ++ show (getRep @h)
             ++ ","
             ++ show (getRep @i)
-            ++ ")"
+            ++ "]"
    where
     _rep = getRep @(OT9 a b c d e f g h i)
 
@@ -260,7 +260,7 @@ instance Inst10 IsObjectType a b c d e f g h i j => PrettyType (OT10 a b c d e f
   prettyType =
     if
         | otherwise ->
-          "OTN '( '(), "
+          "OTN '["
             ++ show (getRep @a)
             ++ ", "
             ++ show (getRep @b)
@@ -280,7 +280,7 @@ instance Inst10 IsObjectType a b c d e f g h i j => PrettyType (OT10 a b c d e f
             ++ show (getRep @i)
             ++ ","
             ++ show (getRep @j)
-            ++ ")"
+            ++ "]"
    where
     _rep = getRep @(OT10 a b c d e f g h i j)
 
@@ -288,7 +288,7 @@ instance Inst11 IsObjectType a b c d e f g h i j k => PrettyType (OT11 a b c d e
   prettyType =
     if
         | otherwise ->
-          "OTN '( '(), "
+          "OTN '["
             ++ show (getRep @a)
             ++ ", "
             ++ show (getRep @b)
@@ -310,7 +310,7 @@ instance Inst11 IsObjectType a b c d e f g h i j k => PrettyType (OT11 a b c d e
             ++ show (getRep @j)
             ++ ","
             ++ show (getRep @k)
-            ++ ")"
+            ++ "]"
    where
     _rep = getRep @(OT11 a b c d e f g h i j k)
 
@@ -321,7 +321,7 @@ instance Inst12 IsObjectType a b c d e f g h i j k l => PrettyType (OT12 a b c d
           "OTNAny"
         | otherwise ->
           assert False $ -- should hit OTNAny
-            "OTN '( '(), "
+            "OTN '["
               ++ show (getRep @a)
               ++ ", "
               ++ show (getRep @b)
@@ -345,6 +345,6 @@ instance Inst12 IsObjectType a b c d e f g h i j k l => PrettyType (OT12 a b c d
               ++ show (getRep @k)
               ++ ","
               ++ show (getRep @l)
-              ++ ")"
+              ++ "]"
    where
     rep = getRep @(OT12 a b c d e f g h i j k l)
