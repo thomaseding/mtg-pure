@@ -82,7 +82,7 @@ https://user-images.githubusercontent.com/6971794/220497420-c35cd250-41be-44b8-b
 ![App.AnsiInspector](https://user-images.githubusercontent.com/6971794/216997518-b8ee0a7d-cc24-4c4b-8e6c-1a70494f24a4.png)
 
 ### Contributors:
-At this point, I am very unlikely to accept contributions unless I know you and we discussed ahead of time.
+Contributions may or may not be accepted. If you are concerned about your time being wasted, please open an issue first to discuss. Entry-level contributions would probably be for card definitions or tests. More advanced contributions would be for the engine or model design.
 
 ---
 
