@@ -50,7 +50,7 @@ Purely functional Haskell "Magic: The Gathering" card model and game engine.
 ### Quickstart:
 ```
 $ cd src
-$ runhaskell MtgPure/Model/Object/ToObjectN/CodeGen.hs > MtgPure/Model/Object/ToObjectN/Instances.hs
+$ runhaskell MtgPure/Model/Object/ToObjectN/CodeGen.hs
 $ cd ..
 $ cabal build
 $ cabal repl

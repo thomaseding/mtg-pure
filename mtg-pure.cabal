@@ -163,6 +163,96 @@ library
         MtgPure.Model.Object.ToObjectN.Classes
         MtgPure.Model.Object.ToObjectN.CodeGen
         MtgPure.Model.Object.ToObjectN.Instances
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_1
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_10
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_10_10
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_10_11
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_10_12
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_11
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_11_11
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_11_12
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_12
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_12_12
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_1_1
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_1_10
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_1_11
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_1_12
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_1_2
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_1_3
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_1_4
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_1_5
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_1_6
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_1_7
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_1_8
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_1_9
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_2
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_2_10
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_2_11
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_2_12
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_2_2
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_2_3
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_2_4
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_2_5
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_2_6
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_2_7
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_2_8
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_2_9
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_3
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_3_10
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_3_11
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_3_12
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_3_3
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_3_4
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_3_5
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_3_6
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_3_7
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_3_8
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_3_9
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_4
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_4_10
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_4_11
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_4_12
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_4_4
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_4_5
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_4_6
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_4_7
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_4_8
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_4_9
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_5
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_5_10
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_5_11
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_5_12
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_5_5
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_5_6
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_5_7
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_5_8
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_5_9
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_6
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_6_10
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_6_11
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_6_12
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_6_6
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_6_7
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_6_8
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_6_9
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_7
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_7_10
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_7_11
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_7_12
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_7_7
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_7_8
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_7_9
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_8
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_8_10
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_8_11
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_8_12
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_8_8
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_8_9
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_9
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_9_10
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_9_11
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_9_12
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_9_9
         MtgPure.Model.Object.ViewObjectN
         MtgPure.Model.Object.VisitObjectN
         MtgPure.Model.Permanent
@@ -238,6 +328,8 @@ library
 
     other-extensions:
         ExtendedDefaultRules
+
+    ghc-options: -Wall -Werror -Wno-type-defaults -Wincomplete-uni-patterns -Wincomplete-record-updates -Wcpp-undef -Wmissing-export-lists
 
     build-depends:
        aeson ^>=2.1.1.0,

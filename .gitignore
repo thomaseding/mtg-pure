@@ -15,6 +15,7 @@
 *.hie
 *.hp
 *.o
+*.swp
 *.prof
 cabal-dev
 cabal.project.local
@@ -24,3 +25,4 @@ data/cache
 dist
 dist-*
 src/MtgPure/Model/Object/ToObjectN/Instances.hs
+src/MtgPure/Model/Object/ToObjectN/Instances/

@@ -4,7 +4,6 @@ module MtgPure (
   allCards,
   mainAnsiBoxExample,
   mainAnsiBoxMagic,
-  mainCodeGenToObjectN,
   mainDemoGameplay,
   mainHybrid,
   mainManaAbility,
@@ -19,7 +18,6 @@ import safe Demo.Ansi.Box (mainAnsiBoxExample)
 import safe Demo.Ansi.MagicBoard (mainAnsiBoxMagic)
 import safe Demo.MtgPure.Gameplay (mainDemoGameplay)
 import safe MtgPure.AllCards (allCards)
-import safe MtgPure.Model.Object.ToObjectN.CodeGen (mainCodeGenToObjectN)
 import safe Test.Engine.Unit.MagicCont (mainUnitMagicCont)
 import safe Test.Engine.Unit.PayMana (mainUnitPayMana)
 import safe Test.Game.Hybrid (mainHybrid)
