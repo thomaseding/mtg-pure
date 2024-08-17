@@ -119,13 +119,13 @@ type Legality' = Maybe ()
 data Speed = InstantSpeed | SorcerySpeed
   deriving (Eq, Ord, Show, Typeable)
 
-getAbilitySpeed :: Monad m => IsZO zone ot => SomeActivatedAbility zone ot -> Magic 'Private 'RO m Speed
+getAbilitySpeed :: (Monad m) => (IsZO zone ot) => SomeActivatedAbility zone ot -> Magic 'Private 'RO m Speed
 getAbilitySpeed _ = pure InstantSpeed -- TODO: activate only as a sorcery
 
-getSpellSpeed :: Monad m => IsZone zone => ZO zone OTNSpell -> Magic 'Private 'RO m Speed
+getSpellSpeed :: (Monad m) => (IsZone zone) => ZO zone OTNSpell -> Magic 'Private 'RO m Speed
 getSpellSpeed _ = pure SorcerySpeed -- TODO: Instants, flash, etc.
 
-speedIsAllowable :: Monad m => Speed -> Magic 'Private 'RO m Bool
+speedIsAllowable :: (Monad m) => Speed -> Magic 'Private 'RO m Bool
 speedIsAllowable speed = do
   -- TODO: check if a split second spell is on the stack
   phaseStep <- gets magicPhaseStep
@@ -136,13 +136,13 @@ speedIsAllowable speed = do
       PSPostCombatMainPhase -> True
       _ -> False
 
-_canActivateAbilityNow :: Monad m => Object 'OTPlayer -> IsZO zone ot => SomeActivatedAbility zone ot -> Magic 'Private 'RO m Bool
+_canActivateAbilityNow :: (Monad m) => Object 'OTPlayer -> (IsZO zone ot) => SomeActivatedAbility zone ot -> Magic 'Private 'RO m Bool
 _canActivateAbilityNow oPlayer ability = logCall '_canActivateAbilityNow do
   hasPriority <- fromPublic $ getHasPriority oPlayer
   speed <- fromRO $ getAbilitySpeed ability
   speedIsAllowable speed <&> (&& hasPriority)
 
-_canPlaySpellNow :: Monad m => Object 'OTPlayer -> IsZone zone => ZO zone OTNSpell -> Magic 'Private 'RO m Bool
+_canPlaySpellNow :: (Monad m) => Object 'OTPlayer -> (IsZone zone) => ZO zone OTNSpell -> Magic 'Private 'RO m Bool
 _canPlaySpellNow oPlayer = logCall '_canPlaySpellNow \zoSpell -> do
   hasPriority <- fromPublic $ getHasPriority oPlayer
   speed <- fromRO $ getSpellSpeed zoSpell
@@ -161,7 +161,7 @@ newtype ActivateAbilityReqs = ActivateAbilityReqs
 --     { activateAbilityReqs_hasPriority = True
 --     }
 
-getActivateAbilityReqs :: Monad m => Object 'OTPlayer -> Magic 'Private 'RO m ActivateAbilityReqs
+getActivateAbilityReqs :: (Monad m) => Object 'OTPlayer -> Magic 'Private 'RO m ActivateAbilityReqs
 getActivateAbilityReqs oPlayer = logCall 'getActivateAbilityReqs do
   hasPriority <- fromPublic $ getHasPriority oPlayer
   pure
@@ -182,7 +182,7 @@ pattern CastSpellReqs_Satisfied =
     { castSpellReqs_hasPriority = True
     }
 
-getCastSpellReqs :: Monad m => Object 'OTPlayer -> Magic 'Private 'RO m CastSpellReqs
+getCastSpellReqs :: (Monad m) => Object 'OTPlayer -> Magic 'Private 'RO m CastSpellReqs
 getCastSpellReqs oPlayer = logCall 'getCastSpellReqs do
   hasPriority <- fromPublic $ getHasPriority oPlayer
   pure
@@ -253,11 +253,11 @@ sorceryCastMeta =
     , castMeta_cost = sorcery_cost
     }
 
-castSpell :: forall m. Monad m => Object 'OTPlayer -> PriorityAction CastSpell -> Magic 'Private 'RW m Legality
+castSpell :: forall m. (Monad m) => Object 'OTPlayer -> PriorityAction CastSpell -> Magic 'Private 'RW m Legality
 castSpell oCaster = logCall 'castSpell \case
   CastSpell zoSpellCard -> goSpell zoSpellCard
  where
-  goSpell :: forall zone. IsZO zone OTNSpell => ZO zone OTNSpell -> Magic 'Private 'RW m Legality
+  goSpell :: forall zone. (IsZO zone OTNSpell) => ZO zone OTNSpell -> Magic 'Private 'RW m Legality
   goSpell zoSpell = do
     st <- fromRO get
     reqs <- fromRO $ getCastSpellReqs oCaster
@@ -265,7 +265,7 @@ castSpell oCaster = logCall 'castSpell \case
     let opaque = mkOpaqueGameState st
         prompt = magicPrompt st
         hand = playerHand player
-        --zoCaster = oToZO1 oCaster
+        -- zoCaster = oToZO1 oCaster
         --
         invalid :: (ZO zone OTNSpell -> InvalidCastSpell) -> Magic 'Private 'RW m Legality
         invalid ex = do
@@ -293,7 +293,7 @@ castSpell oCaster = logCall 'castSpell \case
                     AnyCard1 card -> case card of
                       Card{} -> do
                         stackId <- newObjectId
-                        let zoStack = toZO0 @ 'ZStack stackId
+                        let zoStack = toZO0 @'ZStack stackId
                         modify \st' ->
                           st'
                             { magicControllerMap = Map.insert stackId oCaster $ magicControllerMap st'
@@ -319,7 +319,7 @@ castSpellCard zoStack zoSpellCard oCaster card = logCall 'castSpellCard case car
     pure Nothing
 
   goElectIntrinsic ::
-    IsSpecificCard ot =>
+    (IsSpecificCard ot) =>
     Elect 'IntrinsicStage (CardCharacteristic ot) ot ->
     Magic 'Private 'RW m Legality
   goElectIntrinsic electIntrinsic = do
@@ -384,21 +384,21 @@ castSpellCard zoStack zoSpellCard oCaster card = logCall 'castSpellCard case car
             LandCard{} -> error $ show CantHappenByConstruction
             --
             ArtifactCard{} ->
-              payElectedAndPutOnStack @ 'Cast zoStack electedSpell
+              payElectedAndPutOnStack @'Cast zoStack electedSpell
             ArtifactCreatureCard{} -> do
-              payElectedAndPutOnStack @ 'Cast zoStack electedSpell
+              payElectedAndPutOnStack @'Cast zoStack electedSpell
             CreatureCard{} -> do
-              payElectedAndPutOnStack @ 'Cast zoStack electedSpell
+              payElectedAndPutOnStack @'Cast zoStack electedSpell
             EnchantmentCard{} -> do
-              payElectedAndPutOnStack @ 'Cast zoStack electedSpell
+              payElectedAndPutOnStack @'Cast zoStack electedSpell
             EnchantmentCreatureCard{} -> do
-              payElectedAndPutOnStack @ 'Cast zoStack electedSpell
+              payElectedAndPutOnStack @'Cast zoStack electedSpell
             InstantCard -> do
-              payElectedAndPutOnStack @ 'Cast zoStack electedSpell
+              payElectedAndPutOnStack @'Cast zoStack electedSpell
             PlaneswalkerCard{} -> do
-              payElectedAndPutOnStack @ 'Cast zoStack electedSpell
+              payElectedAndPutOnStack @'Cast zoStack electedSpell
             SorceryCard -> do
-              payElectedAndPutOnStack @ 'Cast zoStack electedSpell
+              payElectedAndPutOnStack @'Cast zoStack electedSpell
     case castMeta_effect meta of
       Just characterToEffect -> do
         playPendingOneShot zoStack (castMeta_cost meta spec) (characterToEffect spec) goPay
@@ -408,7 +408,7 @@ castSpellCard zoStack zoSpellCard oCaster card = logCall 'castSpellCard case car
 -- TODO: Generalize for TriggeredAbility as well. Prolly make an AbilityMeta type that is analogous to CastMeta.
 -- NOTE: A TriggeredAbility is basically the same as an ActivatedAbility that the game activates automatically.
 -- TODO: This needs to validate ActivateAbilityReqs
-activateAbility :: forall m. Monad m => Object 'OTPlayer -> PriorityAction ActivateAbility -> Magic 'Private 'RW m ActivateResult
+activateAbility :: forall m. (Monad m) => Object 'OTPlayer -> PriorityAction ActivateAbility -> Magic 'Private 'RW m ActivateResult
 activateAbility oPlayer = logCall 'activateAbility \case
   ActivateAbility someActivated -> case someActivated of
     SomeActivatedAbility zoThis withThisActivated -> do
@@ -439,7 +439,7 @@ activateAbility oPlayer = logCall 'activateAbility \case
         goWithThisActivated :: Magic 'Private 'RW m ActivateResult
         goWithThisActivated = do
           abilityId <- newObjectId
-          let zoAbility = toZO0 @ 'ZStack abilityId
+          let zoAbility = toZO0 @'ZStack abilityId
           modify \st' ->
             st'
               { magicControllerMap = Map.insert abilityId oPlayer $ magicControllerMap st'
@@ -487,7 +487,7 @@ activateAbility oPlayer = logCall 'activateAbility \case
                           ResolvedManaAbility evs -> ActivatedManaAbility evs
                           CantPay -> IllegalActivation
                       False -> do
-                        legality <- payElectedAndPutOnStack @ 'Activate zoAbility elected
+                        legality <- payElectedAndPutOnStack @'Activate zoAbility elected
                         pure case legality of
                           Legal -> ActivatedNonManaAbility
                           Illegal -> IllegalActivation
@@ -500,7 +500,7 @@ activateAbility oPlayer = logCall 'activateAbility \case
 playPendingOneShot ::
   forall m ot x.
   (AndLike x, AndLike (Maybe x), IsZO 'ZStack ot) =>
-  Monad m =>
+  (Monad m) =>
   ZO 'ZStack OT0 ->
   Cost ->
   WithThisOneShot ot ->
@@ -516,7 +516,7 @@ playPendingOneShot _zoStack cost withThisElectEffect cont = logCall 'playPending
 playPendingPermanent ::
   forall m ot x.
   (AndLike x, AndLike (Maybe x)) =>
-  Monad m =>
+  (Monad m) =>
   ZO 'ZStack OT0 ->
   Cost ->
   (Cost -> Maybe (Pending (Effect 'OneShot) ot) -> Magic 'Private 'RW m (Maybe x)) ->
@@ -526,7 +526,7 @@ playPendingPermanent _zoStack cost cont = logCall 'playPendingPermanent do
 
 playPendingAbility ::
   forall m ot x.
-  Monad m =>
+  (Monad m) =>
   ZO 'ZStack OT0 ->
   Cost ->
   Elect 'ResolveStage (Effect 'OneShot) ot ->
@@ -538,7 +538,7 @@ playPendingAbility _zoStack cost electEffect cont = logCall 'playPendingAbility 
 
 payElected ::
   forall ot m.
-  Monad m =>
+  (Monad m) =>
   Elected 'TargetStage ot ->
   Magic 'Private 'RW m Legality
 payElected elected = logCall 'payElected do
@@ -555,7 +555,7 @@ payElectedManaAbilityAndResolve ::
   Elected 'TargetStage ot ->
   Magic 'Private 'RW m ResolvedManaAbility
 payElectedManaAbilityAndResolve zoAbility elected = logCall 'payElectedManaAbilityAndResolve do
-  payElectedAndPutOnStack @ 'Activate @ot zoAbility elected >>= \case
+  payElectedAndPutOnStack @'Activate @ot zoAbility elected >>= \case
     Illegal -> pure CantPay
     Legal -> do
       resolveTopOfStack <&> \case
@@ -577,35 +577,35 @@ payElectedAndPutOnStack zo elected = logCall 'payElectedAndPutOnStack do
   payElectedAndPutOnStack' @ac @ot @ot zo elected
 
 -- NOTE: `dummyOT` exists to circumvent `The constraint ‘A’ is no smaller than the instance head ‘B’` issues
-class ot ~ dummyOT => PayElected (ac :: ActivateCast) (ot :: Type) (dummyOT :: Type) where
-  payElectedAndPutOnStack' :: Monad m => ZO 'ZStack OT0 -> Elected 'TargetStage ot -> Magic 'Private 'RW m Legality
+class (ot ~ dummyOT) => PayElected (ac :: ActivateCast) (ot :: Type) (dummyOT :: Type) where
+  payElectedAndPutOnStack' :: (Monad m) => ZO 'ZStack OT0 -> Elected 'TargetStage ot -> Magic 'Private 'RW m Legality
 
-instance IsOTN ot => PayElected 'Activate ot ot where
+instance (IsOTN ot) => PayElected 'Activate ot ot where
   payElectedAndPutOnStack' = payElectedAndPutOnStackAbility @ot
 
 instance PayElected 'Cast OTNArtifact OTNArtifact where
-  payElectedAndPutOnStack' = payElectedAndPutOnStackSpell @ 'OTArtifact
+  payElectedAndPutOnStack' = payElectedAndPutOnStackSpell @'OTArtifact
 
 instance PayElected 'Cast OTNArtifactCreature OTNArtifactCreature where
-  payElectedAndPutOnStack' = payElectedAndPutOnStackSpell @ 'OTCreature
+  payElectedAndPutOnStack' = payElectedAndPutOnStackSpell @'OTCreature
 
 instance PayElected 'Cast OTNCreature OTNCreature where
-  payElectedAndPutOnStack' = payElectedAndPutOnStackSpell @ 'OTCreature
+  payElectedAndPutOnStack' = payElectedAndPutOnStackSpell @'OTCreature
 
 instance PayElected 'Cast OTNEnchantment OTNEnchantment where
-  payElectedAndPutOnStack' = payElectedAndPutOnStackSpell @ 'OTEnchantment
+  payElectedAndPutOnStack' = payElectedAndPutOnStackSpell @'OTEnchantment
 
 instance PayElected 'Cast OTNEnchantmentCreature OTNEnchantmentCreature where
-  payElectedAndPutOnStack' = payElectedAndPutOnStackSpell @ 'OTCreature
+  payElectedAndPutOnStack' = payElectedAndPutOnStackSpell @'OTCreature
 
 instance PayElected 'Cast OTNInstant OTNInstant where
-  payElectedAndPutOnStack' = payElectedAndPutOnStackSpell @ 'OTInstant
+  payElectedAndPutOnStack' = payElectedAndPutOnStackSpell @'OTInstant
 
 instance PayElected 'Cast OTNPlaneswalker OTNPlaneswalker where
-  payElectedAndPutOnStack' = payElectedAndPutOnStackSpell @ 'OTPlaneswalker
+  payElectedAndPutOnStack' = payElectedAndPutOnStackSpell @'OTPlaneswalker
 
 instance PayElected 'Cast OTNSorcery OTNSorcery where
-  payElectedAndPutOnStack' = payElectedAndPutOnStackSpell @ 'OTSorcery
+  payElectedAndPutOnStack' = payElectedAndPutOnStackSpell @'OTSorcery
 
 payElectedAndPutOnStackAbility ::
   forall ot m.
@@ -615,7 +615,7 @@ payElectedAndPutOnStackAbility ::
   Magic 'Private 'RW m Legality
 payElectedAndPutOnStackAbility zo = payElectedAndPutOnStackImpl zo \i ->
   let toObjectActivatedTriggered' = toObject2'
-      o = idToObject @ 'OTActivatedAbility $ UntypedObject DefaultObjectDiscriminant i
+      o = idToObject @'OTActivatedAbility $ UntypedObject DefaultObjectDiscriminant i
    in StackAbility $ ZO SingZStack $ toObjectActivatedTriggered' o
 
 payElectedAndPutOnStackSpell ::
@@ -656,7 +656,7 @@ payElectedAndPutOnStackImpl zoStack idToStackObject elected = do
     case elected of
       ElectedActivatedAbility{} -> undefined -- should not be possible
       ElectedSpell{electedSpell_originalSource = zoSource} -> do
-        let go :: forall zone. IsZone zone => ZO zone OTNSpell -> ZO zone OT0 -> Magic 'Private 'RW m ()
+        let go :: forall zone. (IsZone zone) => ZO zone OTNSpell -> ZO zone OT0 -> Magic 'Private 'RW m ()
             go _ zoSource0 = case singZone @zone of
               SingZHand -> do
                 removedCard <- removeHandCard (electedObject_controller elected) $ zo0ToCard zoSource0
@@ -666,7 +666,7 @@ payElectedAndPutOnStackImpl zoStack idToStackObject elected = do
               _ -> undefined -- TODO: singZone
         go zoSource $ toZO0 zoSource
 
-seedStackEntryTargets :: Monad m => ZO 'ZStack OT0 -> Magic 'Private 'RW m ()
+seedStackEntryTargets :: (Monad m) => ZO 'ZStack OT0 -> Magic 'Private 'RW m ()
 seedStackEntryTargets zoStack = logCall 'seedStackEntryTargets do
   modify \st ->
     st

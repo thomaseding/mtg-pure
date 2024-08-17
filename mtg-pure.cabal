@@ -23,7 +23,184 @@ maintainer:         'thomaseding@gmail.com'
 
 library
     exposed-modules:
+        Ansi.AnsiString
+        Ansi.Box
+        Ansi.Compile
+        Ansi.Math
+        Ansi.Old
+        Ansi.TrueColor.Debug
+        Ansi.TrueColor.FileFormat
+        Ansi.TrueColor.FindColoring
+        Ansi.TrueColor.FindRendering
+        Ansi.TrueColor.ImageToAnsi
+        Ansi.TrueColor.RenderedTile
+        Ansi.TrueColor.TileGrid
+        Ansi.TrueColor.Types
+        Ansi.TrueColor.VirtualChar
+        Ansi.TrueColor.VirtualCharTile
+        App.AnsiInspector
+        App.CardGallery
+        Control.Monad.Access
+        Control.Monad.Util
+        Data.Carousel
+        Data.ConsIndex
+        Data.Inst
+        Data.Nat
+        Data.Read.Sep
+        Data.Read.Symbol
+        Data.SafeJson
+        Data.TupleN
+        Data.Virtual
+        Data.Zipper
+        Demo.Ansi.Box
+        Demo.Ansi.ChoiceMenu
+        Demo.Ansi.Colors
+        Demo.Ansi.MagicBoard
+        Demo.Misc.SerializableMonadApi.ProofOfConcept
+        Demo.Misc.SerializableMonadApi.Variable
+        Demo.Misc.SerializableMonadApi.VariableMonad
+        Demo.MtgPure.Gameplay
+        LoadAllModules
         MtgPure
+        MtgPure.AllCards
+        MtgPure.Cards
+        MtgPure.Client.Terminal.Fwd.Api
+        MtgPure.Client.Terminal.Fwd.Impl
+        MtgPure.Client.Terminal.Fwd.Type
+        MtgPure.Client.Terminal.CommandInput
+        MtgPure.Client.Terminal.Monad
+        MtgPure.Client.Terminal.PriorityAction
+        MtgPure.Client.Terminal.Render
+        MtgPure.Engine.ActivateCast
+        MtgPure.Engine.CaseOf
+        MtgPure.Engine.Core
+        MtgPure.Engine.Enact
+        MtgPure.Engine.Fwd.Api
+        MtgPure.Engine.Fwd.Impl
+        MtgPure.Engine.Fwd.Type
+        MtgPure.Engine.Legality
+        MtgPure.Engine.Monad
+        MtgPure.Engine.Orphans
+        MtgPure.Engine.Orphans.ZO
+        MtgPure.Engine.Pay
+        MtgPure.Engine.PayMana
+        MtgPure.Engine.PerformElections
+        MtgPure.Engine.PlayGame
+        MtgPure.Engine.PlayLand
+        MtgPure.Engine.Priority
+        MtgPure.Engine.Prompt
+        MtgPure.Engine.PutOntoBattlefield
+        MtgPure.Engine.Resolve
+        MtgPure.Engine.Satisfies
+        MtgPure.Engine.State
+        MtgPure.Engine.StateBasedActions
+        MtgPure.Engine.Turn
+        MtgPure.Model.AbilityType
+        MtgPure.Model.Artifact
+        MtgPure.Model.ArtifactType
+        MtgPure.Model.BasicLandType
+        MtgPure.Model.Battlefield
+        MtgPure.Model.CardName
+        MtgPure.Model.CardSet
+        MtgPure.Model.CardType
+        MtgPure.Model.Color
+        MtgPure.Model.ColorToManaType
+        MtgPure.Model.Colors
+        MtgPure.Model.ColorsLike
+        MtgPure.Model.Combinators
+        MtgPure.Model.Counter
+        MtgPure.Model.Creature
+        MtgPure.Model.CreatureType
+        MtgPure.Model.Damage
+        MtgPure.Model.Deck
+        MtgPure.Model.EffectType
+        MtgPure.Model.ElectStage
+        MtgPure.Model.Enchantment
+        MtgPure.Model.Graveyard
+        MtgPure.Model.Hand
+        MtgPure.Model.IsCardList
+        MtgPure.Model.Land
+        MtgPure.Model.LandType
+        MtgPure.Model.Library
+        MtgPure.Model.Life
+        MtgPure.Model.Linear
+        MtgPure.Model.Loyalty
+        MtgPure.Model.Mana.CountMana
+        MtgPure.Model.Mana.HasManaSymbol
+        MtgPure.Model.Mana.IsManaAbility
+        MtgPure.Model.Mana.Mana
+        MtgPure.Model.Mana.ManaCost
+        MtgPure.Model.Mana.ManaPool
+        MtgPure.Model.Mana.ManaSymbol
+        MtgPure.Model.Mana.ManaType
+        MtgPure.Model.Mana.ManaTypeToColor
+        MtgPure.Model.Mana.PrintedManaCost
+        MtgPure.Model.Mana.Snow
+        MtgPure.Model.Mana.ToMana
+        MtgPure.Model.Mana.ToManaCost
+        MtgPure.Model.Mana.ToManaPool
+        MtgPure.Model.Mulligan
+        MtgPure.Model.Object.IndexOT
+        MtgPure.Model.Object.IsObjectType
+        MtgPure.Model.Object.LitOTN
+        MtgPure.Model.Object.MapObjectN
+        MtgPure.Model.Object.OT
+        MtgPure.Model.Object.OTKN
+        MtgPure.Model.Object.OTN
+        MtgPure.Model.Object.OTNAliases
+        MtgPure.Model.Object.Object
+        MtgPure.Model.Object.ObjectId
+        MtgPure.Model.Object.ObjectN
+        MtgPure.Model.Object.PromoteIdToObjectN
+        MtgPure.Model.Object.SingOT
+        MtgPure.Model.Object.Singleton.Any
+        MtgPure.Model.Object.Singleton.Card
+        MtgPure.Model.Object.Singleton.NonCreatureCard
+        MtgPure.Model.Object.Singleton.Permanent
+        MtgPure.Model.Object.Singleton.Spell
+        MtgPure.Model.Object.SmartConstructors
+        MtgPure.Model.Object.ToObjectN
+        MtgPure.Model.Object.ToObjectN.Classes
+        MtgPure.Model.Object.ToObjectN.CodeGen
+        MtgPure.Model.Object.ToObjectN.Instances
+        MtgPure.Model.Object.ViewObjectN
+        MtgPure.Model.Object.VisitObjectN
+        MtgPure.Model.Permanent
+        MtgPure.Model.Phase
+        MtgPure.Model.PhaseStep
+        MtgPure.Model.Planeswalker
+        MtgPure.Model.Player
+        MtgPure.Model.Power
+        MtgPure.Model.PrettyType
+        MtgPure.Model.Rarity
+        MtgPure.Model.Recursive
+        MtgPure.Model.Recursive.Ord
+        MtgPure.Model.Recursive.Show
+        MtgPure.Model.Recursive.Tree
+        MtgPure.Model.Sideboard
+        MtgPure.Model.Stack
+        MtgPure.Model.Step
+        MtgPure.Model.Supertype
+        MtgPure.Model.TimePoint
+        MtgPure.Model.Toughness
+        MtgPure.Model.Variable
+        MtgPure.Model.Zone
+        MtgPure.Model.ZoneObject.Convert
+        MtgPure.Model.ZoneObject.ZoneObject
+        Script.GenerateGalleryBatched.Main
+        Script.GenerateGallerySingle.Args
+        Script.GenerateGallerySingle.Main
+        Script.GenerateLoadAllModules
+        Script.MtgPureConfig
+        Script.ScryfallDownloader
+        System.Keyboard
+        Test.Engine.Unit.MagicCont
+        Test.Engine.Unit.PayMana
+        Test.Game.Hybrid
+        Test.Game.ManaAbility
+        Test.Game.RagingGoblin
+        Test.Game.Shock
+        Test.Game.StoneRain
 
     default-extensions:
         AllowAmbiguousTypes,
@@ -56,6 +233,7 @@ library
         TemplateHaskellQuotes,
         TypeApplications,
         TypeFamilyDependencies,
+        TypeOperators,
         ViewPatterns
 
     other-extensions:
@@ -66,12 +244,12 @@ library
        ansi-terminal ^>=0.11.4,
        array ^>=0.5.4.0,
        async ^>=2.2.4,
-       base ^>=4.14.3.0,
+       base ^>=4.17.2.1,
        binary ^>=0.8.8.0,
-       bytestring ^>=0.10.12.0,
+       bytestring ^>=0.11.5.3,
        colour ^>=2.3.6,
        containers ^>=0.6.5.1,
-       directory ^>=1.3.6.0,
+       directory ^>=1.3.8.5,
        dlist ^>=1.0,
        --fin ^>=0.2.1,
        filepath ^>=1.4.2.1,
@@ -87,7 +265,7 @@ library
        random ^>=1.2.1.1,
        split ^>=0.2.3.5,
        Stream ^>=0.4.7.2,
-       template-haskell ^>=2.16.0.0,
+       template-haskell ^>=2.19.0.0,
        time ^>=1.9.3,
        transformers ^>=0.5.6.2,
        vector ^>=0.13.0.0

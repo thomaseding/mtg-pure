@@ -16,20 +16,21 @@ import safe MtgPure.Model.Object.ToObjectN.Classes
 import safe MtgPure.Model.Object.ToObjectN.Instances ()
 
 toObjectNAny ::
-  ToObject12
-    ot
-    'OTActivatedAbility
-    'OTArtifact
-    'OTCreature
-    'OTEmblem
-    'OTEnchantment
-    'OTInstant
-    'OTLand
-    'OTPlaneswalker
-    'OTPlayer
-    'OTSorcery
-    'OTStaticAbility
-    'OTTriggeredAbility =>
+  ( ToObject12
+      ot
+      'OTActivatedAbility
+      'OTArtifact
+      'OTCreature
+      'OTEmblem
+      'OTEnchantment
+      'OTInstant
+      'OTLand
+      'OTPlaneswalker
+      'OTPlayer
+      'OTSorcery
+      'OTStaticAbility
+      'OTTriggeredAbility
+  ) =>
   ObjectN ot ->
   ObjectN OTNAny
 toObjectNAny = toObject12

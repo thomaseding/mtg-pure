@@ -60,7 +60,7 @@ instance Monoid (Mana var snow mt) where
   mempty = Mana 0
 
 -- TODO: Make this an orphan
-instance Num (Mana 'NoVar snow mt) => ForceVars (Mana var snow mt) (Mana 'NoVar snow mt) where
+instance (Num (Mana 'NoVar snow mt)) => ForceVars (Mana var snow mt) (Mana 'NoVar snow mt) where
   forceVars = \case
     Mana n -> Mana n
     VariableMana (ReifiedVariable _ n) -> Mana n

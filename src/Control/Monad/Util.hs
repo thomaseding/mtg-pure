@@ -20,17 +20,17 @@ newtype Attempt' a = Attempt a
 
 type Attempt = Attempt' Int
 
-untilJust :: Monad m => (Attempt -> m (Maybe a)) -> m a
+untilJust :: (Monad m) => (Attempt -> m (Maybe a)) -> m a
 untilJust = untilJust' $ Attempt 0
 
-untilJust' :: Monad m => Attempt -> (Attempt -> m (Maybe a)) -> m a
+untilJust' :: (Monad m) => Attempt -> (Attempt -> m (Maybe a)) -> m a
 untilJust' attempt fm =
   fm attempt >>= \case
     Just x -> pure x
     Nothing -> untilJust' ((1 +) <$> attempt) fm
 
 class AndLike a where
-  andM :: Monad m => [m a] -> m a
+  andM :: (Monad m) => [m a] -> m a
 
 instance AndLike () where
   andM = sequence_

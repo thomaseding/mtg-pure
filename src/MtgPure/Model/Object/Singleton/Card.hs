@@ -50,8 +50,8 @@ data WCard :: Type -> Type where
   WCardPlaneswalker :: WCard OTNPlaneswalker
   WCardSorcery :: WCard OTNSorcery
   WCard :: WCard OTNCard
-  WCard2 :: Inst2 IsCardType a b => WCard (OT2 a b)
-  WCard3 :: Inst3 IsCardType a b c => WCard (OT3 a b c)
+  WCard2 :: (Inst2 IsCardType a b) => WCard (OT2 a b)
+  WCard3 :: (Inst3 IsCardType a b c) => WCard (OT3 a b c)
   deriving (Typeable)
 
 deriving instance Show (WCard a)
@@ -67,15 +67,15 @@ data CardVisitor zone z = CardVisitor
   }
   deriving (Typeable)
 
-class IsObjectType a => IsCardType a where
+class (IsObjectType a) => IsCardType a where
   litCardType :: CardType
   singCardType :: SCardType (ObjectTypeToCardType a)
   singCard :: WCard (OT1 a)
   visitCard :: CardVisitor zone z -> WCard (OT1 a) -> ZO zone (OT1 a) -> z
 
 visitCard' ::
-  IsCardType a =>
-  (forall a'. IsCardType a' => ZO zone (OT1 a') -> z) ->
+  (IsCardType a) =>
+  (forall a'. (IsCardType a') => ZO zone (OT1 a') -> z) ->
   WCard (OT1 a) ->
   ZO zone (OT1 a) ->
   z
@@ -123,7 +123,7 @@ instance IsCardType 'OTSorcery where
   singCard = WCardSorcery
   visitCard v _ = visitCSorcery v
 
-class IsOTN ot => CoCard ot where
+class (IsOTN ot) => CoCard ot where
   coCard :: WCard ot
 
 instance CoCard OTNArtifact where
@@ -150,8 +150,8 @@ instance CoCard OTNSorcery where
 instance CoCard OTNCard where
   coCard = WCard
 
-instance Inst2 IsCardType a b => CoCard (OT2 a b) where
+instance (Inst2 IsCardType a b) => CoCard (OT2 a b) where
   coCard = WCard2 :: WCard (OT2 a b)
 
-instance Inst3 IsCardType a b c => CoCard (OT3 a b c) where
+instance (Inst3 IsCardType a b c) => CoCard (OT3 a b c) where
   coCard = WCard3 :: WCard (OT3 a b c)

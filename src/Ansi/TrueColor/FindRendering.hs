@@ -45,7 +45,7 @@ rateTileColorDifference tileA (TcTile tileB) = sum do
   y <- [0 .. tileH - 1]
   let p = pixelAt tileA x y
   let q = pixelAt tileB x y
-  --pure $ colorDistanceSquared p q
+  -- pure $ colorDistanceSquared p q
   pure $ sqrt $ colorDistanceSquared p q
 
 rateTileVsRendering :: Tile PixelRGB8 -> RenderedTile -> Double

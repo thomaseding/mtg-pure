@@ -57,10 +57,10 @@ import safe MtgPure.Model.ZoneObject.ZoneObject (
 
 data TreeConfig = TreeConfig
   { treeConfig_ :: ()
-  , -- | This is needed because cards can be mutually recursive with other cards and/or tokens.
-    -- In the general case, recursion can only be determined by card name, since comparing
-    -- infinite value types is not possible.
-    treeConfig_maxCardDepth :: Maybe Int
+  , treeConfig_maxCardDepth :: Maybe Int
+  -- ^ This is needed because cards can be mutually recursive with other cards and/or tokens.
+  -- In the general case, recursion can only be determined by card name, since comparing
+  -- infinite value types is not possible.
   }
 
 -- Don't export this.
@@ -101,7 +101,7 @@ runTreeM config m = State.evalState (unTreeM m) st
 class BuildTree a where
   buildTreeM :: a -> TreeM (Tree a)
 
-buildTree :: BuildTree a => TreeConfig -> a -> Tree a
+buildTree :: (BuildTree a) => TreeConfig -> a -> Tree a
 buildTree config = runTreeM config . buildTreeM
 
 --------------------------------------------------------------------------------
@@ -128,7 +128,7 @@ data family Tree (a :: Type) :: Type
 
 data instance Tree (ActivatedAbility zone ot) where
   TreeAbility ::
-    IsZO zone ot =>
+    (IsZO zone ot) =>
     { treeActivated_cost :: Tree Cost
     , treeActivated_effect :: Tree (Elect 'TargetStage (Effect 'OneShot) ot)
     } ->
@@ -140,7 +140,7 @@ data instance Tree AnyCard where
   TreeAnyCard2 :: (ot1 ~ OTN x, IsSpecificCard ot1, ot2 ~ OTN y, IsSpecificCard ot2) => Tree (Card ot1) -> Tree (Card ot2) -> Tree AnyCard
 
 data instance Tree AnyToken where
-  TreeAnyToken :: IsSpecificCard ot => Tree (Token ot) -> Tree AnyToken
+  TreeAnyToken :: (IsSpecificCard ot) => Tree (Token ot) -> Tree AnyToken
 
 data instance Tree (Case x) where
   TreeCaseFin ::
@@ -154,7 +154,7 @@ data instance Tree Condition where
   TreeCAnd :: Tree [Condition] -> Tree Condition
   TreeCNot :: Tree Condition -> Tree Condition
   TreeCOr :: Tree [Condition] -> Tree Condition
-  TreeSatisfies :: IsZO zone ot => Tree (ActivatedAbility zone ot) -> Tree Condition
+  TreeSatisfies :: (IsZO zone ot) => Tree (ActivatedAbility zone ot) -> Tree Condition
 
 data instance Tree (Variable a) where
   TreeVariable ::

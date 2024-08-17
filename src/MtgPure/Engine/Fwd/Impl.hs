@@ -92,7 +92,7 @@ import safe MtgPure.Engine.State (Fwd)
 import safe MtgPure.Engine.StateBasedActions (performStateBasedActions)
 import safe MtgPure.Engine.Turn (startGame)
 
-fwdImpl :: Monad m => Fwd m
+fwdImpl :: (Monad m) => Fwd m
 fwdImpl =
   Fwd
     { fwd_ = ()

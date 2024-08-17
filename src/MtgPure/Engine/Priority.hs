@@ -73,7 +73,7 @@ import safe MtgPure.Engine.State (
 import safe MtgPure.Model.Object.OT (OT (..))
 import safe MtgPure.Model.Object.Object (Object)
 
-gainPriority :: Monad m => Object 'OTPlayer -> MagicCont 'Private 'RW Void m ()
+gainPriority :: (Monad m) => Object 'OTPlayer -> MagicCont 'Private 'RW Void m ()
 gainPriority oPlayer = do
   logCall 'gainPriority do
     liftCont do
@@ -87,16 +87,16 @@ gainPriority oPlayer = do
       Left v -> absurd v
       Right () -> pure ()
 
-bailGainPriority :: Monad m => Object 'OTPlayer -> MagicCont 'Private 'RW PriorityEnd m a
+bailGainPriority :: (Monad m) => Object 'OTPlayer -> MagicCont 'Private 'RW PriorityEnd m a
 bailGainPriority = magicContBail . toPriorityEnd . gainPriority
 
-bailEndTheTurn :: Monad m => MagicCont 'Private 'RW PriorityEnd m ()
+bailEndTheTurn :: (Monad m) => MagicCont 'Private 'RW PriorityEnd m ()
 bailEndTheTurn = magicContBail $ toPriorityEnd endTheTurn
 
-bailResolveTopOfStack :: Monad m => MagicCont 'Private 'RW PriorityEnd m Void
+bailResolveTopOfStack :: (Monad m) => MagicCont 'Private 'RW PriorityEnd m Void
 bailResolveTopOfStack = magicContBail $ fmap Left resolveTopOfStackCont
 
-runPriorityQueue :: Monad m => MagicCont 'Private 'RW PriorityEnd m Void
+runPriorityQueue :: (Monad m) => MagicCont 'Private 'RW PriorityEnd m Void
 runPriorityQueue = M.join $ logCall 'runPriorityQueue do
   playerOrder <- liftCont $ fromRO $ gets magicPlayerOrderPriority
   case playerOrder of
@@ -107,23 +107,23 @@ runPriorityQueue = M.join $ logCall 'runPriorityQueue do
       liftCont $ modify \st -> st{magicPlayerOrderPriority = oPlayers} -- (117.3d)
       pure runPriorityQueue
 
-getPlayerWithPriority :: Monad m => Magic 'Public 'RO m (Maybe (Object 'OTPlayer))
+getPlayerWithPriority :: (Monad m) => Magic 'Public 'RO m (Maybe (Object 'OTPlayer))
 getPlayerWithPriority = logCall 'getPlayerWithPriority do
   oPlayers <- internalFromPrivate $ gets magicPlayerOrderPriority
   pure case oPlayers of
     oPlayer : _ -> Just oPlayer
     [] -> Nothing
 
-getHasPriority :: Monad m => Object 'OTPlayer -> Magic 'Public 'RO m Bool
+getHasPriority :: (Monad m) => Object 'OTPlayer -> Magic 'Public 'RO m Bool
 getHasPriority oPlayer = logCall 'getHasPriority do
   getPlayerWithPriority <&> \case
     Nothing -> False
     Just p -> oPlayer == p
 
-askPriorityAction :: Monad m => Object 'OTPlayer -> MagicCont 'Private 'RW PriorityEnd m ()
+askPriorityAction :: (Monad m) => Object 'OTPlayer -> MagicCont 'Private 'RW PriorityEnd m ()
 askPriorityAction = logCall 'askPriorityAction $ askPriorityAction' $ Attempt 0
 
-_passPriority :: Monad m => MagicCont 'Private 'RW PriorityEnd m Void
+_passPriority :: (Monad m) => MagicCont 'Private 'RW PriorityEnd m Void
 _passPriority = logCall '_passPriority do
   oPlayers <- liftCont $ fromRO $ gets magicPlayerOrderPriority
   let oPlayers' = case oPlayers of
@@ -132,7 +132,7 @@ _passPriority = logCall '_passPriority do
   liftCont $ modify \st -> st{magicPlayerOrderPriority = oPlayers'} -- (117.3d)
   runPriorityQueue
 
-askPriorityAction' :: Monad m => Attempt -> Object 'OTPlayer -> MagicCont 'Private 'RW PriorityEnd m ()
+askPriorityAction' :: (Monad m) => Attempt -> Object 'OTPlayer -> MagicCont 'Private 'RW PriorityEnd m ()
 askPriorityAction' attempt oPlayer = M.join $ logCall 'askPriorityAction' do
   st <- liftCont $ fromRO get
   let opaque = mkOpaqueGameState st
@@ -158,7 +158,7 @@ data PriorityActionResult where
 
 performPriorityActionCont ::
   forall m.
-  Monad m =>
+  (Monad m) =>
   Object 'OTPlayer ->
   PriorityAction () ->
   MagicCont 'Private 'RW PriorityEnd m PriorityActionResult
@@ -179,7 +179,7 @@ performPriorityActionCont oPlayer action = logCall 'performPriorityActionCont do
     PriorityAction y -> go y
 
 activateAbilityCont ::
-  Monad m =>
+  (Monad m) =>
   Object 'OTPlayer ->
   PriorityAction ActivateAbility ->
   MagicCont 'Private 'RW PriorityEnd m ()
@@ -198,14 +198,14 @@ activateAbilityCont oPlayer activate = logCall 'activateAbilityCont do
     EvEndTheTurn{} -> True
     _ -> False
 
-castSpellCont :: Monad m => Object 'OTPlayer -> PriorityAction CastSpell -> MagicCont 'Private 'RW PriorityEnd m ()
+castSpellCont :: (Monad m) => Object 'OTPlayer -> PriorityAction CastSpell -> MagicCont 'Private 'RW PriorityEnd m ()
 castSpellCont oPlayer cast = logCall 'castSpellCont do
   isLegal <- liftCont $ rewindIllegal $ castSpell oPlayer cast
   case isLegal of
     True -> bailGainPriority oPlayer -- (117.3c)
     False -> pure ()
 
-playLandCont :: Monad m => Object 'OTPlayer -> SpecialAction PlayLand -> MagicCont 'Private 'RW PriorityEnd m ()
+playLandCont :: (Monad m) => Object 'OTPlayer -> SpecialAction PlayLand -> MagicCont 'Private 'RW PriorityEnd m ()
 playLandCont oPlayer special = logCall 'playLandCont do
   isLegal <- liftCont $ rewindIllegal $ playLand oPlayer special
   case isLegal of
@@ -213,6 +213,6 @@ playLandCont oPlayer special = logCall 'playLandCont do
     False -> pure ()
 
 -- (117.1c)
-specialActionCont :: Monad m => Object 'OTPlayer -> SpecialAction a -> MagicCont 'Private 'RW PriorityEnd m ()
+specialActionCont :: (Monad m) => Object 'OTPlayer -> SpecialAction a -> MagicCont 'Private 'RW PriorityEnd m ()
 specialActionCont oPlayer action = logCall 'specialActionCont case action of
   PlayLand{} -> playLandCont oPlayer action

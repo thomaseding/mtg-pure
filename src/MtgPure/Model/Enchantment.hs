@@ -15,7 +15,7 @@ import safe MtgPure.Model.Recursive (EnchantmentType)
 import safe MtgPure.Model.ZoneObject.ZoneObject (IsOTN)
 
 data AnyEnchantmentType :: Type where
-  AnyEnchantmentType :: IsOTN ot => EnchantmentType ot -> AnyEnchantmentType
+  AnyEnchantmentType :: (IsOTN ot) => EnchantmentType ot -> AnyEnchantmentType
 
 data Enchantment :: Type where
   Enchantment ::

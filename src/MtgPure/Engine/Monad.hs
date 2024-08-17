@@ -97,7 +97,8 @@ data
     (v :: Visibility)
     (rw :: ReadWrite)
     (m :: Type -> Type)
-    (a :: Type) :: Type
+    (a :: Type) ::
+    Type
   where
   MagicRO ::
     { unMagicRO :: Inner st v 'RO m a
@@ -109,7 +110,7 @@ data
     Magic' ex st v 'RW m a
   deriving (Typeable)
 
-instance Functor m => Functor (Magic' ex st v rw m) where
+instance (Functor m) => Functor (Magic' ex st v rw m) where
   fmap f = \case
     MagicRO a -> MagicRO $ fmap f a
     MagicRW a -> MagicRW $ fmap f a
@@ -152,24 +153,24 @@ newtype MagicCont' ex st v rw bail m a = MagicCont
 class (IsReadWrite rw, Monad m) => HasEnvLogCall ex st rw m where
   theEnvLogCall :: EnvLogCall ex st v rw m
 
-instance HasEnvLogCall ex st rw m => Functor (MagicCont' ex st v rw bail m) where
+instance (HasEnvLogCall ex st rw m) => Functor (MagicCont' ex st v rw bail m) where
   fmap f = MagicCont . fmap f . unMagicCont
 
-instance HasEnvLogCall ex st rw m => Applicative (MagicCont' ex st v rw bail m) where
+instance (HasEnvLogCall ex st rw m) => Applicative (MagicCont' ex st v rw bail m) where
   pure = MagicCont . pure
   MagicCont f <*> MagicCont a = MagicCont $ f <*> a
 
-instance HasEnvLogCall ex st rw m => Monad (MagicCont' ex st v rw bail m) where
+instance (HasEnvLogCall ex st rw m) => Monad (MagicCont' ex st v rw bail m) where
   MagicCont a >>= f = MagicCont $ a >>= unMagicCont . f
 
 instance (HasEnvLogCall ex st rw m, MonadIO m) => MonadIO (MagicCont' ex st v rw bail m) where
   liftIO = liftCont . liftIO
 
-magicThrow :: Monad m => ex -> Magic' ex st 'Private 'RW m b
+magicThrow :: (Monad m) => ex -> Magic' ex st 'Private 'RW m b
 magicThrow = MagicRW . throwE
 
 magicCatch ::
-  Monad m =>
+  (Monad m) =>
   Magic' ex st 'Private 'RW m a ->
   (ex -> Magic' ex st 'Private 'RW m a) ->
   Magic' ex st 'Private 'RW m a
@@ -177,24 +178,24 @@ magicCatch (MagicRW m) f = MagicRW $ catchE m $ unMagicRW . f
 
 -- | NOTE: This hijacks the current continuation.
 -- Use `liftCont` instead of this if you need to preserve the current continuation.
-magicContBail :: HasEnvLogCall ex st rw m => MagicCont' ex st v rw bail m bail -> MagicCont' ex st v rw bail m a
+magicContBail :: (HasEnvLogCall ex st rw m) => MagicCont' ex st v rw bail m bail -> MagicCont' ex st v rw bail m a
 magicContBail = MagicCont . throwE
 
 magicMapBail ::
-  Monad m =>
+  (Monad m) =>
   (Continuation' ex st v rw bail m -> Continuation' ex st v rw bail' m) ->
   MagicCont' ex st v rw bail m a ->
   MagicCont' ex st v rw bail' m a
 magicMapBail f (MagicCont m) = MagicCont $ withExceptT f m
 
-runMagicRO :: Monad m => st -> Magic' ex st v 'RO m a -> m a
+runMagicRO :: (Monad m) => st -> Magic' ex st v 'RO m a -> m a
 runMagicRO st (MagicRO accessM) =
   let stateM = runAccessM accessM
       callM = State.evalStateT stateM st
       m = State.runStateT callM emptyLogCallState
    in sanityCheckCallStackState <$> m
 
-runMagicRW :: Monad m => st -> Magic' ex st v 'RW m a -> m (Either ex a)
+runMagicRW :: (Monad m) => st -> Magic' ex st v 'RW m a -> m (Either ex a)
 runMagicRW st (MagicRW exceptM) =
   let accessM = runExceptT exceptM
       stateM = runAccessM accessM
@@ -268,16 +269,16 @@ internalLiftState = case singReadWrite @rw of
   SRO -> MagicRO . lift
   SRW -> MagicRW . lift . lift
 
-modify :: Monad m => (st -> st) -> Magic' ex st 'Private 'RW m ()
+modify :: (Monad m) => (st -> st) -> Magic' ex st 'Private 'RW m ()
 modify = internalLiftState . State.modify'
 
-put :: Monad m => st -> Magic' ex st 'Private 'RW m ()
+put :: (Monad m) => st -> Magic' ex st 'Private 'RW m ()
 put = internalLiftState . State.put
 
-get :: Monad m => Magic' ex st 'Private 'RO m st
+get :: (Monad m) => Magic' ex st 'Private 'RO m st
 get = internalLiftState State.get
 
-gets :: Monad m => (st -> a) -> Magic' ex st 'Private 'RO m a
+gets :: (Monad m) => (st -> a) -> Magic' ex st 'Private 'RO m a
 gets = internalLiftState . State.gets
 
 local ::
@@ -294,7 +295,7 @@ local f m = do
 
 toPrivate ::
   forall ex st v rw m a.
-  Monad m =>
+  (Monad m) =>
   Magic' ex st v rw m a ->
   Magic' ex st 'Private rw m a
 toPrivate = \case
@@ -303,7 +304,7 @@ toPrivate = \case
 
 toRW ::
   forall ex st v rw m a.
-  Monad m =>
+  (Monad m) =>
   Magic' ex st v rw m a ->
   Magic' ex st v 'RW m a
 toRW = \case
@@ -319,7 +320,7 @@ fromPublicRO = fromPublic . fromRO
 
 fromPublic ::
   forall ex st v rw m a.
-  Monad m =>
+  (Monad m) =>
   Magic' ex st 'Public rw m a ->
   Magic' ex st v rw m a
 fromPublic = \case
@@ -337,7 +338,7 @@ fromRO (MagicRO m) = case singReadWrite @rw of
 
 internalFromPrivate ::
   forall ex st v rw m a.
-  Monad m =>
+  (Monad m) =>
   Magic' ex st 'Private rw m a ->
   Magic' ex st v rw m a
 internalFromPrivate = \case

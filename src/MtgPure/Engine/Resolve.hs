@@ -78,7 +78,7 @@ import safe MtgPure.Model.Zone (Zone (..))
 import safe MtgPure.Model.ZoneObject.Convert (toZO0, zo0ToPermanent)
 import safe MtgPure.Model.ZoneObject.ZoneObject (IsOTN, ZO)
 
-resolveTopOfStackCont :: Monad m => MagicCont 'Private 'RW PriorityEnd m Void
+resolveTopOfStackCont :: (Monad m) => MagicCont 'Private 'RW PriorityEnd m Void
 resolveTopOfStackCont = M.join $ logCall 'resolveTopOfStackCont do
   liftCont resolveTopOfStack >>= \case
     Nothing -> magicContBail $ pure $ Right () -- "if the stack is empty, the phase or step ends"
@@ -87,7 +87,7 @@ resolveTopOfStackCont = M.join $ logCall 'resolveTopOfStackCont do
       oActive <- liftCont $ fromPublicRO getActivePlayer
       bailGainPriority oActive
 
-resolveTopOfStack :: Monad m => Magic 'Private 'RW m (Maybe ResolveElected)
+resolveTopOfStack :: (Monad m) => Magic 'Private 'RW m (Maybe ResolveElected)
 resolveTopOfStack = logCall 'resolveTopOfStack do
   Stack stack <- fromRO $ gets magicStack
   case stack of -- (117.4) (405.5)
@@ -105,12 +105,12 @@ resolveTopOfStack = logCall 'resolveTopOfStack do
           }
       pure $ Just result
 
-endTheTurn :: Monad m => MagicCont 'Private 'RW Void m Void
+endTheTurn :: (Monad m) => MagicCont 'Private 'RW Void m Void
 endTheTurn = logCall 'endTheTurn do
   magicContBail do
     undefined -- TODO: (721.)
 
-resolveStackObject :: Monad m => ZO 'ZStack OT0 -> Magic 'Private 'RW m ResolveElected
+resolveStackObject :: (Monad m) => ZO 'ZStack OT0 -> Magic 'Private 'RW m ResolveElected
 resolveStackObject zoStack = logCall 'resolveStackObject do
   st <- fromRO get
   case Map.lookup zoStack $ magicStackEntryElectedMap st of
@@ -142,7 +142,7 @@ resolveElected zoStack elected = logCall 'resolveElected do
           pure PermanentResolved
 
 resolveOneShot ::
-  Monad m =>
+  (Monad m) =>
   ZO 'ZStack OT0 ->
   -- | `Nothing` is for tokens
   Maybe OwnedCard ->
@@ -163,7 +163,7 @@ resolveOneShot zoStack mCard elect = logCall 'resolveOneShot do
     Just result -> result
     Nothing -> undefined -- Impossible? If so, may want the return type of performElections be parametrized by the result Pre/Post
  where
-  goEffect :: Monad m => Effect 'OneShot -> Magic 'Private 'RW m (Maybe ResolveElected)
+  goEffect :: (Monad m) => Effect 'OneShot -> Magic 'Private 'RW m (Maybe ResolveElected)
   goEffect effect = do
     evs <- enact (Just $ SourceZO zoStack) effect
     pure $ Just $ ResolvedEffect evs

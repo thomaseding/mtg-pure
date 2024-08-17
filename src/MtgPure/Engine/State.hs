@@ -129,7 +129,7 @@ instance Show (Prompt m) where
 type TargetId = ObjectId
 
 data AnyRequirement :: Type where
-  AnyRequirement :: IsZO zone ot => Requirement zone ot -> AnyRequirement
+  AnyRequirement :: (IsZO zone ot) => Requirement zone ot -> AnyRequirement
 
 deriving instance Show AnyRequirement
 
@@ -182,8 +182,8 @@ instance Show (OpaqueGameState m) where
   show _ = show ''OpaqueGameState
 
 class RegisterEventListener (v :: Visibility) (rw :: ReadWrite) where
-  registerListener :: Monad m => EvListener v rw m -> Magic 'Private 'RW m EvListenerId
-  listenLocally :: Monad m => [EvListener v rw m] -> Magic 'Private 'RW m a -> Magic 'Private 'RW m a
+  registerListener :: (Monad m) => EvListener v rw m -> Magic 'Private 'RW m EvListenerId
+  listenLocally :: (Monad m) => [EvListener v rw m] -> Magic 'Private 'RW m a -> Magic 'Private 'RW m a
 
 instance RegisterEventListener 'Private 'RW where
   registerListener listener = do
@@ -204,8 +204,8 @@ instance RegisterEventListener 'Private 'RW where
       st{magicListeners = Map.delete (EvListenerId i) $ magicListeners st}
 
 instance RegisterEventListener 'Public 'RO where
-  registerListener listener = registerListener @ 'Private @ 'RW $ \time -> fromPublic . fromRO . listener time
-  listenLocally listeners = listenLocally @ 'Private @ 'RW $ map f listeners
+  registerListener listener = registerListener @'Private @'RW $ \time -> fromPublic . fromRO . listener time
+  listenLocally listeners = listenLocally @'Private @'RW $ map f listeners
    where
     f listener time = fromPublic . fromRO . listener time
 
@@ -270,13 +270,13 @@ type MagicCont v rw bail m a = MagicCont' (GameResult m) (GameState m) v rw bail
 mkOpaqueGameState :: GameState m -> OpaqueGameState m
 mkOpaqueGameState = OpaqueGameState
 
-getOpaqueGameState :: Monad m => Magic 'Public 'RO m (OpaqueGameState m)
+getOpaqueGameState :: (Monad m) => Magic 'Public 'RO m (OpaqueGameState m)
 getOpaqueGameState = internalFromPrivate $ gets mkOpaqueGameState
 
-queryMagic' :: Monad m => OpaqueGameState m -> Magic 'Public 'RO m a -> m a
+queryMagic' :: (Monad m) => OpaqueGameState m -> Magic 'Public 'RO m a -> m a
 queryMagic' (OpaqueGameState st) = runMagicRO st
 
-queryMagic :: Monad m => OpaqueGameState m -> Magic 'Public 'RO m a -> m a
+queryMagic :: (Monad m) => OpaqueGameState m -> Magic 'Public 'RO m a -> m a
 queryMagic opaque = queryMagic' opaque . logCall 'queryMagic
 
 runMagicCont ::
@@ -287,7 +287,7 @@ runMagicCont = runMagicCont' envLogCall
 
 type Continuation v rw bail m = MagicCont v rw bail m bail
 
-headlessPrompt :: Monad m => Prompt m
+headlessPrompt :: (Monad m) => Prompt m
 headlessPrompt =
   Prompt
     { exceptionCantBeginGameWithoutPlayers = pure ()
@@ -311,7 +311,7 @@ headlessPrompt =
     , promptShuffle = \_ (CardCount count) _ -> pure $ map CardIndex [0 .. count - 1]
     }
 
-withHeadlessPrompt :: Monad m => GameState m -> GameState m
+withHeadlessPrompt :: (Monad m) => GameState m -> GameState m
 withHeadlessPrompt st =
   let prompt = magicPrompt st
    in st
@@ -369,14 +369,14 @@ instance IsNamed (Name, [String]) where
 instance IsNamed (Name, String) where
   toNamed (name, part) = toNamed (name, [part])
 
-showNamed :: IsNamed name => name -> String
+showNamed :: (IsNamed name) => name -> String
 showNamed name = case toNamed name of
   Named s -> s
 
 type IsRec = Bool
 
 class LogCall x where
-  logCallImpl :: IsNamed name => IsRec -> name -> x -> x
+  logCallImpl :: (IsNamed name) => IsRec -> name -> x -> x
 
 logCall :: (LogCall x, IsNamed name) => name -> x -> x
 logCall = logCallImpl False
@@ -436,7 +436,7 @@ instance (IsReadWrite rw, Monad m) => LogCall (a -> b -> c -> MagicCont p rw bai
   logCallImpl isRec name action a b c = logCallImpl isRec name $ action a b c
 
 class ToPriorityEnd a b where
-  toPriorityEnd :: Monad m => MagicCont 'Private 'RW a m b -> MagicCont 'Private 'RW PriorityEnd m PriorityEnd
+  toPriorityEnd :: (Monad m) => MagicCont 'Private 'RW a m b -> MagicCont 'Private 'RW PriorityEnd m PriorityEnd
 
 instance ToPriorityEnd Void Void where
   toPriorityEnd = mapVoidToEnd . fmap Left
@@ -456,13 +456,13 @@ instance ToPriorityEnd () Void where
 instance ToPriorityEnd () PriorityEnd where
   toPriorityEnd = mapUnitToEnd
 
-mapVoidToEnd :: Monad m => MagicCont 'Private 'RW Void m PriorityEnd -> MagicCont 'Private 'RW PriorityEnd m PriorityEnd
+mapVoidToEnd :: (Monad m) => MagicCont 'Private 'RW Void m PriorityEnd -> MagicCont 'Private 'RW PriorityEnd m PriorityEnd
 mapVoidToEnd = mapToEndImpl Left
 
-mapUnitToEnd :: Monad m => MagicCont 'Private 'RW () m PriorityEnd -> MagicCont 'Private 'RW PriorityEnd m PriorityEnd
+mapUnitToEnd :: (Monad m) => MagicCont 'Private 'RW () m PriorityEnd -> MagicCont 'Private 'RW PriorityEnd m PriorityEnd
 mapUnitToEnd = mapToEndImpl Right
 
-mapToEndImpl :: Monad m => (a -> PriorityEnd) -> MagicCont 'Private 'RW a m PriorityEnd -> MagicCont 'Private 'RW PriorityEnd m PriorityEnd
+mapToEndImpl :: (Monad m) => (a -> PriorityEnd) -> MagicCont 'Private 'RW a m PriorityEnd -> MagicCont 'Private 'RW PriorityEnd m PriorityEnd
 mapToEndImpl f = magicMapBail $ mapBail . mapRet
  where
   mapRet = fmap f

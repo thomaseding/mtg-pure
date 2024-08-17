@@ -25,13 +25,13 @@ import safe MtgPure.Model.Mana.ToManaPool (ToCompleteManaPool (..))
 import safe MtgPure.Model.Player (Player (..), emptyPlayer)
 import safe MtgPure.Model.Variable (ForceVars (..))
 
-main :: HasCallStack => IO ()
+main :: (HasCallStack) => IO ()
 main = mainUnitPayMana
 
-emptyPool :: HasCallStack => CompleteManaPool
+emptyPool :: (HasCallStack) => CompleteManaPool
 emptyPool = mempty
 
-toPlayer :: HasCallStack => ToCompleteManaPool pool => Life -> pool -> Player
+toPlayer :: (HasCallStack) => (ToCompleteManaPool pool) => Life -> pool -> Player
 toPlayer life pool =
   emptyPlayer
     { playerMana = toCompleteManaPool pool
@@ -44,7 +44,7 @@ data Solution
   | Ambiguous
   deriving (Eq, Show)
 
-testPayment :: HasCallStack => (ToCompleteManaPool pool, ToManaCost cost) => Life -> pool -> cost -> Solution
+testPayment :: (HasCallStack) => (ToCompleteManaPool pool, ToManaCost cost) => Life -> pool -> cost -> Solution
 testPayment life pool cost = go $ playerCanPayManaCost player cost'
  where
   player = toPlayer life pool
@@ -55,7 +55,7 @@ testPayment life pool cost = go $ playerCanPayManaCost player cost'
       Nothing -> Ambiguous
       Just _ -> Unique
 
-testPaymentIO :: HasCallStack => (ToCompleteManaPool pool, ToManaCost cost) => Solution -> Life -> pool -> cost -> IO ()
+testPaymentIO :: (HasCallStack) => (ToCompleteManaPool pool, ToManaCost cost) => Solution -> Life -> pool -> cost -> IO ()
 testPaymentIO expected life pool cost = do
   let actual = testPayment life pool cost
   case actual == expected of
@@ -68,7 +68,7 @@ _debugCost cost = do
   mapM_ print payments
   print $ length payments
 
-mainUnitPayMana :: HasCallStack => IO ()
+mainUnitPayMana :: (HasCallStack) => IO ()
 mainUnitPayMana = do
   testEmptyPool
   testSingletonPool
@@ -78,7 +78,7 @@ mainUnitPayMana = do
   testPhyrexianCosts
   putStrLn "Unit tests for PayMana passed"
 
-testEmptyPool :: HasCallStack => IO ()
+testEmptyPool :: (HasCallStack) => IO ()
 testEmptyPool = do
   testPaymentIO Unique 20 emptyPool 0
   testPaymentIO None 20 emptyPool 1
@@ -96,7 +96,7 @@ testEmptyPool = do
   testPaymentIO None 20 emptyPool (W, U)
   testPaymentIO None 20 emptyPool (1, U)
 
-testSingletonPool :: HasCallStack => IO ()
+testSingletonPool :: (HasCallStack) => IO ()
 testSingletonPool = do
   testPaymentIO Unique 20 W 0
   testPaymentIO Unique 20 W 1
@@ -114,7 +114,7 @@ testSingletonPool = do
   testPaymentIO None 20 SW UB
   testPaymentIO None 20 SW U2
 
-testSnowCosts :: HasCallStack => IO ()
+testSnowCosts :: (HasCallStack) => IO ()
 testSnowCosts = do
   testPaymentIO Unique 20 SW S
   testPaymentIO Unique 20 SW 0
@@ -145,7 +145,7 @@ testSnowCosts = do
   testPaymentIO Unique 20 (SW, SU) (S, S)
   testPaymentIO None 20 (SW, SW) (S, S, S)
 
-testTwoBridCosts :: HasCallStack => IO ()
+testTwoBridCosts :: (HasCallStack) => IO ()
 testTwoBridCosts = do
   testPaymentIO None 20 emptyPool W2
   testPaymentIO Unique 20 W W2
@@ -168,7 +168,7 @@ testTwoBridCosts = do
   testPaymentIO Unique 20 (W, U) (W2, U)
   testPaymentIO None 20 (U, U, U) (W2, W)
 
-testMixedCosts :: HasCallStack => IO ()
+testMixedCosts :: (HasCallStack) => IO ()
 testMixedCosts = do
   testPaymentIO Unique 20 (W, W, W) 0
   testPaymentIO Unique 20 (W, W, W) 1
@@ -198,7 +198,7 @@ testMixedCosts = do
   testPaymentIO None 20 (W, W, W, U, U, C) 7
   testPaymentIO Unique 20 (SW, SU) (W, U)
 
-testPhyrexianCosts :: HasCallStack => IO ()
+testPhyrexianCosts :: (HasCallStack) => IO ()
 testPhyrexianCosts = do
   testPaymentIO Unique 20 emptyPool PW
   testPaymentIO Unique 3 emptyPool PW

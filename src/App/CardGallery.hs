@@ -52,13 +52,13 @@ import safe Data.String (IsString (..))
 import safe MtgPure.AllCards (allCards)
 import safe MtgPure.Model.CardName (getCardName, unCardName)
 import Script.GenerateGallerySingle.Main (CardAnsiInfo (..), cardNameToAnsis)
-import safe Script.MtgPureConfig (MtgPureConfig (..), readMtgPureConfigFile)
+import Script.MtgPureConfig (MtgPureConfig (..), readMtgPureConfigFile)
 import safe System.Console.ANSI (
   getTerminalSize,
   hideCursor,
   setCursorPosition,
  )
-import safe qualified System.Directory as D
+import qualified System.Directory as D
 import safe System.IO (
   BufferMode (LineBuffering),
   hFlush,

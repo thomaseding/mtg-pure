@@ -47,7 +47,7 @@ import safe MtgPure.Model.Object.ObjectN (ObjectN (..))
 viewOTN' ::
   forall ret otn.
   ObjectN otn ->
-  (forall k (otk :: k). otn ~ OTN otk => ObjectN (OTN otk) -> OTN otk -> ret) ->
+  (forall k (otk :: k). (otn ~ OTN otk) => ObjectN (OTN otk) -> OTN otk -> ret) ->
   ret
 viewOTN' objN = viewOTN objN objN
 
@@ -56,7 +56,7 @@ viewOTN ::
   -- | This is useful as to keep some user-level type in lock with the discovered OTN.
   user otn ->
   ObjectN otn ->
-  (forall k (otk :: k). otn ~ OTN otk => user (OTN otk) -> OTN otk -> ret) ->
+  (forall k (otk :: k). (otn ~ OTN otk) => user (OTN otk) -> OTN otk -> ret) ->
   ret
 viewOTN user' objN cont = case objN of
   O0{} -> go0 user'
@@ -228,7 +228,7 @@ viewOTN user' objN cont = case objN of
   ON12k{} -> go12 user'
   ON12l{} -> go12 user'
  where
-  go0 :: otn ~ OT0 => user OT0 -> ret
+  go0 :: (otn ~ OT0) => user OT0 -> ret
   go0 user = cont user OT0
 
   go1 ::

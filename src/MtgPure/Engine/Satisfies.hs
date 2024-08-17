@@ -52,7 +52,7 @@ import safe MtgPure.Model.ZoneObject.ZoneObject (IsOTN, IsZO, ZO, ZOPlayer)
 zosSatisfying :: (Monad m, IsZO zone ot) => Requirement zone ot -> Magic 'Private 'RO m [ZO zone ot]
 zosSatisfying req = allZOs >>= M.filterM (`satisfies` req)
 
-isSatisfied :: Monad m => Condition -> Magic 'Private 'RO m Bool
+isSatisfied :: (Monad m) => Condition -> Magic 'Private 'RO m Bool
 isSatisfied = \case
   CAnd cs -> and <$> mapM isSatisfied cs
   CNot c -> not <$> isSatisfied c
@@ -117,7 +117,7 @@ hasLandType' zo landType = logCall 'hasLandType' case singZone @zone of
     Card _name electCharacteristic -> goElectCharacteristic electCharacteristic
     _ -> undefined
 
-  goElectCharacteristic :: IsZO zone ot => Elect 'IntrinsicStage (CardCharacteristic ot) ot -> Magic 'Private 'RO m Bool
+  goElectCharacteristic :: (IsZO zone ot) => Elect 'IntrinsicStage (CardCharacteristic ot) ot -> Magic 'Private 'RO m Bool
   goElectCharacteristic elect = do
     owner <- ownerOf zo
     character <- performIntrinsicElections (IntrinsicInput owner) pure elect

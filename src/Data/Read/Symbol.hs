@@ -37,59 +37,59 @@ class LitSymbol (s :: k) where
   litSymbol :: String
   litSymbols :: Set.Set String
 
-instance KnownSymbol s => LitSymbol s where
+instance (KnownSymbol s) => LitSymbol s where
   litSymbol = symbolVal (Proxy @s)
   litSymbols = Set.singleton $ symbolVal (Proxy @s)
 
-instance KnownSymbol s => LitSymbol (CS s) where
+instance (KnownSymbol s) => LitSymbol (CS s) where
   litSymbol = litSymbol @Symbol @s
   litSymbols = Set.singleton $ litSymbol @Symbol @s
 
-instance KnownSymbol s => LitSymbol (CI s) where
+instance (KnownSymbol s) => LitSymbol (CI s) where
   litSymbol = litSymbol @Symbol @s
   litSymbols = Set.singleton $ litSymbol @Symbol @s
 
-instance Inst2 LitSymbol a b => LitSymbol (Or a b) where
+instance (Inst2 LitSymbol a b) => LitSymbol (Or a b) where
   litSymbol = litSymbol @Type @a
   litSymbols = litSymbols @Type @a <> litSymbols @Type @b
 
-instance LitSymbol a => LitSymbol (Many1 a) where
+instance (LitSymbol a) => LitSymbol (Many1 a) where
   litSymbol = litSymbol @Type @a
   litSymbols = litSymbols @Type @a
 
 -- Case-sensitive
 data CS (s :: Symbol) :: Type where
-  CS :: KnownSymbol s => CS s
+  CS :: (KnownSymbol s) => CS s
 
 -- Case-insensitive
 data CI (s :: Symbol) :: Type where
-  CI :: KnownSymbol s => CI s
+  CI :: (KnownSymbol s) => CI s
 
 data Or (a :: Type) (b :: Type) :: Type where
-  Or :: Inst2 LitSymbol a b => Or a b
+  Or :: (Inst2 LitSymbol a b) => Or a b
 
 -- Don't export
 data Many0 (a :: Type) :: Type where
-  Many0 :: LitSymbol a => Many0 a
+  Many0 :: (LitSymbol a) => Many0 a
 
 data Many1 (a :: Type) :: Type where
-  Many1 :: LitSymbol a => Many1 a
+  Many1 :: (LitSymbol a) => Many1 a
 
-instance KnownSymbol s => Show (CS s) where
+instance (KnownSymbol s) => Show (CS s) where
   show CS = symbolVal (Proxy @s)
 
-instance KnownSymbol s => Show (CI s) where
+instance (KnownSymbol s) => Show (CI s) where
   show CI = symbolVal (Proxy @s)
 
-instance LitSymbol s => Show (Many1 s) where
+instance (LitSymbol s) => Show (Many1 s) where
   show Many1 = litSymbol @Type @s
 
-instance KnownSymbol s => Read (CS s) where
+instance (KnownSymbol s) => Read (CS s) where
   readsPrec _ s = case List.stripPrefix (symbolVal (Proxy @s)) s of
     Just rest -> [(CS, rest)]
     Nothing -> []
 
-instance KnownSymbol s => Read (CI s) where
+instance (KnownSymbol s) => Read (CI s) where
   readsPrec _ s = case List.stripPrefix (lower $ symbolVal (Proxy @s)) (lower s) of
     Just rest -> [(CI, rest)]
     Nothing -> []

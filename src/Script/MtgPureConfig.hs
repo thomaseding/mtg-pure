@@ -1,4 +1,4 @@
-{-# LANGUAGE Safe #-}
+{-# LANGUAGE Unsafe #-}
 
 module Script.MtgPureConfig (
   MtgPureConfig (..),
@@ -16,7 +16,7 @@ import safe Data.SafeJson (
   readSafeJsonFile,
   store,
  )
-import safe System.Directory (
+import System.Directory (
   doesDirectoryExist,
   getAppUserDataDirectory,
   getHomeDirectory,

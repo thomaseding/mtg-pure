@@ -112,7 +112,7 @@ getTerminalState = Terminal State.get
 getsTerminalState :: (TerminalState -> a) -> Terminal a
 getsTerminalState = Terminal . State.gets
 
-pause :: MonadIO m => m ()
+pause :: (MonadIO m) => m ()
 pause = M.void $ liftIO getLine
 
 prompt :: String -> Terminal String
@@ -180,7 +180,7 @@ logDetailed =
 data IgnoreBehavior = IgnoreAll -- IgnoreNested
 
 logIgnore :: String -> Maybe IgnoreBehavior
---logIgnore = flip Map.lookup _logIgnoreMap
+-- logIgnore = flip Map.lookup _logIgnoreMap
 logIgnore = const (Just IgnoreAll)
 
 _logIgnoreMap :: Map.Map String IgnoreBehavior

@@ -24,7 +24,7 @@ import safe qualified Control.Monad as M
 import safe Data.Time.Clock (diffUTCTime, getCurrentTime)
 import safe Data.Time.Format (defaultTimeLocale, formatTime)
 import safe qualified Data.Traversable as T
-import safe Script.MtgPureConfig (MtgPureConfig (..), readMtgPureConfigFile)
+import Script.MtgPureConfig (MtgPureConfig (..), readMtgPureConfigFile)
 import Script.ScryfallDownloader (
   CardName,
   DownloadSpecificCards (..),
@@ -33,7 +33,7 @@ import Script.ScryfallDownloader (
   discoverCardSetsOf,
   downloadSpecificCards,
  )
-import safe qualified System.Directory as D
+import qualified System.Directory as D
 import safe System.Environment (getArgs)
 import safe System.Exit (exitFailure)
 import safe qualified System.FilePath as D

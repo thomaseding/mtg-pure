@@ -34,7 +34,7 @@ data ObjectVisitor a = ObjectVisitor
   }
   deriving (Typeable)
 
-class Typeable a => IsObjectType (a :: OT) where
+class (Typeable a) => IsObjectType (a :: OT) where
   idToObject :: UntypedObject -> Object a
   objectToId :: Object a -> ObjectId
   singObjectType :: SingOT a
@@ -42,8 +42,8 @@ class Typeable a => IsObjectType (a :: OT) where
   visitObject :: ObjectVisitor b -> Object a -> b
 
 visitObject' ::
-  IsObjectType a =>
-  (forall b. IsObjectType b => Object b -> x) ->
+  (IsObjectType a) =>
+  (forall b. (IsObjectType b) => Object b -> x) ->
   Object a ->
   x
 visitObject' f = visitObject $ ObjectVisitor f f f f f f f f f f f f

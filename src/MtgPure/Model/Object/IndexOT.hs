@@ -43,17 +43,17 @@ import safe MtgPure.Model.Object.OTN (
   OT9,
  )
 
-idx :: forall ot. IsObjectType ot => OT
+idx :: forall ot. (IsObjectType ot) => OT
 idx = litObjectType @ot
 
-class Typeable ot => IndexOT ot where
+class (Typeable ot) => IndexOT ot where
   -- | Prerequisite: Inner lists may not contain duplicate entries. Inner lists are also sorted.
   indexOT :: [[OT]]
 
-instance Inst2 IndexOT ot1 ot2 => IndexOT (ot1, ot2) where
+instance (Inst2 IndexOT ot1 ot2) => IndexOT (ot1, ot2) where
   indexOT = indexOT @ot1 ++ indexOT @ot2
 
-instance Inst3 IndexOT ot1 ot2 ot3 => IndexOT (ot1, ot2, ot3) where
+instance (Inst3 IndexOT ot1 ot2 ot3) => IndexOT (ot1, ot2, ot3) where
   indexOT = indexOT @ot1 ++ indexOT @ot2 ++ indexOT @ot3
 
 instance IndexOT OT0 where

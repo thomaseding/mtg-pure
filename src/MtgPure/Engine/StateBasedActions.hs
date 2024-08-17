@@ -49,7 +49,7 @@ import safe MtgPure.Model.Toughness (Toughness (..))
 --
 -- Used in SBA due to (704.3) "performs all applicable state-based actions simultaneously as
 -- a single event".
-simultaneously :: Monad m => [Magic 'Private 'RW m ()] -> Magic 'Private 'RW m ()
+simultaneously :: (Monad m) => [Magic 'Private 'RW m ()] -> Magic 'Private 'RW m ()
 simultaneously actions = do
   st <- fromRO get
   gameResults <-
@@ -61,7 +61,7 @@ simultaneously actions = do
     _ -> do
       magicThrow $ concatGameResults st gameResults
 
-playerLoses :: Monad m => Object 'OTPlayer -> Magic 'Private 'RW m ()
+playerLoses :: (Monad m) => Object 'OTPlayer -> Magic 'Private 'RW m ()
 playerLoses oPlayer = do
   let ObjectId i = getObjectId oPlayer
   st <- fromRO get
@@ -80,12 +80,12 @@ playerLoses oPlayer = do
           }
 
 -- | (704.) State-Based Actions
-performStateBasedActions :: Monad m => Magic 'Private 'RW m ()
+performStateBasedActions :: (Monad m) => Magic 'Private 'RW m ()
 performStateBasedActions = logCall 'performStateBasedActions do
   simultaneously sbas
 
 -- | (704.5a) If a player has 0 or less life, that player loses the game.
-sbaPlayerHasZeroOrLessLife :: Monad m => Magic 'Private 'RW m ()
+sbaPlayerHasZeroOrLessLife :: (Monad m) => Magic 'Private 'RW m ()
 sbaPlayerHasZeroOrLessLife = do
   oPlayers <- fromPublic $ fromRO getAlivePlayers
   simultaneously $ map go oPlayers
@@ -96,7 +96,7 @@ sbaPlayerHasZeroOrLessLife = do
     M.when False $ M.when (life <= 0) $ playerLoses oPlayer
 
 -- | (704.5b) If a player attempted to draw a card from a library with no cards in it, that player loses the game.
-sbaPlayerDrawsFromEmptyLibrary :: Monad m => Magic 'Private 'RW m ()
+sbaPlayerDrawsFromEmptyLibrary :: (Monad m) => Magic 'Private 'RW m ()
 sbaPlayerDrawsFromEmptyLibrary = do
   oPlayers <- fromPublic $ fromRO getAlivePlayers
   simultaneously $ map go oPlayers
@@ -107,7 +107,7 @@ sbaPlayerDrawsFromEmptyLibrary = do
     M.when drew $ playerLoses oPlayer
 
 -- | (704.5c) If a player has ten or more poison counters, that player loses the game.
-sbaPlayerHasTenOrMorePoisonCounters :: Monad m => Magic 'Private 'RW m ()
+sbaPlayerHasTenOrMorePoisonCounters :: (Monad m) => Magic 'Private 'RW m ()
 sbaPlayerHasTenOrMorePoisonCounters = do
   oPlayers <- fromPublic $ fromRO getAlivePlayers
   simultaneously $ map go oPlayers
@@ -118,16 +118,16 @@ sbaPlayerHasTenOrMorePoisonCounters = do
     M.when (poison >= 10) $ playerLoses oPlayer
 
 -- | (704.5d) If a token is in a zone other than the battlefield, it ceases to exist.
-sbaTokenNotOnBattlefield :: Monad m => Magic 'Private 'RW m ()
+sbaTokenNotOnBattlefield :: (Monad m) => Magic 'Private 'RW m ()
 sbaTokenNotOnBattlefield = pure () -- TODO
 
 -- | (704.5e) If a copy of a spell or ability is in a zone other than the stack, it ceases to exist.
-sbaCopyOfSpellNotOnStack :: Monad m => Magic 'Private 'RW m ()
+sbaCopyOfSpellNotOnStack :: (Monad m) => Magic 'Private 'RW m ()
 sbaCopyOfSpellNotOnStack = pure () -- TODO
 
 -- | (704.5f) If a creature has toughness 0 or less, it is put into its owner's graveyard.
 -- Regeneration can't replace this event.
-sbaCreatureHasZeroOrLessToughness :: Monad m => Magic 'Private 'RW m ()
+sbaCreatureHasZeroOrLessToughness :: (Monad m) => Magic 'Private 'RW m ()
 sbaCreatureHasZeroOrLessToughness = do
   zoPerms <- fromPublic $ fromRO allPermanents
   F.for_ zoPerms \zoPerm -> do
@@ -145,7 +145,7 @@ sbaCreatureHasZeroOrLessToughness = do
 
 -- | (704.5g) If a creature has lethal damage marked on it, it is put into its owner's graveyard.
 -- Regeneration can replace this event.
-sbaCreatureHasLethalDamage :: Monad m => Magic 'Private 'RW m ()
+sbaCreatureHasLethalDamage :: (Monad m) => Magic 'Private 'RW m ()
 sbaCreatureHasLethalDamage = do
   zoPerms <- fromPublic $ fromRO allPermanents
   F.for_ zoPerms \zoPerm -> do
@@ -165,57 +165,57 @@ sbaCreatureHasLethalDamage = do
 
 -- | (704.5h) If a creature has been deathtouch-ed, it is put into its owner's graveyard.
 -- Regeneration can replace this event.
-sbaCreatureHasBeenDamagedByDeathtouch :: Monad m => Magic 'Private 'RW m ()
+sbaCreatureHasBeenDamagedByDeathtouch :: (Monad m) => Magic 'Private 'RW m ()
 sbaCreatureHasBeenDamagedByDeathtouch = pure () -- TODO
 
 -- | (704.5i) If a planeswalker has loyalty 0 or less, it is put into its owner's graveyard.
-sbaPlaneswalkerHasZeroOrLessLoyalty :: Monad m => Magic 'Private 'RW m ()
+sbaPlaneswalkerHasZeroOrLessLoyalty :: (Monad m) => Magic 'Private 'RW m ()
 sbaPlaneswalkerHasZeroOrLessLoyalty = pure () -- TODO
 
 -- | (704.5j) The legend rule.
-sbaLegendRule :: Monad m => Magic 'Private 'RW m ()
+sbaLegendRule :: (Monad m) => Magic 'Private 'RW m ()
 sbaLegendRule = pure () -- TODO
 
 -- | (704.5k) The world rule.
-sbaWorldRule :: Monad m => Magic 'Private 'RW m ()
+sbaWorldRule :: (Monad m) => Magic 'Private 'RW m ()
 sbaWorldRule = pure () -- TODO
 
 -- | (704.5m) If an Aura is attached to an illegal object or player, it is put into its owner's graveyard.
-sbaAuraAttachedToIllegalObjectOrPlayer :: Monad m => Magic 'Private 'RW m ()
+sbaAuraAttachedToIllegalObjectOrPlayer :: (Monad m) => Magic 'Private 'RW m ()
 sbaAuraAttachedToIllegalObjectOrPlayer = pure () -- TODO
 
 -- | (704.5n) If an Equipment or Fortification is attached to an illegal object or player, it is put into its owner's graveyard.
-sbaEquipmentOrFortificationAttachedToIllegalObjectOrPlayer :: Monad m => Magic 'Private 'RW m ()
+sbaEquipmentOrFortificationAttachedToIllegalObjectOrPlayer :: (Monad m) => Magic 'Private 'RW m ()
 sbaEquipmentOrFortificationAttachedToIllegalObjectOrPlayer = pure () -- TODO
 
 -- | (704.5p) If a creature is attached to an object or player, it becomes unattached.
 -- Likewise for other permanent types that are not Auras, Equipment, or Fortifications.
-sbaUnusualAttachment :: Monad m => Magic 'Private 'RW m ()
+sbaUnusualAttachment :: (Monad m) => Magic 'Private 'RW m ()
 sbaUnusualAttachment = pure () -- TODO
 
 -- | (704.5q) If a permanent has both a +1/+1 counter and a -1/-1 counter on it, remove both of them.
-sbaNormalizeStatCounters :: Monad m => Magic 'Private 'RW m ()
+sbaNormalizeStatCounters :: (Monad m) => Magic 'Private 'RW m ()
 sbaNormalizeStatCounters = pure () -- TODO
 
 -- | (704.5r) If a permanent with an ability that says it can't have more than N counters of a kind has more than N of that kind of counter on it, remove all but N of those counters.
-sbaLimitCounters :: Monad m => Magic 'Private 'RW m ()
+sbaLimitCounters :: (Monad m) => Magic 'Private 'RW m ()
 sbaLimitCounters = pure () -- TODO
 
 -- | (704.5s) If the number of lore counters on a Saga permanent is greater or equal to its final chapter number and isn't the source of the chapter ability that has triggered but not yet been put on the stack, the Saga is sacrificed.
-sbaSagaLoreCounters :: Monad m => Magic 'Private 'RW m ()
+sbaSagaLoreCounters :: (Monad m) => Magic 'Private 'RW m ()
 sbaSagaLoreCounters = pure () -- TODO
 
 -- | (704.5t) Some D&D stuff. Extremely low priority.
-sbaBottomOfDungeon :: Monad m => Magic 'Private 'RW m ()
+sbaBottomOfDungeon :: (Monad m) => Magic 'Private 'RW m ()
 sbaBottomOfDungeon = pure () -- TODO
 
 -- | (704.5u) Unfinity "Space Sculptor".
-sbaSpaceSculptor :: Monad m => Magic 'Private 'RW m ()
+sbaSpaceSculptor :: (Monad m) => Magic 'Private 'RW m ()
 sbaSpaceSculptor = pure ()
 
 -- | (704.) State-Based Actions
 -- TODO: There are more for various game modes.
-sbas :: Monad m => [Magic 'Private 'RW m ()]
+sbas :: (Monad m) => [Magic 'Private 'RW m ()]
 sbas =
   [ sbaPlayerHasZeroOrLessLife
   , sbaPlayerDrawsFromEmptyLibrary

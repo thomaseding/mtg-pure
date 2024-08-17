@@ -18,13 +18,13 @@ data Damage' (v :: Var) (a :: Type) :: Type where
   VariableDamage :: forall a. Variable a -> Damage' 'Var a
   deriving (Typeable) --  TODO: Make some of these orphans
 
-deriving instance Eq a => Eq (Damage' v a)
+deriving instance (Eq a) => Eq (Damage' v a)
 
 deriving instance Functor (Damage' v)
 
-deriving instance Ord a => Ord (Damage' v a)
+deriving instance (Ord a) => Ord (Damage' v a)
 
-deriving instance Show a => Show (Damage' v a)
+deriving instance (Show a) => Show (Damage' v a)
 
 type Damage v = Damage' v Int
 

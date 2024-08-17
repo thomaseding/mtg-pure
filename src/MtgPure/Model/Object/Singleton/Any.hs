@@ -37,18 +37,18 @@ data SingCoAny ot where
   CoAnyPlayer :: SingCoAny OTNPlayer
   CoAnySorcery :: SingCoAny OTNSorcery
   CoAny :: SingCoAny OTNAny
-  CoAny2 :: Inst2 IsAnyType a b => SingCoAny (OT2 a b)
-  CoAny3 :: Inst3 IsAnyType a b c => SingCoAny (OT3 a b c)
-  CoAny4 :: Inst4 IsAnyType a b c d => SingCoAny (OT4 a b c d)
-  CoAny5 :: Inst5 IsAnyType a b c d e => SingCoAny (OT5 a b c d e)
-  CoAny6 :: Inst6 IsAnyType a b c d e f => SingCoAny (OT6 a b c d e f)
+  CoAny2 :: (Inst2 IsAnyType a b) => SingCoAny (OT2 a b)
+  CoAny3 :: (Inst3 IsAnyType a b c) => SingCoAny (OT3 a b c)
+  CoAny4 :: (Inst4 IsAnyType a b c d) => SingCoAny (OT4 a b c d)
+  CoAny5 :: (Inst5 IsAnyType a b c d e) => SingCoAny (OT5 a b c d e)
+  CoAny6 :: (Inst6 IsAnyType a b c d e f) => SingCoAny (OT6 a b c d e f)
   deriving (Typeable)
 
 deriving instance Show (SingCoAny ot)
 
 type IsAnyType = IsObjectType
 
-class IsOTN ot => CoAny ot where
+class (IsOTN ot) => CoAny ot where
   coAny :: SingCoAny ot
 
 instance CoAny OTNInstant where
@@ -75,14 +75,14 @@ instance CoAny OTNLand where
 instance CoAny OTNPlaneswalker where
   coAny = CoAnyPlaneswalker
 
-instance Inst2 IsAnyType a b => CoAny (OT2 a b) where
+instance (Inst2 IsAnyType a b) => CoAny (OT2 a b) where
   coAny = CoAny2
 
-instance Inst3 IsAnyType a b c => CoAny (OT3 a b c) where
+instance (Inst3 IsAnyType a b c) => CoAny (OT3 a b c) where
   coAny = CoAny3
 
-instance Inst4 IsAnyType a b c d => CoAny (OT4 a b c d) where
+instance (Inst4 IsAnyType a b c d) => CoAny (OT4 a b c d) where
   coAny = CoAny4
 
-instance Inst5 IsAnyType a b c d e => CoAny (OT5 a b c d e) where
+instance (Inst5 IsAnyType a b c d e) => CoAny (OT5 a b c d e) where
   coAny = CoAny5

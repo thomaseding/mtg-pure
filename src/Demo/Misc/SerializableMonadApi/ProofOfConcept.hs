@@ -26,23 +26,23 @@ import safe qualified Demo.Misc.SerializableMonadApi.VariableMonad as X
 data InterpM (dsl :: Type -> Type -> Type) (s :: Type) (a :: Type) :: Type where
   Interp :: dsl s a -> InterpM dsl s a
   Pure :: a -> InterpM dsl s a
-  Then :: RS a => InterpM dsl s a -> InterpM dsl s b -> InterpM dsl s b
-  Bind :: RS a => InterpM dsl s (Var s a) -> (Var s a -> InterpM dsl s b) -> InterpM dsl s b
+  Then :: (RS a) => InterpM dsl s a -> InterpM dsl s b -> InterpM dsl s b
+  Bind :: (RS a) => InterpM dsl s (Var s a) -> (Var s a -> InterpM dsl s b) -> InterpM dsl s b
 
 instance X.Monad s (InterpM dsl) where
   pure = Pure
   (>>) = Then
   (>>=) = Bind
 
---https://www.reddit.com/r/haskell/comments/gxcxgl/comment/ftatasa/?utm_source=share&utm_medium=web2x&context=3
+-- https://www.reddit.com/r/haskell/comments/gxcxgl/comment/ftatasa/?utm_source=share&utm_medium=web2x&context=3
 newtype I dsl s m = I {unI :: forall x. dsl s x -> m x}
 
---interpret :: Monad m => (forall s x. (dsl s x -> m x), InterpM dsl s a) -> m a
---interpret :: Monad m => (forall s x. (dsl s x -> m x, InterpM dsl s a)) -> m a
-interpret :: Monad m => (forall s. (I dsl s m, InterpM dsl s a)) -> m a
+-- interpret :: Monad m => (forall s x. (dsl s x -> m x), InterpM dsl s a) -> m a
+-- interpret :: Monad m => (forall s x. (dsl s x -> m x, InterpM dsl s a)) -> m a
+interpret :: (Monad m) => (forall s. (I dsl s m, InterpM dsl s a)) -> m a
 interpret (go, m) = interpret' (unI go) m
 
-interpret' :: Monad m => (forall x. dsl s x -> m x) -> InterpM dsl s a -> m a
+interpret' :: (Monad m) => (forall x. dsl s x -> m x) -> InterpM dsl s a -> m a
 interpret' go = \case
   Interp dsl -> go dsl
   Pure x -> pure x
@@ -94,7 +94,7 @@ instance EnvShow (Store s a) where
 instance Show (Store s a) where
   show = runEnvM . envShow
 
-instance EnvShow a => EnvShow (StoreM s a) where
+instance (EnvShow a) => EnvShow (StoreM s a) where
   envShow = \case
     Interp dsl -> do
       sDsl <- envShow dsl
@@ -115,7 +115,7 @@ instance EnvShow a => EnvShow (StoreM s a) where
       let sf = "\\" <> sva <> " -> " <> smb
       pure $ "Bind (" <> sma <> ") (" <> sf <> ")"
 
-instance EnvShow a => Show (StoreM s a) where
+instance (EnvShow a) => Show (StoreM s a) where
   show = runEnvM . envShow
 
 indirection :: Var s String -> Var s String -> StoreM s ()
@@ -124,9 +124,11 @@ indirection key val =
     X.>> liftStore (Set (Lit "y") (Lit "world"))
     X.>> liftStore (Set (Lit "hello") (Lit "good"))
     X.>> liftStore (Set (Lit "world") (Lit "riddance"))
-    X.>> liftStore (Get key) X.>>= \key' ->
+    X.>> liftStore (Get key)
+    X.>>= \key' ->
       liftStore (Set key' val)
-        X.>> liftStore (Get (Lit "x")) X.>>= \x ->
+        X.>> liftStore (Get (Lit "x"))
+        X.>>= \x ->
           liftStore (Get (Lit "y")) X.>>= \y ->
             liftStore (Get (Lit "hello")) X.>>= \hello ->
               liftStore (Get (Lit "world")) X.>>= \world ->

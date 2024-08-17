@@ -40,7 +40,7 @@ virtCharToTileCached = Map.fromList $ zip vcs $ map f vcs
           16 -> img
           _ -> error "virtCharToTile: out of bounds"
 
-stretchImageHeight :: Pixel a => Int -> Image a -> Image a
+stretchImageHeight :: (Pixel a) => Int -> Image a -> Image a
 stretchImageHeight scale img = case imageHeight img `mod` scale of
   0 -> generateImage go w h
   _ -> error "stretchImageHeight: image height must be a multiple of scale"

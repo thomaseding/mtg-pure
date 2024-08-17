@@ -54,7 +54,8 @@ newtype
     (v :: Visibility)
     (rw :: ReadWrite)
     (m :: Type -> Type)
-    (a :: Type) :: Type
+    (a :: Type) ::
+    Type
   where
   AccessM ::
     { runAccessM :: m a
@@ -62,20 +63,20 @@ newtype
     AccessM v rw m a
   deriving (Typeable)
 
-instance Functor m => Functor (AccessM v rw m) where
+instance (Functor m) => Functor (AccessM v rw m) where
   fmap f (AccessM a) = AccessM $ fmap f a
 
-instance Applicative m => Applicative (AccessM v rw m) where
+instance (Applicative m) => Applicative (AccessM v rw m) where
   pure = AccessM . pure
   AccessM f <*> AccessM a = AccessM $ f <*> a
 
-instance Monad m => Monad (AccessM v rw m) where
+instance (Monad m) => Monad (AccessM v rw m) where
   AccessM a >>= f = AccessM $ a >>= runAccessM . f
 
 instance MonadTrans (AccessM v rw) where
   lift = AccessM
 
-instance MonadIO m => MonadIO (AccessM v rw m) where
+instance (MonadIO m) => MonadIO (AccessM v rw m) where
   liftIO = AccessM . liftIO
 
 safeToPrivate :: AccessM v rw m a -> AccessM 'Private rw m a

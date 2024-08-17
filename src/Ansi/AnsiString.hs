@@ -125,7 +125,7 @@ instance Monoid AnsiString where
 class ToAnsiString a where
   toAnsiString :: a -> AnsiString
 
-instance ToAnsiString a => ToAnsiString [a] where
+instance (ToAnsiString a) => ToAnsiString [a] where
   toAnsiString = mconcat . map toAnsiString
 
 instance ToAnsiString Csi where

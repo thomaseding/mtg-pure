@@ -53,8 +53,8 @@ data WNonCreatureCard :: Type -> Type where
   WNonCreaturePlaneswalker :: WNonCreatureCard OTNPlaneswalker
   WNonCreatureSorcery :: WNonCreatureCard OTNSorcery
   WNonCreatureCard :: WNonCreatureCard OTNNonCreature
-  WNonCreatureCard2 :: Inst2 IsNonCreatureCardType a b => WNonCreatureCard (OT2 a b)
-  WNonCreatureCard3 :: Inst3 IsNonCreatureCardType a b c => WNonCreatureCard (OT3 a b c)
+  WNonCreatureCard2 :: (Inst2 IsNonCreatureCardType a b) => WNonCreatureCard (OT2 a b)
+  WNonCreatureCard3 :: (Inst3 IsNonCreatureCardType a b c) => WNonCreatureCard (OT3 a b c)
   deriving (Typeable)
 
 deriving instance Show (WNonCreatureCard a)
@@ -69,14 +69,14 @@ data NonCreatureCardVisitor zone z = NonCreatureCardVisitor
   }
   deriving (Typeable)
 
-class IsObjectType a => IsNonCreatureCardType a where
+class (IsObjectType a) => IsNonCreatureCardType a where
   singNonCreatureCardType :: Proxy a -> NonCreatureCardType
   singNonCreatureCard :: Proxy a -> WNonCreatureCard (OT1 a)
   visitNonCreatureCard :: NonCreatureCardVisitor zone z -> WNonCreatureCard (OT1 a) -> ZO zone (OT1 a) -> z
 
 visitNonCreature' ::
-  IsNonCreatureCardType a =>
-  (forall a'. IsNonCreatureCardType a' => ZO zone (OT1 a') -> z) ->
+  (IsNonCreatureCardType a) =>
+  (forall a'. (IsNonCreatureCardType a') => ZO zone (OT1 a') -> z) ->
   WNonCreatureCard (OT1 a) ->
   ZO zone (OT1 a) ->
   z
@@ -112,7 +112,7 @@ instance IsNonCreatureCardType 'OTSorcery where
   singNonCreatureCard _ = WNonCreatureSorcery
   visitNonCreatureCard v _ = visitNCSorcery v
 
-class IsOTN ot => CoNonCreatureCard ot where
+class (IsOTN ot) => CoNonCreatureCard ot where
   coNonCreatureCard :: WNonCreatureCard ot
 
 instance CoNonCreatureCard OTNArtifact where
@@ -133,8 +133,8 @@ instance CoNonCreatureCard OTNPlaneswalker where
 instance CoNonCreatureCard OTNSorcery where
   coNonCreatureCard = WNonCreatureSorcery
 
-instance Inst2 IsNonCreatureCardType a b => CoNonCreatureCard (OT2 a b) where
+instance (Inst2 IsNonCreatureCardType a b) => CoNonCreatureCard (OT2 a b) where
   coNonCreatureCard = WNonCreatureCard2 :: WNonCreatureCard (OT2 a b)
 
-instance Inst3 IsNonCreatureCardType a b c => CoNonCreatureCard (OT3 a b c) where
+instance (Inst3 IsNonCreatureCardType a b c) => CoNonCreatureCard (OT3 a b c) where
   coNonCreatureCard = WNonCreatureCard3 :: WNonCreatureCard (OT3 a b c)

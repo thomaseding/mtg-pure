@@ -40,10 +40,10 @@ data St = St
 
 type UnitCont = MagicCont' Ex St 'Private 'RW
 
-instance Monad m => HasEnvLogCall Ex St 'RW m where
+instance (Monad m) => HasEnvLogCall Ex St 'RW m where
   theEnvLogCall = envLogCall
 
-envLogCall :: Monad m => EnvLogCall Ex St v 'RW m
+envLogCall :: (Monad m) => EnvLogCall Ex St v 'RW m
 envLogCall =
   EnvLogCall
     { envLogCallCorruptCallStackLogging = error "envLogCallCorruptCallStackLogging"
@@ -51,7 +51,7 @@ envLogCall =
     , envLogCallPromptPop = \_ -> pure ()
     }
 
-runUnitCont :: Monad m => (Either a b -> c) -> UnitCont a m b -> m (Either Ex c)
+runUnitCont :: (Monad m) => (Either a b -> c) -> UnitCont a m b -> m (Either Ex c)
 runUnitCont f action = runMagicRW st $ f <$> runMagicCont' envLogCall action
  where
   st =

@@ -146,78 +146,78 @@ zo1ToO zo = case zoToObjectN zo of
 class ToZO0 (zone :: Zone) (object :: Type) where
   toZO0 :: object -> ZO zone OT0
 
-instance IsZone zone => ToZO0 zone ObjectId where
+instance (IsZone zone) => ToZO0 zone ObjectId where
   toZO0 = toZone . O0 . UntypedObject DefaultObjectDiscriminant
 
-instance IsZone zone => ToZO0 zone UntypedObject where
+instance (IsZone zone) => ToZO0 zone UntypedObject where
   toZO0 = toZone . O0
 
-instance IsZone zone => ToZO0 zone (Object a) where
+instance (IsZone zone) => ToZO0 zone (Object a) where
   toZO0 = toZO0 . getObjectId
 
-instance IsZone zone => ToZO0 zone (ObjectN ot) where
+instance (IsZone zone) => ToZO0 zone (ObjectN ot) where
   toZO0 = toZO0 . visitObjectN' getObjectId
 
-instance IsZone zone => ToZO0 zone (ZO zone ot) where
+instance (IsZone zone) => ToZO0 zone (ZO zone ot) where
   toZO0 = toZO0 . zoToObjectN
 
-toZO1 :: ToObject1 ot a => ZO zone ot -> ZO zone (OT1 a)
+toZO1 :: (ToObject1 ot a) => ZO zone ot -> ZO zone (OT1 a)
 toZO1 = \case
   ZO sZone o -> ZO sZone $ toObject1 o
 
-toZO2 :: ToObject2 ot a b => ZO zone ot -> ZO zone (OT2 a b)
+toZO2 :: (ToObject2 ot a b) => ZO zone ot -> ZO zone (OT2 a b)
 toZO2 = \case
   ZO sZone o -> ZO sZone $ toObject2 o
 
-toZO3 :: ToObject3 ot a b c => ZO zone ot -> ZO zone (OT3 a b c)
+toZO3 :: (ToObject3 ot a b c) => ZO zone ot -> ZO zone (OT3 a b c)
 toZO3 = \case
   ZO sZone o -> ZO sZone $ toObject3 o
 
-toZO4 :: ToObject4 ot a b c d => ZO zone ot -> ZO zone (OT4 a b c d)
+toZO4 :: (ToObject4 ot a b c d) => ZO zone ot -> ZO zone (OT4 a b c d)
 toZO4 = \case
   ZO sZone o -> ZO sZone $ toObject4 o
 
-toZO5 :: ToObject5 ot a b c d e => ZO zone ot -> ZO zone (OT5 a b c d e)
+toZO5 :: (ToObject5 ot a b c d e) => ZO zone ot -> ZO zone (OT5 a b c d e)
 toZO5 = \case
   ZO sZone o -> ZO sZone $ toObject5 o
 
-toZO6 :: ToObject6 ot a b c d e f => ZO zone ot -> ZO zone (OT6 a b c d e f)
+toZO6 :: (ToObject6 ot a b c d e f) => ZO zone ot -> ZO zone (OT6 a b c d e f)
 toZO6 = \case
   ZO sZone o -> ZO sZone $ toObject6 o
 
 toZO7 ::
-  ToObject7 ot a b c d e f g => ZO zone ot -> ZO zone (OT7 a b c d e f g)
+  (ToObject7 ot a b c d e f g) => ZO zone ot -> ZO zone (OT7 a b c d e f g)
 toZO7 = \case
   ZO sZone o -> ZO sZone $ toObject7 o
 
 toZO8 ::
-  ToObject8 ot a b c d e f g h => ZO zone ot -> ZO zone (OT8 a b c d e f g h)
+  (ToObject8 ot a b c d e f g h) => ZO zone ot -> ZO zone (OT8 a b c d e f g h)
 toZO8 = \case
   ZO sZone o -> ZO sZone $ toObject8 o
 
 toZO9 ::
-  ToObject9 ot a b c d e f g h i =>
+  (ToObject9 ot a b c d e f g h i) =>
   ZO zone ot ->
   ZO zone (OT9 a b c d e f g h i)
 toZO9 = \case
   ZO sZone o -> ZO sZone $ toObject9 o
 
 toZO10 ::
-  ToObject10 ot a b c d e f g h i j =>
+  (ToObject10 ot a b c d e f g h i j) =>
   ZO zone ot ->
   ZO zone (OT10 a b c d e f g h i j)
 toZO10 = \case
   ZO sZone o -> ZO sZone $ toObject10 o
 
 toZO11 ::
-  ToObject11 ot a b c d e f g h i j k =>
+  (ToObject11 ot a b c d e f g h i j k) =>
   ZO zone ot ->
   ZO zone (OT11 a b c d e f g h i j k)
 toZO11 = \case
   ZO sZone o -> ZO sZone $ toObject11 o
 
 toZO12 ::
-  ToObject12 ot a b c d e f g h i j k l =>
+  (ToObject12 ot a b c d e f g h i j k l) =>
   ZO zone ot ->
   ZO zone (OT12 a b c d e f g h i j k l)
 toZO12 = \case
@@ -226,58 +226,58 @@ toZO12 = \case
 oToZO1 :: (IsZone zone, IsObjectType a) => Object a -> ZO zone (OT1 a)
 oToZO1 = toZone . O1
 
-uoToON :: IsOTN ot => UntypedObject -> ObjectN ot
+uoToON :: (IsOTN ot) => UntypedObject -> ObjectN ot
 uoToON = castO0ToON . O0
 
-castO0ToON :: forall ot. IsOTN ot => ObjectN OT0 -> ObjectN ot
+castO0ToON :: forall ot. (IsOTN ot) => ObjectN OT0 -> ObjectN ot
 castO0ToON objN = mapOTN @ot \case
   OT0 -> O0 u
   ot@OT1 ->
-    let go :: forall a. ot ~ OT1 a => ot -> ObjectN ot
+    let go :: forall a. (ot ~ OT1 a) => ot -> ObjectN ot
         go _ = O1 $ Object (singObjectType @a) u
      in go ot
   ot@OT2 ->
-    let go :: forall a b. ot ~ OT2 a b => ot -> ObjectN ot
+    let go :: forall a b. (ot ~ OT2 a b) => ot -> ObjectN ot
         go _ = O2a $ Object (singObjectType @a) u
      in go ot
   ot@OT3 ->
-    let go :: forall a b c. ot ~ OT3 a b c => ot -> ObjectN ot
+    let go :: forall a b c. (ot ~ OT3 a b c) => ot -> ObjectN ot
         go _ = O3a $ Object (singObjectType @a) u
      in go ot
   ot@OT4 ->
-    let go :: forall a b c d. ot ~ OT4 a b c d => ot -> ObjectN ot
+    let go :: forall a b c d. (ot ~ OT4 a b c d) => ot -> ObjectN ot
         go _ = O4a $ Object (singObjectType @a) u
      in go ot
   ot@OT5 ->
-    let go :: forall a b c d e. ot ~ OT5 a b c d e => ot -> ObjectN ot
+    let go :: forall a b c d e. (ot ~ OT5 a b c d e) => ot -> ObjectN ot
         go _ = O5a $ Object (singObjectType @a) u
      in go ot
   ot@OT6 ->
-    let go :: forall a b c d e f. ot ~ OT6 a b c d e f => ot -> ObjectN ot
+    let go :: forall a b c d e f. (ot ~ OT6 a b c d e f) => ot -> ObjectN ot
         go _ = O6a $ Object (singObjectType @a) u
      in go ot
   ot@OT7 ->
-    let go :: forall a b c d e f g. ot ~ OT7 a b c d e f g => ot -> ObjectN ot
+    let go :: forall a b c d e f g. (ot ~ OT7 a b c d e f g) => ot -> ObjectN ot
         go _ = O7a $ Object (singObjectType @a) u
      in go ot
   ot@OT8 ->
-    let go :: forall a b c d e f g h. ot ~ OT8 a b c d e f g h => ot -> ObjectN ot
+    let go :: forall a b c d e f g h. (ot ~ OT8 a b c d e f g h) => ot -> ObjectN ot
         go _ = O8a $ Object (singObjectType @a) u
      in go ot
   ot@OT9 ->
-    let go :: forall a b c d e f g h i. ot ~ OT9 a b c d e f g h i => ot -> ObjectN ot
+    let go :: forall a b c d e f g h i. (ot ~ OT9 a b c d e f g h i) => ot -> ObjectN ot
         go _ = O9a $ Object (singObjectType @a) u
      in go ot
   ot@OT10 ->
-    let go :: forall a b c d e f g h i j. ot ~ OT10 a b c d e f g h i j => ot -> ObjectN ot
+    let go :: forall a b c d e f g h i j. (ot ~ OT10 a b c d e f g h i j) => ot -> ObjectN ot
         go _ = O10a $ Object (singObjectType @a) u
      in go ot
   ot@OT11 ->
-    let go :: forall a b c d e f g h i j k. ot ~ OT11 a b c d e f g h i j k => ot -> ObjectN ot
+    let go :: forall a b c d e f g h i j k. (ot ~ OT11 a b c d e f g h i j k) => ot -> ObjectN ot
         go _ = O11a $ Object (singObjectType @a) u
      in go ot
   ot@OT12 ->
-    let go :: forall a b c d e f g h i j k l. ot ~ OT12 a b c d e f g h i j k l => ot -> ObjectN ot
+    let go :: forall a b c d e f g h i j k l. (ot ~ OT12 a b c d e f g h i j k l) => ot -> ObjectN ot
         go _ = O12a $ Object (singObjectType @a) u
      in go ot
  where
@@ -287,57 +287,57 @@ castONToON :: forall ot ot'. (IsOTN ot, IsOTN ot') => ObjectN ot -> Maybe (Objec
 castONToON objN = viewOTN' objN $ curry \case
   (_, OT0) -> Just $ castO0ToON @ot' objN
   (_, ot@OT1) ->
-    let go :: forall a. Inst1 IsObjectType a => OT1 a -> Maybe (ObjectN ot')
+    let go :: forall a. (Inst1 IsObjectType a) => OT1 a -> Maybe (ObjectN ot')
         go _ = goCast @a
      in go ot
   (_, ot@OT2) ->
-    let go :: forall a b. Inst2 IsObjectType a b => OT2 a b -> Maybe (ObjectN ot')
+    let go :: forall a b. (Inst2 IsObjectType a b) => OT2 a b -> Maybe (ObjectN ot')
         go _ = goCast @a >> goCast @b
      in go ot
   (_, ot@OT3) ->
-    let go :: forall a b c. Inst3 IsObjectType a b c => OT3 a b c -> Maybe (ObjectN ot')
+    let go :: forall a b c. (Inst3 IsObjectType a b c) => OT3 a b c -> Maybe (ObjectN ot')
         go _ = goCast @a >> goCast @b >> goCast @c
      in go ot
   (_, ot@OT4) ->
-    let go :: forall a b c d. Inst4 IsObjectType a b c d => OT4 a b c d -> Maybe (ObjectN ot')
+    let go :: forall a b c d. (Inst4 IsObjectType a b c d) => OT4 a b c d -> Maybe (ObjectN ot')
         go _ = goCast @a >> goCast @b >> goCast @c >> goCast @d
      in go ot
   (_, ot@OT5) ->
-    let go :: forall a b c d e. Inst5 IsObjectType a b c d e => OT5 a b c d e -> Maybe (ObjectN ot')
+    let go :: forall a b c d e. (Inst5 IsObjectType a b c d e) => OT5 a b c d e -> Maybe (ObjectN ot')
         go _ = goCast @a >> goCast @b >> goCast @c >> goCast @d >> goCast @e
      in go ot
   (_, ot@OT6) ->
-    let go :: forall a b c d e f. Inst6 IsObjectType a b c d e f => OT6 a b c d e f -> Maybe (ObjectN ot')
+    let go :: forall a b c d e f. (Inst6 IsObjectType a b c d e f) => OT6 a b c d e f -> Maybe (ObjectN ot')
         go _ = goCast @a >> goCast @b >> goCast @c >> goCast @d >> goCast @e >> goCast @f
      in go ot
   (_, ot@OT7) ->
-    let go :: forall a b c d e f g. Inst7 IsObjectType a b c d e f g => OT7 a b c d e f g -> Maybe (ObjectN ot')
+    let go :: forall a b c d e f g. (Inst7 IsObjectType a b c d e f g) => OT7 a b c d e f g -> Maybe (ObjectN ot')
         go _ = goCast @a >> goCast @b >> goCast @c >> goCast @d >> goCast @e >> goCast @f >> goCast @g
      in go ot
   (_, ot@OT8) ->
-    let go :: forall a b c d e f g h. Inst8 IsObjectType a b c d e f g h => OT8 a b c d e f g h -> Maybe (ObjectN ot')
+    let go :: forall a b c d e f g h. (Inst8 IsObjectType a b c d e f g h) => OT8 a b c d e f g h -> Maybe (ObjectN ot')
         go _ = goCast @a >> goCast @b >> goCast @c >> goCast @d >> goCast @e >> goCast @f >> goCast @g >> goCast @h
      in go ot
   (_, ot@OT9) ->
-    let go :: forall a b c d e f g h i. Inst9 IsObjectType a b c d e f g h i => OT9 a b c d e f g h i -> Maybe (ObjectN ot')
+    let go :: forall a b c d e f g h i. (Inst9 IsObjectType a b c d e f g h i) => OT9 a b c d e f g h i -> Maybe (ObjectN ot')
         go _ = goCast @a >> goCast @b >> goCast @c >> goCast @d >> goCast @e >> goCast @f >> goCast @g >> goCast @h >> goCast @i
      in go ot
   (_, ot@OT10) ->
-    let go :: forall a b c d e f g h i j. Inst10 IsObjectType a b c d e f g h i j => OT10 a b c d e f g h i j -> Maybe (ObjectN ot')
+    let go :: forall a b c d e f g h i j. (Inst10 IsObjectType a b c d e f g h i j) => OT10 a b c d e f g h i j -> Maybe (ObjectN ot')
         go _ = goCast @a >> goCast @b >> goCast @c >> goCast @d >> goCast @e >> goCast @f >> goCast @g >> goCast @h >> goCast @i >> goCast @j
      in go ot
   (_, ot@OT11) ->
-    let go :: forall a b c d e f g h i j k. Inst11 IsObjectType a b c d e f g h i j k => OT11 a b c d e f g h i j k -> Maybe (ObjectN ot')
+    let go :: forall a b c d e f g h i j k. (Inst11 IsObjectType a b c d e f g h i j k) => OT11 a b c d e f g h i j k -> Maybe (ObjectN ot')
         go _ = goCast @a >> goCast @b >> goCast @c >> goCast @d >> goCast @e >> goCast @f >> goCast @g >> goCast @h >> goCast @i >> goCast @j >> goCast @k
      in go ot
   (_, ot@OT12) ->
-    let go :: forall a b c d e f g h i j k l. Inst12 IsObjectType a b c d e f g h i j k l => OT12 a b c d e f g h i j k l -> Maybe (ObjectN ot')
+    let go :: forall a b c d e f g h i j k l. (Inst12 IsObjectType a b c d e f g h i j k l) => OT12 a b c d e f g h i j k l -> Maybe (ObjectN ot')
         go _ = goCast @a >> goCast @b >> goCast @c >> goCast @d >> goCast @e >> goCast @f >> goCast @g >> goCast @h >> goCast @i >> goCast @j >> goCast @k >> goCast @l
      in go ot
  where
   u = getUntypedObject objN
 
-  goCast :: forall x. IsObjectType x => Maybe (ObjectN ot')
+  goCast :: forall x. (IsObjectType x) => Maybe (ObjectN ot')
   goCast = castOToON $ Object (singObjectType @x) u
 
 -- NOTE: Wrapper to get higher kinded types to type-check in `mapOTN`.
@@ -353,11 +353,11 @@ castOToON o = objN
         Just $ O0 case o of
           Object _ u -> u
       ot@OT1 ->
-        let go :: forall a. Inst1 IsObjectType a => OT1 a -> MaybeObjectN (OT1 a)
+        let go :: forall a. (Inst1 IsObjectType a) => OT1 a -> MaybeObjectN (OT1 a)
             go _ = MaybeObjectN $ goCast $ O1 @a
          in go ot
       ot@OT2 ->
-        let go :: forall a b. Inst2 IsObjectType a b => OT2 a b -> MaybeObjectN (OT2 a b)
+        let go :: forall a b. (Inst2 IsObjectType a b) => OT2 a b -> MaybeObjectN (OT2 a b)
             go _ =
               goConcat
                 [ goCast $ O2a @a @b
@@ -365,7 +365,7 @@ castOToON o = objN
                 ]
          in go ot
       ot@OT3 ->
-        let go :: forall a b c. Inst3 IsObjectType a b c => OT3 a b c -> MaybeObjectN (OT3 a b c)
+        let go :: forall a b c. (Inst3 IsObjectType a b c) => OT3 a b c -> MaybeObjectN (OT3 a b c)
             go _ =
               goConcat
                 [ goCast $ O3a @a @b @c
@@ -374,7 +374,7 @@ castOToON o = objN
                 ]
          in go ot
       ot@OT4 ->
-        let go :: forall a b c d. Inst4 IsObjectType a b c d => OT4 a b c d -> MaybeObjectN (OT4 a b c d)
+        let go :: forall a b c d. (Inst4 IsObjectType a b c d) => OT4 a b c d -> MaybeObjectN (OT4 a b c d)
             go _ =
               goConcat
                 [ goCast $ O4a @a @b @c @d
@@ -384,7 +384,7 @@ castOToON o = objN
                 ]
          in go ot
       ot@OT5 ->
-        let go :: forall a b c d e. Inst5 IsObjectType a b c d e => OT5 a b c d e -> MaybeObjectN (OT5 a b c d e)
+        let go :: forall a b c d e. (Inst5 IsObjectType a b c d e) => OT5 a b c d e -> MaybeObjectN (OT5 a b c d e)
             go _ =
               goConcat
                 [ goCast $ O5a @a @b @c @d @e
@@ -395,7 +395,7 @@ castOToON o = objN
                 ]
          in go ot
       ot@OT6 ->
-        let go :: forall a b c d e f. Inst6 IsObjectType a b c d e f => OT6 a b c d e f -> MaybeObjectN (OT6 a b c d e f)
+        let go :: forall a b c d e f. (Inst6 IsObjectType a b c d e f) => OT6 a b c d e f -> MaybeObjectN (OT6 a b c d e f)
             go _ =
               goConcat
                 [ goCast $ O6a @a @b @c @d @e @f
@@ -407,7 +407,7 @@ castOToON o = objN
                 ]
          in go ot
       ot@OT7 ->
-        let go :: forall a b c d e f g. Inst7 IsObjectType a b c d e f g => OT7 a b c d e f g -> MaybeObjectN (OT7 a b c d e f g)
+        let go :: forall a b c d e f g. (Inst7 IsObjectType a b c d e f g) => OT7 a b c d e f g -> MaybeObjectN (OT7 a b c d e f g)
             go _ =
               goConcat
                 [ goCast $ O7a @a @b @c @d @e @f @g
@@ -420,7 +420,7 @@ castOToON o = objN
                 ]
          in go ot
       ot@OT8 ->
-        let go :: forall a b c d e f g h. Inst8 IsObjectType a b c d e f g h => OT8 a b c d e f g h -> MaybeObjectN (OT8 a b c d e f g h)
+        let go :: forall a b c d e f g h. (Inst8 IsObjectType a b c d e f g h) => OT8 a b c d e f g h -> MaybeObjectN (OT8 a b c d e f g h)
             go _ =
               goConcat
                 [ goCast $ O8a @a @b @c @d @e @f @g @h
@@ -434,7 +434,7 @@ castOToON o = objN
                 ]
          in go ot
       ot@OT9 ->
-        let go :: forall a b c d e f g h i. Inst9 IsObjectType a b c d e f g h i => OT9 a b c d e f g h i -> MaybeObjectN (OT9 a b c d e f g h i)
+        let go :: forall a b c d e f g h i. (Inst9 IsObjectType a b c d e f g h i) => OT9 a b c d e f g h i -> MaybeObjectN (OT9 a b c d e f g h i)
             go _ =
               goConcat
                 [ goCast $ O9a @a @b @c @d @e @f @g @h @i
@@ -449,7 +449,7 @@ castOToON o = objN
                 ]
          in go ot
       ot@OT10 ->
-        let go :: forall a b c d e f g h i j. Inst10 IsObjectType a b c d e f g h i j => OT10 a b c d e f g h i j -> MaybeObjectN (OT10 a b c d e f g h i j)
+        let go :: forall a b c d e f g h i j. (Inst10 IsObjectType a b c d e f g h i j) => OT10 a b c d e f g h i j -> MaybeObjectN (OT10 a b c d e f g h i j)
             go _ =
               goConcat
                 [ goCast $ O10a @a @b @c @d @e @f @g @h @i @j
@@ -465,7 +465,7 @@ castOToON o = objN
                 ]
          in go ot
       ot@OT11 ->
-        let go :: forall a b c d e f g h i j k. Inst11 IsObjectType a b c d e f g h i j k => OT11 a b c d e f g h i j k -> MaybeObjectN (OT11 a b c d e f g h i j k)
+        let go :: forall a b c d e f g h i j k. (Inst11 IsObjectType a b c d e f g h i j k) => OT11 a b c d e f g h i j k -> MaybeObjectN (OT11 a b c d e f g h i j k)
             go _ =
               goConcat
                 [ goCast $ O11a @a @b @c @d @e @f @g @h @i @j @k
@@ -482,7 +482,7 @@ castOToON o = objN
                 ]
          in go ot
       ot@OT12 ->
-        let go :: forall a b c d e f g h i j k l. Inst12 IsObjectType a b c d e f g h i j k l => OT12 a b c d e f g h i j k l -> MaybeObjectN (OT12 a b c d e f g h i j k l)
+        let go :: forall a b c d e f g h i j k l. (Inst12 IsObjectType a b c d e f g h i j k l) => OT12 a b c d e f g h i j k l -> MaybeObjectN (OT12 a b c d e f g h i j k l)
             go _ =
               goConcat
                 [ goCast $ O12a @a @b @c @d @e @f @g @h @i @j @k @l
@@ -502,7 +502,7 @@ castOToON o = objN
    where
     goConcat = MaybeObjectN . getFirst . mconcat . map First
 
-    goCast :: Typeable z' => (Object z' -> ObjectN ot') -> Maybe (ObjectN ot')
+    goCast :: (Typeable z') => (Object z' -> ObjectN ot') -> Maybe (ObjectN ot')
     goCast f = f <$> cast o
 
 type ToActivatedOrTriggeredAbility = ToObject2
@@ -603,50 +603,50 @@ type AsAny ot =
     'OTTriggeredAbility
 
 asActivatedOrTriggeredAbility ::
-  AsActivatedOrTriggeredAbility ot =>
+  (AsActivatedOrTriggeredAbility ot) =>
   ZO zone ot ->
   ZO zone OTNActivatedOrTriggeredAbility
 asActivatedOrTriggeredAbility = toZO2
 
 asCreaturePlayerPlaneswalker ::
-  AsCreaturePlayerPlaneswalker ot =>
+  (AsCreaturePlayerPlaneswalker ot) =>
   ZO zone ot ->
   ZO zone OTNCreaturePlayerPlaneswalker
 asCreaturePlayerPlaneswalker = toZO3
 
-asPermanent :: AsPermanent ot => ZO zone ot -> ZO zone OTNPermanent
+asPermanent :: (AsPermanent ot) => ZO zone ot -> ZO zone OTNPermanent
 asPermanent = toZO5
 
-asSpell :: AsSpell ot => ZO zone ot -> ZO zone OTNSpell
+asSpell :: (AsSpell ot) => ZO zone ot -> ZO zone OTNSpell
 asSpell = toZO6
 
-asCard :: AsCard ot => ZO zone ot -> ZO zone OTNCard
+asCard :: (AsCard ot) => ZO zone ot -> ZO zone OTNCard
 asCard = toZO7
 
-asDamageSource :: AsDamageSource ot => ZO zone ot -> ZO zone OTNDamageSource
+asDamageSource :: (AsDamageSource ot) => ZO zone ot -> ZO zone OTNDamageSource
 asDamageSource = toZO8
 
-asAny :: AsAny ot => ZO zone ot -> ZO zone OTNAny
+asAny :: (AsAny ot) => ZO zone ot -> ZO zone OTNAny
 asAny = toZO12
 
 asAny0 :: ZO zone OT0 -> ZO zone OTNAny
-asAny0 = asAny . toZO1 @OT0 @ 'OTArtifact
+asAny0 = asAny . toZO1 @OT0 @'OTArtifact
 
 zo0ToPermanent :: ZO 'ZBattlefield OT0 -> ZO 'ZBattlefield OTNPermanent
 zo0ToPermanent = asPermanent . ZO SingZBattlefield . O1 . Object SingLand . getUntypedObject
 
-zo0ToSpell :: forall zone. IsZone zone => ZO zone OT0 -> ZO zone OTNSpell
+zo0ToSpell :: forall zone. (IsZone zone) => ZO zone OT0 -> ZO zone OTNSpell
 zo0ToSpell = asSpell . ZO (singZone @zone) . O1 . Object SingArtifact . getUntypedObject
 
-zo0ToCard :: forall zone. IsZone zone => ZO zone OT0 -> ZO zone OTNCard
+zo0ToCard :: forall zone. (IsZone zone) => ZO zone OT0 -> ZO zone OTNCard
 zo0ToCard = asCard . ZO (singZone @zone) . O1 . Object SingLand . getUntypedObject
 
-zo0ToAny :: forall zone. IsZone zone => ZO zone OT0 -> ZO zone OTNAny
+zo0ToAny :: forall zone. (IsZone zone) => ZO zone OT0 -> ZO zone OTNAny
 zo0ToAny = asAny . ZO (singZone @zone) . O1 . Object SingLand . getUntypedObject
 
 reifyWithThis ::
   forall zone ot liftOT.
-  IsZO zone ot =>
+  (IsZO zone ot) =>
   ObjectId ->
   WithThis liftOT zone ot ->
   liftOT ot
@@ -660,7 +660,7 @@ reifyWithThis i = \case
   zo0 = toZO0 @zone i
 
 getWithLinkedObjectRequirements ::
-  IsZO zone ot =>
+  (IsZO zone ot) =>
   WithLinkedObject liftOT zone ot ->
   [Requirement zone ot]
 getWithLinkedObjectRequirements = \case
@@ -677,7 +677,7 @@ data LinkedBundle liftOT zone ot = LinkedBundle
   }
 
 reifyWithLinkedObject ::
-  IsZO zone ot =>
+  (IsZO zone ot) =>
   ZO zone ot ->
   WithLinkedObject liftOT zone ot ->
   liftOT ot
@@ -695,27 +695,27 @@ reifyWithLinkedObject zo withLinked = viewOTN bundle (linkedObjN bundle) goView
     liftOT (OTN otk)
   goView = curry \case
     (bundle', OT1) ->
-      let go :: ot ~ OT1 a => LinkedBundle liftOT zone ot -> liftOT ot
+      let go :: (ot ~ OT1 a) => LinkedBundle liftOT zone ot -> liftOT ot
           go bundle'' = case linkedWith bundle'' of
             Linked1 _reqs cont -> cont $ linkedZO bundle''
        in go bundle'
     (bundle', OT2) ->
-      let go :: ot ~ OT2 a b => LinkedBundle liftOT zone ot -> liftOT ot
+      let go :: (ot ~ OT2 a b) => LinkedBundle liftOT zone ot -> liftOT ot
           go bundle'' = case linkedWith bundle'' of
             Linked2 _reqs cont -> cont $ linkedZO bundle''
        in go bundle'
     (bundle', OT3) ->
-      let go :: ot ~ OT3 a b c => LinkedBundle liftOT zone ot -> liftOT ot
+      let go :: (ot ~ OT3 a b c) => LinkedBundle liftOT zone ot -> liftOT ot
           go bundle'' = case linkedWith bundle'' of
             Linked3 _reqs cont -> cont $ linkedZO bundle''
        in go bundle'
     (bundle', OT4) ->
-      let go :: ot ~ OT4 a b c d => LinkedBundle liftOT zone ot -> liftOT ot
+      let go :: (ot ~ OT4 a b c d) => LinkedBundle liftOT zone ot -> liftOT ot
           go bundle'' = case linkedWith bundle'' of
             Linked4 _reqs cont -> cont $ linkedZO bundle''
        in go bundle'
     (bundle', OT5) ->
-      let go :: ot ~ OT5 a b c d e => LinkedBundle liftOT zone ot -> liftOT ot
+      let go :: (ot ~ OT5 a b c d e) => LinkedBundle liftOT zone ot -> liftOT ot
           go bundle'' = case linkedWith bundle'' of
             Linked5 _reqs cont -> cont $ linkedZO bundle''
        in go bundle'

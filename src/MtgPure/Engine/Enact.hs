@@ -112,7 +112,7 @@ import safe MtgPure.Model.ZoneObject.ZoneObject (
 -- XXX: Replacement effects don't just listen... they also modify the event, so perhaps a different
 -- mechanism is needed.
 -- XXX: A replacement effect prolly is an `EvListener` that returns a `Maybe (SourceZO, Effect)`.
-triggerEvListeners :: Monad m => TriggerTime -> [Ev] -> Magic 'Private 'RW m ()
+triggerEvListeners :: (Monad m) => TriggerTime -> [Ev] -> Magic 'Private 'RW m ()
 triggerEvListeners time evs = logCall 'triggerEvListeners do
   listeners <- fromRO $ gets magicListeners
   F.for_ evs \ev -> do
@@ -123,7 +123,7 @@ triggerEvListeners time evs = logCall 'triggerEvListeners do
 --
 -- XXX: Does this really need a non-unit return type? I suppose it simplifies ad-hoc event listening
 -- by not requiring localized event listener registration, which might be worth the return type.
-enact :: Monad m => Maybe SourceZO -> Effect 'OneShot -> Magic 'Private 'RW m [Ev]
+enact :: (Monad m) => Maybe SourceZO -> Effect 'OneShot -> Magic 'Private 'RW m [Ev]
 enact mSource effect = logCall 'enact do
   evs <- enact' mSource effect
   triggerEvListeners AfterResolution evs
@@ -131,7 +131,7 @@ enact mSource effect = logCall 'enact do
 
 -- XXX: This might need to return `Maybe [ev]` because elections might fail in a recursive
 -- call and might need to rewind state. Need to distinguish [] from Nothing.
-enact' :: Monad m => Maybe SourceZO -> Effect 'OneShot -> Magic 'Private 'RW m [Ev]
+enact' :: (Monad m) => Maybe SourceZO -> Effect 'OneShot -> Magic 'Private 'RW m [Ev]
 enact' mSource = logCall 'enact' \case
   AddMana oPlayer mana -> addMana' mSource oPlayer mana
   AddToBattlefield{} -> undefined
@@ -155,7 +155,7 @@ enact' mSource = logCall 'enact' \case
   Untap oPerm -> untap' mSource oPerm
   WithList{} -> undefined
 
-addMana' :: Monad m => Maybe SourceZO -> ZOPlayer -> ManaPool 'NonSnow -> Magic 'Private 'RW m [Ev]
+addMana' :: (Monad m) => Maybe SourceZO -> ZOPlayer -> ManaPool 'NonSnow -> Magic 'Private 'RW m [Ev]
 addMana' mSource oPlayer mana = logCall 'addMana' do
   fromRO (findPlayer $ zo1ToO oPlayer) >>= \case
     Nothing -> pure () -- Don't complain. This can naturally happen if a player in a multiplayer game loses before `enact'` resolves.
@@ -198,7 +198,7 @@ addMana' mSource oPlayer mana = logCall 'addMana' do
           _ -> False
 
 dealDamage' ::
-  Monad m =>
+  (Monad m) =>
   ZO zone OTNDamageSource ->
   ZOCreaturePlayerPlaneswalker ->
   Damage var ->
@@ -233,7 +233,7 @@ dealDamage' _oSource oVictim (forceVars -> Damage damage) = logCall 'dealDamage'
     pure mempty
 
 destroy' ::
-  Monad m =>
+  (Monad m) =>
   Maybe SourceZO ->
   ZOPermanent ->
   Magic 'Private 'RW m [Ev]
@@ -276,7 +276,7 @@ searchLibrary' mSource oSearcher oSearchee zoLibToElectEffect = logCall 'searchL
       case library of
         Library zoLibs -> do
           let req = RAnd $ getWithLinkedObjectRequirements zoLibToElectEffect
-          zoCandidates <- fromRO (zosSatisfying @ 'ZLibrary @ot req)
+          zoCandidates <- fromRO (zosSatisfying @'ZLibrary @ot req)
           let iCandidates = Set.fromList $ map getObjectId zoCandidates
           let zoLibs' = filter (\zo -> getObjectId zo `Set.member` iCandidates) zoLibs
           mEvs <- case zoLibs' of
@@ -301,7 +301,7 @@ searchLibrary' mSource oSearcher oSearchee zoLibToElectEffect = logCall 'searchL
             Nothing -> []
             Just evs -> evs
 
-shuffleLibrary' :: Monad m => Maybe SourceZO -> Object 'OTPlayer -> Magic 'Private 'RW m [Ev]
+shuffleLibrary' :: (Monad m) => Maybe SourceZO -> Object 'OTPlayer -> Magic 'Private 'RW m [Ev]
 shuffleLibrary' _mSource oPlayer = logCall 'shuffleLibrary' do
   prompt <- fromRO $ gets magicPrompt
   player <- fromRO $ getPlayer oPlayer
@@ -319,7 +319,7 @@ shuffleLibrary' _mSource oPlayer = logCall 'shuffleLibrary' do
   setPlayer oPlayer $ player{playerLibrary = toCardList library'}
   pure mempty
 
-drawCard' :: Monad m => Maybe SourceZO -> Object 'OTPlayer -> Magic 'Private 'RW m [Ev]
+drawCard' :: (Monad m) => Maybe SourceZO -> Object 'OTPlayer -> Magic 'Private 'RW m [Ev]
 drawCard' _mSource oPlayer = logCall 'drawCard' do
   player <- fromRO $ getPlayer oPlayer
   let library = playerLibrary player
@@ -333,7 +333,7 @@ drawCard' _mSource oPlayer = logCall 'drawCard' do
       M.void $ pushHandCard oPlayer card
   pure mempty
 
-drawCards' :: Monad m => Maybe SourceZO -> Int -> Object 'OTPlayer -> Magic 'Private 'RW m [Ev]
+drawCards' :: (Monad m) => Maybe SourceZO -> Int -> Object 'OTPlayer -> Magic 'Private 'RW m [Ev]
 drawCards' mSource n oPlayer = logCall 'drawCards' do
   fmap mconcat $ M.replicateM n $ drawCard' mSource oPlayer
 

@@ -88,7 +88,7 @@ import safe Data.List (sortOn)
 import safe Data.String (IsString (..))
 import safe Numeric (showHex)
 import Script.GenerateGallerySingle.Main (CardAnsiInfo (..), cardNameToAnsis)
-import safe Script.MtgPureConfig (MtgPureConfig, readMtgPureConfigFile)
+import Script.MtgPureConfig (MtgPureConfig, readMtgPureConfigFile)
 import safe System.Console.ANSI (
   getTerminalSize,
   hideCursor,
@@ -250,13 +250,13 @@ updateHighLightedPixel arrow = do
   let curr'' = clamp (0, 0) (platonicW - 1, (platonicH `div` 2) - 1) curr'
   Inspector $ State.modify' \st -> st{inspectorHighlightedPixel = curr''}
 
-clamp :: Ord a => (a, a) -> (a, a) -> (a, a) -> (a, a)
+clamp :: (Ord a) => (a, a) -> (a, a) -> (a, a) -> (a, a)
 clamp (minX, minY) (maxX, maxY) (x, y) =
   ( clamp' minX maxX x
   , clamp' minY maxY y
   )
  where
-  clamp' :: Ord a => a -> a -> a -> a
+  clamp' :: (Ord a) => a -> a -> a -> a
   clamp' min' max' x' = max min' $ min max' x'
 
 handleKeyInput :: Inspector ()
@@ -514,7 +514,7 @@ mkProtoTileBox' = do
   (x, y) <- Inspector $ State.gets inspectorHighlightedPixel
   let renderedTile = cardRenderedTileGrid card !! y !! x
   let proto = convertImageToDebugAnsiImage $ rtTileProto renderedTile
-  --let rgb = convertImageToDebugAnsiImage $ unTcTile $ rtTileRgb renderedTile
+  -- let rgb = convertImageToDebugAnsiImage $ unTcTile $ rtTileRgb renderedTile
   pure
     Box
       { boxText = proto

@@ -1,4 +1,6 @@
-{-# LANGUAGE Safe #-}
+{-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE Unsafe #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 module Script.GenerateLoadAllModules (
@@ -7,7 +9,7 @@ module Script.GenerateLoadAllModules (
 
 import safe Data.Functor ((<&>))
 import safe Data.List (isSuffixOf, sort)
-import safe System.Directory (doesDirectoryExist, listDirectory)
+import System.Directory (doesDirectoryExist, listDirectory)
 import safe System.FilePath (dropExtension, (</>))
 import safe System.IO (IOMode (..), hFlush, hPutStrLn, withFile)
 import System.Process (system)

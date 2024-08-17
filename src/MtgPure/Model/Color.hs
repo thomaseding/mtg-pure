@@ -32,7 +32,7 @@ data SColor (color :: Color) :: Type where
   SGreen :: SColor 'Green
   deriving (Typeable)
 
-class Typeable color => IsColor (color :: Color) where
+class (Typeable color) => IsColor (color :: Color) where
   litColor :: Color
   singColor :: SColor color
 

@@ -81,7 +81,7 @@ import safe MtgPure.Model.ZoneObject.ZoneObject (IsZO, ZO, ZOPlayer, ZoneObject 
 
 performIntrinsicElections ::
   forall ot m el x.
-  Monad m =>
+  (Monad m) =>
   ElectionInput 'IntrinsicStage ->
   -- | `goTerm` continuation
   (el -> Magic 'Private 'RO m x) ->
@@ -95,7 +95,7 @@ performIntrinsicElections = logCall 'performIntrinsicElections $ performElection
 -- This may also return Nothing when the `goTerm` continuation returns Nothing.
 performTargetElections ::
   forall ot m el x.
-  Monad m =>
+  (Monad m) =>
   ElectionInput 'TargetStage ->
   -- | `goTerm` continuation
   (el -> Magic 'Private 'RW m (Maybe x)) ->
@@ -105,7 +105,7 @@ performTargetElections = logCall 'performTargetElections $ performElections' Not
 
 performResolveElections ::
   forall ot m el x.
-  Monad m =>
+  (Monad m) =>
   ElectionInput 'ResolveStage ->
   -- | `goTerm` continuation
   (el -> Magic 'Private 'RW m (Maybe x)) ->
@@ -144,13 +144,13 @@ performElections' failureX input goTerm = logCall 'performElections' \case
   Target zoPlayer thisToElect -> electA Target' zoStack failureX goRec zoPlayer thisToElect
   VariableFromPower{} -> undefined
   VariableInt cont -> electVariableInt goRec cont
-  Your cont -> goRec $ cont $ oToZO1 @ 'ZBattlefield $ intrinsicYou input
+  Your cont -> goRec $ cont $ oToZO1 @'ZBattlefield $ intrinsicYou input
  where
   goRec :: Elect s el ot -> Magic 'Private (ElectStageRW s) m x
   goRec = performElections' failureX input goTerm
 
   goRW ::
-    CoNonIntrinsicStage s =>
+    (CoNonIntrinsicStage s) =>
     ((Elect s el ot -> Magic 'Private 'RW m x) -> Magic 'Private 'RW m a) ->
     Magic 'Private (ElectStageRW s) m a
   goRW m = case coNonIntrinsicStage @s of
@@ -185,7 +185,7 @@ chooseOption goElect zoPlayer choices cont = logCall 'chooseOption do
   goElect $ cont var
 
 electVariableInt ::
-  Monad m =>
+  (Monad m) =>
   (Elect 'TargetStage el ot -> Magic 'Private 'RW m x) ->
   (Variable Int -> Elect 'TargetStage el ot) ->
   Magic 'Private 'RW m x

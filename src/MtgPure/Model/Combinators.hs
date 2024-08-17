@@ -194,7 +194,7 @@ class ToToken token where
 instance ToToken AnyToken where
   toToken = id
 
-instance CoPermanent ot => ToToken (Token ot) where
+instance (CoPermanent ot) => ToToken (Token ot) where
   toToken (Token x) = AnyToken $ Token x
 
 class (IsOTN ot, Typeable liftOT) => AsWithLinkedObject ot zone liftOT where
@@ -218,53 +218,53 @@ instance (Typeable x, Inst5 IsObjectType a b c d e) => AsWithLinkedObject (OT5 a
 class AsWithMaskedObject ot where
   masked ::
     forall zone liftOT ot'.
-    Typeable (liftOT ot') =>
+    (Typeable (liftOT ot')) =>
     [Requirement zone ot] ->
     (ZO zone ot -> liftOT ot') ->
     WithMaskedObject liftOT zone ot'
 
-instance Inst1 IsObjectType a => AsWithMaskedObject (OT1 a) where
+instance (Inst1 IsObjectType a) => AsWithMaskedObject (OT1 a) where
   masked = Masked1
 
-instance Inst2 IsObjectType a b => AsWithMaskedObject (OT2 a b) where
+instance (Inst2 IsObjectType a b) => AsWithMaskedObject (OT2 a b) where
   masked = Masked2
 
-instance Inst3 IsObjectType a b c => AsWithMaskedObject (OT3 a b c) where
+instance (Inst3 IsObjectType a b c) => AsWithMaskedObject (OT3 a b c) where
   masked = Masked3
 
-instance Inst4 IsObjectType a b c d => AsWithMaskedObject (OT4 a b c d) where
+instance (Inst4 IsObjectType a b c d) => AsWithMaskedObject (OT4 a b c d) where
   masked = Masked4
 
-instance Inst5 IsObjectType a b c d e => AsWithMaskedObject (OT5 a b c d e) where
+instance (Inst5 IsObjectType a b c d e) => AsWithMaskedObject (OT5 a b c d e) where
   masked = Masked5
 
-instance Inst6 IsObjectType a b c d e f => AsWithMaskedObject (OT6 a b c d e f) where
+instance (Inst6 IsObjectType a b c d e f) => AsWithMaskedObject (OT6 a b c d e f) where
   masked = Masked6
 
 class AsWithMaskedObjects ot where
   maskeds ::
     forall zone liftOT ot'.
-    Typeable (liftOT ot') =>
+    (Typeable (liftOT ot')) =>
     [Requirement zone ot] ->
     (List (ZO zone ot) -> liftOT ot') ->
     WithMaskedObjects liftOT zone ot'
 
-instance Inst1 IsObjectType a => AsWithMaskedObjects (OT1 a) where
+instance (Inst1 IsObjectType a) => AsWithMaskedObjects (OT1 a) where
   maskeds = Maskeds1
 
-instance Inst2 IsObjectType a b => AsWithMaskedObjects (OT2 a b) where
+instance (Inst2 IsObjectType a b) => AsWithMaskedObjects (OT2 a b) where
   maskeds = Maskeds2
 
-instance Inst3 IsObjectType a b c => AsWithMaskedObjects (OT3 a b c) where
+instance (Inst3 IsObjectType a b c) => AsWithMaskedObjects (OT3 a b c) where
   maskeds = Maskeds3
 
-instance Inst4 IsObjectType a b c d => AsWithMaskedObjects (OT4 a b c d) where
+instance (Inst4 IsObjectType a b c d) => AsWithMaskedObjects (OT4 a b c d) where
   maskeds = Maskeds4
 
-instance Inst5 IsObjectType a b c d e => AsWithMaskedObjects (OT5 a b c d e) where
+instance (Inst5 IsObjectType a b c d e) => AsWithMaskedObjects (OT5 a b c d e) where
   maskeds = Maskeds5
 
-instance Inst6 IsObjectType a b c d e f => AsWithMaskedObjects (OT6 a b c d e f) where
+instance (Inst6 IsObjectType a b c d e f) => AsWithMaskedObjects (OT6 a b c d e f) where
   maskeds = Maskeds6
 
 type family ThisFromOTN zone ot where
@@ -281,50 +281,50 @@ type family OT1FromOTN ot where
   OT1FromOTN (OT4 a b c d) = OT1 a
   OT1FromOTN (OT5 a b c d e) = OT1 a
 
-class IsZO zone ot => AsWithThis zone ot where
+class (IsZO zone ot) => AsWithThis zone ot where
   thisObject :: (ThisFromOTN zone ot -> liftOT ot) -> WithThis liftOT zone ot
   thisObject1 :: (ZO zone (OT1FromOTN ot) -> liftOT ot) -> WithThis liftOT zone ot
 
-instance IsZO zone (OT1 a) => AsWithThis zone (OT1 a) where
+instance (IsZO zone (OT1 a)) => AsWithThis zone (OT1 a) where
   thisObject = case litOTN @(OT1 a) of
     OT1 -> This1
   thisObject1 = case litOTN @(OT1 a) of
     OT1 -> This1
 
-instance IsZO zone (OT2 a b) => AsWithThis zone (OT2 a b) where
+instance (IsZO zone (OT2 a b)) => AsWithThis zone (OT2 a b) where
   thisObject = case litOTN @(OT2 a b) of
     OT2 -> This2
   thisObject1 = case litOTN @(OT2 a b) of
     OT2 -> \goThis1 -> This2 \(a, _) -> goThis1 a
 
-instance IsZO zone (OT3 a b c) => AsWithThis zone (OT3 a b c) where
+instance (IsZO zone (OT3 a b c)) => AsWithThis zone (OT3 a b c) where
   thisObject = case litOTN @(OT3 a b c) of
     OT3 -> This3
   thisObject1 = case litOTN @(OT3 a b c) of
     OT3 -> \goThis1 -> This3 \(a, _, _) -> goThis1 a
 
-instance IsZO zone (OT4 a b c d) => AsWithThis zone (OT4 a b c d) where
+instance (IsZO zone (OT4 a b c d)) => AsWithThis zone (OT4 a b c d) where
   thisObject = case litOTN @(OT4 a b c d) of
     OT4 -> This4
   thisObject1 = case litOTN @(OT4 a b c d) of
     OT4 -> \goThis1 -> This4 \(a, _, _, _) -> goThis1 a
 
-instance IsZO zone (OT5 a b c d e) => AsWithThis zone (OT5 a b c d e) where
+instance (IsZO zone (OT5 a b c d e)) => AsWithThis zone (OT5 a b c d e) where
   thisObject = case litOTN @(OT5 a b c d e) of
     OT5 -> This5
   thisObject1 = case litOTN @(OT5 a b c d e) of
     OT5 -> \goThis1 -> This5 \(a, _, _, _, _) -> goThis1 a
 
-activatedOT' :: AsWithThis zone ot => (ThisFromOTN zone ot -> ElectOT 'TargetStage (ActivatedAbility zone) ot) -> WithThisAbility zone ot
+activatedOT' :: (AsWithThis zone ot) => (ThisFromOTN zone ot -> ElectOT 'TargetStage (ActivatedAbility zone) ot) -> WithThisAbility zone ot
 activatedOT' = WithThisActivated . thisObject
 
-activated' :: AsWithThis zone ot => (ThisFromOTN zone ot -> Elect 'TargetStage (ActivatedAbility zone ot) ot) -> WithThisAbility zone ot
+activated' :: (AsWithThis zone ot) => (ThisFromOTN zone ot -> Elect 'TargetStage (ActivatedAbility zone ot) ot) -> WithThisAbility zone ot
 activated' = activatedOT' . (ElectOT .)
 
 activated :: (AsWithThis zone ot, ot ~ OTN x) => (ThisFromOTN zone ot -> Elect 'TargetStage (ActivatedAbility zone ot) ot) -> SomeZone WithThisAbility ot
 activated = SomeZone . activated'
 
-static' :: AsWithThis zone ot => (ThisFromOTN zone ot -> StaticAbility zone ot) -> WithThisAbility zone ot
+static' :: (AsWithThis zone ot) => (ThisFromOTN zone ot -> StaticAbility zone ot) -> WithThisAbility zone ot
 static' = WithThisStatic . thisObject
 
 static :: (AsWithThis zone ot, ot ~ OTN x) => (ThisFromOTN zone ot -> StaticAbility zone ot) -> SomeZone WithThisAbility ot
@@ -334,7 +334,7 @@ static = SomeZone . static'
 static_ :: (AsWithThis zone ot, ot ~ OTN x) => (ThisFromOTN zone ot -> StaticAbility zone ot) -> SomeZone WithThisAbility ot
 static_ = static
 
-triggered' :: AsWithThis zone ot => (ThisFromOTN zone ot -> TriggeredAbility zone ot) -> WithThisAbility zone ot
+triggered' :: (AsWithThis zone ot) => (ThisFromOTN zone ot -> TriggeredAbility zone ot) -> WithThisAbility zone ot
 triggered' = WithThisTriggered . thisObject
 
 triggered :: (AsWithThis zone ot, ot ~ OTN x) => (ThisFromOTN zone ot -> TriggeredAbility zone ot) -> SomeZone WithThisAbility ot
@@ -355,7 +355,7 @@ instance AsDamage (Damage 'Var) where
 instance AsDamage (Variable Int) where
   asDamage = VariableDamage
 
-manaCost :: ToManaCost a => a -> Cost
+manaCost :: (ToManaCost a) => a -> Cost
 manaCost = ManaCost . toManaCost
 
 noCost :: Cost
@@ -382,7 +382,7 @@ controllerOf ::
 controllerOf = ControllerOf . asAny
 
 sacrifice ::
-  CoPermanent ot =>
+  (CoPermanent ot) =>
   ZOPlayer ->
   [Requirement 'ZBattlefield ot] ->
   Effect 'OneShot
@@ -395,14 +395,14 @@ changeTo ::
   Effect 'Continuous
 changeTo = ChangeTo . asPermanent
 
-destroy :: AsPermanent ot => ZO 'ZBattlefield ot -> Effect 'OneShot
+destroy :: (AsPermanent ot) => ZO 'ZBattlefield ot -> Effect 'OneShot
 destroy = Destroy . asPermanent
 
 counterAbility ::
-  AsActivatedOrTriggeredAbility ot => ZO 'ZStack ot -> Effect 'OneShot
+  (AsActivatedOrTriggeredAbility ot) => ZO 'ZStack ot -> Effect 'OneShot
 counterAbility = CounterAbility . asActivatedOrTriggeredAbility
 
-counterSpell :: AsSpell ot => ZO 'ZStack ot -> Effect 'OneShot
+counterSpell :: (AsSpell ot) => ZO 'ZStack ot -> Effect 'OneShot
 counterSpell = CounterSpell . asSpell
 
 is :: (IsZone zone, CoAny ot) => ZO zone ot -> Requirement zone ot
@@ -412,16 +412,16 @@ satisfies ::
   (IsZone zone, CoAny ot) => ZO zone ot -> [Requirement zone ot] -> Condition
 satisfies = Satisfies
 
-sacrificeCost :: CoPermanent ot' => [Requirement 'ZBattlefield ot'] -> Cost
+sacrificeCost :: (CoPermanent ot') => [Requirement 'ZBattlefield ot'] -> Cost
 sacrificeCost = SacrificeCost
 
-tapCost :: CoPermanent ot' => [Requirement 'ZBattlefield ot'] -> Cost
+tapCost :: (CoPermanent ot') => [Requirement 'ZBattlefield ot'] -> Cost
 tapCost = TapCost
 
-isTapped :: CoPermanent ot => Requirement 'ZBattlefield ot
+isTapped :: (CoPermanent ot) => Requirement 'ZBattlefield ot
 isTapped = IsTapped
 
-addToBattlefield :: CoPermanent ot => ZOPlayer -> Token ot -> Effect 'OneShot
+addToBattlefield :: (CoPermanent ot) => ZOPlayer -> Token ot -> Effect 'OneShot
 addToBattlefield = AddToBattlefield
 
 ofColors :: (IsZO zone ot, ColorsLike c) => c -> Requirement zone ot
@@ -439,19 +439,19 @@ instance AsCost (ManaCost 'Var) ot where
 class ElectEffect effect elect where
   effect :: effect -> elect
 
-instance Typeable ef => ElectEffect (Effect ef) (Elect 'ResolveStage (Effect ef) ot) where
+instance (Typeable ef) => ElectEffect (Effect ef) (Elect 'ResolveStage (Effect ef) ot) where
   effect = Effect . pure
 
-instance Typeable ef => ElectEffect [Effect ef] (Elect 'ResolveStage (Effect ef) ot) where
+instance (Typeable ef) => ElectEffect [Effect ef] (Elect 'ResolveStage (Effect ef) ot) where
   effect = Effect
 
 instance ElectEffect (Effect 'Continuous) (Elect 'ResolveStage (Effect 'OneShot) ot) where
   effect = Effect . pure . EffectContinuous
 
-instance Typeable ef => ElectEffect (Effect ef) (ElectTargetedEffect (Effect ef) ot) where
+instance (Typeable ef) => ElectEffect (Effect ef) (ElectTargetedEffect (Effect ef) ot) where
   effect = EndTargets . effect
 
-instance Typeable ef => ElectEffect [Effect ef] (ElectTargetedEffect (Effect ef) ot) where
+instance (Typeable ef) => ElectEffect [Effect ef] (ElectTargetedEffect (Effect ef) ot) where
   effect = EndTargets . effect
 
 class EventLike s el where
@@ -466,12 +466,12 @@ instance EventLike 'IntrinsicStage EventListener where
 class AsIfThen (s :: ElectStage) (el :: Type) (ot :: Type) where
   thenEmpty :: Elect s el ot
 
-class AsIfThen s el ot => AsIfElse s el ot where
+class (AsIfThen s el ot) => AsIfElse s el ot where
   elseEmpty :: Else s el ot
-  default elseEmpty :: AsIfThenElse s el ot => Else s el ot
+  default elseEmpty :: (AsIfThenElse s el ot) => Else s el ot
   elseEmpty = liftElse thenEmpty
 
-class AsIfThen (s :: ElectStage) (el :: Type) (ot :: Type) => AsIfThenElse s el ot where
+class (AsIfThen (s :: ElectStage) (el :: Type) (ot :: Type)) => AsIfThenElse s el ot where
   liftElse :: Elect s el ot -> Else s el ot
 
 instance AsIfThen 'ResolveStage (Effect 'OneShot) ot where
@@ -488,35 +488,35 @@ instance AsIfElse 'IntrinsicStage EventListener ot where
 instance AsIfThenElse 'ResolveStage (Effect 'OneShot) ot where
   liftElse = ElseEffect
 
-ifThen :: AsIfElse s el ot => Condition -> Elect s el ot -> Elect s el ot
+ifThen :: (AsIfElse s el ot) => Condition -> Elect s el ot -> Elect s el ot
 ifThen cond then_ = If cond then_ elseEmpty
 
-ifElse :: AsIfElse s el ot => Condition -> Elect s el ot -> Elect s el ot
+ifElse :: (AsIfElse s el ot) => Condition -> Elect s el ot -> Elect s el ot
 ifElse cond else_ = If (CNot cond) else_ elseEmpty
 
 ifThenElse ::
-  AsIfThenElse s el ot => Condition -> Elect s el ot -> Elect s el ot -> Elect s el ot
+  (AsIfThenElse s el ot) => Condition -> Elect s el ot -> Elect s el ot -> Elect s el ot
 ifThenElse cond then_ else_ = If cond then_ $ liftElse else_
 
-isBasic :: IsZone zone => Requirement zone OTNLand
+isBasic :: (IsZone zone) => Requirement zone OTNLand
 isBasic = ROr $ map (HasLandType . BasicLand) [minBound ..]
 
 -- XXX: Fixme. Non-basic lands can have basic land types.
-nonBasic :: IsZone zone => Requirement zone OTNLand
+nonBasic :: (IsZone zone) => Requirement zone OTNLand
 nonBasic = RAnd $ map (Not . HasLandType . BasicLand) [minBound ..]
 
-nonBlack :: IsZO zone ot => Requirement zone ot
+nonBlack :: (IsZO zone ot) => Requirement zone ot
 nonBlack = Not $ ofColors Black
 
-colored :: IsZO zone ot => Requirement zone ot
+colored :: (IsZO zone ot) => Requirement zone ot
 colored = ROr $ map ofColors [minBound :: Color ..]
 
-colorless :: IsZO zone ot => Requirement zone ot
+colorless :: (IsZO zone ot) => Requirement zone ot
 colorless = Not colored
 
 type FinColor = Fin Color (ToNat 4)
 
-chooseAnyColor :: CoNonIntrinsicStage s => ZOPlayer -> (Variable FinColor -> Elect s el ot) -> Elect s el ot
+chooseAnyColor :: (CoNonIntrinsicStage s) => ZOPlayer -> (Variable FinColor -> Elect s el ot) -> Elect s el ot
 chooseAnyColor player = ChooseOption player list
  where
   list = LS White CTrue $ LS Blue CTrue $ LS Black CTrue $ LS Red CTrue $ LZ Green CTrue
@@ -529,7 +529,7 @@ addManaAnyColor color player amount =
       , ofFin = LS () (go W) $ LS () (go U) $ LS () (go B) $ LS () (go R) $ LZ () (go G)
       }
  where
-  go :: ToManaPool 'NonSnow (ManaSymbol mt, Int) => ManaSymbol mt -> Effect 'OneShot
+  go :: (ToManaPool 'NonSnow (ManaSymbol mt, Int)) => ManaSymbol mt -> Effect 'OneShot
   go sym = AddMana player $ toManaPool (sym, amount)
 
 -- class
@@ -570,13 +570,13 @@ addManaAnyColor color player amount =
 -- mkToken name = Token coPermanent . mkCard name
 
 hasAbility ::
-  IsZO zone ot =>
+  (IsZO zone ot) =>
   SomeZone WithThisAbility ot ->
   Requirement zone ot
 hasAbility = HasAbility
 
 becomesTapped ::
-  CoPermanent ot =>
+  (CoPermanent ot) =>
   WithLinkedObject (Elect 'ResolveStage (Effect 'OneShot)) 'ZBattlefield ot ->
   EventListener
 becomesTapped = BecomesTapped
@@ -585,17 +585,17 @@ untilEndOfTurn :: Effect 'Continuous -> Effect 'OneShot
 untilEndOfTurn =
   EffectContinuous . Until (event $ TimePoint (StepBegin CleanupStep) Proxy)
 
-gainAbility :: CoAny ot => ZO 'ZBattlefield ot -> WithThisAbility 'ZBattlefield ot -> Effect 'Continuous
+gainAbility :: (CoAny ot) => ZO 'ZBattlefield ot -> WithThisAbility 'ZBattlefield ot -> Effect 'Continuous
 gainAbility = GainAbility
 
-loseAbility :: CoAny ot => ZO 'ZBattlefield ot -> WithThisAbility 'ZBattlefield ot -> Effect 'Continuous
+loseAbility :: (CoAny ot) => ZO 'ZBattlefield ot -> WithThisAbility 'ZBattlefield ot -> Effect 'Continuous
 loseAbility = LoseAbility
 
-gainControl :: CoAny ot => ZOPlayer -> ZO 'ZBattlefield ot -> Effect 'Continuous
+gainControl :: (CoAny ot) => ZOPlayer -> ZO 'ZBattlefield ot -> Effect 'Continuous
 gainControl = GainControl
 
 class HasLandType a where
-  hasLandType :: IsZone zone => a -> Requirement zone OTNLand
+  hasLandType :: (IsZone zone) => a -> Requirement zone OTNLand
 
 instance HasLandType BasicLandType where
   hasLandType = HasLandType . BasicLand
@@ -608,7 +608,7 @@ putOntoBattlefield ::
 putOntoBattlefield = PutOntoBattlefield
 
 searchLibrary ::
-  CoCard ot =>
+  (CoCard ot) =>
   ZOPlayer ->
   ZOPlayer ->
   WithLinkedObject (Elect 'ResolveStage (Effect 'OneShot)) 'ZLibrary ot ->
@@ -624,9 +624,9 @@ type CanHaveTrivialManaAbility ot =
 
 mkTrivialManaAbility ::
   forall ot ot1 zo.
-  ot1 ~ OT1FromOTN ot =>
-  zo ~ ZO 'ZBattlefield ot1 =>
-  CanHaveTrivialManaAbility ot =>
+  (ot1 ~ OT1FromOTN ot) =>
+  (zo ~ ZO 'ZBattlefield ot1) =>
+  (CanHaveTrivialManaAbility ot) =>
   Maybe BasicLandType ->
   WithThisActivated 'ZBattlefield ot
 mkTrivialManaAbility mTy = thisObject1 \this ->
@@ -645,25 +645,25 @@ mkTrivialManaAbility mTy = thisObject1 \this ->
               Nothing -> toManaPool C
           }
 
-plainsManaAbility :: CanHaveTrivialManaAbility ot => WithThisActivated 'ZBattlefield ot
+plainsManaAbility :: (CanHaveTrivialManaAbility ot) => WithThisActivated 'ZBattlefield ot
 plainsManaAbility = mkTrivialManaAbility $ Just Plains
 
-islandManaAbility :: CanHaveTrivialManaAbility ot => WithThisActivated 'ZBattlefield ot
+islandManaAbility :: (CanHaveTrivialManaAbility ot) => WithThisActivated 'ZBattlefield ot
 islandManaAbility = mkTrivialManaAbility $ Just Island
 
-swampManaAbility :: CanHaveTrivialManaAbility ot => WithThisActivated 'ZBattlefield ot
+swampManaAbility :: (CanHaveTrivialManaAbility ot) => WithThisActivated 'ZBattlefield ot
 swampManaAbility = mkTrivialManaAbility $ Just Swamp
 
-mountainManaAbility :: CanHaveTrivialManaAbility ot => WithThisActivated 'ZBattlefield ot
+mountainManaAbility :: (CanHaveTrivialManaAbility ot) => WithThisActivated 'ZBattlefield ot
 mountainManaAbility = mkTrivialManaAbility $ Just Mountain
 
-forestManaAbility :: CanHaveTrivialManaAbility ot => WithThisActivated 'ZBattlefield ot
+forestManaAbility :: (CanHaveTrivialManaAbility ot) => WithThisActivated 'ZBattlefield ot
 forestManaAbility = mkTrivialManaAbility $ Just Forest
 
-wastesManaAbility :: CanHaveTrivialManaAbility ot => WithThisActivated 'ZBattlefield ot
+wastesManaAbility :: (CanHaveTrivialManaAbility ot) => WithThisActivated 'ZBattlefield ot
 wastesManaAbility = mkTrivialManaAbility Nothing
 
-trivialManaAbility :: CanHaveTrivialManaAbility ot => Maybe BasicLandType -> WithThisActivated 'ZBattlefield ot
+trivialManaAbility :: (CanHaveTrivialManaAbility ot) => Maybe BasicLandType -> WithThisActivated 'ZBattlefield ot
 trivialManaAbility = \case
   Just ty -> case ty of
     Plains -> plainsManaAbility
@@ -673,7 +673,7 @@ trivialManaAbility = \case
     Forest -> forestManaAbility
   Nothing -> wastesManaAbility
 
-trivialManaAbilities :: CanHaveTrivialManaAbility ot => [WithThisActivated 'ZBattlefield ot]
+trivialManaAbilities :: (CanHaveTrivialManaAbility ot) => [WithThisActivated 'ZBattlefield ot]
 trivialManaAbilities =
   [ plainsManaAbility
   , islandManaAbility

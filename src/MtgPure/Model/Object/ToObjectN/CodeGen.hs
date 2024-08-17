@@ -110,7 +110,7 @@ header =
   \"
 
 limit :: Int
---limit = 3
+-- limit = 3
 limit = 1 + fromEnum (maxBound :: OT)
 
 newtype Sym = Sym Int
@@ -125,7 +125,7 @@ interpretSym desc (Sym n) = case desc of
   SymLetter -> [['a' ..] !! n]
 
 allSyms :: [Sym]
---allSyms = map Sym [0 .. limit - 1] -- fromEnum (maxBound :: OT)]
+-- allSyms = map Sym [0 .. limit - 1] -- fromEnum (maxBound :: OT)]
 allSyms = map Sym [0 .. fromEnum (maxBound :: OT)]
 
 objectTypeDescs :: [SymDesc]
@@ -144,7 +144,7 @@ objectTypes = map f [minBound :: OT .. maxBound]
   f o = [['A' ..] !! fromEnum o]
 
 -- https://stackoverflow.com/a/3100764
-nubOrd :: Ord a => [a] -> [a]
+nubOrd :: (Ord a) => [a] -> [a]
 nubOrd = go Set.empty
  where
   go s (x : xs)
@@ -181,8 +181,8 @@ generateObjectsToObjectN desc n = do
 generateObjectToObjectN :: SymDesc -> Sym -> [Sym] -> Maybe String
 generateObjectToObjectN desc sym symN =
   if
-      | n < 1 -> Nothing
-      | otherwise -> Just $ instanceLine ++ "\n  " ++ funcLine ++ "\n"
+    | n < 1 -> Nothing
+    | otherwise -> Just $ instanceLine ++ "\n  " ++ funcLine ++ "\n"
  where
   n = length symN
 
@@ -230,13 +230,13 @@ generateObjectMsToObjectN desc m n = reverse do
 generateObjectMToObjectN :: SymDesc -> [Sym] -> [Sym] -> Maybe String
 generateObjectMToObjectN desc symsM symsN =
   if
-      | m == n ->
+    | m == n ->
         Just $ instanceLine ++ "\n  toObject" ++ show n ++ " = id\n"
-      | n <= 1 ->
+    | n <= 1 ->
         Nothing
-      | m < 1 ->
+    | m < 1 ->
         Nothing
-      | m + 1 == n ->
+    | m + 1 == n ->
         Just $
           instanceLine
             ++ "\n  toObject"
@@ -245,7 +245,7 @@ generateObjectMToObjectN desc symsM symsN =
             ++ show n
             ++ letterMissing
             ++ "\n"
-      | otherwise ->
+    | otherwise ->
         Just $
           instanceLine
             ++ "\n  toObject"

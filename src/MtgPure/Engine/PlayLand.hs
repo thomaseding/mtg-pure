@@ -77,7 +77,7 @@ pattern PlayLandReqs_Satisfied =
     , playLandReqs_atMaxLands = False
     }
 
-getPlayLandReqs :: Monad m => Object 'OTPlayer -> Magic 'Private 'RO m PlayLandReqs
+getPlayLandReqs :: (Monad m) => Object 'OTPlayer -> Magic 'Private 'RO m PlayLandReqs
 getPlayLandReqs oPlayer = logCall 'getPlayLandReqs do
   st <- internalFromPrivate $ fromRO get
   player <- fromRO $ getPlayer oPlayer
@@ -96,7 +96,7 @@ getPlayLandReqs oPlayer = logCall 'getPlayLandReqs do
       , playLandReqs_atMaxLands = landsPlayed >= maxLands -- (305.2)
       }
 
-playLand :: Monad m => Object 'OTPlayer -> SpecialAction PlayLand -> Magic 'Private 'RW m Legality
+playLand :: (Monad m) => Object 'OTPlayer -> SpecialAction PlayLand -> Magic 'Private 'RW m Legality
 playLand oPlayer (PlayLand oLand) = logCall 'playLand do
   playLandZO oPlayer oLand
 

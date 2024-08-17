@@ -290,7 +290,7 @@ examineObject objId = do
               Just player -> unlines . chunk' $ show player
             Just perm ->
               let card = either show show $ permanentCard perm
-                  goCharacteristic :: Show a => a -> String
+                  goCharacteristic :: (Show a) => a -> String
                   goCharacteristic = show
                   characters =
                     Maybe.catMaybes
@@ -321,8 +321,8 @@ examineAbility _objId _abilityIndex = do
 
 activateAbility :: ObjectId -> CommandAbilityIndex -> [ObjectId] -> Magic 'Public 'RO Terminal (PriorityAction ())
 activateAbility objId abilityIndex _extraIds = do
-  mZoAny <- internalFromPrivate $ toZO @ 'ZBattlefield @OTNAny objId
-  mZoPerm <- internalFromPrivate $ toZO @ 'ZBattlefield @OTNPermanent objId
+  mZoAny <- internalFromPrivate $ toZO @'ZBattlefield @OTNAny objId
+  mZoPerm <- internalFromPrivate $ toZO @'ZBattlefield @OTNPermanent objId
   case abilityIndex of
     CIAbilityIndex relIndex -> do
       case mZoAny of
@@ -332,12 +332,12 @@ activateAbility objId abilityIndex _extraIds = do
           mAction <-
             mconcat . map First
               <$> sequence
-                [ goIndex @ 'ZBattlefield index
-                -- , goIndex @ 'ZExile index
-                -- , goIndex @ 'ZGraveyard index
-                -- , goIndex @ 'ZHand index
-                -- , goIndex @ 'ZLibrary index
-                -- , goIndex @ 'ZStack index
+                [ goIndex @'ZBattlefield index
+                -- , goIndex @'ZExile index
+                -- , goIndex @'ZGraveyard index
+                -- , goIndex @'ZHand index
+                -- , goIndex @'ZLibrary index
+                -- , goIndex @'ZStack index
                 ]
           case getFirst mAction of
             Just action -> pure action
@@ -366,7 +366,7 @@ activateAbility objId abilityIndex _extraIds = do
   tryAgain :: Magic 'Public 'RO Terminal (PriorityAction ())
   tryAgain = pure $ AskPriorityActionAgain Nothing
 
-  goIndex :: forall zone. IsZone zone => AbsoluteActivatedAbilityIndex -> Magic 'Public 'RO Terminal (Maybe (PriorityAction ()))
+  goIndex :: forall zone. (IsZone zone) => AbsoluteActivatedAbilityIndex -> Magic 'Public 'RO Terminal (Maybe (PriorityAction ()))
   goIndex index = do
     mAbility <- internalFromPrivate $ indexToActivated index
     case mAbility of
@@ -375,13 +375,13 @@ activateAbility objId abilityIndex _extraIds = do
 
 castSpell :: ObjectId -> [ObjectId] -> Magic 'Public 'RO Terminal (PriorityAction ())
 castSpell spellId _extraIds = do
-  let zo0 = toZO0 @ 'ZHand spellId
+  let zo0 = toZO0 @'ZHand spellId
       zo = zo0ToSpell zo0
   pure $ PriorityAction $ CastSpell zo
 
 playLand :: ObjectId -> [ObjectId] -> Magic 'Public 'RO Terminal (PriorityAction ())
 playLand landId _extraIds = do
-  let zo0 = toZO0 @ 'ZHand landId
+  let zo0 = toZO0 @'ZHand landId
       zo = toZO1 zo0
   pure $ PriorityAction $ SpecialAction $ PlayLand zo
 
@@ -552,7 +552,7 @@ terminalPick attempt opaque oPlayer variety xs = case xs of
     PickZO -> "PickZO"
 
 terminalPickByObjectId ::
-  GetObjectId a =>
+  (GetObjectId a) =>
   Attempt ->
   OpaqueGameState Terminal ->
   Object 'OTPlayer ->
@@ -584,7 +584,7 @@ terminalPickByObjectId (Attempt attempt) _opaque _oPlayer tag xs = do
   pure x
 
 _terminalPickByListIndex ::
-  Show a =>
+  (Show a) =>
   Attempt ->
   OpaqueGameState Terminal ->
   Object 'OTPlayer ->

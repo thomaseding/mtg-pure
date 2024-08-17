@@ -5,7 +5,8 @@
 -- This module is used to load all modules in the project.
 -- Useful for checking that all modules compile.
 module LoadAllModules (
-  ) where
+
+) where
 
 -- import LoadAllModules () -- can't include self
 import Ansi.AnsiString ()

@@ -98,14 +98,14 @@ data InternalLogicError :: Type where
   CantHappenByConstruction :: InternalLogicError -- TODO: ditch this for informative constructors
   CorruptCallStackLogging :: InternalLogicError
   ExpectedCardToBeAPermanentCard :: InternalLogicError
-  ExpectedStackObjectToExist :: IsZO zone ot => ZO zone ot -> InternalLogicError
+  ExpectedStackObjectToExist :: (IsZO zone ot) => ZO zone ot -> InternalLogicError
   GameShouldHaveEndedBecauseThereIsOnlyOnePlayerLeft :: InternalLogicError
   InvalidPermanent :: ZO 'ZBattlefield OTNPermanent -> InternalLogicError
   InvalidPlayer :: Object 'OTPlayer -> InternalLogicError
   ManaAbilitiesDontHaveTargetsSoNoZoShouldBeNeeded :: InternalLogicError
   NotSureWhatThisEntails :: InternalLogicError
-  ObjectDoesNotHaveAbility :: IsZO zone ot => SomeActivatedAbility zone ot -> InternalLogicError
-  ObjectIdExistsAndAlsoDoesNotExist :: IsZO zone ot => ZO zone ot -> InternalLogicError
+  ObjectDoesNotHaveAbility :: (IsZO zone ot) => SomeActivatedAbility zone ot -> InternalLogicError
+  ObjectIdExistsAndAlsoDoesNotExist :: (IsZO zone ot) => ZO zone ot -> InternalLogicError
   deriving (Typeable)
 
 deriving instance Show InternalLogicError
@@ -159,7 +159,7 @@ data PendingReady (s :: ElectStage) (el :: Type) (ot :: Type) where
   Pending :: {unPending :: Elect 'ResolveStage el ot} -> Pending el ot
   Ready :: {unReady :: el} -> Ready el ot
 
-deriving instance Show el => Show (PendingReady p el ot)
+deriving instance (Show el) => Show (PendingReady p el ot)
 
 type Pending = PendingReady 'TargetStage
 
@@ -167,7 +167,7 @@ type Ready = PendingReady 'ResolveStage
 
 data Elected (s :: ElectStage) (ot :: Type) :: Type where
   ElectedActivatedAbility ::
-    IsZO zone ot =>
+    (IsZO zone ot) =>
     { electedActivatedAbility_ability :: SomeActivatedAbility zone ot
     , electedActivatedAbility_controller :: Object 'OTPlayer
     , electedActivatedAbility_this :: ZO zone ot
@@ -176,11 +176,11 @@ data Elected (s :: ElectStage) (ot :: Type) :: Type where
     } ->
     Elected s ot
   ElectedSpell ::
-    IsZO zone OTNSpell =>
-    { -- | NOTE: This is the card that was cast, so its lifetime is short and the object it points to is often dead.
-      -- For example this is the hand card that was cast, but once it is put on the stack it is no longer in the hand
-      -- and the object it points to is then dead.
-      electedSpell_originalSource :: ZO zone OTNSpell
+    (IsZO zone OTNSpell) =>
+    { electedSpell_originalSource :: ZO zone OTNSpell
+    -- ^ NOTE: This is the card that was cast, so its lifetime is short and the object it points to is often dead.
+    -- For example this is the hand card that was cast, but once it is put on the stack it is no longer in the hand
+    -- and the object it points to is then dead.
     , electedSpell_controller :: Object 'OTPlayer
     , electedSpell_card :: AnyCard -- TODO: OwnedCard?
     , electedSpell_character :: CardCharacteristic ot
@@ -202,7 +202,7 @@ electedObject_cost elected = ($ elected) case elected of
   ElectedSpell{} -> electedSpell_cost
 
 data AnyElected (s :: ElectStage) :: Type where
-  AnyElected :: IsOTN ot => Elected s ot -> AnyElected s
+  AnyElected :: (IsOTN ot) => Elected s ot -> AnyElected s
   deriving (Typeable)
 
 newtype AttackingPlayer = AttackingPlayer {unAttackingPlayer :: Object 'OTPlayer}
@@ -230,7 +230,7 @@ data Pause = Pause | NoPause
   deriving (Eq, Ord, Show)
 
 data PickVariety (a :: Type) :: Type where
-  PickZO :: IsZO zone ot => PickVariety (ZO zone ot)
+  PickZO :: (IsZO zone ot) => PickVariety (ZO zone ot)
 
 data Prompt' (opaqueGameState :: (Type -> Type) -> Type) (m :: Type -> Type) = Prompt
   { exceptionCantBeginGameWithoutPlayers :: m ()
@@ -239,7 +239,7 @@ data Prompt' (opaqueGameState :: (Type -> Type) -> Type) (m :: Type -> Type) = P
   , exceptionInvalidPlayLand :: opaqueGameState m -> Object 'OTPlayer -> InvalidPlayLand -> m ()
   , exceptionInvalidShuffle :: CardCount -> [CardIndex] -> m ()
   , exceptionInvalidStartingPlayer :: PlayerCount -> PlayerIndex -> m ()
-  , exceptionZoneObjectDoesNotExist :: forall zone ot. IsZO zone ot => ZO zone ot -> m ()
+  , exceptionZoneObjectDoesNotExist :: forall zone ot. (IsZO zone ot) => ZO zone ot -> m ()
   , promptChooseAttackers :: Attempt -> opaqueGameState m -> AttackingPlayer -> DefendingPlayer -> m [DeclaredAttacker]
   , promptChooseBlockers :: Attempt -> opaqueGameState m -> AttackingPlayer -> DefendingPlayer -> NonEmpty DeclaredAttacker -> m [DeclaredBlocker]
   , promptChooseOption :: forall user n elem. (Typeable user, IsNat n, Show user) => Attempt -> opaqueGameState m -> Object 'OTPlayer -> NatList user n elem -> m (Fin user n)
@@ -288,8 +288,8 @@ ordSomeActivatedAbility x = case x of
     SomeActivatedAbility zo2 withThis2' ->
       let go ::
             forall ot1 ot2.
-            IsZO zone ot1 =>
-            IsZO zone ot2 =>
+            (IsZO zone ot1) =>
+            (IsZO zone ot2) =>
             WithThisActivated zone ot1 ->
             WithThisActivated zone ot2 ->
             O.EnvM Ordering
@@ -328,8 +328,8 @@ ordSomeStaticAbility x = case x of
     SomeStaticAbility zo2 withThis2' ->
       let go ::
             forall ot1 ot2.
-            IsZO zone ot1 =>
-            IsZO zone ot2 =>
+            (IsZO zone ot1) =>
+            (IsZO zone ot2) =>
             WithThisStatic zone ot1 ->
             WithThisStatic zone ot2 ->
             O.EnvM Ordering
@@ -368,8 +368,8 @@ ordSomeTriggeredAbility x = case x of
     SomeTriggeredAbility zo2 withThis2' ->
       let go ::
             forall ot1 ot2.
-            IsZO zone ot1 =>
-            IsZO zone ot2 =>
+            (IsZO zone ot1) =>
+            (IsZO zone ot2) =>
             WithThisTriggered zone ot1 ->
             WithThisTriggered zone ot2 ->
             O.EnvM Ordering
@@ -392,13 +392,13 @@ data CastSpell
 data PlayLand
 
 data PriorityAction (a :: Type) :: Type where
-  ActivateAbility :: IsZO zone ot => SomeActivatedAbility zone ot -> PriorityAction ActivateAbility
+  ActivateAbility :: (IsZO zone ot) => SomeActivatedAbility zone ot -> PriorityAction ActivateAbility
   AskPriorityActionAgain :: Maybe Attempt -> PriorityAction () -- NOTE: This is handy for client code.
   -- NOTE (305.9): Lands + other types can never be cast
   -- Unfortunately OTNSpell intersects OTArtifactLand. Such is life.
   -- Prolly don't want to model `SomeButNot allowed disallowed`? Maybe `SomeButNot` is okay for Runtime,
   -- though it's probably unnecessary for Authoring (thankfully).
-  CastSpell :: IsZO zone OTNSpell => ZO zone OTNSpell -> PriorityAction CastSpell
+  CastSpell :: (IsZO zone OTNSpell) => ZO zone OTNSpell -> PriorityAction CastSpell
   -- | In genuine MTG, this can be done at any time, but we're going to restrict its use to here.
   -- See doc notes on `endTheGame` for more details on why.
   Concede :: PriorityAction ()
@@ -409,27 +409,27 @@ data PriorityAction (a :: Type) :: Type where
 deriving instance Show (PriorityAction a)
 
 data SpecialAction (a :: Type) :: Type where
-  PlayLand :: IsZO zone OTNLand => ZO zone OTNLand -> SpecialAction PlayLand
+  PlayLand :: (IsZO zone OTNLand) => ZO zone OTNLand -> SpecialAction PlayLand
 
 deriving instance Show (SpecialAction a)
 
 data InvalidPlayLand :: Type where
-  PlayLand_AtMaxLands :: IsZone zone => ZO zone OTNLand -> InvalidPlayLand
-  PlayLand_CannotPlayFromZone :: IsZone zone => ZO zone OTNLand -> InvalidPlayLand
-  PlayLand_NoPriority :: IsZone zone => ZO zone OTNLand -> InvalidPlayLand
-  PlayLand_NotActive :: IsZone zone => ZO zone OTNLand -> InvalidPlayLand
-  PlayLand_NotALand :: IsZone zone => ZO zone OTNLand -> InvalidPlayLand
+  PlayLand_AtMaxLands :: (IsZone zone) => ZO zone OTNLand -> InvalidPlayLand
+  PlayLand_CannotPlayFromZone :: (IsZone zone) => ZO zone OTNLand -> InvalidPlayLand
+  PlayLand_NoPriority :: (IsZone zone) => ZO zone OTNLand -> InvalidPlayLand
+  PlayLand_NotActive :: (IsZone zone) => ZO zone OTNLand -> InvalidPlayLand
+  PlayLand_NotALand :: (IsZone zone) => ZO zone OTNLand -> InvalidPlayLand
   PlayLand_NotInZone :: ZO zone OTNLand -> InvalidPlayLand
-  PlayLand_NotMainPhase :: IsZone zone => ZO zone OTNLand -> InvalidPlayLand
-  PlayLand_NotOwned :: IsZone zone => ZO zone OTNLand -> InvalidPlayLand
-  PlayLand_StackNonEmpty :: IsZone zone => ZO zone OTNLand -> InvalidPlayLand
+  PlayLand_NotMainPhase :: (IsZone zone) => ZO zone OTNLand -> InvalidPlayLand
+  PlayLand_NotOwned :: (IsZone zone) => ZO zone OTNLand -> InvalidPlayLand
+  PlayLand_StackNonEmpty :: (IsZone zone) => ZO zone OTNLand -> InvalidPlayLand
 
 deriving instance Show InvalidPlayLand
 
 data InvalidCastSpell :: Type where
-  CastSpell_CannotPlayFromZone :: IsZone zone => ZO zone OTNSpell -> InvalidCastSpell
-  CastSpell_NoPriority :: IsZone zone => ZO zone OTNSpell -> InvalidCastSpell
-  CastSpell_NotASpell :: IsZone zone => ZO zone OTNSpell -> InvalidCastSpell
+  CastSpell_CannotPlayFromZone :: (IsZone zone) => ZO zone OTNSpell -> InvalidCastSpell
+  CastSpell_NoPriority :: (IsZone zone) => ZO zone OTNSpell -> InvalidCastSpell
+  CastSpell_NotASpell :: (IsZone zone) => ZO zone OTNSpell -> InvalidCastSpell
   CastSpell_NotInZone :: ZO zone OTNSpell -> InvalidCastSpell
   CastSpell_NotOwned :: ZO zone OTNSpell -> InvalidCastSpell
 
@@ -441,7 +441,7 @@ data ResolveElected :: Type where
   PermanentResolved :: ResolveElected
 
 data SourceZO :: Type where
-  SourceZO :: IsZO zone ot => ZO zone ot -> SourceZO
+  SourceZO :: (IsZO zone ot) => ZO zone ot -> SourceZO
 
 data TriggerTime :: Type where
   DuringResolution :: TriggerTime

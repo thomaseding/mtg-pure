@@ -51,13 +51,13 @@ data SafeValue :: Type where
   SafeObject :: Map.Map String SafeValue -> SafeValue
   deriving (Eq, Ord, Show, Typeable)
 
-readSafeJsonFile :: FromSafeJson a => FilePath -> IO (Either String a)
+readSafeJsonFile :: (FromSafeJson a) => FilePath -> IO (Either String a)
 readSafeJsonFile path = do
   contents <- readFile path
   M.void $ evaluate $ length contents
   pure $ parseSafeJson path contents
 
-parseSafeJson :: FromSafeJson a => FilePath -> String -> Either String a
+parseSafeJson :: (FromSafeJson a) => FilePath -> String -> Either String a
 parseSafeJson path str = case parse safeJson path str of
   Left err -> Left $ show err
   Right value -> fromSafeJson value
@@ -213,7 +213,7 @@ class ToSafeJson a where
 class FromSafeJson a where
   fromSafeJson :: SafeValue -> Either String a
 
-store :: ToSafeJson a => String -> a -> (String, SafeValue)
+store :: (ToSafeJson a) => String -> a -> (String, SafeValue)
 store k v = (k, toSafeJson v)
 
 fetch :: (FromSafeJson a) => Map.Map String SafeValue -> String -> Either String a
@@ -291,10 +291,10 @@ instance (FromSafeJson a, FromSafeJson b, FromSafeJson c, FromSafeJson d, FromSa
     SafeArray [a, b, c, d, e] -> (,,,,) <$> fromSafeJson a <*> fromSafeJson b <*> fromSafeJson c <*> fromSafeJson d <*> fromSafeJson e
     _ -> Left "expected array of length 5"
 
-instance ToSafeJson a => ToSafeJson [(String, a)] where
+instance (ToSafeJson a) => ToSafeJson [(String, a)] where
   toSafeJson = SafeObject . Map.fromList . map (\(k, v) -> (k, toSafeJson v))
 
-instance FromSafeJson a => FromSafeJson [(String, a)] where
+instance (FromSafeJson a) => FromSafeJson [(String, a)] where
   fromSafeJson = \case
     SafeObject m -> mapM (\(k, v) -> (,) k <$> fromSafeJson v) $ Map.toList m
     _ -> Left "expected object"
@@ -349,18 +349,18 @@ instance FromSafeJson Float where
 instance ToSafeJson Float where
   toSafeJson = SafeNumber . realToFrac
 
-instance ToSafeJson a => ToSafeJson (Map.Map String a) where
+instance (ToSafeJson a) => ToSafeJson (Map.Map String a) where
   toSafeJson = SafeObject . Map.map toSafeJson
 
-instance FromSafeJson a => FromSafeJson (Map.Map String a) where
+instance (FromSafeJson a) => FromSafeJson (Map.Map String a) where
   fromSafeJson = \case
     SafeObject m -> traverse fromSafeJson m
     _ -> Left "expected object"
 
-instance ToSafeJson a => ToSafeJson (Map.Map Int a) where
+instance (ToSafeJson a) => ToSafeJson (Map.Map Int a) where
   toSafeJson = toSafeJson . Map.mapKeys show
 
-instance FromSafeJson a => FromSafeJson (Map.Map Int a) where
+instance (FromSafeJson a) => FromSafeJson (Map.Map Int a) where
   fromSafeJson = fmap (Map.mapKeys goRead) . fromSafeJson
    where
     goRead :: String -> Int
@@ -368,10 +368,10 @@ instance FromSafeJson a => FromSafeJson (Map.Map Int a) where
       [(i, "")] -> i
       _ -> error "expected int"
 
-instance ToSafeJson a => ToSafeJson (Map.Map Integer a) where
+instance (ToSafeJson a) => ToSafeJson (Map.Map Integer a) where
   toSafeJson = toSafeJson . Map.mapKeys show
 
-instance FromSafeJson a => FromSafeJson (Map.Map Integer a) where
+instance (FromSafeJson a) => FromSafeJson (Map.Map Integer a) where
   fromSafeJson = fmap (Map.mapKeys goRead) . fromSafeJson
    where
     goRead :: String -> Integer

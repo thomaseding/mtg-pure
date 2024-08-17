@@ -37,11 +37,11 @@ data UntypedObject :: Type where
 class GetObjectId a where
   getUntypedObject :: a -> UntypedObject
 
-getObjectId :: GetObjectId a => a -> ObjectId
+getObjectId :: (GetObjectId a) => a -> ObjectId
 getObjectId x = case getUntypedObject x of
   UntypedObject _ i -> i
 
-getObjectDiscriminant :: GetObjectId a => a -> ObjectDiscriminant
+getObjectDiscriminant :: (GetObjectId a) => a -> ObjectDiscriminant
 getObjectDiscriminant x = case getUntypedObject x of
   UntypedObject d _ -> d
 

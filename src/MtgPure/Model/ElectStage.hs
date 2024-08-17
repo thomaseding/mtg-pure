@@ -44,7 +44,7 @@ data NonIntrinsicStage (s :: ElectStage) :: Type where
   NonIntrinsicTargetStage :: NonIntrinsicStage 'TargetStage
   NonIntrinsicResolveStage :: NonIntrinsicStage 'ResolveStage
 
-class IsElectStage s => CoNonIntrinsicStage (s :: ElectStage) where
+class (IsElectStage s) => CoNonIntrinsicStage (s :: ElectStage) where
   coNonIntrinsicStage :: NonIntrinsicStage s
 
 instance CoNonIntrinsicStage 'TargetStage where

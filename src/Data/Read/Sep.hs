@@ -31,10 +31,10 @@ import safe qualified Data.List.Split as List
 import safe Data.Read.Symbol (LitSymbol (..))
 import safe Text.Read (readMaybe)
 
-sep :: forall (s :: Type). LitSymbol s => String -> [String]
+sep :: forall (s :: Type). (LitSymbol s) => String -> [String]
 sep = filter (not . null) . List.splitOn (litSymbol @Type @s)
 
-unSep :: forall (s :: Type). LitSymbol s => [String] -> String
+unSep :: forall (s :: Type). (LitSymbol s) => [String] -> String
 unSep = List.intercalate (litSymbol @Type @s)
 
 newtype List (s :: Type) (a :: Type) :: Type where

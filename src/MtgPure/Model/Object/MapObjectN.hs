@@ -17,7 +17,7 @@ import safe MtgPure.Model.Object.ObjectN (ObjectN (..))
 
 type OTArbitrary = 'OTLand
 
-mapObjectN :: (forall a. IsObjectType a => Object a -> Object a) -> ObjectN ot -> ObjectN ot
+mapObjectN :: (forall a. (IsObjectType a) => Object a -> Object a) -> ObjectN ot -> ObjectN ot
 mapObjectN f = \case
   O0 (UntypedObject d i) ->
     let o = Object (singObjectType @OTArbitrary) (UntypedObject d i)

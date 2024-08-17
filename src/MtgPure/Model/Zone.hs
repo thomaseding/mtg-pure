@@ -37,7 +37,7 @@ deriving instance Ord (SingZone zone)
 
 deriving instance Show (SingZone zone)
 
-class Typeable zone => IsZone zone where
+class (Typeable zone) => IsZone zone where
   singZone :: SingZone zone
   litZone :: Zone
 

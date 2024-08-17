@@ -26,11 +26,11 @@ data Variable (a :: Type) :: Type where
   ReifiedVariable :: VariableId -> a -> Variable a
   deriving (Functor, Typeable)
 
-deriving instance Eq a => Eq (Variable a) -- TODO: Make this an orphan
+deriving instance (Eq a) => Eq (Variable a) -- TODO: Make this an orphan
 
-deriving instance Ord a => Ord (Variable a) -- TODO: Make this an orphan
+deriving instance (Ord a) => Ord (Variable a) -- TODO: Make this an orphan
 
-deriving instance Show a => Show (Variable a) -- TODO: Make this an orphan
+deriving instance (Show a) => Show (Variable a) -- TODO: Make this an orphan
 
 getVariableId :: Variable a -> VariableId
 getVariableId = \case

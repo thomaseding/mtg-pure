@@ -72,7 +72,7 @@ import safe MtgPure.Model.Variable (ForceVars (forceVars), Var (NoVar))
 newtype Bulleted a = Bulleted a
   deriving (Eq, Ord)
 
-instance Show a => Show (Bulleted a) where
+instance (Show a) => Show (Bulleted a) where
   showsPrec n (Bulleted x) = ("\n  @@ " ++) . showsPrec n x
 
 class AsBulleted a b | a -> b where
@@ -81,12 +81,12 @@ class AsBulleted a b | a -> b where
 instance AsBulleted [a] [Bulleted a] where
   bulleted = map Bulleted
 
-instance Ord k => AsBulleted (Map.Map k v) (Map.Map (Bulleted k) v) where
+instance (Ord k) => AsBulleted (Map.Map k v) (Map.Map (Bulleted k) v) where
   bulleted = Map.mapKeys Bulleted
 
 type DString = DList.DList Char
 
-tellPrint :: Show a => a -> Writer DString ()
+tellPrint :: (Show a) => a -> Writer DString ()
 tellPrint s = tell $ DList.fromList (show s) <> "\n"
 
 tellLine :: DString -> Writer DString ()
@@ -103,7 +103,7 @@ class MapManaCost cost where
     cost var'
   mapManaCost2 ::
     ( forall snow color.
-      IsManaNoVar snow color =>
+      (IsManaNoVar snow color) =>
       Mana var snow color ->
       Mana var snow color ->
       Mana var' snow color
@@ -186,7 +186,7 @@ instance MapManaCost ManaCost where
 mapManaPool ::
   (IsSnow snow, IsSnow snow') =>
   ( forall color.
-    IsManaNoVar snow color =>
+    (IsManaNoVar snow color) =>
     Mana 'NoVar snow color ->
     Mana 'NoVar snow' color
   ) ->
@@ -198,7 +198,7 @@ mapManaPool f (ManaPool w u b r g c) =
 mapManaPool2 ::
   (IsSnow snow, IsSnow snow') =>
   ( forall color.
-    IsManaNoVar snow color =>
+    (IsManaNoVar snow color) =>
     Mana 'NoVar snow color ->
     Mana 'NoVar snow color ->
     Mana 'NoVar snow' color
@@ -220,7 +220,7 @@ mapManaPool2
 
 mapCompleteManaPool ::
   ( forall snow.
-    IsSnow snow =>
+    (IsSnow snow) =>
     ManaPool snow ->
     ManaPool snow
   ) ->
@@ -231,7 +231,7 @@ mapCompleteManaPool f (CompleteManaPool snow nonSnow) =
 
 mapCompleteManaPool2 ::
   ( forall snow.
-    IsSnow snow =>
+    (IsSnow snow) =>
     ManaPool snow ->
     ManaPool snow ->
     ManaPool snow
@@ -291,7 +291,7 @@ instance Num (Mana 'NoVar snow mt) where
   negate (Mana x) = Mana $ negate x
   fromInteger = Mana . fromInteger
 
-instance IsSnow snow => Num (ManaPool snow) where
+instance (IsSnow snow) => Num (ManaPool snow) where
   (+) = mapManaPool2 (+)
   (-) = mapManaPool2 (-)
   (*) = mapManaPool2 (*)

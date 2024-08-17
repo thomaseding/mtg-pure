@@ -103,7 +103,7 @@ instance (IsCostType mt, snow ~ ManaTypeToSnow mt) => ToManaCost (Mana 'Var snow
     SCTyPG -> emptyManaCost{costDynamic = mempty{costPhyrexian = mempty{phyrexianG = x}}}
     SCTyPC -> emptyManaCost{costDynamic = mempty{costPhyrexian = mempty{phyrexianC = x}}}
 
-instance IsCostType mt => ToManaCost (ManaSymbol mt, Int) where
+instance (IsCostType mt) => ToManaCost (ManaSymbol mt, Int) where
   toManaCost (_, n) = case singCostType @mt of
     SCTy1 -> emptyManaCost{costDynamic = mempty{costGeneric = Mana n}}
     SCTyW -> emptyManaCost{costW = Mana n}
@@ -136,7 +136,7 @@ instance IsCostType mt => ToManaCost (ManaSymbol mt, Int) where
     SCTyPG -> emptyManaCost{costDynamic = mempty{costPhyrexian = mempty{phyrexianG = Mana n}}}
     SCTyPC -> emptyManaCost{costDynamic = mempty{costPhyrexian = mempty{phyrexianC = Mana n}}}
 
-instance IsCostType mt => ToManaCost (ManaSymbol mt) where
+instance (IsCostType mt) => ToManaCost (ManaSymbol mt) where
   toManaCost _ = case singCostType @mt of
     SCTy1 -> emptyManaCost{costDynamic = mempty{costGeneric = Mana 1}}
     SCTyW -> toManaCost (W, 1 :: Int)

@@ -22,10 +22,10 @@ class Monad (s :: Type) (m :: Type -> Type -> Type) where
   pure :: a -> m s a
 
   infixl 1 >>=
-  (>>=) :: RS a => m s (Var s a) -> (Var s a -> m s b) -> m s b
+  (>>=) :: (RS a) => m s (Var s a) -> (Var s a -> m s b) -> m s b
 
   infixl 1 >>
-  (>>) :: RS a => m s a -> m s b -> m s b
+  (>>) :: (RS a) => m s a -> m s b -> m s b
 
   return :: a -> m s a
   return = pure

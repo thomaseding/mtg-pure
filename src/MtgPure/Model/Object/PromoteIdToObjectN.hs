@@ -53,38 +53,38 @@ class PromoteIdToObjectN ot where
 instance PromoteIdToObjectN OT0 where
   promoteIdToObjectN = O0 . UntypedObject DefaultObjectDiscriminant
 
-instance Inst1 IsObjectType a => PromoteIdToObjectN (OT1 a) where
+instance (Inst1 IsObjectType a) => PromoteIdToObjectN (OT1 a) where
   promoteIdToObjectN = O1 . Object (singObjectType @a) . UntypedObject DefaultObjectDiscriminant
 
-instance Inst2 IsObjectType a b => PromoteIdToObjectN (OT2 a b) where
+instance (Inst2 IsObjectType a b) => PromoteIdToObjectN (OT2 a b) where
   promoteIdToObjectN = O2a . Object (singObjectType @a) . UntypedObject DefaultObjectDiscriminant
 
-instance Inst3 IsObjectType a b c => PromoteIdToObjectN (OT3 a b c) where
+instance (Inst3 IsObjectType a b c) => PromoteIdToObjectN (OT3 a b c) where
   promoteIdToObjectN = O3a . Object (singObjectType @a) . UntypedObject DefaultObjectDiscriminant
 
-instance Inst4 IsObjectType a b c d => PromoteIdToObjectN (OT4 a b c d) where
+instance (Inst4 IsObjectType a b c d) => PromoteIdToObjectN (OT4 a b c d) where
   promoteIdToObjectN = O4a . Object (singObjectType @a) . UntypedObject DefaultObjectDiscriminant
 
-instance Inst5 IsObjectType a b c d e => PromoteIdToObjectN (OT5 a b c d e) where
+instance (Inst5 IsObjectType a b c d e) => PromoteIdToObjectN (OT5 a b c d e) where
   promoteIdToObjectN = O5a . Object (singObjectType @a) . UntypedObject DefaultObjectDiscriminant
 
-instance Inst6 IsObjectType a b c d e f => PromoteIdToObjectN (OT6 a b c d e f) where
+instance (Inst6 IsObjectType a b c d e f) => PromoteIdToObjectN (OT6 a b c d e f) where
   promoteIdToObjectN = O6a . Object (singObjectType @a) . UntypedObject DefaultObjectDiscriminant
 
-instance Inst7 IsObjectType a b c d e f g => PromoteIdToObjectN (OT7 a b c d e f g) where
+instance (Inst7 IsObjectType a b c d e f g) => PromoteIdToObjectN (OT7 a b c d e f g) where
   promoteIdToObjectN = O7a . Object (singObjectType @a) . UntypedObject DefaultObjectDiscriminant
 
-instance Inst8 IsObjectType a b c d e f g h => PromoteIdToObjectN (OT8 a b c d e f g h) where
+instance (Inst8 IsObjectType a b c d e f g h) => PromoteIdToObjectN (OT8 a b c d e f g h) where
   promoteIdToObjectN = O8a . Object (singObjectType @a) . UntypedObject DefaultObjectDiscriminant
 
-instance Inst9 IsObjectType a b c d e f g h i => PromoteIdToObjectN (OT9 a b c d e f g h i) where
+instance (Inst9 IsObjectType a b c d e f g h i) => PromoteIdToObjectN (OT9 a b c d e f g h i) where
   promoteIdToObjectN = O9a . Object (singObjectType @a) . UntypedObject DefaultObjectDiscriminant
 
-instance Inst10 IsObjectType a b c d e f g h i j => PromoteIdToObjectN (OT10 a b c d e f g h i j) where
+instance (Inst10 IsObjectType a b c d e f g h i j) => PromoteIdToObjectN (OT10 a b c d e f g h i j) where
   promoteIdToObjectN = O10a . Object (singObjectType @a) . UntypedObject DefaultObjectDiscriminant
 
-instance Inst11 IsObjectType a b c d e f g h i j k => PromoteIdToObjectN (OT11 a b c d e f g h i j k) where
+instance (Inst11 IsObjectType a b c d e f g h i j k) => PromoteIdToObjectN (OT11 a b c d e f g h i j k) where
   promoteIdToObjectN = O11a . Object (singObjectType @a) . UntypedObject DefaultObjectDiscriminant
 
-instance Inst12 IsObjectType a b c d e f g h i j k l => PromoteIdToObjectN (OT12 a b c d e f g h i j k l) where
+instance (Inst12 IsObjectType a b c d e f g h i j k l) => PromoteIdToObjectN (OT12 a b c d e f g h i j k l) where
   promoteIdToObjectN = O12a . Object (singObjectType @a) . UntypedObject DefaultObjectDiscriminant

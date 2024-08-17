@@ -54,7 +54,7 @@ import safe MtgPure.Model.ZoneObject.ZoneObject (IsOTN, IsZO, ZO, ZOPlayer, Zone
 -- For example cards with abilities that generate mana but are not mana abilities, see:
 -- https://boardgames.stackexchange.com/questions/44040/does-mtg-have-a-card-with-a-mana-generating-ability-that-has-a-target-and-is-thu
 
-class IsManaAbilityImpl a => IsManaAbility a where
+class (IsManaAbilityImpl a) => IsManaAbility a where
   startingStageTrivial :: StageTrivial
 
 instance IsManaAbility (Ability zone ot) where
@@ -69,16 +69,16 @@ instance IsManaAbility (TriggeredAbility zone ot) where
 instance IsManaAbility (SomeZone Ability ot) where
   startingStageTrivial = StageAbility
 
-instance IsOTN ot => IsManaAbility (SomeZone (WithThisZ Ability) ot) where
+instance (IsOTN ot) => IsManaAbility (SomeZone (WithThisZ Ability) ot) where
   startingStageTrivial = StageWithThisAbility
 
-instance IsZO zone ot => IsManaAbility (WithThis (Ability zone) zone ot) where
+instance (IsZO zone ot) => IsManaAbility (WithThis (Ability zone) zone ot) where
   startingStageTrivial = StageWithThisAbility
 
-instance IsZO zone ot => IsManaAbility (WithThisActivated zone ot) where
+instance (IsZO zone ot) => IsManaAbility (WithThisActivated zone ot) where
   startingStageTrivial = StageWithThisAbility
 
-isManaAbility :: IsManaAbility a => a -> Bool
+isManaAbility :: (IsManaAbility a) => a -> Bool
 isManaAbility x = case isManaAbilityImpl x of
   IsManaAbility -> True
   _ -> False
@@ -87,7 +87,7 @@ type TrivialManaAbilityResult = Maybe (Maybe BasicLandType)
 
 -- | A trivial mana ability is defined to be of the exact form
 -- "{T}: Add {#} to your mana pool.", where (#) is a single non-variable mana.
-isTrivialManaAbility :: forall a. IsManaAbility a => a -> Maybe (Maybe BasicLandType)
+isTrivialManaAbility :: forall a. (IsManaAbility a) => a -> Maybe (Maybe BasicLandType)
 isTrivialManaAbility = isTrivialManaAbilityImpl (startingStageTrivial @a)
 
 data Result :: Type where
@@ -131,7 +131,7 @@ proxyYou = ZO singZone oYou
 dummyObjectId :: ObjectId
 dummyObjectId = ObjectId 0
 
-dummyZO :: forall zone ot. IsZO zone ot => ZO zone ot
+dummyZO :: forall zone ot. (IsZO zone ot) => ZO zone ot
 dummyZO = ZO (singZone @zone) oThis
  where
   oThis = promoteIdToObjectN @ot dummyObjectId
@@ -175,7 +175,7 @@ isTapThis = \case
   TapCost [Is this] -> getObjectId this == proxyThisId
   _ -> False
 
-instance IsManaAbilityImpl x => IsManaAbilityImpl (Case x) where
+instance (IsManaAbilityImpl x) => IsManaAbilityImpl (Case x) where
   isManaAbilityImpl = \case
     CaseFin _var list -> isManaAbilityImpl list
   isTrivialManaAbilityImpl _ _ = Nothing
@@ -295,7 +295,7 @@ instance IsManaAbilityImpl EventListener where
     TimePoint _timePoint elect -> isManaAbilityImpl elect
   isTrivialManaAbilityImpl _ _ = Nothing
 
-instance IsManaAbilityImpl x => IsManaAbilityImpl (NatList user n x) where
+instance (IsManaAbilityImpl x) => IsManaAbilityImpl (NatList user n x) where
   isManaAbilityImpl = \case
     LZ _ x -> isManaAbilityImpl x
     LS _ x xs -> isManaAbilityImpl x <> isManaAbilityImpl xs
@@ -309,7 +309,7 @@ instance IsManaAbilityImpl (SomeZone Ability ot) where
     SomeZone ability -> isTrivialManaAbilityImpl stage ability
     SomeZone2{} -> Nothing
 
-instance IsOTN ot => IsManaAbilityImpl (SomeZone (WithThisZ Ability) ot) where
+instance (IsOTN ot) => IsManaAbilityImpl (SomeZone (WithThisZ Ability) ot) where
   isManaAbilityImpl = \case
     SomeZone (WithThisZ ability) -> isManaAbilityImpl ability
   isTrivialManaAbilityImpl = \case
@@ -322,7 +322,7 @@ instance IsManaAbilityImpl (TriggeredAbility zone ot) where
     When elect -> isManaAbilityImpl elect
   isTrivialManaAbilityImpl _ _ = Nothing
 
-instance IsZone zone => IsManaAbilityImpl (WithLinkedObject (Elect s el) zone ot) where
+instance (IsZone zone) => IsManaAbilityImpl (WithLinkedObject (Elect s el) zone ot) where
   isManaAbilityImpl = \case
     Linked1 _reqs cont -> isManaAbilityImpl $ cont dummyZO
     Linked2 _reqs cont -> isManaAbilityImpl $ cont dummyZO
@@ -331,7 +331,7 @@ instance IsZone zone => IsManaAbilityImpl (WithLinkedObject (Elect s el) zone ot
     Linked5 _reqs cont -> isManaAbilityImpl $ cont dummyZO
   isTrivialManaAbilityImpl _ _ = Nothing
 
-instance IsZone zone => IsManaAbilityImpl (WithMaskedObject (Elect s el) zone ot) where
+instance (IsZone zone) => IsManaAbilityImpl (WithMaskedObject (Elect s el) zone ot) where
   isManaAbilityImpl = \case
     Masked1 _reqs cont -> isManaAbilityImpl $ cont dummyZO
     Masked2 _reqs cont -> isManaAbilityImpl $ cont dummyZO
@@ -351,21 +351,21 @@ instance IsManaAbilityImpl (WithMaskedObjects (Elect s el) zone ot) where
     Maskeds6 _reqs cont -> isManaAbilityImpl $ cont $ List []
   isTrivialManaAbilityImpl _ _ = Nothing
 
-instance IsManaAbilityImpl ret => IsManaAbilityImpl (WithList ret zone ot) where
+instance (IsManaAbilityImpl ret) => IsManaAbilityImpl (WithList ret zone ot) where
   isManaAbilityImpl = \case
     CountOf _list cont -> isManaAbilityImpl $ cont dummyVar
     Each _list cont -> isManaAbilityImpl $ cont dummyZO
     SuchThat _reqs withList -> isManaAbilityImpl withList
   isTrivialManaAbilityImpl _ _ = Nothing
 
-instance IsZO zone ot => IsManaAbilityImpl (WithThis (Ability zone) zone ot) where
+instance (IsZO zone ot) => IsManaAbilityImpl (WithThis (Ability zone) zone ot) where
   isManaAbilityImpl = isManaAbilityImpl . reifyWithThis dummyObjectId
   isTrivialManaAbilityImpl = \case
     StageWithThisAbility ->
       isTrivialManaAbilityImpl StageAbility . reifyWithThis proxyThisId
     _ -> const Nothing
 
-instance IsZO zone ot => IsManaAbilityImpl (WithThisActivated zone ot) where
+instance (IsZO zone ot) => IsManaAbilityImpl (WithThisActivated zone ot) where
   isManaAbilityImpl = isManaAbilityImpl . reifyWithThis dummyObjectId
   isTrivialManaAbilityImpl = \case
     StageWithThisAbility ->

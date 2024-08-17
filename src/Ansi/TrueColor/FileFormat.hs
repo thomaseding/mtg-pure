@@ -82,14 +82,15 @@ data Images = Images
 data Image = Image
   { image_width :: Int -- u16
   , image_height :: Int -- u16
-  , -- | `pixel = grid ! y ! x`, where all rows must have the same length
-    image_pixelGrid :: [[Pixel]]
+  , image_pixelGrid :: [[Pixel]]
+  -- ^ `pixel = grid ! y ! x`, where all rows must have the same length
   }
   deriving (Eq, Ord, Show)
 
 data Pixel = Pixel
-  { -- | XXX: Could use '\NUL' to denote a clipped pixel.
-    pixel_char :: Char -- u32
+  { pixel_char :: Char -- u32
+
+  -- ^ XXX: Could use '\NUL' to denote a clipped pixel.
   , pixel_fg :: Color
   , pixel_bg :: Color
   }
@@ -128,11 +129,11 @@ instance Binary Header where
     magicNumber <- get
     version <- get
     if
-        | version_major version /= version_major currentVersion ->
+      | version_major version /= version_major currentVersion ->
           fail $ "Unsupported version: " ++ show version
-        | version_minor version > version_minor currentVersion ->
+      | version_minor version > version_minor currentVersion ->
           fail $ "Unsupported version: " ++ show version
-        | otherwise -> pure ()
+      | otherwise -> pure ()
     pure
       Header
         { header_magicNumber = magicNumber

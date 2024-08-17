@@ -66,7 +66,7 @@ instance EnvShow Int where
 instance EnvShow String where
   envShow = pure . DList.fromList . show
 
-instance EnvShow a => EnvShow (Var s a) where
+instance (EnvShow a) => EnvShow (Var s a) where
   envShow = \case
     Lit a -> do
       sa <- envShow a
@@ -75,5 +75,5 @@ instance EnvShow a => EnvShow (Var s a) where
       let sVar = DList.fromList $ "v" ++ show i
       pure sVar
 
-instance EnvShow a => Show (Var s a) where
+instance (EnvShow a) => Show (Var s a) where
   show = runEnvM . envShow

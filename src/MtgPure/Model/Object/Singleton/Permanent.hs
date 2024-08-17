@@ -51,9 +51,9 @@ data WPermanent :: Type -> Type where
   WPermanentLand :: WPermanent OTNLand
   WPermanentPlaneswalker :: WPermanent OTNPlaneswalker
   WPermanent :: WPermanent OTNPermanent
-  WPermanent2 :: Inst2 IsPermanentType a b => WPermanent (OT2 a b)
-  WPermanent3 :: Inst3 IsPermanentType a b c => WPermanent (OT3 a b c)
-  WPermanent4 :: Inst4 IsPermanentType a b c d => WPermanent (OT4 a b c d)
+  WPermanent2 :: (Inst2 IsPermanentType a b) => WPermanent (OT2 a b)
+  WPermanent3 :: (Inst3 IsPermanentType a b c) => WPermanent (OT3 a b c)
+  WPermanent4 :: (Inst4 IsPermanentType a b c d) => WPermanent (OT4 a b c d)
   deriving (Typeable)
 
 deriving instance Show (WPermanent a)
@@ -67,14 +67,14 @@ data PermanentVisitor zone z = PermanentVisitor
   }
   deriving (Typeable)
 
-class IsObjectType a => IsPermanentType a where
+class (IsObjectType a) => IsPermanentType a where
   singPermanentType :: Proxy a -> PermanentType
   singPermanent :: Proxy a -> WPermanent (OT1 a)
   visitPermanent :: PermanentVisitor zone z -> WPermanent (OT1 a) -> ZO zone (OT1 a) -> z
 
 visitPermanent' ::
-  IsPermanentType a =>
-  (forall a'. IsPermanentType a' => ZO zone (OT1 a') -> z) ->
+  (IsPermanentType a) =>
+  (forall a'. (IsPermanentType a') => ZO zone (OT1 a') -> z) ->
   WPermanent (OT1 a) ->
   ZO zone (OT1 a) ->
   z
@@ -105,7 +105,7 @@ instance IsPermanentType 'OTPlaneswalker where
   singPermanent _ = WPermanentPlaneswalker
   visitPermanent v _ = visitPPlaneswalker v
 
-class IsOTN ot => CoPermanent ot where
+class (IsOTN ot) => CoPermanent ot where
   coPermanent :: WPermanent ot
 
 instance CoPermanent OTNArtifact where
@@ -126,11 +126,11 @@ instance CoPermanent OTNPlaneswalker where
 instance CoPermanent OTNPermanent where
   coPermanent = WPermanent
 
-instance Inst2 IsPermanentType a b => CoPermanent (OT2 a b) where
+instance (Inst2 IsPermanentType a b) => CoPermanent (OT2 a b) where
   coPermanent = WPermanent2 :: WPermanent (OT2 a b)
 
-instance Inst3 IsPermanentType a b c => CoPermanent (OT3 a b c) where
+instance (Inst3 IsPermanentType a b c) => CoPermanent (OT3 a b c) where
   coPermanent = WPermanent3 :: WPermanent (OT3 a b c)
 
-instance Inst4 IsPermanentType a b c d => CoPermanent (OT4 a b c d) where
+instance (Inst4 IsPermanentType a b c d) => CoPermanent (OT4 a b c d) where
   coPermanent = WPermanent4 :: WPermanent (OT4 a b c d)

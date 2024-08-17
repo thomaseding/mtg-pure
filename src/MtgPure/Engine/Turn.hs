@@ -93,7 +93,7 @@ import safe MtgPure.Model.ZoneObject.Convert (asPermanent, oToZO1, reifyWithThis
 import safe MtgPure.Model.ZoneObject.ZoneObject (ZO)
 
 -- (103)
-startGame :: Monad m => Magic 'Private 'RW m Void
+startGame :: (Monad m) => Magic 'Private 'RW m Void
 startGame = logCall 'startGame do
   determineStartingPlayer -- (103.1)
   ps <- fromPublicRO getAlivePlayers
@@ -107,7 +107,7 @@ startGame = logCall 'startGame do
   either id id <$> runMagicCont startTurn
 
 -- (103.1)
-determineStartingPlayer :: Monad m => Magic 'Private 'RW m ()
+determineStartingPlayer :: (Monad m) => Magic 'Private 'RW m ()
 determineStartingPlayer = logCall 'determineStartingPlayer do
   st <- fromRO get
   let prompt = magicPrompt st
@@ -132,22 +132,22 @@ determineStartingPlayer = logCall 'determineStartingPlayer do
       }
 
 -- (103.4)
-drawStartingHands :: Monad m => Magic 'Private 'RW m ()
+drawStartingHands :: (Monad m) => Magic 'Private 'RW m ()
 drawStartingHands = logCall 'drawStartingHands do
   ps <- fromPublic $ fromRO getAlivePlayers
   eachLogged_ ps drawStartingHand
 
-drawStartingHand :: Monad m => Object 'OTPlayer -> Magic 'Private 'RW m ()
+drawStartingHand :: (Monad m) => Object 'OTPlayer -> Magic 'Private 'RW m ()
 drawStartingHand oPlayer = logCall 'drawStartingHand do
   player <- fromRO $ getPlayer oPlayer
   M.void $ enact Nothing $ DrawCards (oToZO1 oPlayer) $ playerStartingHandSize player
 
-setPhaseStep :: PhaseStep -> Monad m => Magic 'Private 'RW m ()
+setPhaseStep :: PhaseStep -> (Monad m) => Magic 'Private 'RW m ()
 setPhaseStep phaseStep = logCall 'setPhaseStep do
   modify \st -> st{magicPhaseStep = phaseStep}
 
 -- NOTE: This hangs if there are not enough unique items.
-takeUnique :: Eq a => Int -> Stream.Stream a -> [a]
+takeUnique :: (Eq a) => Int -> Stream.Stream a -> [a]
 takeUnique n s = case n <= 0 of
   True -> []
   False ->
@@ -158,7 +158,7 @@ takeUnique n s = case n <= 0 of
 mkAPNAP :: PlayerCount -> Stream.Stream (Object 'OTPlayer) -> Stream.Stream (Object 'OTPlayer)
 mkAPNAP (PlayerCount n) = Stream.cycle . takeUnique n
 
-advanceStateForNewTurn :: Monad m => Magic 'Private 'RW m ()
+advanceStateForNewTurn :: (Monad m) => Magic 'Private 'RW m ()
 advanceStateForNewTurn = logCall 'advanceStateForNewTurn do
   n <- fromPublicRO getAlivePlayerCount
   ps <- fromRO $ gets $ Stream.tail . magicPlayerOrderTurn
@@ -171,13 +171,13 @@ advanceStateForNewTurn = logCall 'advanceStateForNewTurn do
         , magicPlayerOrderTurn = ps
         }
 
-startTurn :: Monad m => MagicCont 'Private 'RW Void m Void
+startTurn :: (Monad m) => MagicCont 'Private 'RW Void m Void
 startTurn = M.join $ logCall 'startTurn do
   liftCont advanceStateForNewTurn -- XXX: This will need more work for things like [Time Warp]
   pure untapStep
 
 -- (502.) Untap Step
-untapStep :: Monad m => MagicCont 'Private 'RW Void m Void
+untapStep :: (Monad m) => MagicCont 'Private 'RW Void m Void
 untapStep = M.join $ logCall 'untapStep do
   liftCont do
     setPhaseStep $ PSBeginningPhase UntapStep
@@ -197,7 +197,7 @@ untapStep = M.join $ logCall 'untapStep do
   pure upkeepStep
 
 -- TODO: Make this an Effect constructor
-togglePermanentPhase :: Monad m => ZO 'ZBattlefield OTNPermanent -> Magic 'Private 'RW m ()
+togglePermanentPhase :: (Monad m) => ZO 'ZBattlefield OTNPermanent -> Magic 'Private 'RW m ()
 togglePermanentPhase zoPerm = do
   perm <- fromRO $ getPermanent zoPerm
   staticAbils <- fromRO $ staticAbilitiesOf zoPerm
@@ -216,7 +216,7 @@ togglePermanentPhase zoPerm = do
                 PhasedOut -> PhasedIn
             }
 
-removeSummoningSickness :: Monad m => ZO 'ZBattlefield OTNPermanent -> Magic 'Private 'RW m ()
+removeSummoningSickness :: (Monad m) => ZO 'ZBattlefield OTNPermanent -> Magic 'Private 'RW m ()
 removeSummoningSickness oPerm = do
   perm <- fromRO $ getPermanent oPerm
   setPermanent
@@ -227,7 +227,7 @@ removeSummoningSickness oPerm = do
         }
 
 -- | (503.) Upkeep Step
-upkeepStep :: Monad m => MagicCont 'Private 'RW Void m Void
+upkeepStep :: (Monad m) => MagicCont 'Private 'RW Void m Void
 upkeepStep = M.join $ logCall 'upkeepStep do
   liftCont do
     setPhaseStep $ PSBeginningPhase UpkeepStep
@@ -236,7 +236,7 @@ upkeepStep = M.join $ logCall 'upkeepStep do
   pure drawStep
 
 -- | (504.) Draw Step
-drawStep :: Monad m => MagicCont 'Private 'RW Void m Void
+drawStep :: (Monad m) => MagicCont 'Private 'RW Void m Void
 drawStep = M.join $ logCall 'drawStep do
   oActive <- liftCont $ fromPublicRO getActivePlayer
   liftCont do
@@ -248,14 +248,14 @@ drawStep = M.join $ logCall 'drawStep do
   gainPriority oActive
   pure precombatMainPhase
 
-precombatMainPhase :: Monad m => MagicCont 'Private 'RW Void m Void
+precombatMainPhase :: (Monad m) => MagicCont 'Private 'RW Void m Void
 precombatMainPhase = M.join $ logCall 'precombatMainPhase do
   liftCont do
     setPhaseStep PSPreCombatMainPhase
   mainPhaseCommon
   pure beginningOfCombatStep
 
-postcombatMainPhase :: Monad m => MagicCont 'Private 'RW Void m Void
+postcombatMainPhase :: (Monad m) => MagicCont 'Private 'RW Void m Void
 postcombatMainPhase = M.join $ logCall 'postcombatMainPhase do
   liftCont do
     setPhaseStep PSPostCombatMainPhase
@@ -263,7 +263,7 @@ postcombatMainPhase = M.join $ logCall 'postcombatMainPhase do
   pure endStep
 
 -- | (505.) Main Phase
-mainPhaseCommon :: Monad m => MagicCont 'Private 'RW Void m ()
+mainPhaseCommon :: (Monad m) => MagicCont 'Private 'RW Void m ()
 mainPhaseCommon = logCall 'mainPhaseCommon do
   pure () -- (505.1) Rule just states nomenclature. Nothing special to do
   pure () -- (505.2) Rule just states this phase has no steps
@@ -272,7 +272,7 @@ mainPhaseCommon = logCall 'mainPhaseCommon do
   oActive <- liftCont $ fromPublicRO getActivePlayer
   gainPriority oActive
 
-promptForADefendingPlayer :: Monad m => Magic 'Private 'RO m DefendingPlayer
+promptForADefendingPlayer :: (Monad m) => Magic 'Private 'RO m DefendingPlayer
 promptForADefendingPlayer = do
   let isOneVersusOne = True -- TODO: multiplayer
   case isOneVersusOne of
@@ -285,7 +285,7 @@ promptForADefendingPlayer = do
         [] -> error $ show GameShouldHaveEndedBecauseThereIsOnlyOnePlayerLeft
 
 -- | (507.) Beginning of Combat Step
-beginningOfCombatStep :: Monad m => MagicCont 'Private 'RW Void m Void
+beginningOfCombatStep :: (Monad m) => MagicCont 'Private 'RW Void m Void
 beginningOfCombatStep = M.join $ logCall 'beginningOfCombatStep do
   liftCont $ setPhaseStep $ PSCombatPhase BeginningOfCombatStep
   defendingPlayer <- liftCont $ fromRO promptForADefendingPlayer
@@ -293,7 +293,7 @@ beginningOfCombatStep = M.join $ logCall 'beginningOfCombatStep do
   gainPriority oActive
   pure $ declareAttackersStep defendingPlayer
 
-canCreatureAttack :: Monad m => ZO 'ZBattlefield OTNCreature -> Magic 'Private 'RO m Bool
+canCreatureAttack :: (Monad m) => ZO 'ZBattlefield OTNCreature -> Magic 'Private 'RO m Bool
 canCreatureAttack zoCreat = logCall 'canCreatureAttack do
   findPermanent (asPermanent zoCreat) >>= \case
     Nothing -> pure False
@@ -320,7 +320,7 @@ canCreatureAttack zoCreat = logCall 'canCreatureAttack do
           , defender `notElem` staticAbils
           ]
 
-canCreatureBlock :: Monad m => DefendingPlayer -> ZO 'ZBattlefield OTNCreature -> Magic 'Private 'RO m Bool
+canCreatureBlock :: (Monad m) => DefendingPlayer -> ZO 'ZBattlefield OTNCreature -> Magic 'Private 'RO m Bool
 canCreatureBlock (DefendingPlayer oDefender) zoCreat = logCall 'canCreatureBlock do
   findPermanent (asPermanent zoCreat) >>= \case
     Nothing -> pure False
@@ -341,7 +341,7 @@ canCreatureBlock (DefendingPlayer oDefender) zoCreat = logCall 'canCreatureBlock
           ]
 
 -- | (508.) Declare Attackers Step
-declareAttackersStep :: Monad m => DefendingPlayer -> MagicCont 'Private 'RW Void m Void
+declareAttackersStep :: (Monad m) => DefendingPlayer -> MagicCont 'Private 'RW Void m Void
 declareAttackersStep defendingPlayer = M.join $ logCall 'declareAttackersStep do
   oActive <- liftCont $ fromPublic $ fromRO getActivePlayer
   attackers <- liftCont $ do
@@ -367,7 +367,7 @@ declareAttackersStep defendingPlayer = M.join $ logCall 'declareAttackersStep do
 type AssignedCombatOrdering = Map.Map (ZO 'ZBattlefield OTNCreature) [ZO 'ZBattlefield OTNCreature]
 
 assignCombatDamageOrder ::
-  Monad m =>
+  (Monad m) =>
   NonEmpty DeclaredAttacker ->
   [DeclaredBlocker] ->
   Magic 'Private 'RW m AssignedCombatOrdering
@@ -405,7 +405,7 @@ attackerToBlockers' blockers = Map.fromListWith (++) $ do
   pure (attacker, [declaredBlocker_blocker blocker])
 
 -- | (509.) Declare Blockers Step
-declareBlockersStep :: Monad m => DefendingPlayer -> NonEmpty DeclaredAttacker -> MagicCont 'Private 'RW Void m Void
+declareBlockersStep :: (Monad m) => DefendingPlayer -> NonEmpty DeclaredAttacker -> MagicCont 'Private 'RW Void m Void
 declareBlockersStep defendingPlayer attackers = M.join $ logCall 'declareBlockersStep do
   oActive <- liftCont $ fromPublicRO getActivePlayer
   ordering <- liftCont do
@@ -426,7 +426,7 @@ declareBlockersStep defendingPlayer attackers = M.join $ logCall 'declareBlocker
   gainPriority oActive
   pure $ combatDamageStep defendingPlayer ordering
 
-applyDamageInOrder :: Monad m => DefendingPlayer -> ZO 'ZBattlefield OTNCreature -> [ZO 'ZBattlefield OTNCreature] -> Magic 'Private 'RW m ()
+applyDamageInOrder :: (Monad m) => DefendingPlayer -> ZO 'ZBattlefield OTNCreature -> [ZO 'ZBattlefield OTNCreature] -> Magic 'Private 'RW m ()
 applyDamageInOrder (DefendingPlayer oDefender) zoSource zoVictims = logCall 'applyDamageInOrder do
   sourcePerm <- fromRO $ getPermanent $ asPermanent zoSource
   sourceController <- fromRO $ controllerOf zoSource
@@ -438,7 +438,7 @@ applyDamageInOrder (DefendingPlayer oDefender) zoSource zoVictims = logCall 'app
           Just creat -> do
             let Toughness toughness = creatureToughness creat
             let amountToVictim = min remainingDamage toughness
-            let damageVictim = dealDamage zoSource zoVictim $ Damage @ 'Var amountToVictim
+            let damageVictim = dealDamage zoSource zoVictim $ Damage @'Var amountToVictim
             _evs <- enact (Just $ SourceZO zoSource) damageVictim
             pure $ remainingDamage - amountToVictim
   case permanentCreature sourcePerm of
@@ -462,13 +462,13 @@ applyDamageInOrder (DefendingPlayer oDefender) zoSource zoVictims = logCall 'app
       case hitPlayer of
         False -> pure ()
         True -> do
-          let damagePlayer = dealDamage zoSource (oToZO1 oDefender) $ Damage @ 'Var remainingDamage
+          let damagePlayer = dealDamage zoSource (oToZO1 oDefender) $ Damage @'Var remainingDamage
           _evs <- enact (Just $ SourceZO zoSource) damagePlayer
           pure ()
 
 -- | (510.) Combat Damage Step
 -- TODO: This isn't rigorous wrt the official rules. Just want to get something working.
-combatDamageStep :: Monad m => DefendingPlayer -> AssignedCombatOrdering -> MagicCont 'Private 'RW Void m Void
+combatDamageStep :: (Monad m) => DefendingPlayer -> AssignedCombatOrdering -> MagicCont 'Private 'RW Void m Void
 combatDamageStep defendingPlayer ordering = M.join $ logCall 'combatDamageStep do
   liftCont $ setPhaseStep $ PSCombatPhase CombatDamageStep
   let assocs = Map.assocs ordering
@@ -479,7 +479,7 @@ combatDamageStep defendingPlayer ordering = M.join $ logCall 'combatDamageStep d
   gainPriority oActive
   pure endOfCombatStep
 
-endOfCombatStep :: Monad m => MagicCont 'Private 'RW Void m Void
+endOfCombatStep :: (Monad m) => MagicCont 'Private 'RW Void m Void
 endOfCombatStep = M.join $ logCall 'endOfCombatStep do
   liftCont do
     setPhaseStep $ PSCombatPhase EndOfCombatStep
@@ -487,7 +487,7 @@ endOfCombatStep = M.join $ logCall 'endOfCombatStep do
   gainPriority oActive
   pure postcombatMainPhase
 
-endStep :: Monad m => MagicCont 'Private 'RW Void m Void
+endStep :: (Monad m) => MagicCont 'Private 'RW Void m Void
 endStep = M.join $ logCall 'endStep do
   liftCont do
     setPhaseStep $ PSEndingPhase EndStep
@@ -495,8 +495,8 @@ endStep = M.join $ logCall 'endStep do
   gainPriority oActive
   pure cleanupStep
 
-cleanupStep :: Monad m => MagicCont 'Private 'RW Void m Void
+cleanupStep :: (Monad m) => MagicCont 'Private 'RW Void m Void
 cleanupStep = M.join $ logCall 'cleanupStep do
   liftCont $ setPhaseStep $ PSEndingPhase CleanupStep
-  --_ <- undefined
+  -- _ <- undefined
   pure startTurn

@@ -113,7 +113,7 @@ withHiddenCursor m = do
   hideCursor
   m `finally` showCursor
 
-clearScreenWithoutPaging :: M.MonadIO m => m ()
+clearScreenWithoutPaging :: (M.MonadIO m) => m ()
 clearScreenWithoutPaging = M.liftIO do
   putStr $ ansiToString SgrReset
   getTerminalSize >>= \case
@@ -123,7 +123,7 @@ clearScreenWithoutPaging = M.liftIO do
         putStr $ ansiToString $ CsiSetAbsCursorXY 0 y
         clearLine
 
-clearScreenByPaging :: M.MonadIO m => m ()
+clearScreenByPaging :: (M.MonadIO m) => m ()
 clearScreenByPaging = M.liftIO do
   putStr $ ansiToString SgrReset
   clearScreen

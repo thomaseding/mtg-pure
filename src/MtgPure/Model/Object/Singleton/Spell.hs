@@ -54,9 +54,9 @@ data WSpell :: Type -> Type where
   WSpellPlaneswalker :: WSpell OTNPlaneswalker
   WSpellSorcery :: WSpell OTNSorcery
   WSpell :: WSpell OTNSpell
-  WSpell2 :: Inst2 IsSpellType a b => WSpell (OT2 a b)
-  WSpell3 :: Inst3 IsSpellType a b c => WSpell (OT3 a b c)
-  WSpell4 :: Inst4 IsSpellType a b c d => WSpell (OT4 a b c d)
+  WSpell2 :: (Inst2 IsSpellType a b) => WSpell (OT2 a b)
+  WSpell3 :: (Inst3 IsSpellType a b c) => WSpell (OT3 a b c)
+  WSpell4 :: (Inst4 IsSpellType a b c d) => WSpell (OT4 a b c d)
   deriving (Typeable)
 
 deriving instance Show (WSpell a)
@@ -71,14 +71,14 @@ data SpellVisitor zone z = SpellVisitor
   }
   deriving (Typeable)
 
-class IsObjectType a => IsSpellType a where
+class (IsObjectType a) => IsSpellType a where
   singSpellType :: Proxy a -> SpellType
   singSpell :: Proxy a -> WSpell (OT1 a)
   visitSpell :: SpellVisitor zone z -> WSpell (OT1 a) -> ZO zone (OT1 a) -> z
 
 visitSpell' ::
-  IsSpellType a =>
-  (forall a'. IsSpellType a' => ZO zone (OT1 a') -> z) ->
+  (IsSpellType a) =>
+  (forall a'. (IsSpellType a') => ZO zone (OT1 a') -> z) ->
   WSpell (OT1 a) ->
   ZO zone (OT1 a) ->
   z
@@ -114,7 +114,7 @@ instance IsSpellType 'OTSorcery where
   singSpell _ = WSpellSorcery
   visitSpell v _ = visitSSorcery v
 
-class IsOTN ot => CoSpell ot where
+class (IsOTN ot) => CoSpell ot where
   coSpell :: WSpell ot
 
 instance CoSpell OTNArtifact where
@@ -138,11 +138,11 @@ instance CoSpell OTNSorcery where
 instance CoSpell OTNSpell where
   coSpell = WSpell
 
-instance Inst2 IsSpellType a b => CoSpell (OT2 a b) where
+instance (Inst2 IsSpellType a b) => CoSpell (OT2 a b) where
   coSpell = WSpell2 :: WSpell (OT2 a b)
 
-instance Inst3 IsSpellType a b c => CoSpell (OT3 a b c) where
+instance (Inst3 IsSpellType a b c) => CoSpell (OT3 a b c) where
   coSpell = WSpell3 :: WSpell (OT3 a b c)
 
-instance Inst4 IsSpellType a b c d => CoSpell (OT4 a b c d) where
+instance (Inst4 IsSpellType a b c d) => CoSpell (OT4 a b c d) where
   coSpell = WSpell4 :: WSpell (OT4 a b c d)

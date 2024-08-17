@@ -134,7 +134,7 @@ instance Eq Condition where
 instance Eq Cost where
   (==) x y = runEnvM (ordCost x y) == EQ
 
-instance Typeable ef => Eq (Effect ef) where
+instance (Typeable ef) => Eq (Effect ef) where
   (==) x y = runEnvM (ordEffect x y) == EQ
 
 instance (Typeable el, Typeable s, IsOTN ot) => Eq (Elect s el ot) where
@@ -146,7 +146,7 @@ instance Eq EventListener where
 instance Eq (ObjectN ot) where
   (==) x y = runEnvM (ordObjectN x y) == EQ
 
-instance IndexOT ot => Eq (Requirement zone ot) where
+instance (IndexOT ot) => Eq (Requirement zone ot) where
   (==) x y = runEnvM (ordRequirement x y) == EQ
 
 instance Eq (SetCard ot) where
@@ -164,16 +164,16 @@ instance Eq (TimePoint p) where
 instance Eq (Token ot) where
   (==) x y = runEnvM (ordToken x y) == EQ
 
-instance IndexOT ot => Eq (TriggeredAbility zone ot) where
+instance (IndexOT ot) => Eq (TriggeredAbility zone ot) where
   (==) x y = runEnvM (ordTriggeredAbility x y) == EQ
 
 instance (Typeable el, Typeable s, IsZO zone ot) => Eq (WithMaskedObject (Elect s el) zone ot) where
   (==) x y = runEnvM (ordWithMaskedObjectElectEl x y) == EQ
 
-instance IsZO zone ot => Eq (WithThis (Ability zone) zone ot) where
+instance (IsZO zone ot) => Eq (WithThis (Ability zone) zone ot) where
   (==) x y = runEnvM (ordWithThis ordAbility x y) == EQ
 
-instance IsOTN ot => Eq (SomeZone WithThisAbility ot) where
+instance (IsOTN ot) => Eq (SomeZone WithThisAbility ot) where
   (==) x y = runEnvM (ordSomeZoneWithThisAbility x y) == EQ
 
 instance Eq (ZoneObject zone ot) where
@@ -202,7 +202,7 @@ instance Ord Condition where
 instance Ord Cost where
   compare x y = runEnvM (ordCost x y)
 
-instance Typeable ef => Ord (Effect ef) where
+instance (Typeable ef) => Ord (Effect ef) where
   compare x y = runEnvM (ordEffect x y)
 
 instance (Typeable el, Typeable s, IsOTN ot) => Ord (Elect s el ot) where
@@ -214,7 +214,7 @@ instance Ord EventListener where
 instance Ord (ObjectN ot) where
   compare x y = runEnvM (ordObjectN x y)
 
-instance IndexOT ot => Ord (Requirement zone ot) where
+instance (IndexOT ot) => Ord (Requirement zone ot) where
   compare x y = runEnvM (ordRequirement x y)
 
 instance Ord (SetCard ot) where
@@ -232,16 +232,16 @@ instance Ord (TimePoint p) where
 instance Ord (Token ot) where
   compare x y = runEnvM (ordToken x y)
 
-instance IndexOT ot => Ord (TriggeredAbility zone ot) where
+instance (IndexOT ot) => Ord (TriggeredAbility zone ot) where
   compare x y = runEnvM (ordTriggeredAbility x y)
 
 instance (Typeable el, Typeable s, IsZO zone ot) => Ord (WithMaskedObject (Elect s el) zone ot) where
   compare x y = runEnvM (ordWithMaskedObjectElectEl x y)
 
-instance IsZO zone ot => Ord (WithThis (Ability zone) zone ot) where
+instance (IsZO zone ot) => Ord (WithThis (Ability zone) zone ot) where
   compare x y = runEnvM (ordWithThis ordAbility x y)
 
-instance IsOTN ot => Ord (SomeZone WithThisAbility ot) where
+instance (IsOTN ot) => Ord (SomeZone WithThisAbility ot) where
   compare x y = runEnvM (ordSomeZoneWithThisAbility x y)
 
 instance Ord (ZoneObject zone ot) where
@@ -279,7 +279,7 @@ mkEnv =
 runEnvM :: EnvM a -> a
 runEnvM (EnvM m) = State.evalState m mkEnv
 
-seqM :: Monad m => [m Ordering] -> m Ordering
+seqM :: (Monad m) => [m Ordering] -> m Ordering
 seqM = \case
   [] -> pure EQ
   ordM : ordMs ->
@@ -303,7 +303,7 @@ newVariableId = EnvM do
   State.modify' \st -> st{nextRawId = nextRawId st + 1}
   pure $ VariableId raw
 
-newObject :: forall a. IsObjectType a => EnvM (Object a)
+newObject :: forall a. (IsObjectType a) => EnvM (Object a)
 newObject = EnvM do
   raw <- State.gets nextRawId
   let i = ObjectId raw
@@ -334,7 +334,7 @@ withObjectCont ordM cons cont1 cont2 = do
   objN <- newObjectN @a cons
   ordM (cont1 objN) (cont2 objN)
 
-compareIndexM :: ConsIndex a => a -> a -> EnvM Ordering
+compareIndexM :: (ConsIndex a) => a -> a -> EnvM Ordering
 compareIndexM x y = pure $ compare (consIndex x) (consIndex y)
 
 compareOT ::
@@ -599,14 +599,14 @@ ordCardSpec = \case
         , ordWithThis ordElectEl effect1 effect2
         ]
 
-ordCase :: Typeable x => (x -> x -> EnvM Ordering) -> Case x -> Case x -> EnvM Ordering
+ordCase :: (Typeable x) => (x -> x -> EnvM Ordering) -> Case x -> Case x -> EnvM Ordering
 ordCase ordX x = case x of
   CaseFin varFin1 natList1 -> \case
     CaseFin varFin2 natList2 ->
       let go ::
             forall u1 u2 n1 n2.
-            IsUser u1 =>
-            IsUser u2 =>
+            (IsUser u1) =>
+            (IsUser u2) =>
             (IsNat n1, IsNat n2) =>
             Variable (Fin u1 n1) ->
             Variable (Fin u2 n2) ->
@@ -651,8 +651,8 @@ ordCondition x = case x of
     Satisfies obj2 reqs2 ->
       let go ::
             forall zone1 zone2 ot1 ot2.
-            IsZO zone1 ot1 =>
-            IsZO zone2 ot2 =>
+            (IsZO zone1 ot1) =>
+            (IsZO zone2 ot2) =>
             ZO zone1 ot1 ->
             ZO zone2 ot2 ->
             EnvM Ordering
@@ -684,8 +684,8 @@ ordCost x = case x of
     ExileCost reqs2 ->
       let go ::
             forall zone1 zone2 ot1 ot2.
-            IsZO zone1 ot1 =>
-            IsZO zone2 ot2 =>
+            (IsZO zone1 ot1) =>
+            (IsZO zone2 ot2) =>
             [Requirement zone1 ot1] ->
             [Requirement zone2 ot2] ->
             EnvM Ordering
@@ -714,8 +714,8 @@ ordCost x = case x of
     SacrificeCost reqs2 ->
       let go ::
             forall zone1 zone2 ot1 ot2.
-            IsZO zone1 ot1 =>
-            IsZO zone2 ot2 =>
+            (IsZO zone1 ot1) =>
+            (IsZO zone2 ot2) =>
             [Requirement zone1 ot1] ->
             [Requirement zone2 ot2] ->
             EnvM Ordering
@@ -728,8 +728,8 @@ ordCost x = case x of
     TapCost reqs2 ->
       let go ::
             forall zone1 zone2 ot1 ot2.
-            IsZO zone1 ot1 =>
-            IsZO zone2 ot2 =>
+            (IsZO zone1 ot1) =>
+            (IsZO zone2 ot2) =>
             [Requirement zone1 ot1] ->
             [Requirement zone2 ot2] ->
             EnvM Ordering
@@ -745,7 +745,7 @@ ordCosts = listM ordCost
 ordDamage :: Damage var -> Damage var -> EnvM Ordering
 ordDamage x y = pure $ compare x y
 
-ordEffect :: forall ef. Typeable ef => Effect ef -> Effect ef -> EnvM Ordering
+ordEffect :: forall ef. (Typeable ef) => Effect ef -> Effect ef -> EnvM Ordering
 ordEffect x = case x of
   AddMana player1 mana1 -> \case
     AddMana player2 mana2 ->
@@ -775,8 +775,8 @@ ordEffect x = case x of
     ChangeTo obj2 card2 ->
       let go ::
             forall zone1 zone2 ot1 ot2.
-            IsZO zone1 ot1 =>
-            IsZO zone2 ot2 =>
+            (IsZO zone1 ot1) =>
+            (IsZO zone2 ot2) =>
             ZO zone1 ot1 ->
             ZO zone2 ot2 ->
             EnvM Ordering
@@ -800,8 +800,8 @@ ordEffect x = case x of
     DealDamage source2 victim2 damage2 ->
       let go ::
             forall zone1 zone2.
-            IsZO zone1 OTNDamageSource =>
-            IsZO zone2 OTNDamageSource =>
+            (IsZO zone1 OTNDamageSource) =>
+            (IsZO zone2 OTNDamageSource) =>
             ZO zone1 OTNDamageSource ->
             ZO zone2 OTNDamageSource ->
             EnvM Ordering
@@ -835,8 +835,8 @@ ordEffect x = case x of
     Exile obj2 ->
       let go ::
             forall zone1 zone2 ot1 ot2.
-            IsZO zone1 ot1 =>
-            IsZO zone2 ot2 =>
+            (IsZO zone1 ot1) =>
+            (IsZO zone2 ot2) =>
             ZO zone1 ot1 ->
             ZO zone2 ot2 ->
             EnvM Ordering
@@ -849,10 +849,10 @@ ordEffect x = case x of
     GainAbility obj2 ability2 ->
       let go ::
             forall zone1 zone2 ot1 ot2.
-            zone1 ~ 'ZBattlefield =>
-            zone2 ~ 'ZBattlefield =>
-            IsZO zone1 ot1 =>
-            IsZO zone2 ot2 =>
+            (zone1 ~ 'ZBattlefield) =>
+            (zone2 ~ 'ZBattlefield) =>
+            (IsZO zone1 ot1) =>
+            (IsZO zone2 ot2) =>
             ZO zone1 ot1 ->
             ZO zone2 ot2 ->
             EnvM Ordering
@@ -869,8 +869,8 @@ ordEffect x = case x of
     GainControl player2 obj2 ->
       let go ::
             forall zone1 zone2 ot1 ot2.
-            IsZO zone1 ot1 =>
-            IsZO zone2 ot2 =>
+            (IsZO zone1 ot1) =>
+            (IsZO zone2 ot2) =>
             ZO zone1 ot1 ->
             ZO zone2 ot2 ->
             EnvM Ordering
@@ -891,10 +891,10 @@ ordEffect x = case x of
     LoseAbility obj2 ability2 ->
       let go ::
             forall zone1 zone2 ot1 ot2.
-            zone1 ~ 'ZBattlefield =>
-            zone2 ~ 'ZBattlefield =>
-            IsZO zone1 ot1 =>
-            IsZO zone2 ot2 =>
+            (zone1 ~ 'ZBattlefield) =>
+            (zone2 ~ 'ZBattlefield) =>
+            (IsZO zone1 ot1) =>
+            (IsZO zone2 ot2) =>
             ZO zone1 ot1 ->
             ZO zone2 ot2 ->
             EnvM Ordering
@@ -915,8 +915,8 @@ ordEffect x = case x of
     PutOntoBattlefield player2 card2 ->
       let go ::
             forall zone1 zone2 ot1 ot2.
-            IsZO zone1 ot1 =>
-            IsZO zone2 ot2 =>
+            (IsZO zone1 ot1) =>
+            (IsZO zone2 ot2) =>
             ZO zone1 ot1 ->
             ZO zone2 ot2 ->
             EnvM Ordering
@@ -933,10 +933,10 @@ ordEffect x = case x of
     Sacrifice player2 reqs2 ->
       let go ::
             forall zone1 zone2 ot1 ot2.
-            zone1 ~ 'ZBattlefield =>
-            zone2 ~ 'ZBattlefield =>
-            IsZO zone1 ot1 =>
-            IsZO zone2 ot2 =>
+            (zone1 ~ 'ZBattlefield) =>
+            (zone2 ~ 'ZBattlefield) =>
+            (IsZO zone1 ot1) =>
+            (IsZO zone2 ot2) =>
             [Requirement zone1 ot1] ->
             [Requirement zone2 ot2] ->
             EnvM Ordering
@@ -953,8 +953,8 @@ ordEffect x = case x of
     SearchLibrary searcher2 searchee2 withCard2 ->
       let go ::
             forall ot1 ot2.
-            IsOTN ot1 =>
-            IsOTN ot2 =>
+            (IsOTN ot1) =>
+            (IsOTN ot2) =>
             WithLinkedObject (Elect 'ResolveStage (Effect 'OneShot)) 'ZLibrary ot1 ->
             WithLinkedObject (Elect 'ResolveStage (Effect 'OneShot)) 'ZLibrary ot2 ->
             EnvM Ordering
@@ -986,8 +986,8 @@ ordEffect x = case x of
     Tap victim2 ->
       let go ::
             forall ot1 ot2.
-            IsZO 'ZBattlefield ot1 =>
-            IsZO 'ZBattlefield ot2 =>
+            (IsZO 'ZBattlefield ot1) =>
+            (IsZO 'ZBattlefield ot2) =>
             ZO 'ZBattlefield ot1 ->
             ZO 'ZBattlefield ot2 ->
             EnvM Ordering
@@ -1000,8 +1000,8 @@ ordEffect x = case x of
     Untap victim2 ->
       let go ::
             forall ot1 ot2.
-            IsZO 'ZBattlefield ot1 =>
-            IsZO 'ZBattlefield ot2 =>
+            (IsZO 'ZBattlefield ot1) =>
+            (IsZO 'ZBattlefield ot2) =>
             ZO 'ZBattlefield ot1 ->
             ZO 'ZBattlefield ot2 ->
             EnvM Ordering
@@ -1018,8 +1018,8 @@ ordEffect x = case x of
     WithList withList2 ->
       let go ::
             forall zone1 zone2 ot1 ot2.
-            IsZO zone1 ot1 =>
-            IsZO zone2 ot2 =>
+            (IsZO zone1 ot1) =>
+            (IsZO zone2 ot2) =>
             WithList (Effect ef) zone1 ot1 ->
             WithList (Effect ef) zone2 ot2 ->
             EnvM Ordering
@@ -1038,7 +1038,7 @@ ordElectEl ::
 ordElectEl x = case x of
   ActivePlayer playerToElect1 -> \case
     ActivePlayer playerToElect2 -> do
-      player' <- newObjectN @ 'OTPlayer toObject1'
+      player' <- newObjectN @'OTPlayer toObject1'
       let player = toZone player'
           elect1 = playerToElect1 player
           elect2 = playerToElect2 player
@@ -1051,10 +1051,10 @@ ordElectEl x = case x of
     Choose player2 with2 ->
       let go ::
             forall zone1 zone2.
-            CoNonIntrinsicStage s =>
-            Typeable el =>
-            IsZO zone1 ot =>
-            IsZO zone2 ot =>
+            (CoNonIntrinsicStage s) =>
+            (Typeable el) =>
+            (IsZO zone1 ot) =>
+            (IsZO zone2 ot) =>
             WithMaskedObject (Elect s el) zone1 ot ->
             WithMaskedObject (Elect s el) zone2 ot ->
             EnvM Ordering
@@ -1071,10 +1071,10 @@ ordElectEl x = case x of
     ChooseOption player2 natList2 varToElect2 ->
       let go ::
             forall u1 u2 n1 n2.
-            IsUser u1 =>
-            IsUser u2 =>
-            IsNat n1 =>
-            IsNat n2 =>
+            (IsUser u1) =>
+            (IsUser u2) =>
+            (IsNat n1) =>
+            (IsNat n2) =>
             NatList u1 n1 Condition ->
             NatList u2 n2 Condition ->
             EnvM Ordering
@@ -1103,16 +1103,16 @@ ordElectEl x = case x of
     ControllerOf obj2 playerToElect2 ->
       let go ::
             forall zone1 zone2 ot'.
-            ot' ~ OTNAny =>
-            IsZO zone1 ot' =>
-            IsZO zone2 ot' =>
+            (ot' ~ OTNAny) =>
+            (IsZO zone1 ot') =>
+            (IsZO zone2 ot') =>
             ZO zone1 ot' ->
             ZO zone2 ot' ->
             EnvM Ordering
           go _ _ = case cast obj2 of
             Nothing -> compareZone @zone1 @zone2
             Just obj2 -> do
-              player' <- newObjectN @ 'OTPlayer toObject1'
+              player' <- newObjectN @'OTPlayer toObject1'
               let player = toZone player'
                   elect1 = playerToElect1 player
                   elect2 = playerToElect2 player
@@ -1129,8 +1129,8 @@ ordElectEl x = case x of
     ElectActivated ability2 ->
       let go ::
             forall zone1 zone2.
-            IsZO zone1 ot =>
-            IsZO zone2 ot =>
+            (IsZO zone1 ot) =>
+            (IsZO zone2 ot) =>
             ActivatedAbility zone1 ot ->
             ActivatedAbility zone2 ot ->
             EnvM Ordering
@@ -1166,16 +1166,16 @@ ordElectEl x = case x of
     OwnerOf obj2 playerToElect2 ->
       let go ::
             forall zone1 zone2 ot'.
-            ot' ~ OTNAny =>
-            IsZO zone1 ot' =>
-            IsZO zone2 ot' =>
+            (ot' ~ OTNAny) =>
+            (IsZO zone1 ot') =>
+            (IsZO zone2 ot') =>
             ZO zone1 ot' ->
             ZO zone2 ot' ->
             EnvM Ordering
           go _ _ = case cast obj2 of
             Nothing -> compareZone @zone1 @zone2
             Just obj2 -> do
-              player' <- newObjectN @ 'OTPlayer toObject1'
+              player' <- newObjectN @'OTPlayer toObject1'
               let player = toZone player'
                   elect1 = playerToElect1 player
                   elect2 = playerToElect2 player
@@ -1197,9 +1197,9 @@ ordElectEl x = case x of
     Target player2 with2 ->
       let go ::
             forall el zone1 zone2.
-            Typeable el =>
-            IsZO zone1 ot =>
-            IsZO zone2 ot =>
+            (Typeable el) =>
+            (IsZO zone1 ot) =>
+            (IsZO zone2 ot) =>
             WithMaskedObject (Elect 'TargetStage el) zone1 ot ->
             WithMaskedObject (Elect 'TargetStage el) zone2 ot ->
             EnvM Ordering
@@ -1230,7 +1230,7 @@ ordElectEl x = case x of
     y -> compareIndexM x y
   Your playerToElect1 -> \case
     Your playerToElect2 -> do
-      player' <- newObjectN @ 'OTPlayer toObject1'
+      player' <- newObjectN @'OTPlayer toObject1'
       let player = toZone player'
           elect1 = playerToElect1 player
           elect2 = playerToElect2 player
@@ -1254,7 +1254,7 @@ ordElseE = \case
   ElseEvent -> \case
     ElseEvent -> pure EQ
 
-ordEnchant :: IsZO zone ot => Enchant zone ot -> Enchant zone ot -> EnvM Ordering
+ordEnchant :: (IsZO zone ot) => Enchant zone ot -> Enchant zone ot -> EnvM Ordering
 ordEnchant = \case
   Enchant withObj1 -> \case
     Enchant withObj2 -> ordWithLinkedObject ordElectEl withObj1 withObj2
@@ -1265,8 +1265,8 @@ ordEnchantmentType = \case
     Aura enchant2 ->
       let go ::
             forall zone1 ot1 zone2 ot2.
-            IsZO zone1 ot1 =>
-            IsZO zone2 ot2 =>
+            (IsZO zone1 ot1) =>
+            (IsZO zone2 ot2) =>
             Enchant zone1 ot1 ->
             Enchant zone2 ot2 ->
             EnvM Ordering
@@ -1285,8 +1285,8 @@ ordEntersStatic = \case
 
 ordEventListener' ::
   forall liftOT.
-  Typeable liftOT =>
-  (forall ot. IsOTN ot => liftOT ot -> liftOT ot -> EnvM Ordering) ->
+  (Typeable liftOT) =>
+  (forall ot. (IsOTN ot) => liftOT ot -> liftOT ot -> EnvM Ordering) ->
   EventListener' liftOT ->
   EventListener' liftOT ->
   EnvM Ordering
@@ -1295,10 +1295,10 @@ ordEventListener' ordM x = case x of
     BecomesTapped with2 ->
       let go ::
             forall zone1 zone2 ot1 ot2.
-            zone1 ~ 'ZBattlefield =>
-            zone2 ~ 'ZBattlefield =>
-            IsZO zone1 ot1 =>
-            IsZO zone2 ot2 =>
+            (zone1 ~ 'ZBattlefield) =>
+            (zone2 ~ 'ZBattlefield) =>
+            (IsZO zone1 ot1) =>
+            (IsZO zone2 ot2) =>
             WithLinkedObject liftOT zone1 ot1 ->
             WithLinkedObject liftOT zone2 ot2 ->
             EnvM Ordering
@@ -1311,10 +1311,10 @@ ordEventListener' ordM x = case x of
     EntersBattlefield with2 ->
       let go ::
             forall zone1 zone2 ot1 ot2.
-            zone1 ~ 'ZBattlefield =>
-            zone2 ~ 'ZBattlefield =>
-            IsZO zone1 ot1 =>
-            IsZO zone2 ot2 =>
+            (zone1 ~ 'ZBattlefield) =>
+            (zone2 ~ 'ZBattlefield) =>
+            (IsZO zone1 ot1) =>
+            (IsZO zone2 ot2) =>
             WithLinkedObject liftOT zone1 ot1 ->
             WithLinkedObject liftOT zone2 ot2 ->
             EnvM Ordering
@@ -1327,8 +1327,8 @@ ordEventListener' ordM x = case x of
     EntersNonBattlefield with2 ->
       let go ::
             forall zone1 zone2 ot1 ot2.
-            IsZO zone1 ot1 =>
-            IsZO zone2 ot2 =>
+            (IsZO zone1 ot1) =>
+            (IsZO zone2 ot2) =>
             WithLinkedObject liftOT zone1 ot1 ->
             WithLinkedObject liftOT zone2 ot2 ->
             EnvM Ordering
@@ -1344,10 +1344,10 @@ ordEventListener' ordM x = case x of
     SpellIsCast with2 ->
       let go ::
             forall zone1 zone2 ot1 ot2.
-            zone1 ~ 'ZBattlefield =>
-            zone2 ~ 'ZBattlefield =>
-            IsZO zone1 ot1 =>
-            IsZO zone2 ot2 =>
+            (zone1 ~ 'ZBattlefield) =>
+            (zone2 ~ 'ZBattlefield) =>
+            (IsZO zone1 ot1) =>
+            (IsZO zone2 ot2) =>
             WithLinkedObject liftOT zone1 ot1 ->
             WithLinkedObject liftOT zone2 ot2 ->
             EnvM Ordering
@@ -1375,7 +1375,7 @@ ordManaCost x y = pure $ compare x y
 ordManaPool :: ManaPool snow -> ManaPool snow -> EnvM Ordering
 ordManaPool x y = pure $ compare x y
 
-ordNatList :: IsUser u => (x -> x -> EnvM Ordering) -> NatList u n x -> NatList u n x -> EnvM Ordering
+ordNatList :: (IsUser u) => (x -> x -> EnvM Ordering) -> NatList u n x -> NatList u n x -> EnvM Ordering
 ordNatList ordX = \case
   LZ _ x1 -> \case
     LZ _ x2 -> ordX x1 x2
@@ -1707,7 +1707,7 @@ ordObjectN objN1 objN2 = case objN1 of
   ON12k{} -> ordObjectN' objN1 objN2
   ON12l{} -> ordObjectN' objN1 objN2
 
-ordRequirement :: IndexOT ot => Requirement zone ot -> Requirement zone ot -> EnvM Ordering
+ordRequirement :: (IndexOT ot) => Requirement zone ot -> Requirement zone ot -> EnvM Ordering
 ordRequirement x = case x of
   ControlledBy player1 -> \case
     ControlledBy player2 -> ordZoneObject player1 player2
@@ -1716,10 +1716,10 @@ ordRequirement x = case x of
     ControlsA req2 ->
       let go ::
             forall zone1 zone2 ot1 ot2.
-            zone1 ~ 'ZBattlefield =>
-            zone2 ~ 'ZBattlefield =>
-            IsZO zone1 ot1 =>
-            IsZO zone2 ot2 =>
+            (zone1 ~ 'ZBattlefield) =>
+            (zone2 ~ 'ZBattlefield) =>
+            (IsZO zone1 ot1) =>
+            (IsZO zone2 ot2) =>
             Requirement zone1 ot1 ->
             Requirement zone2 ot2 ->
             EnvM Ordering
@@ -1790,7 +1790,7 @@ ordRequirement x = case x of
         ]
     y -> compareIndexM x y
 
-ordRequirements :: IsZO zone ot => [Requirement zone ot] -> [Requirement zone ot] -> EnvM Ordering
+ordRequirements :: (IsZO zone ot) => [Requirement zone ot] -> [Requirement zone ot] -> EnvM Ordering
 ordRequirements = listM ordRequirement
 
 ordSetCard :: SetCard ot -> SetCard ot -> EnvM Ordering
@@ -1815,7 +1815,7 @@ ordSetToken = \case
 
 ordSomeZone ::
   forall liftZOT ot.
-  Typeable liftZOT =>
+  (Typeable liftZOT) =>
   (forall zone. liftZOT zone ot -> liftZOT zone ot -> EnvM Ordering) ->
   SomeZone liftZOT ot ->
   SomeZone liftZOT ot ->
@@ -1849,7 +1849,7 @@ ordSomeZone ordM = \case
 
 ordSomeZoneWithThisAbility ::
   forall ot.
-  IsOTN ot =>
+  (IsOTN ot) =>
   SomeZone WithThisAbility ot ->
   SomeZone WithThisAbility ot ->
   EnvM Ordering
@@ -1922,7 +1922,7 @@ ordToken x = case x of
 
 ordTriggeredAbility ::
   forall zone ot.
-  IndexOT ot =>
+  (IndexOT ot) =>
   TriggeredAbility zone ot ->
   TriggeredAbility zone ot ->
   EnvM Ordering
@@ -1985,9 +1985,9 @@ ordWithList ordRet x = case x of
     y -> compareIndexM x y
 
 ordWithMaskedObjectElectEl ::
-  Typeable s =>
-  Typeable el =>
-  IsZO zone ot =>
+  (Typeable s) =>
+  (Typeable el) =>
+  (IsZO zone ot) =>
   WithMaskedObject (Elect s el) zone ot ->
   WithMaskedObject (Elect s el) zone ot ->
   EnvM Ordering
@@ -2014,9 +2014,9 @@ ordWithMaskedObjectElectEl x = case x of
   ordM = ordElectEl
 
 ordWithMaskedObjectsElectEl ::
-  Typeable s =>
-  Typeable el =>
-  IsZO zone ot =>
+  (Typeable s) =>
+  (Typeable el) =>
+  (IsZO zone ot) =>
   WithMaskedObjects (Elect s el) zone ot ->
   WithMaskedObjects (Elect s el) zone ot ->
   EnvM Ordering
@@ -2044,8 +2044,8 @@ ordWithMaskedObjectsElectEl x = case x of
 
 ordWithThis ::
   forall liftOT zone ot.
-  Typeable liftOT =>
-  IsZO zone ot =>
+  (Typeable liftOT) =>
+  (IsZO zone ot) =>
   (liftOT ot -> liftOT ot -> EnvM Ordering) ->
   WithThis liftOT zone ot ->
   WithThis liftOT zone ot ->
@@ -2057,9 +2057,9 @@ ordWithThis ordM = \case
     This2 cont2 ->
       let go ::
             forall a b ota otb.
-            ota ~ OT1 a =>
-            otb ~ OT1 b =>
-            Inst2 IsObjectType a b =>
+            (ota ~ OT1 a) =>
+            (otb ~ OT1 b) =>
+            (Inst2 IsObjectType a b) =>
             ((ZO zone ota, ZO zone otb) -> liftOT ot) ->
             ((ZO zone ota, ZO zone otb) -> liftOT ot) ->
             EnvM Ordering
@@ -2076,10 +2076,10 @@ ordWithThis ordM = \case
     This3 cont2 ->
       let go ::
             forall a b c ota otb otc.
-            ota ~ OT1 a =>
-            otb ~ OT1 b =>
-            otc ~ OT1 c =>
-            Inst3 IsObjectType a b c =>
+            (ota ~ OT1 a) =>
+            (otb ~ OT1 b) =>
+            (otc ~ OT1 c) =>
+            (Inst3 IsObjectType a b c) =>
             ((ZO zone ota, ZO zone otb, ZO zone otc) -> liftOT ot) ->
             ((ZO zone ota, ZO zone otb, ZO zone otc) -> liftOT ot) ->
             EnvM Ordering
@@ -2098,11 +2098,11 @@ ordWithThis ordM = \case
     This4 cont2 ->
       let go ::
             forall a b c d ota otb otc otd.
-            ota ~ OT1 a =>
-            otb ~ OT1 b =>
-            otc ~ OT1 c =>
-            otd ~ OT1 d =>
-            Inst4 IsObjectType a b c d =>
+            (ota ~ OT1 a) =>
+            (otb ~ OT1 b) =>
+            (otc ~ OT1 c) =>
+            (otd ~ OT1 d) =>
+            (Inst4 IsObjectType a b c d) =>
             ((ZO zone ota, ZO zone otb, ZO zone otc, ZO zone otd) -> liftOT ot) ->
             ((ZO zone ota, ZO zone otb, ZO zone otc, ZO zone otd) -> liftOT ot) ->
             EnvM Ordering
@@ -2123,12 +2123,12 @@ ordWithThis ordM = \case
     This5 cont2 ->
       let go ::
             forall a b c d e ota otb otc otd ote.
-            ota ~ OT1 a =>
-            otb ~ OT1 b =>
-            otc ~ OT1 c =>
-            otd ~ OT1 d =>
-            ote ~ OT1 e =>
-            Inst5 IsObjectType a b c d e =>
+            (ota ~ OT1 a) =>
+            (otb ~ OT1 b) =>
+            (otc ~ OT1 c) =>
+            (otd ~ OT1 d) =>
+            (ote ~ OT1 e) =>
+            (Inst5 IsObjectType a b c d e) =>
             ((ZO zone ota, ZO zone otb, ZO zone otc, ZO zone otd, ZO zone ote) -> liftOT ot) ->
             ((ZO zone ota, ZO zone otb, ZO zone otc, ZO zone otd, ZO zone ote) -> liftOT ot) ->
             EnvM Ordering
@@ -2167,21 +2167,21 @@ ordWithThisAbility x = case x of
     y -> compareIndexM x y
 
 ordWithThisActivated ::
-  IsZO zone ot =>
+  (IsZO zone ot) =>
   WithThisActivated zone ot ->
   WithThisActivated zone ot ->
   EnvM Ordering
 ordWithThisActivated = ordWithThis (ordElectEl `on` unElectOT)
 
 ordWithThisStatic ::
-  IsZO zone ot =>
+  (IsZO zone ot) =>
   WithThisStatic zone ot ->
   WithThisStatic zone ot ->
   EnvM Ordering
 ordWithThisStatic = ordWithThis ordStaticAbility
 
 ordWithThisTriggered ::
-  IsZO zone ot =>
+  (IsZO zone ot) =>
   WithThisTriggered zone ot ->
   WithThisTriggered zone ot ->
   EnvM Ordering

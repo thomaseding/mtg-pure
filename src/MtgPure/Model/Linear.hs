@@ -23,7 +23,7 @@ data SLinearity (l :: Linearity) :: Type where
   SNonLinear :: SLinearity 'NonLinear
   deriving (Typeable)
 
-class Typeable l => IsLinearity l where
+class (Typeable l) => IsLinearity l where
   singLinearity :: SLinearity l
 
 instance IsLinearity 'Linear where

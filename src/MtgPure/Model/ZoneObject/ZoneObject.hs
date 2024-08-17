@@ -114,9 +114,9 @@ type IsZO (zone :: Zone) (ot :: Type) =
   ( IsOTN ot
   , IsZone zone
   -- XXX: Prolly don't want to put these here so they don't leak to Authoring
-  --, Eq (ZO zone ot)
-  --, Ord (ZO zone ot)
-  --, Show (ZO zone ot)
+  -- , Eq (ZO zone ot)
+  -- , Ord (ZO zone ot)
+  -- , Show (ZO zone ot)
   )
 
 type ZOAny = ZO 'ZBattlefield OTNAny
@@ -169,5 +169,5 @@ type ZOStaticAbility = ZO 'ZBattlefield OTNStaticAbility
 
 type ZOTriggeredAbility = ZO 'ZBattlefield OTNTriggeredAbility
 
-toZone :: forall zone ot. IsZone zone => ObjectN ot -> ZO zone ot
+toZone :: forall zone ot. (IsZone zone) => ObjectN ot -> ZO zone ot
 toZone = ZO (singZone @zone)

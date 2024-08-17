@@ -49,7 +49,7 @@ import safe MtgPure.Model.Zone (SingZone (..), Zone (..))
 import safe MtgPure.Model.ZoneObject.Convert (oToZO1, toZO0, zo0ToPermanent)
 import safe MtgPure.Model.ZoneObject.ZoneObject (IsZO, ZoneObject (..))
 
-pay :: Monad m => Object 'OTPlayer -> Cost -> Magic 'Private 'RW m Legality
+pay :: (Monad m) => Object 'OTPlayer -> Cost -> Magic 'Private 'RW m Legality
 pay oPlayer = logCall 'pay do
   -- TODO: allow player to activate mana abilities iff the payment requires a mana cost.
   -- Prolly actually should be done on each mana payment attempt instead of ahead of time,
@@ -57,7 +57,7 @@ pay oPlayer = logCall 'pay do
   pure ()
   payRec oPlayer
 
-payRec :: Monad m => Object 'OTPlayer -> Cost -> Magic 'Private 'RW m Legality
+payRec :: (Monad m) => Object 'OTPlayer -> Cost -> Magic 'Private 'RW m Legality
 payRec oPlayer = logCall 'payRec \case
   AndCosts costs -> payAndCosts oPlayer costs
   CostCase{} -> undefined
@@ -70,7 +70,7 @@ payRec oPlayer = logCall 'payRec \case
   SacrificeCost reqs -> paySacrificeCost oPlayer $ RAnd reqs
   TapCost reqs -> payTapCost oPlayer $ RAnd reqs
 
-payLife :: Monad m => Object 'OTPlayer -> Life -> Magic 'Private 'RW m Legality
+payLife :: (Monad m) => Object 'OTPlayer -> Life -> Magic 'Private 'RW m Legality
 payLife oPlayer life = logCall 'payLife do
   fromRO (findPlayer oPlayer) >>= \case
     Nothing -> pure Illegal
@@ -117,7 +117,7 @@ payTapCost oPlayer req = logCall 'payTapCost do
     Nothing -> pure Illegal
     Just zo -> do
       let zoPerm = zo0ToPermanent $ toZO0 zo
-          zoPlayer = oToZO1 @ 'ZBattlefield oPlayer
+          zoPlayer = oToZO1 @'ZBattlefield oPlayer
       M.void $ enact (Just $ SourceZO zoPlayer) $ Tap zoPerm
       fromRO $ satisfies zoPerm isTapped <&> toLegality
  where
@@ -128,7 +128,7 @@ payTapCost oPlayer req = logCall 'payTapCost do
       , req
       ]
 
-payAndCosts :: Monad m => Object 'OTPlayer -> [Cost] -> Magic 'Private 'RW m Legality
+payAndCosts :: (Monad m) => Object 'OTPlayer -> [Cost] -> Magic 'Private 'RW m Legality
 payAndCosts oPlayer = logCall 'payAndCosts \case
   [] -> pure Legal
   cost : costs ->
@@ -136,7 +136,7 @@ payAndCosts oPlayer = logCall 'payAndCosts \case
       Illegal -> pure Illegal
       Legal -> payAndCosts oPlayer costs
 
-payOrCosts :: Monad m => Object 'OTPlayer -> [Cost] -> Magic 'Private 'RW m Legality
+payOrCosts :: (Monad m) => Object 'OTPlayer -> [Cost] -> Magic 'Private 'RW m Legality
 payOrCosts oPlayer = logCall 'payOrCosts \case
   [] -> pure Illegal
   cost : _costs ->

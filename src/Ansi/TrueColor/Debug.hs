@@ -31,7 +31,7 @@ import safe Data.List (intercalate)
 
 --------------------------------------------------------------------------------
 
-class ImageToGrid p => PixelToAnsi p where
+class (ImageToGrid p) => PixelToAnsi p where
   pixelToAnsi :: p -> AnsiImage
 
 instance PixelToAnsi PixelRGB8 where
@@ -53,7 +53,7 @@ instance PixelToAnsi Pixel1 where
       255 -> SgrTrueColor Fg $ Rgb 0 0 0
       _ -> error "pixelToAnsi: invalid input"
 
-pixelsToAnsi :: PixelToAnsi p => Grid p -> AnsiImage
+pixelsToAnsi :: (PixelToAnsi p) => Grid p -> AnsiImage
 pixelsToAnsi grid =
   AnsiString $
     intercalate
@@ -61,5 +61,5 @@ pixelsToAnsi grid =
       (map (concatMap $ unAnsiString . pixelToAnsi) grid)
       <> [AnsiSgr SgrReset]
 
-convertImageToDebugAnsiImage :: PixelToAnsi p => Image p -> AnsiImage
+convertImageToDebugAnsiImage :: (PixelToAnsi p) => Image p -> AnsiImage
 convertImageToDebugAnsiImage = pixelsToAnsi . imageToGrid

@@ -341,7 +341,7 @@ mkCompleteManaPoolBox y pool =
   nonSnow = poolNonSnow pool
   snow = poolSnow pool
 
-mkManaPoolBox :: forall snow. IsSnow snow => ManaPool snow -> Int -> Box
+mkManaPoolBox :: forall snow. (IsSnow snow) => ManaPool snow -> Int -> Box
 mkManaPoolBox pool y =
   Box
     { boxText = ""

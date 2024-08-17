@@ -14,7 +14,7 @@ import safe Data.Typeable (Typeable)
 data Snow = Snow | NonSnow
   deriving (Typeable)
 
-class Typeable snow => IsSnow (snow :: Snow) where
+class (Typeable snow) => IsSnow (snow :: Snow) where
   litSnow :: Snow
 
 instance IsSnow 'Snow where

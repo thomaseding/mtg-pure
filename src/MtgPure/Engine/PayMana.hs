@@ -64,7 +64,7 @@ class FindMana manas var | manas -> var where
     ) ->
     Maybe x
 
-instance IsSnow snow => FindMana (ManaPool snow) 'NoVar where
+instance (IsSnow snow) => FindMana (ManaPool snow) 'NoVar where
   findMana (ManaPool w u b r g c) f =
     getFirst $ mconcat $ map First [f w, f u, f b, f r, f g, f c]
 
@@ -81,7 +81,7 @@ hasEnoughFixedMana completePool cost = isEachManaNonNegative nonSnow'' && isEach
   nonSnow'' = nonSnow - nonSnow'
   snow'' = snow - snow'
 
-isEachManaNonNegative :: FindMana manas 'NoVar => manas -> Bool
+isEachManaNonNegative :: (FindMana manas 'NoVar) => manas -> Bool
 isEachManaNonNegative pool = case findMana pool isBad of
   Nothing -> True
   Just () -> False
@@ -134,8 +134,8 @@ toPayment :: CompleteManaPool -> PartialManaPayment
 toPayment pool = PartialManaPayment mempty{paymentMana = pool} 0
 
 possiblePaymentsHybrid ::
-  ToManaPool 'NonSnow (ManaSymbol mt1) =>
-  ToManaPool 'NonSnow (ManaSymbol mt2) =>
+  (ToManaPool 'NonSnow (ManaSymbol mt1)) =>
+  (ToManaPool 'NonSnow (ManaSymbol mt2)) =>
   ManaSymbol mt1 ->
   ManaSymbol mt2 ->
   Mana 'NoVar 'NonSnow mth ->
@@ -155,7 +155,7 @@ possiblePaymentsHybrid sym1 sym2 (Mana n) = case n <= 0 of
     pure $ p <> q
 
 possiblePaymentsHybrid2 ::
-  ToManaPool 'NonSnow (ManaSymbol mt) =>
+  (ToManaPool 'NonSnow (ManaSymbol mt)) =>
   ManaSymbol mt ->
   Mana 'NoVar 'NonSnow mth ->
   [PartialManaPayment]
@@ -174,7 +174,7 @@ possiblePaymentsHybrid2 sym (Mana n) = case n <= 0 of
 
 possiblePaymentsPhyrexian ::
   forall mt mtp.
-  ToManaPool 'NonSnow (ManaSymbol mt) =>
+  (ToManaPool 'NonSnow (ManaSymbol mt)) =>
   ManaSymbol mt ->
   Mana 'NoVar 'NonSnow mtp ->
   [PartialManaPayment]
@@ -191,9 +191,9 @@ possiblePaymentsPhyrexian sym (Mana n) = case n <= 0 of
 
 class PossiblePayments cost where
   -- | This is allowed to return duplicates.
-  possiblePaymentsImpl :: HasCallStack => cost -> [PartialManaPayment]
+  possiblePaymentsImpl :: (HasCallStack) => cost -> [PartialManaPayment]
 
-possiblePayments :: HasCallStack => PossiblePayments cost => cost -> [PartialManaPayment]
+possiblePayments :: (HasCallStack) => (PossiblePayments cost) => cost -> [PartialManaPayment]
 possiblePayments = map head . List.group . List.sort . possiblePaymentsImpl
 
 instance PossiblePayments (Mana 'NoVar 'NonSnow 'TyWU) where
@@ -372,7 +372,7 @@ data CanPayManaCost where
   -- Returns `Nothing` if there are multiple solutions.
   CanPayMana :: Maybe ManaPayment -> CanPayManaCost
 
-getUniqueElem :: Eq a => [a] -> Maybe a
+getUniqueElem :: (Eq a) => [a] -> Maybe a
 getUniqueElem = \case
   [] -> Nothing
   xs -> case all (== head xs) xs of
@@ -386,7 +386,7 @@ getUniqueElem = \case
 -- costs for those. (e.g. no cards have hybrid mana costs for X, or at least it is rare). If such
 -- cards exist and cause performance problems, we can revisit this to special case them or update
 -- the algorithm to handle them. (e.g. bust out a third-party discrete constraint solver).
-playerCanPayManaCost :: HasCallStack => Player -> ManaCost 'NoVar -> CanPayManaCost
+playerCanPayManaCost :: (HasCallStack) => Player -> ManaCost 'NoVar -> CanPayManaCost
 playerCanPayManaCost player cost = case hasEnoughFixedMana pool cost of
   False -> CantPayMana
   True -> do
@@ -419,7 +419,7 @@ playerCanPayManaCost player cost = case hasEnoughFixedMana pool cost of
           Nothing -> Nothing
           Just x -> Just $ payment <> mempty{paymentMana = x}
 
-payManaCost :: Monad m => Object 'OTPlayer -> ManaCost 'Var -> Magic 'Private 'A.RW m Legality
+payManaCost :: (Monad m) => Object 'OTPlayer -> ManaCost 'Var -> Magic 'Private 'A.RW m Legality
 payManaCost oPlayer (forceVars -> cost) = logCall 'payManaCost do
   fromRO (findPlayer oPlayer) >>= \case
     Nothing -> pure Illegal
@@ -453,7 +453,7 @@ payManaCost oPlayer (forceVars -> cost) = logCall 'payManaCost do
 -- Game engine needs to search for at least one solution. If no solutions are found, then the payment
 -- is aborted regardless of whether it is mandatory or optional.
 promptPayForCompatibleDynamic ::
-  Monad m =>
+  (Monad m) =>
   Object 'OTPlayer ->
   CompleteManaPool ->
   DynamicManaCost 'NoVar ->

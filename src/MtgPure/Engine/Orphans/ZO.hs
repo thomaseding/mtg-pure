@@ -11,7 +11,8 @@
 {-# HLINT ignore "Redundant pure" #-}
 
 module MtgPure.Engine.Orphans.ZO (
-  ) where
+
+) where
 
 import safe MtgPure.Model.Object.Object (Object (Object))
 import safe MtgPure.Model.Object.ObjectId (GetObjectId (..))

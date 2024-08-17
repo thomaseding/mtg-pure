@@ -241,37 +241,37 @@ instance Show (Token ot) where
 instance Show (TriggeredAbility zone ot) where
   show = runEnvM defaultDepthLimit . showTriggeredAbility
 
-instance IsZO zone ot => Show (WithMaskedObject (Elect s e) zone ot) where
+instance (IsZO zone ot) => Show (WithMaskedObject (Elect s e) zone ot) where
   show = runEnvM defaultDepthLimit . showWithMaskedObject showElect "obj"
 
-instance IsOTN ot => Show (SomeZone WithThisAbility ot) where
+instance (IsOTN ot) => Show (SomeZone WithThisAbility ot) where
   show = runEnvM defaultDepthLimit . showSomeZone (showWithThisAbility "this")
 
-instance IsOTN ot => Show (SomeZone (WithThisZ ActivatedAbility) ot) where
+instance (IsOTN ot) => Show (SomeZone (WithThisZ ActivatedAbility) ot) where
   show = runEnvM defaultDepthLimit . showSomeZone (showWithThisZ showActivatedAbility "this")
 
-instance IsOTN ot => Show (SomeZone (WithThisZ StaticAbility) ot) where
+instance (IsOTN ot) => Show (SomeZone (WithThisZ StaticAbility) ot) where
   show = runEnvM defaultDepthLimit . showSomeZone (showWithThisZ showStaticAbility "this")
 
-instance IsOTN ot => Show (SomeZone (WithThisZ TriggeredAbility) ot) where
+instance (IsOTN ot) => Show (SomeZone (WithThisZ TriggeredAbility) ot) where
   show = runEnvM defaultDepthLimit . showSomeZone (showWithThisZ showTriggeredAbility "this")
 
-instance IsZO zone ot => Show (WithThis (Ability zone) zone ot) where
+instance (IsZO zone ot) => Show (WithThis (Ability zone) zone ot) where
   show = runEnvM defaultDepthLimit . showWithThis showAbility "this"
 
-instance IsZO zone ot => Show (WithThisAbility zone ot) where
+instance (IsZO zone ot) => Show (WithThisAbility zone ot) where
   show = runEnvM defaultDepthLimit . showWithThisAbility "this"
 
-instance IsZO zone ot => Show (WithThisActivated zone ot) where
+instance (IsZO zone ot) => Show (WithThisActivated zone ot) where
   show = runEnvM defaultDepthLimit . showWithThis (showElect . unElectOT) "this"
 
-instance IsZO 'ZStack ot => Show (WithThisOneShot ot) where
+instance (IsZO 'ZStack ot) => Show (WithThisOneShot ot) where
   show = runEnvM defaultDepthLimit . showWithThis showElect "this"
 
-instance IsZO zone ot => Show (WithThisStatic zone ot) where
+instance (IsZO zone ot) => Show (WithThisStatic zone ot) where
   show = runEnvM defaultDepthLimit . showWithThis showStaticAbility "this"
 
-instance IsZO zone ot => Show (WithThisTriggered zone ot) where
+instance (IsZO zone ot) => Show (WithThisTriggered zone ot) where
   show = runEnvM defaultDepthLimit . showWithThis showTriggeredAbility "this"
 
 ----------------------------------------
@@ -429,7 +429,7 @@ getObjectName (Object _ (UntypedObject _ i)) = EnvM do
 newtype ObjectIdState = ObjectIdState ObjectId
 
 newObject ::
-  forall a. IsObjectType a => String -> EnvM (Object a, ObjectIdState)
+  forall a. (IsObjectType a) => String -> EnvM (Object a, ObjectIdState)
 newObject name = EnvM do
   i@(ObjectId raw) <- State.gets nextObjectId
   let obj = idToObject @a $ UntypedObject DefaultObjectDiscriminant i
@@ -462,7 +462,7 @@ newObjectN make name = do
   pure (objN, snap)
 
 restoreObject :: ObjectIdState -> EnvM ()
---restoreObject (ObjectIdState i) = State.modify' \st -> st {nextObjectId = i}
+-- restoreObject (ObjectIdState i) = State.modify' \st -> st {nextObjectId = i}
 restoreObject _ = pure ()
 
 data Plurality = Singular | Plural
@@ -561,7 +561,7 @@ showCard card = case card of
         <> sCard2
         <> sSplitAbilities
 
-showCardImpl :: HasCardName name => Item -> name -> EnvM Items -> EnvM ParenItems
+showCardImpl :: (HasCardName name) => Item -> name -> EnvM Items -> EnvM ParenItems
 showCardImpl consName (getCardName -> CardName name) cont = yesParens do
   depth <- EnvM $ State.gets cardDepth
   EnvM $ State.modify' \st -> st{cardDepth = subtract 1 <$> depth}
@@ -1035,7 +1035,7 @@ showEffects = showListM showEffect
 showElect :: Elect s e ot -> EnvM ParenItems
 showElect = \case
   ActivePlayer contElect -> yesParens do
-    (active', snap) <- newObjectN @ 'OTPlayer O1 "active"
+    (active', snap) <- newObjectN @'OTPlayer O1 "active"
     let active = toZone active'
         elect = contElect active
     sActive <- parens <$> showZoneObject active
@@ -1059,7 +1059,9 @@ showElect = \case
         elect = varToElect var
     sElect <- dropParens <$> showElect elect
     pure $
-      pure "ChooseOption " <> sPlayer <> pure " "
+      pure "ChooseOption "
+        <> sPlayer
+        <> pure " "
         <> sNatList
         <> pure " $ \\"
         <> pure varName
@@ -1156,7 +1158,7 @@ showElect = \case
     goPlayerOf0 "Your" "you" contElect
  where
   goPlayerOf0 consName varName contElect = yesParens do
-    (player', snap) <- newObjectN @ 'OTPlayer O1 varName
+    (player', snap) <- newObjectN @'OTPlayer O1 varName
     let player = toZone player'
     sPlayer <- parens <$> showZoneObject player
     let elect = contElect player
@@ -1176,7 +1178,7 @@ showElect = \case
               ZO _ o -> o
          in visitObjectN' objectToId objN
     (player', snap) <-
-      newObjectN @ 'OTPlayer O1 case objPrefix == "this" of
+      newObjectN @'OTPlayer O1 case objPrefix == "this" of
         True -> "you"
         False -> varName
     let player = toZone player'
@@ -1597,7 +1599,7 @@ showManaPool pool = yesParens do
             _ -> "(" ++ List.intercalate "," manas ++ ")"
       pure $ pure $ fromString $ "toManaPool " ++ sManas
 
-showNatList :: forall u n x. IsUser u => (x -> EnvM ParenItems) -> NatList u n x -> EnvM ParenItems
+showNatList :: forall u n x. (IsUser u) => (x -> EnvM ParenItems) -> NatList u n x -> EnvM ParenItems
 showNatList showX = \case
   LZ u x -> yesParens do
     let sU = pure $ fromString $ show u
@@ -1612,7 +1614,7 @@ showNatList showX = \case
 showO1 ::
   forall zone a z.
   (IsZone zone, IsObjectType a) =>
-  IsOTN (OT1 a) =>
+  (IsOTN (OT1 a)) =>
   Plurality ->
   (z -> EnvM ParenItems) ->
   String ->
@@ -1696,7 +1698,7 @@ showObject :: Object a -> EnvM Items
 showObject = fmap pure . getObjectName
 
 showObjectNImpl ::
-  IsObjectType a => TypeRep -> Item -> Object a -> EnvM ParenItems
+  (IsObjectType a) => TypeRep -> Item -> Object a -> EnvM ParenItems
 showObjectNImpl objNRef prefix obj = do
   let i = objectToId obj
   sObj <- showObject obj
@@ -1724,11 +1726,11 @@ showObject1 ::
 showObject1 objN = visitObjectN' visit objN
  where
   rep = typeOf objN
-  visit :: IsObjectType x => Object x -> EnvM ParenItems
+  visit :: (IsObjectType x) => Object x -> EnvM ParenItems
   visit =
     showObjectNImpl rep $
       if
-          | otherwise -> "toZO1"
+        | otherwise -> "toZO1"
 
 showObject2 ::
   forall zone a b.
@@ -1738,17 +1740,17 @@ showObject2 ::
 showObject2 objN = visitObjectN' visit objN
  where
   rep = typeOf objN
-  visit :: IsObjectType x => Object x -> EnvM ParenItems
+  visit :: (IsObjectType x) => Object x -> EnvM ParenItems
   visit =
     showObjectNImpl rep $
       if
-          | rep == typeRep (Proxy @(ObjectN OTNCreaturePlaneswalker)) ->
+        | rep == typeRep (Proxy @(ObjectN OTNCreaturePlaneswalker)) ->
             "asCreaturePlaneswalker"
-          | rep == typeRep (Proxy @(ObjectN OTNCreaturePlayer)) ->
+        | rep == typeRep (Proxy @(ObjectN OTNCreaturePlayer)) ->
             "asCreaturePlayer"
-          | rep == typeRep (Proxy @(ObjectN OTNPlayerPlaneswalker)) ->
+        | rep == typeRep (Proxy @(ObjectN OTNPlayerPlaneswalker)) ->
             "asPlayerPlaneswalker"
-          | otherwise ->
+        | otherwise ->
             "toZO2"
 
 showObject3 ::
@@ -1759,13 +1761,13 @@ showObject3 ::
 showObject3 objN = visitObjectN' visit objN
  where
   rep = typeOf objN
-  visit :: IsObjectType x => Object x -> EnvM ParenItems
+  visit :: (IsObjectType x) => Object x -> EnvM ParenItems
   visit =
     showObjectNImpl rep $
       if
-          | rep == typeRep (Proxy @(ObjectN OTNCreaturePlayerPlaneswalker)) ->
+        | rep == typeRep (Proxy @(ObjectN OTNCreaturePlayerPlaneswalker)) ->
             "asCreaturePlayerPlaneswalker"
-          | otherwise ->
+        | otherwise ->
             "toZO3"
 
 showObject4 ::
@@ -1776,11 +1778,11 @@ showObject4 ::
 showObject4 objN = visitObjectN' visit objN
  where
   rep = typeOf objN
-  visit :: IsObjectType x => Object x -> EnvM ParenItems
+  visit :: (IsObjectType x) => Object x -> EnvM ParenItems
   visit =
     showObjectNImpl rep $
       if
-          | otherwise -> "toZO4"
+        | otherwise -> "toZO4"
 
 showObject5 ::
   forall zone a b c d e.
@@ -1790,12 +1792,12 @@ showObject5 ::
 showObject5 objN = visitObjectN' visit objN
  where
   rep = typeOf objN
-  visit :: IsObjectType x => Object x -> EnvM ParenItems
+  visit :: (IsObjectType x) => Object x -> EnvM ParenItems
   visit =
     showObjectNImpl rep $
       if
-          | rep == typeRep (Proxy @(ObjectN OTNPermanent)) -> "asPermanent"
-          | otherwise -> "toZO5"
+        | rep == typeRep (Proxy @(ObjectN OTNPermanent)) -> "asPermanent"
+        | otherwise -> "toZO5"
 
 showObject6 ::
   forall zone a b c d e f.
@@ -1805,12 +1807,12 @@ showObject6 ::
 showObject6 objN = visitObjectN' visit objN
  where
   rep = typeOf objN
-  visit :: IsObjectType x => Object x -> EnvM ParenItems
+  visit :: (IsObjectType x) => Object x -> EnvM ParenItems
   visit =
     showObjectNImpl rep $
       if
-          | rep == typeRep (Proxy @(ObjectN OTNSpell)) -> "asSpell"
-          | otherwise -> "toZO6"
+        | rep == typeRep (Proxy @(ObjectN OTNSpell)) -> "asSpell"
+        | otherwise -> "toZO6"
 
 showObject7 ::
   forall zone a b c d e f g.
@@ -1820,11 +1822,11 @@ showObject7 ::
 showObject7 objN = visitObjectN' visit objN
  where
   rep = typeOf objN
-  visit :: IsObjectType x => Object x -> EnvM ParenItems
+  visit :: (IsObjectType x) => Object x -> EnvM ParenItems
   visit =
     showObjectNImpl rep $
       if
-          | otherwise -> "toZO7"
+        | otherwise -> "toZO7"
 
 showObject8 ::
   forall zone a b c d e f g h.
@@ -1834,12 +1836,12 @@ showObject8 ::
 showObject8 objN = visitObjectN' visit objN
  where
   rep = typeOf objN
-  visit :: IsObjectType x => Object x -> EnvM ParenItems
+  visit :: (IsObjectType x) => Object x -> EnvM ParenItems
   visit =
     showObjectNImpl rep $
       if
-          | rep == typeRep (Proxy @(ObjectN OTNDamageSource)) -> "asDamageSource"
-          | otherwise -> "toZO8"
+        | rep == typeRep (Proxy @(ObjectN OTNDamageSource)) -> "asDamageSource"
+        | otherwise -> "toZO8"
 
 showObject9 ::
   forall zone a b c d e f g h i.
@@ -1849,11 +1851,11 @@ showObject9 ::
 showObject9 objN = visitObjectN' visit objN
  where
   rep = typeOf objN
-  visit :: IsObjectType x => Object x -> EnvM ParenItems
+  visit :: (IsObjectType x) => Object x -> EnvM ParenItems
   visit =
     showObjectNImpl rep $
       if
-          | otherwise -> "toZO9"
+        | otherwise -> "toZO9"
 
 showObject10 ::
   forall zone a b c d e f g h i j.
@@ -1863,11 +1865,11 @@ showObject10 ::
 showObject10 objN = visitObjectN' visit objN
  where
   rep = typeOf objN
-  visit :: IsObjectType x => Object x -> EnvM ParenItems
+  visit :: (IsObjectType x) => Object x -> EnvM ParenItems
   visit =
     showObjectNImpl rep $
       if
-          | otherwise -> "toZO10"
+        | otherwise -> "toZO10"
 
 showObject11 ::
   forall zone a b c d e f g h i j k.
@@ -1877,11 +1879,11 @@ showObject11 ::
 showObject11 objN = visitObjectN' visit objN
  where
   rep = typeOf objN
-  visit :: IsObjectType x => Object x -> EnvM ParenItems
+  visit :: (IsObjectType x) => Object x -> EnvM ParenItems
   visit =
     showObjectNImpl rep $
       if
-          | otherwise -> "toZO11"
+        | otherwise -> "toZO11"
 
 showObject12 ::
   forall zone a b c d e f g h i j k l.
@@ -1891,14 +1893,14 @@ showObject12 ::
 showObject12 objN = visitObjectN' visit objN
  where
   rep = typeOf objN
-  visit :: IsObjectType x => Object x -> EnvM ParenItems
+  visit :: (IsObjectType x) => Object x -> EnvM ParenItems
   visit =
     showObjectNImpl rep $
       if
-          | rep == typeRep (Proxy @(ObjectN OTNAny)) -> "asAny"
-          | otherwise -> "toZO12"
+        | rep == typeRep (Proxy @(ObjectN OTNAny)) -> "asAny"
+        | otherwise -> "toZO12"
 
-showObjectN :: forall zone ot. IsZO zone ot => ObjectN ot -> EnvM ParenItems
+showObjectN :: forall zone ot. (IsZO zone ot) => ObjectN ot -> EnvM ParenItems
 showObjectN objN' = viewOTN' objN' go
  where
   go :: ObjectN (OTN otk) -> OTN otk -> EnvM ParenItems
@@ -2101,7 +2103,7 @@ showTriggeredAbility = \case
     sEventListener <- dollar <$> showElect eventListener
     pure $ pure (fromString consName) <> sEventListener
 
-showTypeOf :: forall a. PrettyType a => Proxy a -> EnvM ParenItems
+showTypeOf :: forall a. (PrettyType a) => Proxy a -> EnvM ParenItems
 showTypeOf _ = conditionalParens do
   pure $ pure $ fromString name
  where
@@ -2112,7 +2114,7 @@ showTypeOf _ = conditionalParens do
 
 showWithLinkedObject ::
   forall liftOT zone ot.
-  IsZO zone ot =>
+  (IsZO zone ot) =>
   (forall ot'. liftOT ot' -> EnvM ParenItems) ->
   String ->
   WithLinkedObject liftOT zone ot ->
@@ -2170,7 +2172,7 @@ showWithList showRet = \case
 
 showWithMaskedObject ::
   forall liftOT zone ot.
-  IsZone zone =>
+  (IsZone zone) =>
   (liftOT ot -> EnvM ParenItems) ->
   String ->
   WithMaskedObject liftOT zone ot ->
@@ -2202,7 +2204,7 @@ showWithMaskedObject showM memo = \case
 
 showWithMaskedObjects ::
   forall liftOT zone ot.
-  IsZone zone =>
+  (IsZone zone) =>
   (liftOT ot -> EnvM ParenItems) ->
   String ->
   WithMaskedObjects liftOT zone ot ->
@@ -2234,8 +2236,8 @@ showWithMaskedObjects showM memo = \case
 
 showWithThis ::
   forall liftOT zone ot.
-  IsZO zone ot =>
-  PrettyType (ZO zone ot) =>
+  (IsZO zone ot) =>
+  (PrettyType (ZO zone ot)) =>
   (forall ot'. liftOT ot' -> EnvM ParenItems) ->
   String ->
   WithThis liftOT zone ot ->
@@ -2399,7 +2401,7 @@ showWithThisZ showM memo = \case
     sWithThis <- dollar <$> showWithThis showM memo withThis
     pure $ pure "WithThisZ" <> sWithThis
 
-showZoneObject :: forall zone ot. IsZO zone ot => ZO zone ot -> EnvM ParenItems
+showZoneObject :: forall zone ot. (IsZO zone ot) => ZO zone ot -> EnvM ParenItems
 showZoneObject = \case
   ZO _ objN -> showObjectN @zone objN
 
@@ -2407,5 +2409,5 @@ showZoneObject = \case
 -- showZoneObject0 = \case
 --   ZO _ objN -> showObject0 @zone objN
 
-showZoneObjects :: forall zone ot. IsZO zone ot => List (ZO zone ot) -> EnvM ParenItems
+showZoneObjects :: forall zone ot. (IsZO zone ot) => List (ZO zone ot) -> EnvM ParenItems
 showZoneObjects (lenseList -> zo) = pluralize $ showZoneObject zo

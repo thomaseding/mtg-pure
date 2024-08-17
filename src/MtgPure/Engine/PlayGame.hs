@@ -56,7 +56,7 @@ import safe MtgPure.Model.Stack (Stack (..))
 import safe MtgPure.Model.Step (Step (..))
 import safe MtgPure.Model.Variable (VariableId' (..))
 
-playGame :: Monad m => GameInput m -> m (Maybe (GameResult m))
+playGame :: (Monad m) => GameInput m -> m (Maybe (GameResult m))
 playGame input = case mkGameState fwdImpl input of
   Nothing -> do
     exceptionCantBeginGameWithoutPlayers $ gameInput_prompt input
@@ -66,12 +66,12 @@ playGame input = case mkGameState fwdImpl input of
       Left result -> Just result
       Right v -> absurd v
 
-startGame' :: Monad m => Magic 'Private 'RW m Void
+startGame' :: (Monad m) => Magic 'Private 'RW m Void
 startGame' = logCall 'startGame' do
   initLibraries
   startGame
 
-initLibraries :: Monad m => Magic 'Private 'RW m ()
+initLibraries :: (Monad m) => Magic 'Private 'RW m ()
 initLibraries = logCall 'initLibraries do
   oPlayers <- fromPublicRO getAlivePlayers
   eachLogged_ oPlayers \oPlayer -> do

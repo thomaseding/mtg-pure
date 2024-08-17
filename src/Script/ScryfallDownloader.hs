@@ -30,8 +30,8 @@ import safe qualified Data.Set as Set
 import safe qualified Data.Traversable as T
 import qualified Network.HTTP.Simple as H
 import safe Numeric (readHex, showHex)
-import safe Script.MtgPureConfig (MtgPureConfig (..), readMtgPureConfigFile)
-import safe qualified System.Directory as D
+import Script.MtgPureConfig (MtgPureConfig (..), readMtgPureConfigFile)
+import qualified System.Directory as D
 import safe qualified System.FilePath as D
 
 type Uri = String

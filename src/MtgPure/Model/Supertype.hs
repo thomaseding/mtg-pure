@@ -16,11 +16,11 @@ import safe MtgPure.Model.Object.Singleton.NonCreatureCard (CoNonCreatureCard)
 
 data Supertype (ot :: Type) :: Type where
   Basic :: Supertype OTNLand
-  --Basic :: CoLand ot => Supertype OTNLand
+  -- Basic :: CoLand ot => Supertype OTNLand
   Legendary :: Supertype ot
   Snow :: Supertype ot
   -- | TODO: NonEmpty
-  Tribal :: CoNonCreatureCard ot => [CreatureType] -> Supertype ot
+  Tribal :: (CoNonCreatureCard ot) => [CreatureType] -> Supertype ot
   World :: Supertype ot
   deriving (Typeable)
 

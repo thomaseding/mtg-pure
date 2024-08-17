@@ -256,13 +256,13 @@ bucketedCellsToAnsiString input bucketStartPos (fg, bg) = fixup . foldr go initi
             True -> setRelCursorY
             False -> setAbsPosXY
      in if
-            | not hasExpectedFgBg -> error "bucketedCellsToAnsiString: unexpected fg/bg"
-            | isNextChar -> (curr, char : acc)
-            | isPrevLine && x == 0 -> (curr, char : setPrevLine : acc)
-            | isNextLine && x == 0 -> (curr, char : setNextLine : acc)
-            | isSameLine -> (curr, char : setCursorX : acc)
-            | isSameCol -> (curr, char : setCursorY : acc) -- NOTE: there is no abs set cursor y w/o x
-            | otherwise -> (curr, char : setAbsPosXY : acc)
+          | not hasExpectedFgBg -> error "bucketedCellsToAnsiString: unexpected fg/bg"
+          | isNextChar -> (curr, char : acc)
+          | isPrevLine && x == 0 -> (curr, char : setPrevLine : acc)
+          | isNextLine && x == 0 -> (curr, char : setNextLine : acc)
+          | isSameLine -> (curr, char : setCursorX : acc)
+          | isSameCol -> (curr, char : setCursorY : acc) -- NOTE: there is no abs set cursor y w/o x
+          | otherwise -> (curr, char : setAbsPosXY : acc)
 
 --------------------------------------------------------------------------------
 

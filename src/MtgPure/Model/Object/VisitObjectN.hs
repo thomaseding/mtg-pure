@@ -177,7 +177,7 @@ data ObjectVisitorN (ret :: Type) (ot :: Type) :: Type where
     } ->
     ObjectVisitorN ret (OT12 a b c d e f g h i j k l)
 
-visitObjectN' :: (forall a. IsObjectType a => Object a -> ret) -> ObjectN ot -> ret
+visitObjectN' :: (forall a. (IsObjectType a) => Object a -> ret) -> ObjectN ot -> ret
 visitObjectN' f objN' = viewOTN' objN' \objN ot -> case ot of
   OT0 -> visitObjectN (ObjectVisitor0 f) objN
   OT1 -> visitObjectN (ObjectVisitor1 f) objN
