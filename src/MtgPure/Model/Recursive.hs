@@ -322,7 +322,7 @@ data CardCharacteristic (ot :: Type) :: Type where
     { artifactCreature_colors :: Colors
     , artifactCreature_supertypes :: [Supertype OTNArtifactCreature]
     , artifactCreature_artifactTypes :: [ArtifactType]
-    , artifactCreature_creatureTypes :: [CreatureType] -- TODO: Non-empty
+    , artifactCreature_creatureTypes :: [CreatureType] -- no creature types is legal [Nameless Race]
     , artifactCreature_power :: Power
     , artifactCreature_toughness :: Toughness
     , artifactCreature_spec :: CardSpec OTNArtifactCreature
@@ -338,7 +338,7 @@ data CardCharacteristic (ot :: Type) :: Type where
   CreatureCharacteristic ::
     { creature_colors :: Colors
     , creature_supertypes :: [Supertype OTNCreature]
-    , creature_creatureTypes :: [CreatureType] -- TODO: Non-empty
+    , creature_creatureTypes :: [CreatureType] -- no creature types is legal [Nameless Race]
     , creature_power :: Power
     , creature_toughness :: Toughness
     , creature_spec :: CardSpec OTNCreature
@@ -354,7 +354,7 @@ data CardCharacteristic (ot :: Type) :: Type where
   EnchantmentCreatureCharacteristic ::
     { enchantmentCreature_colors :: Colors
     , enchantmentCreature_supertypes :: [Supertype OTNEnchantmentCreature]
-    , enchantmentCreature_creatureTypes :: [CreatureType] -- TODO: Non-empty
+    , enchantmentCreature_creatureTypes :: [CreatureType] -- no creature types is legal [Nameless Race]
     , enchantmentCreature_enchantmentTypes :: [EnchantmentType OTNEnchantmentCreature]
     , enchantmentCreature_power :: Power
     , enchantmentCreature_toughness :: Toughness
