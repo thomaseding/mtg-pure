@@ -65,10 +65,27 @@ class FindMana manas var | manas -> var where
     Maybe x
 
 instance (IsSnow snow) => FindMana (ManaPool snow) 'NoVar where
+  findMana ::
+    (IsSnow snow) =>
+    ManaPool snow ->
+    ( forall (snow1 :: Snow) (color :: ManaType).
+      (IsSnow snow1, IsManaNoVar snow1 color) =>
+      Mana 'NoVar snow1 color ->
+      Maybe x
+    ) ->
+    Maybe x
   findMana (ManaPool w u b r g c) f =
     getFirst $ mconcat $ map First [f w, f u, f b, f r, f g, f c]
 
 instance FindMana CompleteManaPool 'NoVar where
+  findMana ::
+    CompleteManaPool ->
+    ( forall (snow :: Snow) (color :: ManaType).
+      (IsSnow snow, IsManaNoVar snow color) =>
+      Mana 'NoVar snow color ->
+      Maybe x
+    ) ->
+    Maybe x
   findMana pool f =
     getFirst $ mconcat $ map First [poolNonSnow pool `findMana` f, poolSnow pool `findMana` f]
 
@@ -125,9 +142,11 @@ data PartialManaPayment = PartialManaPayment ManaPayment (Mana 'NoVar 'NonSnow '
   deriving (Eq, Ord, Show)
 
 instance Semigroup PartialManaPayment where
+  (<>) :: PartialManaPayment -> PartialManaPayment -> PartialManaPayment
   PartialManaPayment p1 m1 <> PartialManaPayment p2 m2 = PartialManaPayment (p1 <> p2) (m1 + m2)
 
 instance Monoid PartialManaPayment where
+  mempty :: PartialManaPayment
   mempty = PartialManaPayment mempty 0
 
 toPayment :: CompleteManaPool -> PartialManaPayment
@@ -197,69 +216,91 @@ possiblePayments :: (HasCallStack) => (PossiblePayments cost) => cost -> [Partia
 possiblePayments = map head . List.group . List.sort . possiblePaymentsImpl
 
 instance PossiblePayments (Mana 'NoVar 'NonSnow 'TyWU) where
+  possiblePaymentsImpl :: (HasCallStack) => Mana 'NoVar 'NonSnow 'TyWU -> [PartialManaPayment]
   possiblePaymentsImpl = possiblePaymentsHybrid W U
 
 instance PossiblePayments (Mana 'NoVar 'NonSnow 'TyUB) where
+  possiblePaymentsImpl :: (HasCallStack) => Mana 'NoVar 'NonSnow 'TyUB -> [PartialManaPayment]
   possiblePaymentsImpl = possiblePaymentsHybrid U B
 
 instance PossiblePayments (Mana 'NoVar 'NonSnow 'TyBR) where
+  possiblePaymentsImpl :: (HasCallStack) => Mana 'NoVar 'NonSnow 'TyBR -> [PartialManaPayment]
   possiblePaymentsImpl = possiblePaymentsHybrid B R
 
 instance PossiblePayments (Mana 'NoVar 'NonSnow 'TyRG) where
+  possiblePaymentsImpl :: (HasCallStack) => Mana 'NoVar 'NonSnow 'TyRG -> [PartialManaPayment]
   possiblePaymentsImpl = possiblePaymentsHybrid R G
 
 instance PossiblePayments (Mana 'NoVar 'NonSnow 'TyGW) where
+  possiblePaymentsImpl :: (HasCallStack) => Mana 'NoVar 'NonSnow 'TyGW -> [PartialManaPayment]
   possiblePaymentsImpl = possiblePaymentsHybrid G W
 
 instance PossiblePayments (Mana 'NoVar 'NonSnow 'TyWB) where
+  possiblePaymentsImpl :: (HasCallStack) => Mana 'NoVar 'NonSnow 'TyWB -> [PartialManaPayment]
   possiblePaymentsImpl = possiblePaymentsHybrid W B
 
 instance PossiblePayments (Mana 'NoVar 'NonSnow 'TyUR) where
+  possiblePaymentsImpl :: (HasCallStack) => Mana 'NoVar 'NonSnow 'TyUR -> [PartialManaPayment]
   possiblePaymentsImpl = possiblePaymentsHybrid U R
 
 instance PossiblePayments (Mana 'NoVar 'NonSnow 'TyBG) where
+  possiblePaymentsImpl :: (HasCallStack) => Mana 'NoVar 'NonSnow 'TyBG -> [PartialManaPayment]
   possiblePaymentsImpl = possiblePaymentsHybrid B G
 
 instance PossiblePayments (Mana 'NoVar 'NonSnow 'TyRW) where
+  possiblePaymentsImpl :: (HasCallStack) => Mana 'NoVar 'NonSnow 'TyRW -> [PartialManaPayment]
   possiblePaymentsImpl = possiblePaymentsHybrid R W
 
 instance PossiblePayments (Mana 'NoVar 'NonSnow 'TyGU) where
+  possiblePaymentsImpl :: (HasCallStack) => Mana 'NoVar 'NonSnow 'TyGU -> [PartialManaPayment]
   possiblePaymentsImpl = possiblePaymentsHybrid G U
 
 instance PossiblePayments (Mana 'NoVar 'NonSnow 'TyW2) where
+  possiblePaymentsImpl :: (HasCallStack) => Mana 'NoVar 'NonSnow 'TyW2 -> [PartialManaPayment]
   possiblePaymentsImpl = possiblePaymentsHybrid2 W
 
 instance PossiblePayments (Mana 'NoVar 'NonSnow 'TyU2) where
+  possiblePaymentsImpl :: (HasCallStack) => Mana 'NoVar 'NonSnow 'TyU2 -> [PartialManaPayment]
   possiblePaymentsImpl = possiblePaymentsHybrid2 U
 
 instance PossiblePayments (Mana 'NoVar 'NonSnow 'TyB2) where
+  possiblePaymentsImpl :: (HasCallStack) => Mana 'NoVar 'NonSnow 'TyB2 -> [PartialManaPayment]
   possiblePaymentsImpl = possiblePaymentsHybrid2 B
 
 instance PossiblePayments (Mana 'NoVar 'NonSnow 'TyR2) where
+  possiblePaymentsImpl :: (HasCallStack) => Mana 'NoVar 'NonSnow 'TyR2 -> [PartialManaPayment]
   possiblePaymentsImpl = possiblePaymentsHybrid2 R
 
 instance PossiblePayments (Mana 'NoVar 'NonSnow 'TyG2) where
+  possiblePaymentsImpl :: (HasCallStack) => Mana 'NoVar 'NonSnow 'TyG2 -> [PartialManaPayment]
   possiblePaymentsImpl = possiblePaymentsHybrid2 G
 
 instance PossiblePayments (Mana 'NoVar 'NonSnow 'TyC2) where
+  possiblePaymentsImpl :: (HasCallStack) => Mana 'NoVar 'NonSnow 'TyC2 -> [PartialManaPayment]
   possiblePaymentsImpl = possiblePaymentsHybrid2 C
 
 instance PossiblePayments (Mana 'NoVar 'NonSnow 'TyPW) where
+  possiblePaymentsImpl :: (HasCallStack) => Mana 'NoVar 'NonSnow 'TyPW -> [PartialManaPayment]
   possiblePaymentsImpl = possiblePaymentsPhyrexian W
 
 instance PossiblePayments (Mana 'NoVar 'NonSnow 'TyPU) where
+  possiblePaymentsImpl :: (HasCallStack) => Mana 'NoVar 'NonSnow 'TyPU -> [PartialManaPayment]
   possiblePaymentsImpl = possiblePaymentsPhyrexian U
 
 instance PossiblePayments (Mana 'NoVar 'NonSnow 'TyPB) where
+  possiblePaymentsImpl :: (HasCallStack) => Mana 'NoVar 'NonSnow 'TyPB -> [PartialManaPayment]
   possiblePaymentsImpl = possiblePaymentsPhyrexian B
 
 instance PossiblePayments (Mana 'NoVar 'NonSnow 'TyPR) where
+  possiblePaymentsImpl :: (HasCallStack) => Mana 'NoVar 'NonSnow 'TyPR -> [PartialManaPayment]
   possiblePaymentsImpl = possiblePaymentsPhyrexian R
 
 instance PossiblePayments (Mana 'NoVar 'NonSnow 'TyPG) where
+  possiblePaymentsImpl :: (HasCallStack) => Mana 'NoVar 'NonSnow 'TyPG -> [PartialManaPayment]
   possiblePaymentsImpl = possiblePaymentsPhyrexian G
 
 instance PossiblePayments (Mana 'NoVar 'NonSnow 'TyPC) where
+  possiblePaymentsImpl :: (HasCallStack) => Mana 'NoVar 'NonSnow 'TyPC -> [PartialManaPayment]
   possiblePaymentsImpl = possiblePaymentsPhyrexian C
 
 singleSnowPayments :: [PartialManaPayment]
@@ -273,9 +314,11 @@ singleSnowPayments =
   ]
 
 instance PossiblePayments (Mana 'NoVar 'NonSnow 'Ty1) where
+  possiblePaymentsImpl :: (HasCallStack) => Mana 'NoVar 'NonSnow 'Ty1 -> [PartialManaPayment]
   possiblePaymentsImpl n = assert (n >= 0) [PartialManaPayment mempty n]
 
 instance PossiblePayments (Mana 'NoVar 'Snow 'Ty1) where
+  possiblePaymentsImpl :: (HasCallStack) => Mana 'NoVar 'Snow 'Ty1 -> [PartialManaPayment]
   possiblePaymentsImpl (Mana n) = case n <= 0 of
     True -> assert (n == 0) [mempty]
     False -> do
@@ -284,6 +327,7 @@ instance PossiblePayments (Mana 'NoVar 'Snow 'Ty1) where
       pure $ p <> q
 
 instance PossiblePayments (HybridManaCost 'NoVar) where
+  possiblePaymentsImpl :: (HasCallStack) => HybridManaCost 'NoVar -> [PartialManaPayment]
   possiblePaymentsImpl hy = do
     wu <- possiblePaymentsImpl $ hybridWU hy
     ub <- possiblePaymentsImpl $ hybridUB hy
@@ -304,6 +348,7 @@ instance PossiblePayments (HybridManaCost 'NoVar) where
     pure $ wu <> ub <> br <> rg <> gw <> wb <> ur <> bg <> rw <> gu <> w2 <> u2 <> b2 <> r2 <> g2 <> c2
 
 instance PossiblePayments (PhyrexianManaCost 'NoVar) where
+  possiblePaymentsImpl :: (HasCallStack) => PhyrexianManaCost 'NoVar -> [PartialManaPayment]
   possiblePaymentsImpl phy = do
     w <- possiblePaymentsImpl $ phyrexianW phy
     u <- possiblePaymentsImpl $ phyrexianU phy
@@ -314,6 +359,7 @@ instance PossiblePayments (PhyrexianManaCost 'NoVar) where
     pure $ w <> u <> b <> r <> g <> c
 
 instance PossiblePayments (DynamicManaCost 'NoVar) where
+  possiblePaymentsImpl :: (HasCallStack) => DynamicManaCost 'NoVar -> [PartialManaPayment]
   possiblePaymentsImpl dyn = do
     s <- possiblePaymentsImpl $ costSnow dyn
     hy <- possiblePaymentsImpl $ costHybrid dyn
@@ -333,6 +379,7 @@ class PayGenericUnambiguously pool where
   payGenericUnambiguouslyImpl :: (pool -> CompleteManaPool) -> Int -> pool -> Maybe CompleteManaPool
 
 instance PayGenericUnambiguously CompleteManaPool where
+  payGenericUnambiguouslyImpl :: (CompleteManaPool -> CompleteManaPool) -> Int -> CompleteManaPool -> Maybe CompleteManaPool
   payGenericUnambiguouslyImpl _go generic pool =
     let nonSnow = payGenericUnambiguouslyImpl goNonSnow generic $ poolNonSnow pool
         snow = payGenericUnambiguouslyImpl goSnow generic $ poolSnow pool
@@ -346,6 +393,7 @@ instance PayGenericUnambiguously CompleteManaPool where
     goSnow x = pool{poolSnow = x}
 
 instance PayGenericUnambiguously (ManaPool snow) where
+  payGenericUnambiguouslyImpl :: (ManaPool snow -> CompleteManaPool) -> Int -> ManaPool snow -> Maybe CompleteManaPool
   payGenericUnambiguouslyImpl go generic pool
     | poolW pool >= x && pool{poolW = 0} == mempty = Just $ go mempty{poolW = x}
     | poolU pool >= x && pool{poolU = 0} == mempty = Just $ go mempty{poolU = x}

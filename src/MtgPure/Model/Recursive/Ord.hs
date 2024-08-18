@@ -114,137 +114,181 @@ import safe MtgPure.Model.ZoneObject.ZoneObject (IsOTN, IsZO, ZO, ZoneObject (..
 ----------------------------------------
 
 instance Eq (Ability zone ot) where
+  (==) :: Ability zone ot -> Ability zone ot -> Bool
   (==) x y = runEnvM (ordAbility x y) == EQ
 
 instance Eq AnyCard where
+  (==) :: AnyCard -> AnyCard -> Bool
   (==) x y = runEnvM (ordAnyCard x y) == EQ
 
 instance Eq AnyToken where
+  (==) :: AnyToken -> AnyToken -> Bool
   (==) x y = runEnvM (ordAnyToken x y) == EQ
 
 instance Eq (Card ot) where
+  (==) :: Card ot -> Card ot -> Bool
   (==) x y = runEnvM (ordCard x y) == EQ
 
 instance Eq (CardCharacteristic ot) where
+  (==) :: CardCharacteristic ot -> CardCharacteristic ot -> Bool
   (==) x y = runEnvM (ordCardCharacteristic x y) == EQ
 
 instance Eq Condition where
+  (==) :: Condition -> Condition -> Bool
   (==) x y = runEnvM (ordCondition x y) == EQ
 
 instance Eq Cost where
+  (==) :: Cost -> Cost -> Bool
   (==) x y = runEnvM (ordCost x y) == EQ
 
 instance (Typeable ef) => Eq (Effect ef) where
+  (==) :: (Typeable ef) => Effect ef -> Effect ef -> Bool
   (==) x y = runEnvM (ordEffect x y) == EQ
 
 instance (Typeable el, Typeable s, IsOTN ot) => Eq (Elect s el ot) where
+  (==) :: (Typeable el, Typeable s, IsOTN ot) => Elect s el ot -> Elect s el ot -> Bool
   (==) x y = runEnvM (ordElectEl x y) == EQ
 
 instance Eq EventListener where
+  (==) :: EventListener -> EventListener -> Bool
   (==) x y = runEnvM (ordEventListener x y) == EQ
 
 instance Eq (ObjectN ot) where
+  (==) :: ObjectN ot -> ObjectN ot -> Bool
   (==) x y = runEnvM (ordObjectN x y) == EQ
 
 instance (IndexOT ot) => Eq (Requirement zone ot) where
+  (==) :: (IndexOT ot) => Requirement zone ot -> Requirement zone ot -> Bool
   (==) x y = runEnvM (ordRequirement x y) == EQ
 
 instance Eq (SetCard ot) where
+  (==) :: SetCard ot -> SetCard ot -> Bool
   (==) x y = runEnvM (ordSetCard x y) == EQ
 
 instance Eq (SetToken ot) where
+  (==) :: SetToken ot -> SetToken ot -> Bool
   (==) x y = runEnvM (ordSetToken x y) == EQ
 
 instance Eq (StaticAbility zone ot) where
+  (==) :: StaticAbility zone ot -> StaticAbility zone ot -> Bool
   (==) x y = runEnvM (ordStaticAbility x y) == EQ
 
 instance Eq (TimePoint p) where
+  (==) :: TimePoint p -> TimePoint p -> Bool
   (==) x y = runEnvM (ordTimePoint x y) == EQ
 
 instance Eq (Token ot) where
+  (==) :: Token ot -> Token ot -> Bool
   (==) x y = runEnvM (ordToken x y) == EQ
 
 instance (IndexOT ot) => Eq (TriggeredAbility zone ot) where
+  (==) :: (IndexOT ot) => TriggeredAbility zone ot -> TriggeredAbility zone ot -> Bool
   (==) x y = runEnvM (ordTriggeredAbility x y) == EQ
 
 instance (Typeable el, Typeable s, IsZO zone ot) => Eq (WithMaskedObject (Elect s el) zone ot) where
+  (==) :: (Typeable el, Typeable s, IsZO zone ot) => WithMaskedObject (Elect s el) zone ot -> WithMaskedObject (Elect s el) zone ot -> Bool
   (==) x y = runEnvM (ordWithMaskedObjectElectEl x y) == EQ
 
 instance (IsZO zone ot) => Eq (WithThis (Ability zone) zone ot) where
+  (==) :: (IsZO zone ot) => WithThis (Ability zone) zone ot -> WithThis (Ability zone) zone ot -> Bool
   (==) x y = runEnvM (ordWithThis ordAbility x y) == EQ
 
 instance (IsOTN ot) => Eq (SomeZone WithThisAbility ot) where
+  (==) :: (IsOTN ot) => SomeZone WithThisAbility ot -> SomeZone WithThisAbility ot -> Bool
   (==) x y = runEnvM (ordSomeZoneWithThisAbility x y) == EQ
 
 instance Eq (ZoneObject zone ot) where
+  (==) :: ZoneObject zone ot -> ZoneObject zone ot -> Bool
   (==) x y = runEnvM (ordZoneObject x y) == EQ
 
 ----------------------------------------
 
 instance Ord (Ability zone ot) where
+  compare :: Ability zone ot -> Ability zone ot -> Ordering
   compare x y = runEnvM (ordAbility x y)
 
 instance Ord AnyCard where
+  compare :: AnyCard -> AnyCard -> Ordering
   compare x y = runEnvM (ordAnyCard x y)
 
 instance Ord AnyToken where
+  compare :: AnyToken -> AnyToken -> Ordering
   compare x y = runEnvM (ordAnyToken x y)
 
 instance Ord (Card ot) where
+  compare :: Card ot -> Card ot -> Ordering
   compare x y = runEnvM (ordCard x y)
 
 instance Ord (CardCharacteristic ot) where
+  compare :: CardCharacteristic ot -> CardCharacteristic ot -> Ordering
   compare x y = runEnvM (ordCardCharacteristic x y)
 
 instance Ord Condition where
+  compare :: Condition -> Condition -> Ordering
   compare x y = runEnvM (ordCondition x y)
 
 instance Ord Cost where
+  compare :: Cost -> Cost -> Ordering
   compare x y = runEnvM (ordCost x y)
 
 instance (Typeable ef) => Ord (Effect ef) where
+  compare :: (Typeable ef) => Effect ef -> Effect ef -> Ordering
   compare x y = runEnvM (ordEffect x y)
 
 instance (Typeable el, Typeable s, IsOTN ot) => Ord (Elect s el ot) where
+  compare :: (Typeable el, Typeable s, IsOTN ot) => Elect s el ot -> Elect s el ot -> Ordering
   compare x y = runEnvM (ordElectEl x y)
 
 instance Ord EventListener where
+  compare :: EventListener -> EventListener -> Ordering
   compare x y = runEnvM (ordEventListener x y)
 
 instance Ord (ObjectN ot) where
+  compare :: ObjectN ot -> ObjectN ot -> Ordering
   compare x y = runEnvM (ordObjectN x y)
 
 instance (IndexOT ot) => Ord (Requirement zone ot) where
+  compare :: (IndexOT ot) => Requirement zone ot -> Requirement zone ot -> Ordering
   compare x y = runEnvM (ordRequirement x y)
 
 instance Ord (SetCard ot) where
+  compare :: SetCard ot -> SetCard ot -> Ordering
   compare x y = runEnvM (ordSetCard x y)
 
 instance Ord (SetToken ot) where
+  compare :: SetToken ot -> SetToken ot -> Ordering
   compare x y = runEnvM (ordSetToken x y)
 
 instance Ord (StaticAbility zone ot) where
+  compare :: StaticAbility zone ot -> StaticAbility zone ot -> Ordering
   compare x y = runEnvM (ordStaticAbility x y)
 
 instance Ord (TimePoint p) where
+  compare :: TimePoint p -> TimePoint p -> Ordering
   compare x y = runEnvM (ordTimePoint x y)
 
 instance Ord (Token ot) where
+  compare :: Token ot -> Token ot -> Ordering
   compare x y = runEnvM (ordToken x y)
 
 instance (IndexOT ot) => Ord (TriggeredAbility zone ot) where
+  compare :: (IndexOT ot) => TriggeredAbility zone ot -> TriggeredAbility zone ot -> Ordering
   compare x y = runEnvM (ordTriggeredAbility x y)
 
 instance (Typeable el, Typeable s, IsZO zone ot) => Ord (WithMaskedObject (Elect s el) zone ot) where
+  compare :: (Typeable el, Typeable s, IsZO zone ot) => WithMaskedObject (Elect s el) zone ot -> WithMaskedObject (Elect s el) zone ot -> Ordering
   compare x y = runEnvM (ordWithMaskedObjectElectEl x y)
 
 instance (IsZO zone ot) => Ord (WithThis (Ability zone) zone ot) where
+  compare :: (IsZO zone ot) => WithThis (Ability zone) zone ot -> WithThis (Ability zone) zone ot -> Ordering
   compare x y = runEnvM (ordWithThis ordAbility x y)
 
 instance (IsOTN ot) => Ord (SomeZone WithThisAbility ot) where
+  compare :: (IsOTN ot) => SomeZone WithThisAbility ot -> SomeZone WithThisAbility ot -> Ordering
   compare x y = runEnvM (ordSomeZoneWithThisAbility x y)
 
 instance Ord (ZoneObject zone ot) where
+  compare :: ZoneObject zone ot -> ZoneObject zone ot -> Ordering
   compare x y = runEnvM (ordZoneObject x y)
 
 ----------------------------------------
@@ -253,10 +297,14 @@ newtype EnvM a = EnvM {unEnvM :: State.State Env a}
   deriving (Functor)
 
 instance Applicative EnvM where
+  pure :: a -> EnvM a
   pure = EnvM . pure
+
+  (<*>) :: EnvM (a -> b) -> EnvM a -> EnvM b
   EnvM f <*> EnvM a = EnvM $ f <*> a
 
 instance Monad EnvM where
+  (>>=) :: EnvM a -> (a -> EnvM b) -> EnvM b
   EnvM a >>= f = EnvM $ a >>= unEnvM . f
 
 -- TODO: Smarts need to be added to handle Card loops.
@@ -631,9 +679,11 @@ class OrdColors colors where
   ordColors :: colors -> colors -> EnvM Ordering
 
 instance OrdColors [Color] where
+  ordColors :: [Color] -> [Color] -> EnvM Ordering
   ordColors = listM ordColor
 
 instance OrdColors Colors where
+  ordColors :: Colors -> Colors -> EnvM Ordering
   ordColors x y = pure $ compare x y
 
 ordCondition :: Condition -> Condition -> EnvM Ordering

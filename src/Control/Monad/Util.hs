@@ -33,12 +33,15 @@ class AndLike a where
   andM :: (Monad m) => [m a] -> m a
 
 instance AndLike () where
+  andM :: (Monad m) => [m ()] -> m ()
   andM = sequence_
 
 instance AndLike (Maybe Void) where
+  andM :: (Monad m) => [m (Maybe Void)] -> m (Maybe Void)
   andM ms = Nothing <$ sequence_ ms
 
 instance AndLike Bool where
+  andM :: (Monad m) => [m Bool] -> m Bool
   andM = \case
     [] -> pure True
     m : ms ->
@@ -47,12 +50,14 @@ instance AndLike Bool where
         False -> pure False
 
 instance AndLike Legality where
+  andM :: (Monad m) => [m Legality] -> m Legality
   andM m = do
     let bs = map (fmap fromLegality) m
     b <- andM bs
     pure $ toLegality b
 
 instance AndLike (Maybe ()) where
+  andM :: (Monad m) => [m (Maybe ())] -> m (Maybe ())
   andM = \case
     [] -> pure $ Just ()
     m : ms ->
@@ -63,6 +68,7 @@ instance AndLike (Maybe ()) where
         Nothing -> pure Nothing
 
 instance AndLike (Maybe Legality) where
+  andM :: (Monad m) => [m (Maybe Legality)] -> m (Maybe Legality)
   andM = \case
     [] -> pure $ Just Legal
     m : ms ->

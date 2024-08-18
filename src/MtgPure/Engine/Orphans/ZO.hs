@@ -21,6 +21,7 @@ import safe MtgPure.Model.Object.VisitObjectN ()
 import safe MtgPure.Model.ZoneObject.ZoneObject (ZO)
 
 instance Show (ZO zone ot) where
+  show :: ZO zone ot -> String
   show zo = "Z" ++ show o
    where
     arb = SingLand

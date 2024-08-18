@@ -42,6 +42,7 @@ data PlayerCounters = PlayerCounters
   deriving (Eq, Ord, Show, Typeable)
 
 instance Semigroup PlayerCounters where
+  (<>) :: PlayerCounters -> PlayerCounters -> PlayerCounters
   pc1 <> pc2 =
     PlayerCounters
       { playerCounters_ = ()
@@ -49,6 +50,7 @@ instance Semigroup PlayerCounters where
       }
 
 instance Monoid PlayerCounters where
+  mempty :: PlayerCounters
   mempty =
     PlayerCounters
       { playerCounters_ = ()
@@ -64,6 +66,7 @@ data PermanentCounters = PermanentCounters
   deriving (Eq, Ord, Show, Typeable)
 
 instance Semigroup PermanentCounters where
+  (<>) :: PermanentCounters -> PermanentCounters -> PermanentCounters
   pc1 <> pc2 =
     PermanentCounters
       { permanentCounters_ = ()
@@ -73,6 +76,7 @@ instance Semigroup PermanentCounters where
       }
 
 instance Monoid PermanentCounters where
+  mempty :: PermanentCounters
   mempty =
     PermanentCounters
       { permanentCounters_ = ()

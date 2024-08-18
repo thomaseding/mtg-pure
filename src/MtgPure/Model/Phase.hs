@@ -36,6 +36,7 @@ deriving instance Ord (SPhase a)
 deriving instance Show (SPhase a)
 
 instance ConsIndex Phase where
+  consIndex :: Phase -> Int
   consIndex = \case
     BeginningPhase -> 1
     PreCombatMainPhase -> 2

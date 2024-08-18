@@ -29,7 +29,15 @@ import safe MtgPure.Engine.Fwd.Api (
  )
 import safe MtgPure.Engine.Monad (fromPublic, fromRO, get, magicCatch, magicThrow)
 import safe MtgPure.Engine.Prompt (PlayerIndex (PlayerIndex))
-import safe MtgPure.Engine.State (GameCheats (..), GameInput (..), GameResult (..), GameState (..), Magic, concatGameResults, logCall)
+import safe MtgPure.Engine.State (
+  GameCheats (..),
+  GameInput (..),
+  GameResult (..),
+  GameState (..),
+  Magic,
+  concatGameResults,
+  logCall,
+ )
 import safe MtgPure.Model.Counter (PlayerCounters (..))
 import safe MtgPure.Model.Creature (Creature (..))
 import safe MtgPure.Model.Damage (Damage' (..))

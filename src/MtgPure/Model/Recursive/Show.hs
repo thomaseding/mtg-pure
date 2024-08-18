@@ -167,111 +167,147 @@ defaultDepthLimit :: Maybe Int
 defaultDepthLimit = Nothing
 
 instance Show (Ability zone ot) where
+  show :: Ability zone ot -> String
   show = runEnvM defaultDepthLimit . showAbility
 
 instance Show (ActivatedAbility zone ot) where
+  show :: ActivatedAbility zone ot -> String
   show = runEnvM defaultDepthLimit . showActivatedAbility
 
 instance Show AnyCard where
+  show :: AnyCard -> String
   show = runEnvM defaultDepthLimit . showAnyCard
 
 instance Show AnyToken where
+  show :: AnyToken -> String
   show = runEnvM defaultDepthLimit . showAnyToken
 
 instance Show (Card ot) where
+  show :: Card ot -> String
   show = runEnvM defaultDepthLimit . showCard
 
 instance Show (CardCharacteristic ot) where
+  show :: CardCharacteristic ot -> String
   show = runEnvM defaultDepthLimit . showCardCharacteristic
 
 instance Show (CardSpec ot) where
+  show :: CardSpec ot -> String
   show = runEnvM defaultDepthLimit . showCardSpec
 
 instance Show CompleteManaPool where
+  show :: CompleteManaPool -> String
   show = runEnvM defaultDepthLimit . showCompleteManaPool
 
 instance Show Condition where
+  show :: Condition -> String
   show = runEnvM defaultDepthLimit . showCondition
 
 instance Show Cost where
+  show :: Cost -> String
   show = runEnvM defaultDepthLimit . showCost
 
 instance Show (DynamicManaCost var) where
+  show :: DynamicManaCost var -> String
   show = runEnvM defaultDepthLimit . showDynamicManaCost
 
 instance Show (Effect ef) where
+  show :: Effect ef -> String
   show = runEnvM defaultDepthLimit . showEffect
 
 instance Show (Elect s el ot) where
+  show :: Elect s el ot -> String
   show = runEnvM defaultDepthLimit . showElect
 
 instance Show (EnchantmentType ot) where
+  show :: EnchantmentType ot -> String
   show = runEnvM defaultDepthLimit . showEnchantmentType
 
 instance Show EventListener where
+  show :: EventListener -> String
   show = runEnvM defaultDepthLimit . showEventListener
 
 instance Show (HybridManaCost var) where
+  show :: HybridManaCost var -> String
   show = runEnvM defaultDepthLimit . showHybridManaCost
 
 instance Show (ManaCost var) where
+  show :: ManaCost var -> String
   show = runEnvM defaultDepthLimit . showManaCost
 
 instance Show (ManaPool snow) where
+  show :: ManaPool snow -> String
   show = runEnvM defaultDepthLimit . showManaPool
 
 instance Show (PhyrexianManaCost var) where
+  show :: PhyrexianManaCost var -> String
   show = runEnvM defaultDepthLimit . showPhyrexianManaCost
 
 instance Show (Requirement zone ot) where
+  show :: Requirement zone ot -> String
   show = runEnvM defaultDepthLimit . showRequirement
 
 instance Show (SetCard ot) where
+  show :: SetCard ot -> String
   show = runEnvM defaultDepthLimit . showSetCard
 
 instance Show (SetToken ot) where
+  show :: SetToken ot -> String
   show = runEnvM defaultDepthLimit . showSetToken
 
 instance Show (StaticAbility zone ot) where
+  show :: StaticAbility zone ot -> String
   show = runEnvM defaultDepthLimit . showStaticAbility
 
 instance Show (Token ot) where
+  show :: Token ot -> String
   show = runEnvM defaultDepthLimit . showToken
 
 instance Show (TriggeredAbility zone ot) where
+  show :: TriggeredAbility zone ot -> String
   show = runEnvM defaultDepthLimit . showTriggeredAbility
 
 instance (IsZO zone ot) => Show (WithMaskedObject (Elect s e) zone ot) where
+  show :: (IsZO zone ot) => WithMaskedObject (Elect s e) zone ot -> String
   show = runEnvM defaultDepthLimit . showWithMaskedObject showElect "obj"
 
 instance (IsOTN ot) => Show (SomeZone WithThisAbility ot) where
+  show :: (IsOTN ot) => SomeZone WithThisAbility ot -> String
   show = runEnvM defaultDepthLimit . showSomeZone (showWithThisAbility "this")
 
 instance (IsOTN ot) => Show (SomeZone (WithThisZ ActivatedAbility) ot) where
+  show :: (IsOTN ot) => SomeZone (WithThisZ ActivatedAbility) ot -> String
   show = runEnvM defaultDepthLimit . showSomeZone (showWithThisZ showActivatedAbility "this")
 
 instance (IsOTN ot) => Show (SomeZone (WithThisZ StaticAbility) ot) where
+  show :: (IsOTN ot) => SomeZone (WithThisZ StaticAbility) ot -> String
   show = runEnvM defaultDepthLimit . showSomeZone (showWithThisZ showStaticAbility "this")
 
 instance (IsOTN ot) => Show (SomeZone (WithThisZ TriggeredAbility) ot) where
+  show :: (IsOTN ot) => SomeZone (WithThisZ TriggeredAbility) ot -> String
   show = runEnvM defaultDepthLimit . showSomeZone (showWithThisZ showTriggeredAbility "this")
 
 instance (IsZO zone ot) => Show (WithThis (Ability zone) zone ot) where
+  show :: (IsZO zone ot) => WithThis (Ability zone) zone ot -> String
   show = runEnvM defaultDepthLimit . showWithThis showAbility "this"
 
 instance (IsZO zone ot) => Show (WithThisAbility zone ot) where
+  show :: (IsZO zone ot) => WithThisAbility zone ot -> String
   show = runEnvM defaultDepthLimit . showWithThisAbility "this"
 
 instance (IsZO zone ot) => Show (WithThisActivated zone ot) where
+  show :: (IsZO zone ot) => WithThisActivated zone ot -> String
   show = runEnvM defaultDepthLimit . showWithThis (showElect . unElectOT) "this"
 
 instance (IsZO 'ZStack ot) => Show (WithThisOneShot ot) where
+  show :: (IsZO 'ZStack ot) => WithThisOneShot ot -> String
   show = runEnvM defaultDepthLimit . showWithThis showElect "this"
 
 instance (IsZO zone ot) => Show (WithThisStatic zone ot) where
+  show :: (IsZO zone ot) => WithThisStatic zone ot -> String
   show = runEnvM defaultDepthLimit . showWithThis showStaticAbility "this"
 
 instance (IsZO zone ot) => Show (WithThisTriggered zone ot) where
+  show :: (IsZO zone ot) => WithThisTriggered zone ot -> String
   show = runEnvM defaultDepthLimit . showWithThis showTriggeredAbility "this"
 
 ----------------------------------------
@@ -295,6 +331,7 @@ data Item :: Type where
   deriving (Show)
 
 instance IsString Item where
+  fromString :: String -> Item
   fromString = StringItem
 
 type Items = DList.DList Item
@@ -354,10 +391,14 @@ newtype EnvM a = EnvM {unEnvM :: State.State Env a}
   deriving (Functor)
 
 instance Applicative EnvM where
+  pure :: a -> EnvM a
   pure = EnvM . pure
+
+  (<*>) :: EnvM (a -> b) -> EnvM a -> EnvM b
   EnvM f <*> EnvM a = EnvM $ f <*> a
 
 instance Monad EnvM where
+  (>>=) :: EnvM a -> (a -> EnvM b) -> EnvM b
   EnvM a >>= f = EnvM $ a >>= unEnvM . f
 
 runEnvM :: CardDepth -> EnvM ParenItems -> String
@@ -830,9 +871,11 @@ class ShowColors colors where
   showColors :: colors -> EnvM ParenItems
 
 instance ShowColors [Color] where
+  showColors :: [Color] -> EnvM ParenItems
   showColors = showListM showColor
 
 instance ShowColors Colors where
+  showColors :: Colors -> EnvM ParenItems
   showColors colors = yesParens do
     pure $ pure "toColors " <> sOpen <> sSyms <> sClose
    where

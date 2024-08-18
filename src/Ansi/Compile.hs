@@ -47,6 +47,7 @@ data ScreenPos = ScreenPos
   deriving (Eq, Show)
 
 instance Ord ScreenPos where
+  compare :: ScreenPos -> ScreenPos -> Ordering
   compare (ScreenPos x1 y1) (ScreenPos x2 y2) =
     case compare y1 y2 of
       EQ -> compare x1 x2

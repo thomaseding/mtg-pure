@@ -81,56 +81,90 @@ visitPermanent' ::
 visitPermanent' f = visitPermanent $ PermanentVisitor f f f f f
 
 instance IsPermanentType 'OTArtifact where
+  singPermanentType :: Proxy 'OTArtifact -> PermanentType
   singPermanentType _ = PTArtifact
+
+  singPermanent :: Proxy 'OTArtifact -> WPermanent (OT1 'OTArtifact)
   singPermanent _ = WPermanentArtifact
+
+  visitPermanent :: PermanentVisitor zone z -> WPermanent (OT1 'OTArtifact) -> ZO zone (OT1 'OTArtifact) -> z
   visitPermanent v _ = visitPArtifact v
 
 instance IsPermanentType 'OTCreature where
+  singPermanentType :: Proxy 'OTCreature -> PermanentType
   singPermanentType _ = PTCreature
+
+  singPermanent :: Proxy 'OTCreature -> WPermanent (OT1 'OTCreature)
   singPermanent _ = WPermanentCreature
+
+  visitPermanent :: PermanentVisitor zone z -> WPermanent (OT1 'OTCreature) -> ZO zone (OT1 'OTCreature) -> z
   visitPermanent v _ = visitPCreature v
 
 instance IsPermanentType 'OTEnchantment where
+  singPermanentType :: Proxy 'OTEnchantment -> PermanentType
   singPermanentType _ = PTEnchantment
+
+  singPermanent :: Proxy 'OTEnchantment -> WPermanent (OT1 'OTEnchantment)
   singPermanent _ = WPermanentEnchantment
+
+  visitPermanent :: PermanentVisitor zone z -> WPermanent (OT1 'OTEnchantment) -> ZO zone (OT1 'OTEnchantment) -> z
   visitPermanent v _ = visitPEnchantment v
 
 instance IsPermanentType 'OTLand where
+  singPermanentType :: Proxy 'OTLand -> PermanentType
   singPermanentType _ = PTLand
+
+  singPermanent :: Proxy 'OTLand -> WPermanent (OT1 'OTLand)
   singPermanent _ = WPermanentLand
+
+  visitPermanent :: PermanentVisitor zone z -> WPermanent (OT1 'OTLand) -> ZO zone (OT1 'OTLand) -> z
   visitPermanent v _ = visitPLand v
 
 instance IsPermanentType 'OTPlaneswalker where
+  singPermanentType :: Proxy 'OTPlaneswalker -> PermanentType
   singPermanentType _ = PTPlaneswalker
+
+  singPermanent :: Proxy 'OTPlaneswalker -> WPermanent (OT1 'OTPlaneswalker)
   singPermanent _ = WPermanentPlaneswalker
+
+  visitPermanent :: PermanentVisitor zone z -> WPermanent (OT1 'OTPlaneswalker) -> ZO zone (OT1 'OTPlaneswalker) -> z
   visitPermanent v _ = visitPPlaneswalker v
 
 class (IsOTN ot) => CoPermanent ot where
   coPermanent :: WPermanent ot
 
 instance CoPermanent OTNArtifact where
+  coPermanent :: WPermanent OTNArtifact
   coPermanent = WPermanentArtifact
 
 instance CoPermanent OTNCreature where
+  coPermanent :: WPermanent OTNCreature
   coPermanent = WPermanentCreature
 
 instance CoPermanent OTNEnchantment where
+  coPermanent :: WPermanent OTNEnchantment
   coPermanent = WPermanentEnchantment
 
 instance CoPermanent OTNLand where
+  coPermanent :: WPermanent OTNLand
   coPermanent = WPermanentLand
 
 instance CoPermanent OTNPlaneswalker where
+  coPermanent :: WPermanent OTNPlaneswalker
   coPermanent = WPermanentPlaneswalker
 
 instance CoPermanent OTNPermanent where
+  coPermanent :: WPermanent OTNPermanent
   coPermanent = WPermanent
 
 instance (Inst2 IsPermanentType a b) => CoPermanent (OT2 a b) where
+  coPermanent :: (Inst2 IsPermanentType a b) => WPermanent (OT2 a b)
   coPermanent = WPermanent2 :: WPermanent (OT2 a b)
 
 instance (Inst3 IsPermanentType a b c) => CoPermanent (OT3 a b c) where
+  coPermanent :: (Inst3 IsPermanentType a b c) => WPermanent (OT3 a b c)
   coPermanent = WPermanent3 :: WPermanent (OT3 a b c)
 
 instance (Inst4 IsPermanentType a b c d) => CoPermanent (OT4 a b c d) where
+  coPermanent :: (Inst4 IsPermanentType a b c d) => WPermanent (OT4 a b c d)
   coPermanent = WPermanent4 :: WPermanent (OT4 a b c d)

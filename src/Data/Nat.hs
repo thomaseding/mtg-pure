@@ -38,11 +38,17 @@ class (Typeable n) => IsNat (n :: Nat) where
   litFin :: (Typeable user) => Fin user n
 
 instance IsNat 'Z where
+  litNat :: Nat
   litNat = Z
+
+  litFin :: (Typeable user) => Fin user 'Z
   litFin = FZ
 
 instance (IsNat n) => IsNat ('S n) where
+  litNat :: (IsNat n) => Nat
   litNat = S (litNat @n)
+
+  litFin :: (IsNat n, Typeable user) => Fin user ('S n)
   litFin = FS (litFin @n)
 
 data NatList (user :: Type) (n :: Nat) (elem :: Type) where

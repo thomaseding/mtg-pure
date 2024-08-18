@@ -63,15 +63,18 @@ class (Typeable ty) => PrettyType ty where
   prettyType :: String
 
 instance (IsObjectType a) => PrettyType a where
+  prettyType :: (IsObjectType a) => String
   prettyType = show (litObjectType @a)
 
 getRep :: forall a. (Typeable a) => TypeRep
 getRep = typeRep (Proxy @a)
 
 instance PrettyType OT0 where
+  prettyType :: String
   prettyType = "OT0"
 
 instance (IsObjectType a) => PrettyType (OT1 a) where
+  prettyType :: (IsObjectType a) => String
   prettyType = case litObjectType @a of
     OTActivatedAbility -> "OTActivatedAbility"
     OTArtifact -> "OTArtifact"
@@ -87,6 +90,7 @@ instance (IsObjectType a) => PrettyType (OT1 a) where
     OTTriggeredAbility -> "OTTriggeredAbility"
 
 instance (Inst2 IsObjectType a b) => PrettyType (OT2 a b) where
+  prettyType :: (Inst2 IsObjectType a b) => String
   prettyType =
     if
       | rep == getRep @OTNArtifactCreature ->
@@ -109,6 +113,7 @@ instance (Inst2 IsObjectType a b) => PrettyType (OT2 a b) where
     rep = getRep @(OT2 a b)
 
 instance (Inst3 IsObjectType a b c) => PrettyType (OT3 a b c) where
+  prettyType :: (Inst3 IsObjectType a b c) => String
   prettyType =
     if
       | rep == getRep @OTNCreaturePlayerPlaneswalker ->
@@ -125,6 +130,7 @@ instance (Inst3 IsObjectType a b c) => PrettyType (OT3 a b c) where
     rep = getRep @(OT3 a b c)
 
 instance (Inst4 IsObjectType a b c d) => PrettyType (OT4 a b c d) where
+  prettyType :: (Inst4 IsObjectType a b c d) => String
   prettyType =
     if
       | otherwise ->
@@ -141,6 +147,7 @@ instance (Inst4 IsObjectType a b c d) => PrettyType (OT4 a b c d) where
     _rep = getRep @(OT4 a b c d)
 
 instance (Inst5 IsObjectType a b c d e) => PrettyType (OT5 a b c d e) where
+  prettyType :: (Inst5 IsObjectType a b c d e) => String
   prettyType =
     if
       | rep == getRep @OTNPermanent ->
@@ -161,6 +168,7 @@ instance (Inst5 IsObjectType a b c d e) => PrettyType (OT5 a b c d e) where
     rep = getRep @(OT5 a b c d e)
 
 instance (Inst6 IsObjectType a b c d e f) => PrettyType (OT6 a b c d e f) where
+  prettyType :: (Inst6 IsObjectType a b c d e f) => String
   prettyType =
     if
       | rep == getRep @OTNSpell ->
@@ -183,6 +191,7 @@ instance (Inst6 IsObjectType a b c d e f) => PrettyType (OT6 a b c d e f) where
     rep = getRep @(OT6 a b c d e f)
 
 instance (Inst7 IsObjectType a b c d e f g) => PrettyType (OT7 a b c d e f g) where
+  prettyType :: (Inst7 IsObjectType a b c d e f g) => String
   prettyType =
     if
       | otherwise ->
@@ -205,6 +214,7 @@ instance (Inst7 IsObjectType a b c d e f g) => PrettyType (OT7 a b c d e f g) wh
     _rep = getRep @(OT7 a b c d e f g)
 
 instance (Inst8 IsObjectType a b c d e f g h) => PrettyType (OT8 a b c d e f g h) where
+  prettyType :: (Inst8 IsObjectType a b c d e f g h) => String
   prettyType =
     if
       | rep == getRep @OTNDamageSource ->
@@ -231,6 +241,7 @@ instance (Inst8 IsObjectType a b c d e f g h) => PrettyType (OT8 a b c d e f g h
     rep = getRep @(OT8 a b c d e f g h)
 
 instance (Inst9 IsObjectType a b c d e f g h i) => PrettyType (OT9 a b c d e f g h i) where
+  prettyType :: (Inst9 IsObjectType a b c d e f g h i) => String
   prettyType =
     if
       | otherwise ->
@@ -257,6 +268,7 @@ instance (Inst9 IsObjectType a b c d e f g h i) => PrettyType (OT9 a b c d e f g
     _rep = getRep @(OT9 a b c d e f g h i)
 
 instance (Inst10 IsObjectType a b c d e f g h i j) => PrettyType (OT10 a b c d e f g h i j) where
+  prettyType :: (Inst10 IsObjectType a b c d e f g h i j) => String
   prettyType =
     if
       | otherwise ->
@@ -285,6 +297,7 @@ instance (Inst10 IsObjectType a b c d e f g h i j) => PrettyType (OT10 a b c d e
     _rep = getRep @(OT10 a b c d e f g h i j)
 
 instance (Inst11 IsObjectType a b c d e f g h i j k) => PrettyType (OT11 a b c d e f g h i j k) where
+  prettyType :: (Inst11 IsObjectType a b c d e f g h i j k) => String
   prettyType =
     if
       | otherwise ->
@@ -315,6 +328,7 @@ instance (Inst11 IsObjectType a b c d e f g h i j k) => PrettyType (OT11 a b c d
     _rep = getRep @(OT11 a b c d e f g h i j k)
 
 instance (Inst12 IsObjectType a b c d e f g h i j k l) => PrettyType (OT12 a b c d e f g h i j k l) where
+  prettyType :: (Inst12 IsObjectType a b c d e f g h i j k l) => String
   prettyType =
     if
       | rep == getRep @OTNAny ->

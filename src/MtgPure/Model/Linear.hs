@@ -27,7 +27,9 @@ class (Typeable l) => IsLinearity l where
   singLinearity :: SLinearity l
 
 instance IsLinearity 'Linear where
+  singLinearity :: SLinearity 'Linear
   singLinearity = SLinear
 
 instance IsLinearity 'NonLinear where
+  singLinearity :: SLinearity 'NonLinear
   singLinearity = SNonLinear

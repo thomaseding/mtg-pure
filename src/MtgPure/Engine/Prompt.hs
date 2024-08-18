@@ -72,7 +72,11 @@ import safe MtgPure.Model.Object.OTNAliases (
   OTNSpell,
  )
 import safe MtgPure.Model.Object.Object (Object)
-import safe MtgPure.Model.Object.ObjectId (GetObjectId (getUntypedObject), ObjectId)
+import safe MtgPure.Model.Object.ObjectId (
+  GetObjectId (getUntypedObject),
+  ObjectId,
+  UntypedObject,
+ )
 import safe MtgPure.Model.Permanent (Permanent)
 import safe MtgPure.Model.Player (Player)
 import safe MtgPure.Model.Recursive (
@@ -259,6 +263,7 @@ data AbsoluteActivatedAbilityIndex :: Type where
   deriving (Eq, Ord, Show, Typeable)
 
 instance GetObjectId AbsoluteActivatedAbilityIndex where
+  getUntypedObject :: AbsoluteActivatedAbilityIndex -> UntypedObject
   getUntypedObject (AbsoluteActivatedAbilityIndex i _) = getUntypedObject i
 
 data SomeActivatedAbility (zone :: Zone) (ot :: Type) :: Type where
@@ -273,9 +278,11 @@ data SomeActivatedAbility (zone :: Zone) (ot :: Type) :: Type where
 deriving instance Show (SomeActivatedAbility zone ot)
 
 instance Eq (SomeActivatedAbility zone ot) where
+  (==) :: SomeActivatedAbility zone ot -> SomeActivatedAbility zone ot -> Bool
   (==) x y = O.runEnvM (ordSomeActivatedAbility x y) == EQ
 
 instance Ord (SomeActivatedAbility zone ot) where
+  compare :: SomeActivatedAbility zone ot -> SomeActivatedAbility zone ot -> Ordering
   compare x y = O.runEnvM (ordSomeActivatedAbility x y)
 
 ordSomeActivatedAbility ::
@@ -313,9 +320,11 @@ data SomeStaticAbility (zone :: Zone) (ot :: Type) :: Type where
 deriving instance Show (SomeStaticAbility zone ot)
 
 instance Eq (SomeStaticAbility zone ot) where
+  (==) :: SomeStaticAbility zone ot -> SomeStaticAbility zone ot -> Bool
   (==) x y = O.runEnvM (ordSomeStaticAbility x y) == EQ
 
 instance Ord (SomeStaticAbility zone ot) where
+  compare :: SomeStaticAbility zone ot -> SomeStaticAbility zone ot -> Ordering
   compare x y = O.runEnvM (ordSomeStaticAbility x y)
 
 ordSomeStaticAbility ::
@@ -353,9 +362,11 @@ data SomeTriggeredAbility (zone :: Zone) (ot :: Type) :: Type where
 deriving instance Show (SomeTriggeredAbility zone ot)
 
 instance Eq (SomeTriggeredAbility zone ot) where
+  (==) :: SomeTriggeredAbility zone ot -> SomeTriggeredAbility zone ot -> Bool
   (==) x y = O.runEnvM (ordSomeTriggeredAbility x y) == EQ
 
 instance Ord (SomeTriggeredAbility zone ot) where
+  compare :: SomeTriggeredAbility zone ot -> SomeTriggeredAbility zone ot -> Ordering
   compare x y = O.runEnvM (ordSomeTriggeredAbility x y)
 
 ordSomeTriggeredAbility ::

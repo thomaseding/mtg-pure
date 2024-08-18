@@ -52,37 +52,49 @@ class (IsOTN ot) => CoAny ot where
   coAny :: SingCoAny ot
 
 instance CoAny OTNInstant where
+  coAny :: SingCoAny OTNInstant
   coAny = CoAnyInstant
 
 instance CoAny OTNSorcery where
+  coAny :: SingCoAny OTNSorcery
   coAny = CoAnySorcery
 
 instance CoAny OTNPlayer where
+  coAny :: SingCoAny OTNPlayer
   coAny = CoAnyPlayer
 
 instance CoAny OTNArtifact where
+  coAny :: SingCoAny OTNArtifact
   coAny = CoAnyArtifact
 
 instance CoAny OTNCreature where
+  coAny :: SingCoAny OTNCreature
   coAny = CoAnyCreature
 
 instance CoAny OTNEnchantment where
+  coAny :: SingCoAny OTNEnchantment
   coAny = CoAnyEnchantment
 
 instance CoAny OTNLand where
+  coAny :: SingCoAny OTNLand
   coAny = CoAnyLand
 
 instance CoAny OTNPlaneswalker where
+  coAny :: SingCoAny OTNPlaneswalker
   coAny = CoAnyPlaneswalker
 
 instance (Inst2 IsAnyType a b) => CoAny (OT2 a b) where
+  coAny :: (Inst2 IsAnyType a b) => SingCoAny (OT2 a b)
   coAny = CoAny2
 
 instance (Inst3 IsAnyType a b c) => CoAny (OT3 a b c) where
+  coAny :: (Inst3 IsAnyType a b c) => SingCoAny (OT3 a b c)
   coAny = CoAny3
 
 instance (Inst4 IsAnyType a b c d) => CoAny (OT4 a b c d) where
+  coAny :: (Inst4 IsAnyType a b c d) => SingCoAny (OT4 a b c d)
   coAny = CoAny4
 
 instance (Inst5 IsAnyType a b c d e) => CoAny (OT5 a b c d e) where
+  coAny :: (Inst5 IsAnyType a b c d e) => SingCoAny (OT5 a b c d e)
   coAny = CoAny5

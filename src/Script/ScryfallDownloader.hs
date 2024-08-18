@@ -69,6 +69,7 @@ data JsonCardInfo = Card
   deriving (Show)
 
 instance A.FromJSON JsonCardInfo where
+  parseJSON :: A.Value -> A.Parser JsonCardInfo
   parseJSON = \case
     A.Object o -> do
       name <- o .: "name"

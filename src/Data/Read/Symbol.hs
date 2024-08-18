@@ -38,23 +38,38 @@ class LitSymbol (s :: k) where
   litSymbols :: Set.Set String
 
 instance (KnownSymbol s) => LitSymbol s where
+  litSymbol :: (KnownSymbol s) => String
   litSymbol = symbolVal (Proxy @s)
+
+  litSymbols :: (KnownSymbol s) => Set.Set String
   litSymbols = Set.singleton $ symbolVal (Proxy @s)
 
 instance (KnownSymbol s) => LitSymbol (CS s) where
+  litSymbol :: (KnownSymbol s) => String
   litSymbol = litSymbol @Symbol @s
+
+  litSymbols :: (KnownSymbol s) => Set.Set String
   litSymbols = Set.singleton $ litSymbol @Symbol @s
 
 instance (KnownSymbol s) => LitSymbol (CI s) where
+  litSymbol :: (KnownSymbol s) => String
   litSymbol = litSymbol @Symbol @s
+
+  litSymbols :: (KnownSymbol s) => Set.Set String
   litSymbols = Set.singleton $ litSymbol @Symbol @s
 
 instance (Inst2 LitSymbol a b) => LitSymbol (Or a b) where
+  litSymbol :: (Inst2 LitSymbol a b) => String
   litSymbol = litSymbol @Type @a
+
+  litSymbols :: (Inst2 LitSymbol a b) => Set.Set String
   litSymbols = litSymbols @Type @a <> litSymbols @Type @b
 
 instance (LitSymbol a) => LitSymbol (Many1 a) where
+  litSymbol :: (LitSymbol a) => String
   litSymbol = litSymbol @Type @a
+
+  litSymbols :: (LitSymbol a) => Set.Set String
   litSymbols = litSymbols @Type @a
 
 -- Case-sensitive
@@ -76,25 +91,31 @@ data Many1 (a :: Type) :: Type where
   Many1 :: (LitSymbol a) => Many1 a
 
 instance (KnownSymbol s) => Show (CS s) where
+  show :: (KnownSymbol s) => CS s -> String
   show CS = symbolVal (Proxy @s)
 
 instance (KnownSymbol s) => Show (CI s) where
+  show :: (KnownSymbol s) => CI s -> String
   show CI = symbolVal (Proxy @s)
 
 instance (LitSymbol s) => Show (Many1 s) where
+  show :: (LitSymbol s) => Many1 s -> String
   show Many1 = litSymbol @Type @s
 
 instance (KnownSymbol s) => Read (CS s) where
+  readsPrec :: (KnownSymbol s) => Int -> ReadS (CS s)
   readsPrec _ s = case List.stripPrefix (symbolVal (Proxy @s)) s of
     Just rest -> [(CS, rest)]
     Nothing -> []
 
 instance (KnownSymbol s) => Read (CI s) where
+  readsPrec :: (KnownSymbol s) => Int -> ReadS (CI s)
   readsPrec _ s = case List.stripPrefix (lower $ symbolVal (Proxy @s)) (lower s) of
     Just rest -> [(CI, rest)]
     Nothing -> []
 
 instance (Inst2 LitSymbol a b, Inst2 Read a b) => Read (Or a b) where
+  readsPrec :: (Inst2 LitSymbol a b, Inst2 Read a b) => Int -> ReadS (Or a b)
   readsPrec _ s = case reads @a s of
     [] -> case reads @b s of
       [] -> []
@@ -102,6 +123,7 @@ instance (Inst2 LitSymbol a b, Inst2 Read a b) => Read (Or a b) where
     xs -> mapFst (const Or) <$> xs
 
 instance (LitSymbol a, Read a) => Read (Many0 a) where
+  readsPrec :: (LitSymbol a, Read a) => Int -> ReadS (Many0 a)
   readsPrec _ s = case reads @a s of
     [] -> [(Many0, s)]
     xs -> do
@@ -110,6 +132,7 @@ instance (LitSymbol a, Read a) => Read (Many0 a) where
 
 -- fixme: doesn't work beyond first
 instance (LitSymbol a, Read a) => Read (Many1 a) where
+  readsPrec :: (LitSymbol a, Read a) => Int -> ReadS (Many1 a)
   readsPrec _ s = case reads @a s of
     [] -> []
     xs -> do

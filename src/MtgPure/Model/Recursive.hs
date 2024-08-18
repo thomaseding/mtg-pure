@@ -146,6 +146,7 @@ data Ability (zone :: Zone) (ot :: Type) :: Type where
   deriving (Typeable)
 
 instance ConsIndex (Ability zone ot) where
+  consIndex :: Ability zone ot -> Int
   consIndex = \case
     Activated{} -> 1
     Static{} -> 2
@@ -164,6 +165,7 @@ data ActivatedAbility (zone :: Zone) (ot :: Type) :: Type where
   deriving (Typeable)
 
 instance ConsIndex (ActivatedAbility zone ot) where
+  consIndex :: ActivatedAbility zone ot -> Int
   consIndex = \case
     Ability{} -> 1
     Cycling{} -> 2
@@ -182,6 +184,7 @@ class (Show u, Typeable u) => IsUser (u :: Type) where
   showUserType = show (typeRep (Proxy @u))
 
 instance IsUser () where
+  showUserType :: String
   showUserType = "()"
 
 instance IsUser Color
@@ -206,6 +209,7 @@ data SpecificCard (ot :: Type) :: Type where
   deriving (Typeable)
 
 instance ConsIndex (SpecificCard ot) where
+  consIndex :: SpecificCard ot -> Int
   consIndex = \case
     ArtifactCard{} -> 1
     ArtifactCreatureCard{} -> 2
@@ -222,33 +226,43 @@ class (IsOTN ot) => IsSpecificCard (ot :: Type) where
   singSpecificCard :: SpecificCard ot
 
 instance IsSpecificCard OTNArtifact where
+  singSpecificCard :: SpecificCard OTNArtifact
   singSpecificCard = ArtifactCard
 
 instance IsSpecificCard OTNArtifactCreature where
+  singSpecificCard :: SpecificCard OTNArtifactCreature
   singSpecificCard = ArtifactCreatureCard
 
 instance IsSpecificCard OTNArtifactLand where
+  singSpecificCard :: SpecificCard OTNArtifactLand
   singSpecificCard = ArtifactLandCard
 
 instance IsSpecificCard OTNCreature where
+  singSpecificCard :: SpecificCard OTNCreature
   singSpecificCard = CreatureCard
 
 instance IsSpecificCard OTNEnchantment where
+  singSpecificCard :: SpecificCard OTNEnchantment
   singSpecificCard = EnchantmentCard
 
 instance IsSpecificCard OTNEnchantmentCreature where
+  singSpecificCard :: SpecificCard OTNEnchantmentCreature
   singSpecificCard = EnchantmentCreatureCard
 
 instance IsSpecificCard OTNInstant where
+  singSpecificCard :: SpecificCard OTNInstant
   singSpecificCard = InstantCard
 
 instance IsSpecificCard OTNLand where
+  singSpecificCard :: SpecificCard OTNLand
   singSpecificCard = LandCard
 
 instance IsSpecificCard OTNPlaneswalker where
+  singSpecificCard :: SpecificCard OTNPlaneswalker
   singSpecificCard = PlaneswalkerCard
 
 instance IsSpecificCard OTNSorcery where
+  singSpecificCard :: SpecificCard OTNSorcery
   singSpecificCard = SorceryCard
 
 --------------------------------------------------------------------------------
@@ -259,11 +273,13 @@ data AnyCard :: Type where
   deriving (Typeable)
 
 instance ConsIndex AnyCard where
+  consIndex :: AnyCard -> Int
   consIndex = \case
     AnyCard1{} -> 1
     AnyCard2{} -> 2
 
 instance HasCardName AnyCard where
+  getCardName :: AnyCard -> CardName
   getCardName = \case
     AnyCard1 card -> getCardName card
     AnyCard2 card -> getCardName card
@@ -275,10 +291,12 @@ data AnyToken :: Type where
   deriving (Typeable)
 
 instance ConsIndex AnyToken where
+  consIndex :: AnyToken -> Int
   consIndex = \case
     AnyToken{} -> 1
 
 instance HasCardName AnyToken where
+  getCardName :: AnyToken -> CardName
   getCardName = \case
     AnyToken token -> getCardName token
 
@@ -297,12 +315,14 @@ data Card (ot :: Type) :: Type where
   deriving (Typeable)
 
 instance ConsIndex (Card ot) where
+  consIndex :: Card ot -> Int
   consIndex = \case
     Card{} -> 1
     DoubleSidedCard{} -> 2
     SplitCard{} -> 3
 
 instance HasCardName (Card ot) where
+  getCardName :: Card ot -> CardName
   getCardName = \case
     Card name _ -> name
     DoubleSidedCard card1 card2 -> getCardName card1 <> " // " <> getCardName card2
@@ -388,6 +408,7 @@ data CardCharacteristic (ot :: Type) :: Type where
   deriving (Typeable)
 
 instance ConsIndex (CardCharacteristic ot) where
+  consIndex :: CardCharacteristic ot -> Int
   consIndex = \case
     ArtifactCharacteristic{} -> 1
     ArtifactCreatureCharacteristic{} -> 2
@@ -464,6 +485,7 @@ data CardSpec (ot :: Type) :: Type where
   deriving (Typeable)
 
 instance ConsIndex (CardSpec ot) where
+  consIndex :: CardSpec ot -> Int
   consIndex = \case
     ArtifactSpec{} -> 1
     ArtifactCreatureSpec{} -> 2
@@ -488,6 +510,7 @@ data Case (x :: Type) where
   deriving (Typeable)
 
 instance ConsIndex (Case x) where
+  consIndex :: Case x -> Int
   consIndex = \case
     CaseFin{} -> 1
 
@@ -501,6 +524,7 @@ data Condition :: Type where
   deriving (Typeable)
 
 instance ConsIndex Condition where
+  consIndex :: Condition -> Int
   consIndex = \case
     CAnd{} -> 1
     CNot{} -> 2
@@ -536,6 +560,7 @@ data Cost :: Type where
   deriving (Typeable)
 
 instance ConsIndex Cost where
+  consIndex :: Cost -> Int
   consIndex = \case
     AndCosts{} -> 1
     CostCase{} -> 2
@@ -584,6 +609,7 @@ data Effect (ef :: EffectType) :: Type where
   deriving (Typeable)
 
 instance ConsIndex (Effect ef) where
+  consIndex :: Effect ef -> Int
   consIndex = \case
     AddMana{} -> 1
     AddToBattlefield{} -> 2
@@ -674,6 +700,7 @@ data Elect (s :: ElectStage) (el :: Type) (ot :: Type) :: Type where
   deriving (Typeable)
 
 instance ConsIndex (Elect s el ot) where
+  consIndex :: Elect s el ot -> Int
   consIndex = \case
     ActivePlayer{} -> 1
     All{} -> 2
@@ -720,6 +747,7 @@ data Else (s :: ElectStage) (el :: Type) (ot :: Type) :: Type where
   deriving (Typeable)
 
 instance ConsIndex (Else s el ot) where
+  consIndex :: Else s el ot -> Int
   consIndex = \case
     ElseCost{} -> 1
     ElseEffect{} -> 2
@@ -732,6 +760,7 @@ data Enchant (zone :: Zone) (ot :: Type) :: Type where
   deriving (Typeable)
 
 instance ConsIndex (Enchant zone ot) where
+  consIndex :: Enchant zone ot -> Int
   consIndex = \case
     Enchant{} -> 1
 
@@ -742,6 +771,7 @@ data EnchantmentType (ot :: Type) :: Type where
   deriving (Typeable)
 
 instance ConsIndex (EnchantmentType ot) where
+  consIndex :: EnchantmentType ot -> Int
   consIndex = \case
     Aura{} -> 1
 
@@ -754,6 +784,7 @@ data EntersStatic (zone :: Zone) (ot :: Type) :: Type where
   deriving (Typeable)
 
 instance ConsIndex (EntersStatic zone ot) where
+  consIndex :: EntersStatic zone ot -> Int
   consIndex = \case
     EntersTapped{} -> 1
 
@@ -778,6 +809,7 @@ data EventListener' (liftOT :: Type -> Type) :: Type where
   deriving (Typeable)
 
 instance ConsIndex (EventListener' liftOT) where
+  consIndex :: EventListener' liftOT -> Int
   consIndex = \case
     BecomesTapped{} -> 1
     EntersBattlefield{} -> 2
@@ -801,7 +833,10 @@ newtype List a = List [a]
   deriving (Functor, Typeable)
 
 instance Applicative List where
+  pure :: a -> List a
   pure = List . pure
+
+  (<*>) :: List (a -> b) -> List a -> List b
   List f <*> List x = List $ f <*> x
 
 --------------------------------------------------------------------------------
@@ -857,6 +892,7 @@ data Requirement (zone :: Zone) (ot :: Type) :: Type where
   deriving (Typeable)
 
 instance ConsIndex (Requirement zone ot) where
+  consIndex :: Requirement zone ot -> Int
   consIndex = \case
     ControlledBy{} -> 1
     ControlsA{} -> 2
@@ -883,6 +919,7 @@ data SetCard (ot :: Type) :: Type where
   deriving (Typeable)
 
 instance ConsIndex (SetCard ot) where
+  consIndex :: SetCard ot -> Int
   consIndex = \case
     SetCard{} -> 1
 
@@ -894,6 +931,7 @@ data SetToken (ot :: Type) :: Type where
   deriving (Typeable)
 
 instance ConsIndex (SetToken ot) where
+  consIndex :: SetToken ot -> Int
   consIndex = \case
     SetToken{} -> 1
 
@@ -1033,6 +1071,7 @@ data SomeZone (liftZOT :: Zone -> Type -> Type) (ot :: Type) :: Type where
   deriving (Typeable)
 
 instance ConsIndex (SomeZone liftZOT ot) where
+  consIndex :: SomeZone liftZOT ot -> Int
   consIndex = \case
     SomeZone{} -> 1
     SomeZone2{} -> 2
@@ -1059,6 +1098,7 @@ data StaticAbility (zone :: Zone) (ot :: Type) :: Type where
   deriving (Typeable)
 
 instance ConsIndex (StaticAbility zone ot) where
+  consIndex :: StaticAbility zone ot -> Int
   consIndex = \case
     As{} -> 1
     Bestow{} -> 2
@@ -1082,10 +1122,12 @@ data Token (ot :: Type) :: Type where
   deriving (Typeable)
 
 instance ConsIndex (Token ot) where
+  consIndex :: Token ot -> Int
   consIndex = \case
     Token{} -> 1
 
 instance HasCardName (Token ot) where
+  getCardName :: Token ot -> CardName
   getCardName = \case
     Token card -> getCardName card
 
@@ -1098,6 +1140,7 @@ data TriggeredAbility (zone :: Zone) (ot :: Type) :: Type where
   deriving (Typeable)
 
 instance ConsIndex (TriggeredAbility zone ot) where
+  consIndex :: TriggeredAbility zone ot -> Int
   consIndex = \case
     When{} -> 1
 
@@ -1134,6 +1177,7 @@ data WithLinkedObject (liftOT :: Type -> Type) (zone :: Zone) (ot :: Type) :: Ty
   deriving (Typeable)
 
 instance ConsIndex (WithLinkedObject liftOT zone ot) where
+  consIndex :: WithLinkedObject liftOT zone ot -> Int
   consIndex = \case
     Linked1{} -> 1
     Linked2{} -> 2
@@ -1149,6 +1193,7 @@ data WithList (ret :: Type) (zone :: Zone) (ot :: Type) where
   SuchThat :: (IsZO zone ot, Typeable ret) => [Requirement zone ot] -> WithList ret zone ot -> WithList ret zone ot
 
 instance ConsIndex (WithList ret zone ot) where
+  consIndex :: WithList ret zone ot -> Int
   consIndex = \case
     CountOf{} -> 1
     Each{} -> 2
@@ -1192,6 +1237,7 @@ data WithMaskedObject (liftOT :: Type -> Type) (zone :: Zone) (ot :: Type) :: Ty
   deriving (Typeable)
 
 instance ConsIndex (WithMaskedObject liftOT zone ot) where
+  consIndex :: WithMaskedObject liftOT zone ot -> Int
   consIndex = \case
     Masked1{} -> 1
     Masked2{} -> 2
@@ -1236,6 +1282,7 @@ data WithMaskedObjects (liftOT :: Type -> Type) (zone :: Zone) (ot :: Type) :: T
   deriving (Typeable)
 
 instance ConsIndex (WithMaskedObjects liftOT zone ot) where
+  consIndex :: WithMaskedObjects liftOT zone ot -> Int
   consIndex = \case
     Maskeds1{} -> 1
     Maskeds2{} -> 2
@@ -1289,6 +1336,7 @@ data WithThis (liftOT :: Type -> Type) (zone :: Zone) (ot :: Type) :: Type where
   deriving (Typeable)
 
 instance ConsIndex (WithThis zone liftOT ot) where
+  consIndex :: WithThis zone liftOT ot -> Int
   consIndex = \case
     This1{} -> 1
     This2{} -> 2
@@ -1319,6 +1367,7 @@ data WithThisAbility (zone :: Zone) (ot :: Type) where
   deriving (Typeable)
 
 instance ConsIndex (WithThisAbility zone ot) where
+  consIndex :: WithThisAbility zone ot -> Int
   consIndex = \case
     WithThisActivated{} -> 1
     WithThisStatic{} -> 2

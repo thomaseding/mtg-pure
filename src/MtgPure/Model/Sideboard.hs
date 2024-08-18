@@ -18,7 +18,9 @@ newtype Sideboard :: Type where
   deriving (Typeable)
 
 instance Semigroup Sideboard where
+  (<>) :: Sideboard -> Sideboard -> Sideboard
   Sideboard a <> Sideboard b = Sideboard (a <> b)
 
 instance Monoid Sideboard where
+  mempty :: Sideboard
   mempty = Sideboard mempty

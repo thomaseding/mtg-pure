@@ -168,16 +168,22 @@ newtype Inspector a = Inspector
   }
 
 instance Functor Inspector where
+  fmap :: (a -> b) -> Inspector a -> Inspector b
   fmap f = Inspector . fmap f . unInspector
 
 instance Applicative Inspector where
+  pure :: a -> Inspector a
   pure = Inspector . pure
+
+  (<*>) :: Inspector (a -> b) -> Inspector a -> Inspector b
   f <*> x = Inspector $ unInspector f <*> unInspector x
 
 instance Monad Inspector where
+  (>>=) :: Inspector a -> (a -> Inspector b) -> Inspector b
   x >>= f = Inspector $ unInspector x >>= unInspector . f
 
 instance M.MonadIO Inspector where
+  liftIO :: IO a -> Inspector a
   liftIO = Inspector . M.liftIO
 
 runInspector :: Inspector a -> IO a

@@ -26,16 +26,20 @@ data Object :: OT -> Type where
   deriving (Typeable)
 
 instance Eq (Object ot) where
+  (==) :: Object ot -> Object ot -> Bool
   Object _ (UntypedObject _ i) == Object _ (UntypedObject _ j) = i == j
 
 instance Ord (Object ot) where
+  compare :: Object ot -> Object ot -> Ordering
   compare (Object _ (UntypedObject _ i)) (Object _ (UntypedObject _ j)) = compare i j
 
 instance GetObjectId (Object ot) where
+  getUntypedObject :: Object ot -> UntypedObject
   getUntypedObject = \case
     Object _ o -> o
 
 instance Show (Object ot) where
+  show :: Object ot -> String
   show = \case
     Object _ (UntypedObject (ObjectDiscriminant d) (ObjectId i)) -> case d of
       0 -> "O=" ++ show i

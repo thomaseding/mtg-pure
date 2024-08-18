@@ -22,6 +22,7 @@ class CountMana a where
   countMana :: a -> Int
 
 instance CountMana CompleteManaPool where
+  countMana :: CompleteManaPool -> Int
   countMana
     CompleteManaPool
       { poolSnow = p0
@@ -29,20 +30,25 @@ instance CountMana CompleteManaPool where
       } = countMana p0 + countMana p1
 
 instance CountMana (ManaPool snow) where
+  countMana :: ManaPool snow -> Int
   countMana (ManaPool w u b r g c) =
     countMana w + countMana u + countMana b + countMana r + countMana g + countMana c
 
 instance CountMana ManaPayment where
+  countMana :: ManaPayment -> Int
   countMana (ManaPayment pool _life) = countMana pool
 
 instance CountMana (Mana 'NoVar snow mt) where
+  countMana :: Mana 'NoVar snow mt -> Int
   countMana = \case
     Mana mana -> mana
 
 instance CountMana (PhyrexianManaCost 'NoVar) where
+  countMana :: PhyrexianManaCost 'NoVar -> Int
   countMana PhyrexianManaCost{} = 0
 
 instance CountMana (HybridManaCost 'NoVar) where
+  countMana :: HybridManaCost 'NoVar -> Int
   countMana (HybridManaCost wu ub br rg gw wb ur bg rw gu w2 u2 b2 r2 g2 c2) =
     countMana wu
       + countMana ub
@@ -62,6 +68,7 @@ instance CountMana (HybridManaCost 'NoVar) where
       + countMana c2
 
 instance CountMana (DynamicManaCost 'NoVar) where
+  countMana :: DynamicManaCost 'NoVar -> Int
   countMana
     DynamicManaCost
       { costGeneric = g

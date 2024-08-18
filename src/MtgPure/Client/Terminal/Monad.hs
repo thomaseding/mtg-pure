@@ -69,17 +69,25 @@ newtype Terminal a = Terminal
   deriving (Functor)
 
 instance Applicative Terminal where
+  pure :: a -> Terminal a
   pure = Terminal . pure
+
+  (<*>) :: Terminal (a -> b) -> Terminal a -> Terminal b
   Terminal f <*> Terminal a = Terminal $ f <*> a
 
 instance Monad Terminal where
+  (>>=) :: Terminal a -> (a -> Terminal b) -> Terminal b
   Terminal a >>= f = Terminal $ a >>= unTerminal . f
 
 instance MonadIO Terminal where
+  liftIO :: IO a -> Terminal a
   liftIO = Terminal . liftIO
 
 instance State.MonadState TerminalState Terminal where
+  get :: Terminal TerminalState
   get = Terminal State.get
+
+  put :: TerminalState -> Terminal ()
   put = Terminal . State.put
 
 runTerminal :: TerminalInput -> Terminal () -> IO ()

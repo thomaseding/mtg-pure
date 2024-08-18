@@ -17,7 +17,9 @@ newtype Deck :: Type where
   deriving (Typeable)
 
 instance Semigroup Deck where
+  (<>) :: Deck -> Deck -> Deck
   Deck a <> Deck b = Deck (a <> b)
 
 instance Monoid Deck where
+  mempty :: Deck
   mempty = Deck mempty

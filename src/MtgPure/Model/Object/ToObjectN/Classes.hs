@@ -144,5 +144,6 @@ class (Inst12 IsObjectType a b c d e f g h i j k l) => ToObject12 ot a b c d e f
   toObject12 :: ObjectN ot -> ObjectN (OT12 a b c d e f g h i j k l)
 
 instance (IsObjectType a) => ToObject1 OT0 a where
+  toObject1 :: (IsObjectType a) => ObjectN OT0 -> ObjectN (OT1 a)
   toObject1 = \case
     O0 o -> O1 $ idToObject o

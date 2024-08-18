@@ -71,6 +71,7 @@ data ManaCost (var :: Var) = ManaCost'
   deriving (Eq, Ord, Typeable) --  TODO: Make some of these orphans
 
 instance Semigroup (PhyrexianManaCost var) where
+  (<>) :: PhyrexianManaCost var -> PhyrexianManaCost var -> PhyrexianManaCost var
   pmc1 <> pmc2 =
     PhyrexianManaCost
       { phyrexianW = w1 <> w2
@@ -99,6 +100,7 @@ instance Semigroup (PhyrexianManaCost var) where
       } = pmc2
 
 instance Semigroup (HybridManaCost var) where
+  (<>) :: HybridManaCost var -> HybridManaCost var -> HybridManaCost var
   hmc1 <> hmc2 =
     HybridManaCost
       { hybridWU = wu1 <> wu2
@@ -157,6 +159,7 @@ instance Semigroup (HybridManaCost var) where
       } = hmc2
 
 instance Semigroup (DynamicManaCost var) where
+  (<>) :: DynamicManaCost var -> DynamicManaCost var -> DynamicManaCost var
   dmc1 <> dmc2 =
     DynamicManaCost
       { costGeneric = g1 <> g2
@@ -179,6 +182,7 @@ instance Semigroup (DynamicManaCost var) where
       } = dmc2
 
 instance Semigroup (ManaCost var) where
+  (<>) :: ManaCost var -> ManaCost var -> ManaCost var
   mc1 <> mc2 =
     ManaCost'
       { costW = w1 <> w2
@@ -210,6 +214,7 @@ instance Semigroup (ManaCost var) where
       } = mc2
 
 instance Monoid (PhyrexianManaCost var) where
+  mempty :: PhyrexianManaCost var
   mempty =
     PhyrexianManaCost
       { phyrexianW = mempty
@@ -221,6 +226,7 @@ instance Monoid (PhyrexianManaCost var) where
       }
 
 instance Monoid (HybridManaCost var) where
+  mempty :: HybridManaCost var
   mempty =
     HybridManaCost
       { hybridWU = mempty
@@ -242,6 +248,7 @@ instance Monoid (HybridManaCost var) where
       }
 
 instance Monoid (DynamicManaCost var) where
+  mempty :: DynamicManaCost var
   mempty =
     DynamicManaCost
       { costGeneric = mempty
@@ -251,6 +258,7 @@ instance Monoid (DynamicManaCost var) where
       }
 
 instance Monoid (ManaCost var) where
+  mempty :: ManaCost var
   mempty =
     ManaCost'
       { costW = mempty

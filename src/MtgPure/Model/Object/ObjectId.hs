@@ -46,7 +46,9 @@ getObjectDiscriminant x = case getUntypedObject x of
   UntypedObject d _ -> d
 
 instance GetObjectId ObjectId where
+  getUntypedObject :: ObjectId -> UntypedObject
   getUntypedObject = UntypedObject DefaultObjectDiscriminant
 
 instance (GetObjectId a, GetObjectId b) => GetObjectId (Either a b) where
+  getUntypedObject :: (GetObjectId a, GetObjectId b) => Either a b -> UntypedObject
   getUntypedObject = either getUntypedObject getUntypedObject

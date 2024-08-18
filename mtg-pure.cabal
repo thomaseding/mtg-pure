@@ -306,6 +306,7 @@ library
         FlexibleInstances,
         FunctionalDependencies,
         GADTs,
+        InstanceSigs,
         LambdaCase,
         MagicHash,
         MultiParamTypeClasses,

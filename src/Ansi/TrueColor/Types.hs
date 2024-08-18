@@ -89,12 +89,14 @@ class ImageToGrid p where
   imageToGrid :: Image p -> Grid p
 
 instance ImageToGrid PixelRGB8 where
+  imageToGrid :: Image PixelRGB8 -> Grid PixelRGB8
   imageToGrid img = bytesToRgbGrid gridWidth imgData
    where
     imgData = VS.toList $ imageData img
     gridWidth = imageWidth img
 
 instance ImageToGrid Pixel1 where
+  imageToGrid :: Image Pixel1 -> Grid Pixel1
   imageToGrid img = toGrid gridWidth imgData
    where
     imgData = VS.toList $ imageData img

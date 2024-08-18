@@ -41,6 +41,7 @@ data St = St
 type UnitCont = MagicCont' Ex St 'Private 'RW
 
 instance (Monad m) => HasEnvLogCall Ex St 'RW m where
+  theEnvLogCall :: (Monad m) => EnvLogCall Ex St v 'RW m
   theEnvLogCall = envLogCall
 
 envLogCall :: (Monad m) => EnvLogCall Ex St v 'RW m

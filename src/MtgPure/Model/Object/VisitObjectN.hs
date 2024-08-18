@@ -33,7 +33,7 @@ import safe MtgPure.Model.Object.OTN (
   OTN (..),
  )
 import safe MtgPure.Model.Object.Object (Object (..))
-import safe MtgPure.Model.Object.ObjectId (GetObjectId (..))
+import safe MtgPure.Model.Object.ObjectId (GetObjectId (..), UntypedObject)
 import safe MtgPure.Model.Object.ObjectN (
   ON10,
   ON11,
@@ -53,6 +53,7 @@ import safe MtgPure.Model.Object.ViewObjectN (viewOTN, viewOTN')
 type OTArbitrary = 'OTLand
 
 instance GetObjectId (ObjectN ot) where
+  getUntypedObject :: ObjectN ot -> UntypedObject
   getUntypedObject = \case
     O0 o -> o
     x -> visitObjectN' getUntypedObject x

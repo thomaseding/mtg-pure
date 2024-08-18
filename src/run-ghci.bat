@@ -22,6 +22,7 @@ ghci -hidir .output -odir .output^
  -XFlexibleInstances^
  -XFunctionalDependencies^
  -XGADTs^
+ -XInstanceSigs^
  -XLambdaCase^
  -XMagicHash^
  -XMultiParamTypeClasses^

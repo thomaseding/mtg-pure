@@ -20,7 +20,16 @@ import safe qualified Control.Monad.State.Strict as State
 import safe Data.IORef (modifyIORef', newIORef, readIORef)
 import safe Data.Kind (Type)
 import safe qualified Data.Map.Strict as Map
-import safe Demo.Misc.SerializableMonadApi.Variable (Env (..), EnvM, EnvShow (..), RS, Var (Lit, Var), VarID, runEnvM)
+import safe Demo.Misc.SerializableMonadApi.Variable (
+  DString,
+  Env (..),
+  EnvM,
+  EnvShow (..),
+  RS,
+  Var (Lit, Var),
+  VarID,
+  runEnvM,
+ )
 import safe qualified Demo.Misc.SerializableMonadApi.VariableMonad as X
 
 data InterpM (dsl :: Type -> Type -> Type) (s :: Type) (a :: Type) :: Type where
@@ -30,8 +39,13 @@ data InterpM (dsl :: Type -> Type -> Type) (s :: Type) (a :: Type) :: Type where
   Bind :: (RS a) => InterpM dsl s (Var s a) -> (Var s a -> InterpM dsl s b) -> InterpM dsl s b
 
 instance X.Monad s (InterpM dsl) where
+  pure :: a -> InterpM dsl s a
   pure = Pure
+
+  (>>) :: (RS a) => InterpM dsl s a -> InterpM dsl s b -> InterpM dsl s b
   (>>) = Then
+
+  (>>=) :: (RS a) => InterpM dsl s (Var s a) -> (Var s a -> InterpM dsl s b) -> InterpM dsl s b
   (>>=) = Bind
 
 -- https://www.reddit.com/r/haskell/comments/gxcxgl/comment/ftatasa/?utm_source=share&utm_medium=web2x&context=3
@@ -57,6 +71,7 @@ data StoreF (f :: Type -> Type) (a :: Type) :: Type where
 type StoreVar s a = StoreF (Var s) a
 
 instance EnvShow (StoreVar s a) where
+  envShow :: StoreVar s a -> EnvM DString
   envShow x = case x of
     Get key -> do
       sKey <- envShow key
@@ -70,6 +85,7 @@ instance EnvShow (StoreVar s a) where
       pure $ "Print (" <> sVar <> ")"
 
 instance Show (StoreVar s a) where
+  show :: StoreVar s a -> String
   show = runEnvM . envShow
 
 newtype Store s a = Store {unStore :: StoreF (Var s) a}
@@ -86,15 +102,18 @@ newVar = do
   pure $ Var i
 
 instance EnvShow (Store s a) where
+  envShow :: Store s a -> EnvM DString
   envShow = \case
     Store store -> do
       sStore <- envShow store
       pure $ "Store (" <> sStore <> ")"
 
 instance Show (Store s a) where
+  show :: Store s a -> String
   show = runEnvM . envShow
 
 instance (EnvShow a) => EnvShow (StoreM s a) where
+  envShow :: (EnvShow a) => StoreM s a -> EnvM DString
   envShow = \case
     Interp dsl -> do
       sDsl <- envShow dsl
@@ -116,6 +135,7 @@ instance (EnvShow a) => EnvShow (StoreM s a) where
       pure $ "Bind (" <> sma <> ") (" <> sf <> ")"
 
 instance (EnvShow a) => Show (StoreM s a) where
+  show :: (EnvShow a) => StoreM s a -> String
   show = runEnvM . envShow
 
 indirection :: Var s String -> Var s String -> StoreM s ()

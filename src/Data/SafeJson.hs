@@ -18,6 +18,7 @@ module Data.SafeJson (
 import safe Control.Exception (evaluate)
 import safe qualified Control.Monad as M
 import safe qualified Data.Char as Char
+import safe Data.Inst (Inst2, Inst3, Inst4, Inst5)
 import safe Data.Kind (Type)
 import safe qualified Data.Map.Strict as Map
 import safe Data.Maybe (fromMaybe)
@@ -71,13 +72,14 @@ safeJson = do
   pure value
 
 jsonValue :: Parsec String () SafeValue
-jsonValue = do
-  SafeString <$> jsonString
-    <|> SafeNumber <$> jsonNumber
-    <|> SafeBool <$> jsonBool
-    <|> SafeNull <$ jsonNull
-    <|> SafeArray <$> jsonArray
-    <|> SafeObject <$> jsonObject
+jsonValue =
+  do
+    SafeString <$> jsonString
+    <|> (SafeNumber <$> jsonNumber)
+    <|> (SafeBool <$> jsonBool)
+    <|> (SafeNull <$ jsonNull)
+    <|> (SafeArray <$> jsonArray)
+    <|> (SafeObject <$> jsonObject)
 
 jsonString :: Parsec String () String
 jsonString = do
@@ -222,102 +224,127 @@ fetch m k = case Map.lookup k m of
   Just v -> fromSafeJson v
 
 instance ToSafeJson SafeValue where
+  toSafeJson :: SafeValue -> SafeValue
   toSafeJson = id
 
 instance FromSafeJson SafeValue where
+  fromSafeJson :: SafeValue -> Either String SafeValue
   fromSafeJson = Right
 
 instance ToSafeJson String where
+  toSafeJson :: String -> SafeValue
   toSafeJson = SafeString
 
 instance FromSafeJson String where
+  fromSafeJson :: SafeValue -> Either String String
   fromSafeJson = \case
     SafeString s -> Right s
     _ -> Left "expected string"
 
 instance ToSafeJson Double where
+  toSafeJson :: Double -> SafeValue
   toSafeJson = SafeNumber
 
 instance FromSafeJson Double where
+  fromSafeJson :: SafeValue -> Either String Double
   fromSafeJson = \case
     SafeNumber n -> Right n
     _ -> Left "expected number"
 
 instance ToSafeJson Bool where
+  toSafeJson :: Bool -> SafeValue
   toSafeJson = SafeBool
 
 instance FromSafeJson Bool where
+  fromSafeJson :: SafeValue -> Either String Bool
   fromSafeJson = \case
     SafeBool b -> Right b
     _ -> Left "expected bool"
 
 instance ToSafeJson () where
+  toSafeJson :: () -> SafeValue
   toSafeJson = const SafeNull
 
 instance FromSafeJson () where
+  fromSafeJson :: SafeValue -> Either String ()
   fromSafeJson = \case
     SafeNull -> Right ()
     _ -> Left "expected null"
 
-instance (ToSafeJson a, ToSafeJson b) => ToSafeJson (a, b) where
+instance (Inst2 ToSafeJson a b) => ToSafeJson (a, b) where
+  toSafeJson :: (Inst2 ToSafeJson a b) => (a, b) -> SafeValue
   toSafeJson (a, b) = SafeArray [toSafeJson a, toSafeJson b]
 
-instance (FromSafeJson a, FromSafeJson b) => FromSafeJson (a, b) where
+instance (Inst2 FromSafeJson a b) => FromSafeJson (a, b) where
+  fromSafeJson :: (Inst2 FromSafeJson a b) => SafeValue -> Either String (a, b)
   fromSafeJson = \case
     SafeArray [a, b] -> (,) <$> fromSafeJson a <*> fromSafeJson b
     _ -> Left "expected array of length 2"
 
-instance (ToSafeJson a, ToSafeJson b, ToSafeJson c) => ToSafeJson (a, b, c) where
+instance (Inst3 ToSafeJson a b c) => ToSafeJson (a, b, c) where
+  toSafeJson :: (Inst3 ToSafeJson a b c) => (a, b, c) -> SafeValue
   toSafeJson (a, b, c) = SafeArray [toSafeJson a, toSafeJson b, toSafeJson c]
 
-instance (FromSafeJson a, FromSafeJson b, FromSafeJson c) => FromSafeJson (a, b, c) where
+instance (Inst3 FromSafeJson a b c) => FromSafeJson (a, b, c) where
+  fromSafeJson :: (Inst3 FromSafeJson a b c) => SafeValue -> Either String (a, b, c)
   fromSafeJson = \case
     SafeArray [a, b, c] -> (,,) <$> fromSafeJson a <*> fromSafeJson b <*> fromSafeJson c
     _ -> Left "expected array of length 3"
 
-instance (ToSafeJson a, ToSafeJson b, ToSafeJson c, ToSafeJson d) => ToSafeJson (a, b, c, d) where
+instance (Inst4 ToSafeJson a b c d) => ToSafeJson (a, b, c, d) where
+  toSafeJson :: (Inst4 ToSafeJson a b c d) => (a, b, c, d) -> SafeValue
   toSafeJson (a, b, c, d) = SafeArray [toSafeJson a, toSafeJson b, toSafeJson c, toSafeJson d]
 
-instance (FromSafeJson a, FromSafeJson b, FromSafeJson c, FromSafeJson d) => FromSafeJson (a, b, c, d) where
+instance (Inst4 FromSafeJson a b c d) => FromSafeJson (a, b, c, d) where
+  fromSafeJson :: (Inst4 FromSafeJson a b c d) => SafeValue -> Either String (a, b, c, d)
   fromSafeJson = \case
     SafeArray [a, b, c, d] -> (,,,) <$> fromSafeJson a <*> fromSafeJson b <*> fromSafeJson c <*> fromSafeJson d
     _ -> Left "expected array of length 4"
 
-instance (ToSafeJson a, ToSafeJson b, ToSafeJson c, ToSafeJson d, ToSafeJson e) => ToSafeJson (a, b, c, d, e) where
+instance (Inst5 ToSafeJson a b c d e) => ToSafeJson (a, b, c, d, e) where
+  toSafeJson :: (Inst5 ToSafeJson a b c d e) => (a, b, c, d, e) -> SafeValue
   toSafeJson (a, b, c, d, e) = SafeArray [toSafeJson a, toSafeJson b, toSafeJson c, toSafeJson d, toSafeJson e]
 
-instance (FromSafeJson a, FromSafeJson b, FromSafeJson c, FromSafeJson d, FromSafeJson e) => FromSafeJson (a, b, c, d, e) where
+instance (Inst5 FromSafeJson a b c d e) => FromSafeJson (a, b, c, d, e) where
+  fromSafeJson :: (Inst5 FromSafeJson a b c d e) => SafeValue -> Either String (a, b, c, d, e)
   fromSafeJson = \case
     SafeArray [a, b, c, d, e] -> (,,,,) <$> fromSafeJson a <*> fromSafeJson b <*> fromSafeJson c <*> fromSafeJson d <*> fromSafeJson e
     _ -> Left "expected array of length 5"
 
 instance (ToSafeJson a) => ToSafeJson [(String, a)] where
+  toSafeJson :: (ToSafeJson a) => [(String, a)] -> SafeValue
   toSafeJson = SafeObject . Map.fromList . map (\(k, v) -> (k, toSafeJson v))
 
 instance (FromSafeJson a) => FromSafeJson [(String, a)] where
+  fromSafeJson :: (FromSafeJson a) => SafeValue -> Either String [(String, a)]
   fromSafeJson = \case
     SafeObject m -> mapM (\(k, v) -> (,) k <$> fromSafeJson v) $ Map.toList m
     _ -> Left "expected object"
 
 instance (ToSafeJson a) => ToSafeJson (Maybe a) where
+  toSafeJson :: (ToSafeJson a) => Maybe a -> SafeValue
   toSafeJson = \case
     Nothing -> SafeNull
     Just x -> toSafeJson x
 
 instance (FromSafeJson a) => FromSafeJson (Maybe a) where
+  fromSafeJson :: (FromSafeJson a) => SafeValue -> Either String (Maybe a)
   fromSafeJson = \case
     SafeNull -> Right Nothing
     x -> Just <$> fromSafeJson x
 
 instance ToSafeJson Char where
+  toSafeJson :: Char -> SafeValue
   toSafeJson = SafeString . pure
 
 instance FromSafeJson Char where
+  fromSafeJson :: SafeValue -> Either String Char
   fromSafeJson = \case
     SafeString [c] -> Right c
     _ -> Left "expected string of length 1"
 
 instance FromSafeJson Int where
+  fromSafeJson :: SafeValue -> Either String Int
   fromSafeJson = \case
     SafeNumber n ->
       let i = truncate n
@@ -327,9 +354,11 @@ instance FromSafeJson Int where
     _ -> Left "expected number"
 
 instance ToSafeJson Int where
+  toSafeJson :: Int -> SafeValue
   toSafeJson = SafeNumber . fromIntegral
 
 instance FromSafeJson Integer where
+  fromSafeJson :: SafeValue -> Either String Integer
   fromSafeJson = \case
     SafeNumber n ->
       let i = truncate n
@@ -339,28 +368,35 @@ instance FromSafeJson Integer where
     _ -> Left "expected number"
 
 instance ToSafeJson Integer where
+  toSafeJson :: Integer -> SafeValue
   toSafeJson = SafeNumber . fromIntegral
 
 instance FromSafeJson Float where
+  fromSafeJson :: SafeValue -> Either String Float
   fromSafeJson = \case
     SafeNumber n -> Right $ realToFrac n
     _ -> Left "expected number"
 
 instance ToSafeJson Float where
+  toSafeJson :: Float -> SafeValue
   toSafeJson = SafeNumber . realToFrac
 
 instance (ToSafeJson a) => ToSafeJson (Map.Map String a) where
+  toSafeJson :: (ToSafeJson a) => Map.Map String a -> SafeValue
   toSafeJson = SafeObject . Map.map toSafeJson
 
 instance (FromSafeJson a) => FromSafeJson (Map.Map String a) where
+  fromSafeJson :: (FromSafeJson a) => SafeValue -> Either String (Map.Map String a)
   fromSafeJson = \case
     SafeObject m -> traverse fromSafeJson m
     _ -> Left "expected object"
 
 instance (ToSafeJson a) => ToSafeJson (Map.Map Int a) where
+  toSafeJson :: (ToSafeJson a) => Map.Map Int a -> SafeValue
   toSafeJson = toSafeJson . Map.mapKeys show
 
 instance (FromSafeJson a) => FromSafeJson (Map.Map Int a) where
+  fromSafeJson :: (FromSafeJson a) => SafeValue -> Either String (Map.Map Int a)
   fromSafeJson = fmap (Map.mapKeys goRead) . fromSafeJson
    where
     goRead :: String -> Int
@@ -369,9 +405,11 @@ instance (FromSafeJson a) => FromSafeJson (Map.Map Int a) where
       _ -> error "expected int"
 
 instance (ToSafeJson a) => ToSafeJson (Map.Map Integer a) where
+  toSafeJson :: (ToSafeJson a) => Map.Map Integer a -> SafeValue
   toSafeJson = toSafeJson . Map.mapKeys show
 
 instance (FromSafeJson a) => FromSafeJson (Map.Map Integer a) where
+  fromSafeJson :: (FromSafeJson a) => SafeValue -> Either String (Map.Map Integer a)
   fromSafeJson = fmap (Map.mapKeys goRead) . fromSafeJson
    where
     goRead :: String -> Integer

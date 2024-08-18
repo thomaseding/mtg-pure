@@ -42,4 +42,5 @@ carCursor :: Carousel a -> a
 carCursor (Carousel xs i) = xs A.! i
 
 instance Functor Carousel where
+  fmap :: (a -> b) -> Carousel a -> Carousel b
   fmap f (Carousel xs i) = Carousel (fmap f xs) i

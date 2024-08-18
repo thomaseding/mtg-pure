@@ -58,15 +58,19 @@ class EnvShow (a :: Type) where
   envShow :: a -> EnvM DString
 
 instance EnvShow () where
+  envShow :: () -> EnvM DString
   envShow _ = pure "()"
 
 instance EnvShow Int where
+  envShow :: Int -> EnvM DString
   envShow = pure . DList.fromList . show
 
 instance EnvShow String where
+  envShow :: String -> EnvM DString
   envShow = pure . DList.fromList . show
 
 instance (EnvShow a) => EnvShow (Var s a) where
+  envShow :: (EnvShow a) => Var s a -> EnvM DString
   envShow = \case
     Lit a -> do
       sa <- envShow a
@@ -76,4 +80,5 @@ instance (EnvShow a) => EnvShow (Var s a) where
       pure sVar
 
 instance (EnvShow a) => Show (Var s a) where
+  show :: (EnvShow a) => Var s a -> String
   show = runEnvM . envShow

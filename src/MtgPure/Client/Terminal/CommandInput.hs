@@ -61,6 +61,7 @@ data CommandAbilityIndex :: Type where
   CIInferManaAbility :: CommandAbilityIndex
 
 instance Show CommandAbilityIndex where
+  show :: CommandAbilityIndex -> String
   show = \case
     CIAbilityIndex n -> show n
     CIManaAbility (Just landType) -> case landType of
@@ -97,6 +98,7 @@ data CIChoice :: Type where
   deriving (Show)
 
 instance Show CIPriorityAction where
+  show :: CIPriorityAction -> String
   show = \case
     CIActivateAbility objectId abilityIndex extras -> activateAbility ++ " " ++ showId objectId ++ " " ++ show abilityIndex ++ showExtras extras
     CIAskAgain -> askAgain

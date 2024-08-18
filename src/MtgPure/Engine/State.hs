@@ -119,11 +119,13 @@ import safe MtgPure.Model.ZoneObject.ZoneObject (IsZO, ZO)
 type Fwd m = Fwd' (GameResult m) (GameState m) m
 
 instance Show (Fwd m) where
+  show :: Fwd m -> String
   show _ = show ''Fwd
 
 type Prompt m = Prompt' OpaqueGameState m
 
 instance Show (Prompt m) where
+  show :: Prompt m -> String
   show _ = show ''Prompt
 
 type TargetId = ObjectId
@@ -179,6 +181,7 @@ data GameState (m :: Type -> Type) where
 newtype OpaqueGameState m = OpaqueGameState (GameState m)
 
 instance Show (OpaqueGameState m) where
+  show :: OpaqueGameState m -> String
   show _ = show ''OpaqueGameState
 
 class RegisterEventListener (v :: Visibility) (rw :: ReadWrite) where
@@ -186,6 +189,7 @@ class RegisterEventListener (v :: Visibility) (rw :: ReadWrite) where
   listenLocally :: (Monad m) => [EvListener v rw m] -> Magic 'Private 'RW m a -> Magic 'Private 'RW m a
 
 instance RegisterEventListener 'Private 'RW where
+  registerListener :: (Monad m) => EvListener 'Private 'RW m -> Magic 'Private 'RW m EvListenerId
   registerListener listener = do
     evId@(EvListenerId i) <- fromRO $ gets magicListenerNextId
     modify \st ->
@@ -194,6 +198,8 @@ instance RegisterEventListener 'Private 'RW where
         , magicListeners = Map.insert evId listener $ magicListeners st
         }
     pure evId
+
+  listenLocally :: (Monad m) => [EvListener 'Private 'RW m] -> Magic 'Private 'RW m a -> Magic 'Private 'RW m a
   listenLocally listeners action = do
     listenerIds <- mapM registerListener listeners
     result <- action
@@ -204,7 +210,10 @@ instance RegisterEventListener 'Private 'RW where
       st{magicListeners = Map.delete (EvListenerId i) $ magicListeners st}
 
 instance RegisterEventListener 'Public 'RO where
+  registerListener :: (Monad m) => EvListener 'Public 'RO m -> Magic 'Private 'RW m EvListenerId
   registerListener listener = registerListener @'Private @'RW $ \time -> fromPublic . fromRO . listener time
+
+  listenLocally :: (Monad m) => [EvListener 'Public 'RO m] -> Magic 'Private 'RW m a -> Magic 'Private 'RW m a
   listenLocally listeners = listenLocally @'Private @'RW $ map f listeners
    where
     f listener time = fromPublic . fromRO . listener time
@@ -324,6 +333,7 @@ withHeadlessPrompt st =
         }
 
 instance (IsReadWrite rw, Monad m) => HasEnvLogCall (GameResult m) (GameState m) rw m where
+  theEnvLogCall :: (IsReadWrite rw, Monad m) => EnvLogCall (GameResult m) (GameState m) v rw m
   theEnvLogCall = envLogCall
 
 envLogCall :: (IsReadWrite rw, Monad m) => EnvLogCall (GameResult m) (GameState m) v rw m
@@ -358,15 +368,19 @@ class IsNamed name where
   toNamed :: name -> Named
 
 instance IsNamed Named where
+  toNamed :: Named -> Named
   toNamed = id
 
 instance IsNamed Name where
+  toNamed :: Name -> Named
   toNamed = Named . show
 
 instance IsNamed (Name, [String]) where
+  toNamed :: (Name, [String]) -> Named
   toNamed (name, parts) = Named $ show name ++ "." ++ List.intercalate "." parts
 
 instance IsNamed (Name, String) where
+  toNamed :: (Name, String) -> Named
   toNamed (name, part) = toNamed (name, [part])
 
 showNamed :: (IsNamed name) => name -> String
@@ -412,48 +426,62 @@ logCallImpl' lift' isRec name action = do
   pure result
 
 instance (IsReadWrite rw, Monad m) => LogCall (Magic p rw m z) where
+  logCallImpl :: (IsReadWrite rw, Monad m, IsNamed name) => IsRec -> name -> Magic p rw m z -> Magic p rw m z
   logCallImpl = logCallImpl' id
 
 instance (IsReadWrite rw, Monad m) => LogCall (MagicCont p rw bail m z) where
+  logCallImpl :: (IsReadWrite rw, Monad m, IsNamed name) => IsRec -> name -> MagicCont p rw bail m z -> MagicCont p rw bail m z
   logCallImpl = logCallImpl' liftCont
 
 instance (IsReadWrite rw, Monad m) => LogCall (a -> Magic p rw m z) where
+  logCallImpl :: (IsReadWrite rw, Monad m, IsNamed name) => IsRec -> name -> (a -> Magic p rw m z) -> a -> Magic p rw m z
   logCallImpl isRec name action a = logCallImpl isRec name $ action a
 
 instance (IsReadWrite rw, Monad m) => LogCall (a -> MagicCont p rw bail m z) where
+  logCallImpl :: (IsReadWrite rw, Monad m, IsNamed name) => IsRec -> name -> (a -> MagicCont p rw bail m z) -> a -> MagicCont p rw bail m z
   logCallImpl isRec name action a = logCallImpl isRec name $ action a
 
 instance (IsReadWrite rw, Monad m) => LogCall (a -> b -> Magic p rw m z) where
+  logCallImpl :: (IsReadWrite rw, Monad m, IsNamed name) => IsRec -> name -> (a -> b -> Magic p rw m z) -> a -> b -> Magic p rw m z
   logCallImpl isRec name action a b = logCallImpl isRec name $ action a b
 
 instance (IsReadWrite rw, Monad m) => LogCall (a -> b -> MagicCont p rw bail m z) where
+  logCallImpl :: (IsReadWrite rw, Monad m, IsNamed name) => IsRec -> name -> (a -> b -> MagicCont p rw bail m z) -> a -> b -> MagicCont p rw bail m z
   logCallImpl isRec name action a b = logCallImpl isRec name $ action a b
 
 instance (IsReadWrite rw, Monad m) => LogCall (a -> b -> c -> Magic p rw m z) where
+  logCallImpl :: (IsReadWrite rw, Monad m, IsNamed name) => IsRec -> name -> (a -> b -> c -> Magic p rw m z) -> a -> b -> c -> Magic p rw m z
   logCallImpl isRec name action a b c = logCallImpl isRec name $ action a b c
 
 instance (IsReadWrite rw, Monad m) => LogCall (a -> b -> c -> MagicCont p rw bail m z) where
+  logCallImpl :: (IsReadWrite rw, Monad m, IsNamed name) => IsRec -> name -> (a -> b -> c -> MagicCont p rw bail m z) -> a -> b -> c -> MagicCont p rw bail m z
   logCallImpl isRec name action a b c = logCallImpl isRec name $ action a b c
 
 class ToPriorityEnd a b where
   toPriorityEnd :: (Monad m) => MagicCont 'Private 'RW a m b -> MagicCont 'Private 'RW PriorityEnd m PriorityEnd
 
 instance ToPriorityEnd Void Void where
+  toPriorityEnd :: (Monad m) => MagicCont 'Private 'RW Void m Void -> MagicCont 'Private 'RW PriorityEnd m PriorityEnd
   toPriorityEnd = mapVoidToEnd . fmap Left
 
 instance ToPriorityEnd Void () where
+  toPriorityEnd :: (Monad m) => MagicCont 'Private 'RW Void m () -> MagicCont 'Private 'RW PriorityEnd m PriorityEnd
   toPriorityEnd = mapVoidToEnd . fmap Right
 
 instance ToPriorityEnd Void PriorityEnd where
+  toPriorityEnd :: (Monad m) => MagicCont 'Private 'RW Void m PriorityEnd -> MagicCont 'Private 'RW PriorityEnd m PriorityEnd
   toPriorityEnd = mapVoidToEnd
 
 instance ToPriorityEnd () () where
+  toPriorityEnd :: (Monad m) => MagicCont 'Private 'RW () m () -> MagicCont 'Private 'RW PriorityEnd m PriorityEnd
   toPriorityEnd = mapUnitToEnd . fmap Right
 
 instance ToPriorityEnd () Void where
+  toPriorityEnd :: (Monad m) => MagicCont 'Private 'RW () m Void -> MagicCont 'Private 'RW PriorityEnd m PriorityEnd
   toPriorityEnd = mapUnitToEnd . fmap Left
 
 instance ToPriorityEnd () PriorityEnd where
+  toPriorityEnd :: (Monad m) => MagicCont 'Private 'RW () m PriorityEnd -> MagicCont 'Private 'RW PriorityEnd m PriorityEnd
   toPriorityEnd = mapUnitToEnd
 
 mapVoidToEnd :: (Monad m) => MagicCont 'Private 'RW Void m PriorityEnd -> MagicCont 'Private 'RW PriorityEnd m PriorityEnd

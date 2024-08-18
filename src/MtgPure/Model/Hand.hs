@@ -21,11 +21,16 @@ newtype Hand :: Type where
   deriving (Typeable)
 
 instance IsCardList Hand (ZO 'ZHand OTNCard) where
+  toCardList :: [ZO 'ZHand OTNCard] -> Hand
   toCardList = Hand
+
+  fromCardList :: Hand -> [ZO 'ZHand OTNCard]
   fromCardList = unHand
 
 instance Semigroup Hand where
+  (<>) :: Hand -> Hand -> Hand
   Hand a <> Hand b = Hand (a <> b)
 
 instance Monoid Hand where
+  mempty :: Hand
   mempty = Hand mempty

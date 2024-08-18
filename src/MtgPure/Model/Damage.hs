@@ -29,6 +29,7 @@ deriving instance (Show a) => Show (Damage' v a)
 type Damage v = Damage' v Int
 
 instance ForceVars (Damage v) (Damage 'NoVar) where
+  forceVars :: Damage v -> Damage 'NoVar
   forceVars = \case
     Damage n -> Damage n
     VariableDamage (ReifiedVariable _ n) -> Damage n

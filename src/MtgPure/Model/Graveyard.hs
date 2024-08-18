@@ -20,11 +20,16 @@ newtype Graveyard :: Type where
   deriving (Typeable)
 
 instance IsCardList Graveyard (ZO 'ZGraveyard OTNCard) where
+  toCardList :: [ZO 'ZGraveyard OTNCard] -> Graveyard
   toCardList = Graveyard
+
+  fromCardList :: Graveyard -> [ZO 'ZGraveyard OTNCard]
   fromCardList = unGraveyard
 
 instance Semigroup Graveyard where
+  (<>) :: Graveyard -> Graveyard -> Graveyard
   Graveyard a <> Graveyard b = Graveyard (a <> b)
 
 instance Monoid Graveyard where
+  mempty :: Graveyard
   mempty = Graveyard mempty

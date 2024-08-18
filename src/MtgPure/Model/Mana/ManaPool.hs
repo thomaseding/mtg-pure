@@ -40,6 +40,7 @@ data ManaPayment = ManaPayment
   deriving (Eq, Ord, Typeable) --  TODO: Make some of these orphans
 
 instance Semigroup (ManaPool snow) where
+  (<>) :: ManaPool snow -> ManaPool snow -> ManaPool snow
   mp1 <> mp2 =
     ManaPool
       { poolW = w1 <> w2
@@ -68,6 +69,7 @@ instance Semigroup (ManaPool snow) where
       } = mp2
 
 instance Semigroup ManaPayment where
+  (<>) :: ManaPayment -> ManaPayment -> ManaPayment
   mp1 <> mp2 =
     ManaPayment
       { paymentMana = m1 <> m2
@@ -84,6 +86,7 @@ instance Semigroup ManaPayment where
       } = mp2
 
 instance Semigroup CompleteManaPool where
+  (<>) :: CompleteManaPool -> CompleteManaPool -> CompleteManaPool
   mp1 <> mp2 =
     CompleteManaPool
       { poolSnow = s1 <> s2
@@ -100,6 +103,7 @@ instance Semigroup CompleteManaPool where
       } = mp2
 
 instance Monoid (ManaPool snow) where
+  mempty :: ManaPool snow
   mempty =
     ManaPool
       { poolW = mempty
@@ -111,6 +115,7 @@ instance Monoid (ManaPool snow) where
       }
 
 instance Monoid CompleteManaPool where
+  mempty :: CompleteManaPool
   mempty =
     CompleteManaPool
       { poolSnow = mempty
@@ -118,6 +123,7 @@ instance Monoid CompleteManaPool where
       }
 
 instance Monoid ManaPayment where
+  mempty :: ManaPayment
   mempty =
     ManaPayment
       { paymentMana = mempty

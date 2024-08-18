@@ -83,58 +83,96 @@ visitNonCreature' ::
 visitNonCreature' f = visitNonCreatureCard $ NonCreatureCardVisitor f f f f f f
 
 instance IsNonCreatureCardType 'OTArtifact where
+  singNonCreatureCardType :: Proxy 'OTArtifact -> NonCreatureCardType
   singNonCreatureCardType _ = NCTArtifact
+
+  singNonCreatureCard :: Proxy 'OTArtifact -> WNonCreatureCard (OT1 'OTArtifact)
   singNonCreatureCard _ = WNonCreatureArtifact
+
+  visitNonCreatureCard :: NonCreatureCardVisitor zone z -> WNonCreatureCard (OT1 'OTArtifact) -> ZO zone (OT1 'OTArtifact) -> z
   visitNonCreatureCard v _ = visitNCArtifact v
 
 instance IsNonCreatureCardType 'OTEnchantment where
+  singNonCreatureCardType :: Proxy 'OTEnchantment -> NonCreatureCardType
   singNonCreatureCardType _ = NCTEnchantment
+
+  singNonCreatureCard :: Proxy 'OTEnchantment -> WNonCreatureCard (OT1 'OTEnchantment)
   singNonCreatureCard _ = WNonCreatureEnchantment
+
+  visitNonCreatureCard :: NonCreatureCardVisitor zone z -> WNonCreatureCard (OT1 'OTEnchantment) -> ZO zone (OT1 'OTEnchantment) -> z
   visitNonCreatureCard v _ = visitNCEnchantment v
 
 instance IsNonCreatureCardType 'OTInstant where
+  singNonCreatureCardType :: Proxy 'OTInstant -> NonCreatureCardType
   singNonCreatureCardType _ = NCTInstant
+
+  singNonCreatureCard :: Proxy 'OTInstant -> WNonCreatureCard (OT1 'OTInstant)
   singNonCreatureCard _ = WNonCreatureInstant
+
+  visitNonCreatureCard :: NonCreatureCardVisitor zone z -> WNonCreatureCard (OT1 'OTInstant) -> ZO zone (OT1 'OTInstant) -> z
   visitNonCreatureCard v _ = visitNCInstant v
 
 instance IsNonCreatureCardType 'OTLand where
+  singNonCreatureCardType :: Proxy 'OTLand -> NonCreatureCardType
   singNonCreatureCardType _ = NCTLand
+
+  singNonCreatureCard :: Proxy 'OTLand -> WNonCreatureCard (OT1 'OTLand)
   singNonCreatureCard _ = WNonCreatureLand
+
+  visitNonCreatureCard :: NonCreatureCardVisitor zone z -> WNonCreatureCard (OT1 'OTLand) -> ZO zone (OT1 'OTLand) -> z
   visitNonCreatureCard v _ = visitNCLand v
 
 instance IsNonCreatureCardType 'OTPlaneswalker where
+  singNonCreatureCardType :: Proxy 'OTPlaneswalker -> NonCreatureCardType
   singNonCreatureCardType _ = NCTPlaneswalker
+
+  singNonCreatureCard :: Proxy 'OTPlaneswalker -> WNonCreatureCard (OT1 'OTPlaneswalker)
   singNonCreatureCard _ = WNonCreaturePlaneswalker
+
+  visitNonCreatureCard :: NonCreatureCardVisitor zone z -> WNonCreatureCard (OT1 'OTPlaneswalker) -> ZO zone (OT1 'OTPlaneswalker) -> z
   visitNonCreatureCard v _ = visitNCPlaneswalker v
 
 instance IsNonCreatureCardType 'OTSorcery where
+  singNonCreatureCardType :: Proxy 'OTSorcery -> NonCreatureCardType
   singNonCreatureCardType _ = NCTSorcery
+
+  singNonCreatureCard :: Proxy 'OTSorcery -> WNonCreatureCard (OT1 'OTSorcery)
   singNonCreatureCard _ = WNonCreatureSorcery
+
+  visitNonCreatureCard :: NonCreatureCardVisitor zone z -> WNonCreatureCard (OT1 'OTSorcery) -> ZO zone (OT1 'OTSorcery) -> z
   visitNonCreatureCard v _ = visitNCSorcery v
 
 class (IsOTN ot) => CoNonCreatureCard ot where
   coNonCreatureCard :: WNonCreatureCard ot
 
 instance CoNonCreatureCard OTNArtifact where
+  coNonCreatureCard :: WNonCreatureCard OTNArtifact
   coNonCreatureCard = WNonCreatureArtifact
 
 instance CoNonCreatureCard OTNEnchantment where
+  coNonCreatureCard :: WNonCreatureCard OTNEnchantment
   coNonCreatureCard = WNonCreatureEnchantment
 
 instance CoNonCreatureCard OTNInstant where
+  coNonCreatureCard :: WNonCreatureCard OTNInstant
   coNonCreatureCard = WNonCreatureInstant
 
 instance CoNonCreatureCard OTNLand where
+  coNonCreatureCard :: WNonCreatureCard OTNLand
   coNonCreatureCard = WNonCreatureLand
 
 instance CoNonCreatureCard OTNPlaneswalker where
+  coNonCreatureCard :: WNonCreatureCard OTNPlaneswalker
   coNonCreatureCard = WNonCreaturePlaneswalker
 
 instance CoNonCreatureCard OTNSorcery where
+  coNonCreatureCard :: WNonCreatureCard OTNSorcery
   coNonCreatureCard = WNonCreatureSorcery
 
 instance (Inst2 IsNonCreatureCardType a b) => CoNonCreatureCard (OT2 a b) where
+  coNonCreatureCard :: (Inst2 IsNonCreatureCardType a b) => WNonCreatureCard (OT2 a b)
   coNonCreatureCard = WNonCreatureCard2 :: WNonCreatureCard (OT2 a b)
 
 instance (Inst3 IsNonCreatureCardType a b c) => CoNonCreatureCard (OT3 a b c) where
+  coNonCreatureCard :: (Inst3 IsNonCreatureCardType a b c) => WNonCreatureCard (OT3 a b c)
   coNonCreatureCard = WNonCreatureCard3 :: WNonCreatureCard (OT3 a b c)

@@ -111,29 +111,36 @@ data
   deriving (Typeable)
 
 instance (Functor m) => Functor (Magic' ex st v rw m) where
+  fmap :: (Functor m) => (a -> b) -> Magic' ex st v rw m a -> Magic' ex st v rw m b
   fmap f = \case
     MagicRO a -> MagicRO $ fmap f a
     MagicRW a -> MagicRW $ fmap f a
 
 instance (IsReadWrite rw, Monad m) => Applicative (Magic' ex st v rw m) where
+  pure :: (IsReadWrite rw, Monad m) => a -> Magic' ex st v rw m a
   pure = case singReadWrite @rw of
     SRO -> MagicRO . pure
     SRW -> MagicRW . pure
+
+  (<*>) :: (IsReadWrite rw, Monad m) => Magic' ex st v rw m (a -> b) -> Magic' ex st v rw m a -> Magic' ex st v rw m b
   magicF <*> magicA = case (magicF, magicA) of
     (MagicRO f, MagicRO a) -> MagicRO $ f <*> a
     (MagicRW f, MagicRW a) -> MagicRW $ f <*> a
 
 instance (IsReadWrite rw, Monad m) => Monad (Magic' ex st v rw m) where
+  (>>=) :: (IsReadWrite rw, Monad m) => Magic' ex st v rw m a -> (a -> Magic' ex st v rw m b) -> Magic' ex st v rw m b
   magicA >>= f = case magicA of
     MagicRO a -> MagicRO $ a >>= unMagicRO . f
     MagicRW a -> MagicRW $ a >>= unMagicRW . f
 
 instance (IsReadWrite rw) => MonadTrans (Magic' ex st v rw) where
+  lift :: (IsReadWrite rw, Monad m) => m a -> Magic' ex st v rw m a
   lift = case singReadWrite @rw of
     SRO -> MagicRO . lift . lift . lift
     SRW -> MagicRW . lift . lift . lift . lift
 
 instance (IsReadWrite rw, MonadIO m) => MonadIO (Magic' ex st v rw m) where
+  liftIO :: (IsReadWrite rw, MonadIO m) => IO a -> Magic' ex st v rw m a
   liftIO = case singReadWrite @rw of
     SRO -> MagicRO . liftIO
     SRW -> MagicRW . liftIO
@@ -154,16 +161,22 @@ class (IsReadWrite rw, Monad m) => HasEnvLogCall ex st rw m where
   theEnvLogCall :: EnvLogCall ex st v rw m
 
 instance (HasEnvLogCall ex st rw m) => Functor (MagicCont' ex st v rw bail m) where
+  fmap :: (HasEnvLogCall ex st rw m) => (a -> b) -> MagicCont' ex st v rw bail m a -> MagicCont' ex st v rw bail m b
   fmap f = MagicCont . fmap f . unMagicCont
 
 instance (HasEnvLogCall ex st rw m) => Applicative (MagicCont' ex st v rw bail m) where
+  pure :: (HasEnvLogCall ex st rw m) => a -> MagicCont' ex st v rw bail m a
   pure = MagicCont . pure
+
+  (<*>) :: (HasEnvLogCall ex st rw m) => MagicCont' ex st v rw bail m (a -> b) -> MagicCont' ex st v rw bail m a -> MagicCont' ex st v rw bail m b
   MagicCont f <*> MagicCont a = MagicCont $ f <*> a
 
 instance (HasEnvLogCall ex st rw m) => Monad (MagicCont' ex st v rw bail m) where
+  (>>=) :: (HasEnvLogCall ex st rw m) => MagicCont' ex st v rw bail m a -> (a -> MagicCont' ex st v rw bail m b) -> MagicCont' ex st v rw bail m b
   MagicCont a >>= f = MagicCont $ a >>= unMagicCont . f
 
 instance (HasEnvLogCall ex st rw m, MonadIO m) => MonadIO (MagicCont' ex st v rw bail m) where
+  liftIO :: (HasEnvLogCall ex st rw m, MonadIO m) => IO a -> MagicCont' ex st v rw bail m a
   liftIO = liftCont . liftIO
 
 magicThrow :: (Monad m) => ex -> Magic' ex st 'Private 'RW m b

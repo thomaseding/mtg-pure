@@ -581,30 +581,39 @@ class (ot ~ dummyOT) => PayElected (ac :: ActivateCast) (ot :: Type) (dummyOT ::
   payElectedAndPutOnStack' :: (Monad m) => ZO 'ZStack OT0 -> Elected 'TargetStage ot -> Magic 'Private 'RW m Legality
 
 instance (IsOTN ot) => PayElected 'Activate ot ot where
+  payElectedAndPutOnStack' :: (IsOTN ot, Monad m) => ZO 'ZStack OT0 -> Elected 'TargetStage ot -> Magic 'Private 'RW m Legality
   payElectedAndPutOnStack' = payElectedAndPutOnStackAbility @ot
 
 instance PayElected 'Cast OTNArtifact OTNArtifact where
+  payElectedAndPutOnStack' :: (Monad m) => ZO 'ZStack OT0 -> Elected 'TargetStage OTNArtifact -> Magic 'Private 'RW m Legality
   payElectedAndPutOnStack' = payElectedAndPutOnStackSpell @'OTArtifact
 
 instance PayElected 'Cast OTNArtifactCreature OTNArtifactCreature where
+  payElectedAndPutOnStack' :: (Monad m) => ZO 'ZStack OT0 -> Elected 'TargetStage OTNArtifactCreature -> Magic 'Private 'RW m Legality
   payElectedAndPutOnStack' = payElectedAndPutOnStackSpell @'OTCreature
 
 instance PayElected 'Cast OTNCreature OTNCreature where
+  payElectedAndPutOnStack' :: (Monad m) => ZO 'ZStack OT0 -> Elected 'TargetStage OTNCreature -> Magic 'Private 'RW m Legality
   payElectedAndPutOnStack' = payElectedAndPutOnStackSpell @'OTCreature
 
 instance PayElected 'Cast OTNEnchantment OTNEnchantment where
+  payElectedAndPutOnStack' :: (Monad m) => ZO 'ZStack OT0 -> Elected 'TargetStage OTNEnchantment -> Magic 'Private 'RW m Legality
   payElectedAndPutOnStack' = payElectedAndPutOnStackSpell @'OTEnchantment
 
 instance PayElected 'Cast OTNEnchantmentCreature OTNEnchantmentCreature where
+  payElectedAndPutOnStack' :: (Monad m) => ZO 'ZStack OT0 -> Elected 'TargetStage OTNEnchantmentCreature -> Magic 'Private 'RW m Legality
   payElectedAndPutOnStack' = payElectedAndPutOnStackSpell @'OTCreature
 
 instance PayElected 'Cast OTNInstant OTNInstant where
+  payElectedAndPutOnStack' :: (Monad m) => ZO 'ZStack OT0 -> Elected 'TargetStage OTNInstant -> Magic 'Private 'RW m Legality
   payElectedAndPutOnStack' = payElectedAndPutOnStackSpell @'OTInstant
 
 instance PayElected 'Cast OTNPlaneswalker OTNPlaneswalker where
+  payElectedAndPutOnStack' :: (Monad m) => ZO 'ZStack OT0 -> Elected 'TargetStage OTNPlaneswalker -> Magic 'Private 'RW m Legality
   payElectedAndPutOnStack' = payElectedAndPutOnStackSpell @'OTPlaneswalker
 
 instance PayElected 'Cast OTNSorcery OTNSorcery where
+  payElectedAndPutOnStack' :: (Monad m) => ZO 'ZStack OT0 -> Elected 'TargetStage OTNSorcery -> Magic 'Private 'RW m Legality
   payElectedAndPutOnStack' = payElectedAndPutOnStackSpell @'OTSorcery
 
 payElectedAndPutOnStackAbility ::

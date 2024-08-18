@@ -27,8 +27,8 @@ module Ansi.TrueColor.FileFormat (
 
 import safe qualified Control.Monad as M
 import safe Data.Binary (Binary (..), getWord8, putWord8)
-import safe Data.Binary.Get (getWord16be, getWord32be)
-import safe Data.Binary.Put (putWord16be, putWord32be)
+import safe Data.Binary.Get (Get, getWord16be, getWord32be)
+import safe Data.Binary.Put (Put, putWord16be, putWord32be)
 import safe qualified Data.Char as Char
 import safe Data.Word (Word8)
 
@@ -107,6 +107,7 @@ data Color = Color
 --------------------------------------------------------------------------------
 
 instance Binary File where
+  get :: Get File
   get = do
     header <- get
     images <- get
@@ -115,6 +116,8 @@ instance Binary File where
         { file_header = header
         , file_images = images
         }
+
+  put :: File -> Put
   put
     File
       { file_header = header
@@ -125,6 +128,7 @@ instance Binary File where
       put images
 
 instance Binary Header where
+  get :: Get Header
   get = do
     magicNumber <- get
     version <- get
@@ -139,6 +143,8 @@ instance Binary Header where
         { header_magicNumber = magicNumber
         , header_version = version
         }
+
+  put :: Header -> Put
   put
     Header
       { header_magicNumber = magicNumber
@@ -148,14 +154,18 @@ instance Binary Header where
       put version
 
 instance Binary MagicNumber where
+  get :: Get MagicNumber
   get = do
     magicNumber <- M.replicateM (length ansiMagicNumber) getWord8
     if magicNumber == ansiMagicNumber
       then pure MagicNumber
       else fail "Invalid file format magic"
+
+  put :: MagicNumber -> Put
   put MagicNumber = mapM_ putWord8 ansiMagicNumber
 
 instance Binary Version where
+  get :: Get Version
   get = do
     major <- fromIntegral <$> getWord16be
     minor <- fromIntegral <$> getWord16be
@@ -164,6 +174,8 @@ instance Binary Version where
         { version_major = major
         , version_minor = minor
         }
+
+  put :: Version -> Put
   put
     Version
       { version_major = major
@@ -173,6 +185,7 @@ instance Binary Version where
       putWord16be $ fromIntegral minor
 
 instance Binary Images where
+  get :: Get Images
   get = do
     imageCount <- fromIntegral <$> getWord32be
     images <- M.replicateM imageCount get
@@ -181,6 +194,8 @@ instance Binary Images where
         { images_imageCount = imageCount
         , images_images = images
         }
+
+  put :: Images -> Put
   put
     Images
       { images_imageCount = imageCount
@@ -191,6 +206,7 @@ instance Binary Images where
       mapM_ put images
 
 instance Binary Image where
+  get :: Get Image
   get = do
     width <- fromIntegral <$> getWord16be
     height <- fromIntegral <$> getWord16be
@@ -201,6 +217,8 @@ instance Binary Image where
         , image_height = height
         , image_pixelGrid = pixelGrid
         }
+
+  put :: Image -> Put
   put
     Image
       { image_width = width
@@ -214,6 +232,7 @@ instance Binary Image where
       mapM_ (mapM_ put) pixelGrid
 
 instance Binary Pixel where
+  get :: Get Pixel
   get = do
     char <- Char.chr . fromIntegral <$> getWord32be
     fg <- get
@@ -224,6 +243,8 @@ instance Binary Pixel where
         , pixel_fg = fg
         , pixel_bg = bg
         }
+
+  put :: Pixel -> Put
   put
     Pixel
       { pixel_char = char
@@ -235,6 +256,7 @@ instance Binary Pixel where
       put bg
 
 instance Binary Color where
+  get :: Get Color
   get = do
     r <- getWord8
     g <- getWord8
@@ -245,6 +267,8 @@ instance Binary Color where
         , color_g = g
         , color_b = b
         }
+
+  put :: Color -> Put
   put
     Color
       { color_r = r

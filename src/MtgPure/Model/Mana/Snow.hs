@@ -18,7 +18,9 @@ class (Typeable snow) => IsSnow (snow :: Snow) where
   litSnow :: Snow
 
 instance IsSnow 'Snow where
+  litSnow :: Snow
   litSnow = Snow
 
 instance IsSnow 'NonSnow where
+  litSnow :: Snow
   litSnow = NonSnow

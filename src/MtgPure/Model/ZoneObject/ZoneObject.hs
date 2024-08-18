@@ -70,7 +70,7 @@ import safe MtgPure.Model.Object.OTNAliases (
   OTNStaticAbility,
   OTNTriggeredAbility,
  )
-import safe MtgPure.Model.Object.ObjectId (GetObjectId (..))
+import safe MtgPure.Model.Object.ObjectId (GetObjectId (..), UntypedObject)
 import safe MtgPure.Model.Object.ObjectN (ObjectN)
 import safe MtgPure.Model.Object.PromoteIdToObjectN (PromoteIdToObjectN)
 import safe MtgPure.Model.Object.VisitObjectN ()
@@ -88,10 +88,12 @@ zoToObjectN = \case
   ZO _ o -> o
 
 instance ConsIndex (ZO zone ot) where
+  consIndex :: ZO zone ot -> Int
   consIndex = \case
     ZO{} -> 1
 
 instance (IsZone zone, PrettyType ot) => PrettyType (ZO zone ot) where
+  prettyType :: (IsZone zone, PrettyType ot) => String
   prettyType = "ZO '" ++ sZone ++ " " ++ open ++ sOT ++ close
    where
     sZone = show (litZone @zone)
@@ -101,6 +103,7 @@ instance (IsZone zone, PrettyType ot) => PrettyType (ZO zone ot) where
       False -> ("", "")
 
 instance GetObjectId (ZO zone ot) where
+  getUntypedObject :: ZO zone ot -> UntypedObject
   getUntypedObject = getUntypedObject . zoToObjectN
 
 type IsOTN (ot :: Type) =

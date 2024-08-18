@@ -44,9 +44,11 @@ class IsReadWrite (rw :: ReadWrite) where
   singReadWrite :: SReadWrite rw
 
 instance IsReadWrite 'RO where
+  singReadWrite :: SReadWrite 'RO
   singReadWrite = SRO
 
 instance IsReadWrite 'RW where
+  singReadWrite :: SReadWrite 'RW
   singReadWrite = SRW
 
 newtype
@@ -64,19 +66,26 @@ newtype
   deriving (Typeable)
 
 instance (Functor m) => Functor (AccessM v rw m) where
+  fmap :: (Functor m) => (a -> b) -> AccessM v rw m a -> AccessM v rw m b
   fmap f (AccessM a) = AccessM $ fmap f a
 
 instance (Applicative m) => Applicative (AccessM v rw m) where
+  pure :: (Applicative m) => a -> AccessM v rw m a
   pure = AccessM . pure
+
+  (<*>) :: (Applicative m) => AccessM v rw m (a -> b) -> AccessM v rw m a -> AccessM v rw m b
   AccessM f <*> AccessM a = AccessM $ f <*> a
 
 instance (Monad m) => Monad (AccessM v rw m) where
+  (>>=) :: (Monad m) => AccessM v rw m a -> (a -> AccessM v rw m b) -> AccessM v rw m b
   AccessM a >>= f = AccessM $ a >>= runAccessM . f
 
 instance MonadTrans (AccessM v rw) where
+  lift :: (Monad m) => m a -> AccessM v rw m a
   lift = AccessM
 
 instance (MonadIO m) => MonadIO (AccessM v rw m) where
+  liftIO :: (MonadIO m) => IO a -> AccessM v rw m a
   liftIO = AccessM . liftIO
 
 safeToPrivate :: AccessM v rw m a -> AccessM 'Private rw m a

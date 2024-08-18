@@ -37,21 +37,36 @@ class (Typeable color) => IsColor (color :: Color) where
   singColor :: SColor color
 
 instance IsColor 'White where
+  litColor :: Color
   litColor = White
+
+  singColor :: SColor 'White
   singColor = SWhite
 
 instance IsColor 'Blue where
+  litColor :: Color
   litColor = Blue
+
+  singColor :: SColor 'Blue
   singColor = SBlue
 
 instance IsColor 'Black where
+  litColor :: Color
   litColor = Black
+
+  singColor :: SColor 'Black
   singColor = SBlack
 
 instance IsColor 'Red where
+  litColor :: Color
   litColor = Red
+
+  singColor :: SColor 'Red
   singColor = SRed
 
 instance IsColor 'Green where
+  litColor :: Color
   litColor = Green
+
+  singColor :: SColor 'Green
   singColor = SGreen

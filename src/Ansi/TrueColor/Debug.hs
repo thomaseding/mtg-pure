@@ -35,6 +35,7 @@ class (ImageToGrid p) => PixelToAnsi p where
   pixelToAnsi :: p -> AnsiImage
 
 instance PixelToAnsi PixelRGB8 where
+  pixelToAnsi :: PixelRGB8 -> AnsiImage
   pixelToAnsi p = toAnsiString [setFg, setBg] <> toAnsiString '.'
    where
     PixelRGB8 r g b = p
@@ -42,6 +43,7 @@ instance PixelToAnsi PixelRGB8 where
     setFg = SgrTrueColor Fg $ Rgb (255 - r) (255 - g) (255 - b)
 
 instance PixelToAnsi Pixel1 where
+  pixelToAnsi :: Pixel1 -> AnsiImage
   pixelToAnsi p = toAnsiString [setFg, setBg] <> toAnsiString '.'
    where
     setBg = case p of

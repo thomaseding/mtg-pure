@@ -22,6 +22,7 @@ data TimePoint (p :: Phase) :: Type where
   deriving (Show, Typeable)
 
 instance ConsIndex (TimePoint p) where
+  consIndex :: TimePoint p -> Int
   consIndex = \case
     PhaseBegin{} -> 1
     PhaseEnd{} -> 2

@@ -20,11 +20,16 @@ newtype Library :: Type where
   deriving (Typeable)
 
 instance IsCardList Library (ZO 'ZLibrary OTNCard) where
+  toCardList :: [ZO 'ZLibrary OTNCard] -> Library
   toCardList = Library
+
+  fromCardList :: Library -> [ZO 'ZLibrary OTNCard]
   fromCardList = unLibrary
 
 instance Semigroup Library where
+  (<>) :: Library -> Library -> Library
   Library a <> Library b = Library (a <> b)
 
 instance Monoid Library where
+  mempty :: Library
   mempty = Library mempty

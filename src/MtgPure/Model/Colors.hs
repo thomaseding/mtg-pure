@@ -24,8 +24,10 @@ data Colors :: Type where
   deriving (Eq, Ord, Show, Typeable)
 
 instance Semigroup Colors where
+  (<>) :: Colors -> Colors -> Colors
   Colors w1 u1 b1 r1 g1 <> Colors w2 u2 b2 r2 g2 =
     Colors (w1 <> w2) (u1 <> u2) (b1 <> b2) (r1 <> r2) (g1 <> g2)
 
 instance Monoid Colors where
+  mempty :: Colors
   mempty = Colors Nothing Nothing Nothing Nothing Nothing

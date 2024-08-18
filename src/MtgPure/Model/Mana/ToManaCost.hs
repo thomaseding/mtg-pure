@@ -29,23 +29,29 @@ class ToManaCost (mana :: Type) where
   toManaCost :: mana -> ManaCost 'Var
 
 instance ToManaCost (ManaCost 'Var) where
+  toManaCost :: ManaCost 'Var -> ManaCost 'Var
   toManaCost = id
 
 instance {-# OVERLAPPABLE #-} (Inst2 ToManaCost a b) => ToManaCost (a, b) where
+  toManaCost :: (Inst2 ToManaCost a b) => (a, b) -> ManaCost 'Var
   toManaCost (a, b) = toManaCost a <> toManaCost b
 
 instance {-# OVERLAPPABLE #-} (Inst3 ToManaCost a b c) => ToManaCost (a, b, c) where
+  toManaCost :: (Inst3 ToManaCost a b c) => (a, b, c) -> ManaCost 'Var
   toManaCost (a, b, c) = toManaCost a <> toManaCost b <> toManaCost c
 
 instance {-# OVERLAPPABLE #-} (Inst4 ToManaCost a b c d) => ToManaCost (a, b, c, d) where
+  toManaCost :: (Inst4 ToManaCost a b c d) => (a, b, c, d) -> ManaCost 'Var
   toManaCost (a, b, c, d) =
     toManaCost a <> toManaCost b <> toManaCost c <> toManaCost d
 
 instance {-# OVERLAPPABLE #-} (Inst5 ToManaCost a b c d e) => ToManaCost (a, b, c, d, e) where
+  toManaCost :: (Inst5 ToManaCost a b c d e) => (a, b, c, d, e) -> ManaCost 'Var
   toManaCost (a, b, c, d, e) =
     toManaCost a <> toManaCost b <> toManaCost c <> toManaCost d <> toManaCost e
 
 instance {-# OVERLAPPABLE #-} (Inst6 ToManaCost a b c d e f) => ToManaCost (a, b, c, d, e, f) where
+  toManaCost :: (Inst6 ToManaCost a b c d e f) => (a, b, c, d, e, f) -> ManaCost 'Var
   toManaCost (a, b, c, d, e, f) =
     toManaCost a
       <> toManaCost b
@@ -55,6 +61,7 @@ instance {-# OVERLAPPABLE #-} (Inst6 ToManaCost a b c d e f) => ToManaCost (a, b
       <> toManaCost f
 
 instance {-# OVERLAPPABLE #-} (Inst7 ToManaCost a b c d e f g) => ToManaCost (a, b, c, d, e, f, g) where
+  toManaCost :: (Inst7 ToManaCost a b c d e f g) => (a, b, c, d, e, f, g) -> ManaCost 'Var
   toManaCost (a, b, c, d, e, f, g) =
     toManaCost a
       <> toManaCost b
@@ -65,12 +72,15 @@ instance {-# OVERLAPPABLE #-} (Inst7 ToManaCost a b c d e f g) => ToManaCost (a,
       <> toManaCost g
 
 instance ToManaCost Integer where
+  toManaCost :: Integer -> ManaCost 'Var
   toManaCost n = toManaCost (fromInteger n :: Int)
 
 instance ToManaCost Int where
+  toManaCost :: Int -> ManaCost 'Var
   toManaCost = toManaCost @(Mana 'Var 'NonSnow 'Ty1) . Mana
 
 instance (IsCostType mt, snow ~ ManaTypeToSnow mt) => ToManaCost (Mana 'Var snow mt) where
+  toManaCost :: (IsCostType mt, snow ~ ManaTypeToSnow mt) => Mana 'Var snow mt -> ManaCost 'Var
   toManaCost x = case singCostType @mt of
     SCTy1 -> emptyManaCost{costDynamic = mempty{costGeneric = x}}
     SCTyW -> emptyManaCost{costW = x}
@@ -104,6 +114,7 @@ instance (IsCostType mt, snow ~ ManaTypeToSnow mt) => ToManaCost (Mana 'Var snow
     SCTyPC -> emptyManaCost{costDynamic = mempty{costPhyrexian = mempty{phyrexianC = x}}}
 
 instance (IsCostType mt) => ToManaCost (ManaSymbol mt, Int) where
+  toManaCost :: (IsCostType mt) => (ManaSymbol mt, Int) -> ManaCost 'Var
   toManaCost (_, n) = case singCostType @mt of
     SCTy1 -> emptyManaCost{costDynamic = mempty{costGeneric = Mana n}}
     SCTyW -> emptyManaCost{costW = Mana n}
@@ -137,6 +148,7 @@ instance (IsCostType mt) => ToManaCost (ManaSymbol mt, Int) where
     SCTyPC -> emptyManaCost{costDynamic = mempty{costPhyrexian = mempty{phyrexianC = Mana n}}}
 
 instance (IsCostType mt) => ToManaCost (ManaSymbol mt) where
+  toManaCost :: (IsCostType mt) => ManaSymbol mt -> ManaCost 'Var
   toManaCost _ = case singCostType @mt of
     SCTy1 -> emptyManaCost{costDynamic = mempty{costGeneric = Mana 1}}
     SCTyW -> toManaCost (W, 1 :: Int)
@@ -170,6 +182,7 @@ instance (IsCostType mt) => ToManaCost (ManaSymbol mt) where
     SCTyPC -> toManaCost (PC, 1 :: Int)
 
 instance ToManaCost (ManaPool 'NonSnow) where
+  toManaCost :: ManaPool 'NonSnow -> ManaCost 'Var
   toManaCost (ManaPool w u b r g c) =
     emptyManaCost
       { costW = litMana w
@@ -181,6 +194,7 @@ instance ToManaCost (ManaPool 'NonSnow) where
       }
 
 instance ToManaCost (ManaPool 'Snow) where
+  toManaCost :: ManaPool 'Snow -> ManaCost 'Var
   toManaCost (ManaPool w u b r g c) =
     emptyManaCost
       { costW = go w
@@ -194,4 +208,5 @@ instance ToManaCost (ManaPool 'Snow) where
     go = litMana . thawMana
 
 instance ToManaCost CompleteManaPool where
+  toManaCost :: CompleteManaPool -> ManaCost 'Var
   toManaCost (CompleteManaPool a b) = toManaCost a <> toManaCost b

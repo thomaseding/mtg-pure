@@ -64,6 +64,7 @@ data Csi where
   deriving (Eq, Ord)
 
 instance Show Csi where
+  show :: Csi -> String
   show = \case
     CsiSetNextLine -> "[+]"
     CsiSetPrevLine -> "[-]"
@@ -90,6 +91,7 @@ data Sgr where
   deriving (Eq, Ord)
 
 instance Show Sgr where
+  show :: Sgr -> String
   show = \case
     SgrReset -> "[reset]"
     SgrTrueColor Fg (Rgb r g b) -> "[fg=" ++ show r ++ "," ++ show g ++ "," ++ show b ++ "]"
@@ -102,6 +104,7 @@ data AnsiChar where
   deriving (Eq, Ord)
 
 instance Show AnsiChar where
+  show :: AnsiChar -> String
   show = \case
     AnsiChar c -> show c
     AnsiCsi csi -> show csi
@@ -111,50 +114,63 @@ newtype AnsiString = AnsiString {unAnsiString :: [AnsiChar]}
   deriving (Eq, Ord)
 
 instance Show AnsiString where
+  show :: AnsiString -> String
   show (AnsiString cs) = concatMap show cs
 
 instance IsString AnsiString where
+  fromString :: String -> AnsiString
   fromString = AnsiString . map AnsiChar
 
 instance Semigroup AnsiString where
+  (<>) :: AnsiString -> AnsiString -> AnsiString
   AnsiString x <> AnsiString y = AnsiString $ x ++ y
 
 instance Monoid AnsiString where
+  mempty :: AnsiString
   mempty = AnsiString []
 
 class ToAnsiString a where
   toAnsiString :: a -> AnsiString
 
 instance (ToAnsiString a) => ToAnsiString [a] where
+  toAnsiString :: (ToAnsiString a) => [a] -> AnsiString
   toAnsiString = mconcat . map toAnsiString
 
 instance ToAnsiString Csi where
+  toAnsiString :: Csi -> AnsiString
   toAnsiString = AnsiString . pure . AnsiCsi
 
 instance ToAnsiString Sgr where
+  toAnsiString :: Sgr -> AnsiString
   toAnsiString = AnsiString . pure . AnsiSgr
 
 instance ToAnsiString AnsiChar where
+  toAnsiString :: AnsiChar -> AnsiString
   toAnsiString = AnsiString . pure
 
 instance ToAnsiString Char where
+  toAnsiString :: Char -> AnsiString
   toAnsiString = toAnsiString . AnsiChar
 
 instance ToAnsiString String where
+  toAnsiString :: String -> AnsiString
   toAnsiString = fromString
 
 instance ToAnsiString AnsiString where
+  toAnsiString :: AnsiString -> AnsiString
   toAnsiString = id
 
 class AnsiToString a where
   ansiToString :: a -> String
 
 instance AnsiToString String where
+  ansiToString :: String -> String
   ansiToString = id
 
 -- TODO: Does extra work need to be done for Int values outside of Word8?
 -- Do I need to chain a bunch of relative movement commands?
 instance AnsiToString Csi where
+  ansiToString :: Csi -> String
   ansiToString = \case
     CsiSetNextLine -> "\ESC[E"
     CsiSetPrevLine -> "\ESC[F"
@@ -180,6 +196,7 @@ instance AnsiToString Csi where
       (x', y') -> "\ESC[" <> show y' <> ";" <> show x' <> "H"
 
 instance AnsiToString Sgr where
+  ansiToString :: Sgr -> String
   ansiToString = \case
     SgrReset -> "\ESC[0m"
     SgrTrueColor Fg (Rgb r g b) ->
@@ -188,12 +205,14 @@ instance AnsiToString Sgr where
       "\ESC[48;2;" <> show r <> ";" <> show g <> ";" <> show b <> "m"
 
 instance AnsiToString AnsiChar where
+  ansiToString :: AnsiChar -> String
   ansiToString = \case
     AnsiChar c -> [c]
     AnsiCsi csi -> ansiToString csi
     AnsiSgr sgr -> ansiToString sgr
 
 instance AnsiToString [AnsiChar] where
+  ansiToString :: [AnsiChar] -> String
   ansiToString = \case
     AnsiSgr (SgrTrueColor Fg (Rgb r1 g1 b1)) : AnsiSgr (SgrTrueColor Bg (Rgb r2 g2 b2)) : cs ->
       let x = "\ESC[38;2;" <> show r1 <> ";" <> show g1 <> ";" <> show b1 <> ";48;2;" <> show r2 <> ";" <> show g2 <> ";" <> show b2 <> "m"
@@ -205,6 +224,7 @@ instance AnsiToString [AnsiChar] where
     [] -> []
 
 instance AnsiToString AnsiString where
+  ansiToString :: AnsiString -> String
   ansiToString = ansiToString . unAnsiString
 
 parseSemiList :: String -> Either String (Char, [Int], String)
@@ -302,17 +322,26 @@ class Lines a where
   fromLines :: [a] -> a
 
 instance Lines String where
+  toLines :: String -> [String]
   toLines = lines
+
+  fromLines :: [String] -> String
   fromLines = unlines
 
 instance Lines [AnsiChar] where
+  toLines :: [AnsiChar] -> [[AnsiChar]]
   toLines cs = case span (/= AnsiChar '\n') cs of
     (pre, _ : post) -> pre : toLines post
     (pre, []) -> [pre]
+
+  fromLines :: [[AnsiChar]] -> [AnsiChar]
   fromLines cs = intercalate [AnsiChar '\n'] cs ++ [AnsiChar '\n']
 
 instance Lines AnsiString where
+  toLines :: AnsiString -> [AnsiString]
   toLines = map AnsiString . toLines . unAnsiString
+
+  fromLines :: [AnsiString] -> AnsiString
   fromLines = AnsiString . fromLines . map unAnsiString
 
 dropAnsi :: AnsiString -> String

@@ -34,6 +34,7 @@ data MtgPureConfig = MtgPureConfig
   deriving (Show)
 
 instance ToSafeJson MtgPureConfig where
+  toSafeJson :: MtgPureConfig -> SafeValue
   toSafeJson
     MtgPureConfig
       { mtgPure_scryfallUniqueArtworkJson = scryfallUniqueArtworkJson
@@ -52,6 +53,7 @@ instance ToSafeJson MtgPureConfig where
           ]
 
 instance FromSafeJson MtgPureConfig where
+  fromSafeJson :: SafeValue -> Either String MtgPureConfig
   fromSafeJson = \case
     SafeObject obj -> do
       scryfallUniqueArtworkJson <- fetch obj "scryfallUniqueArtworkJson"

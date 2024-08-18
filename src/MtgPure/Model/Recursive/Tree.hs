@@ -76,14 +76,21 @@ newtype TreeM a = TreeM {unTreeM :: State.State TreeState a}
   deriving (Functor)
 
 instance Applicative TreeM where
+  pure :: a -> TreeM a
   pure = TreeM . pure
+
+  (<*>) :: TreeM (a -> b) -> TreeM a -> TreeM b
   (<*>) f x = TreeM $ unTreeM f <*> unTreeM x
 
 instance Monad TreeM where
+  (>>=) :: TreeM a -> (a -> TreeM b) -> TreeM b
   (>>=) m f = TreeM $ unTreeM m >>= unTreeM . f
 
 instance State.MonadState TreeState TreeM where
+  get :: TreeM TreeState
   get = TreeM State.get
+
+  put :: TreeState -> TreeM ()
   put = TreeM . State.put
 
 runTreeM :: TreeConfig -> TreeM a -> a

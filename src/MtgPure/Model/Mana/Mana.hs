@@ -46,6 +46,7 @@ deriving instance Show (Mana var snow mt)
 
 -- TODO: Make this an orphan
 instance Semigroup (Mana var snow mt) where
+  (<>) :: Mana var snow mt -> Mana var snow mt -> Mana var snow mt
   (<>) x y = case (x, y) of
     (Mana a, Mana b) -> Mana (a + b)
     (Mana 0, _) -> y
@@ -57,10 +58,12 @@ instance Semigroup (Mana var snow mt) where
 
 -- TODO: Make this an orphan
 instance Monoid (Mana var snow mt) where
+  mempty :: Mana var snow mt
   mempty = Mana 0
 
 -- TODO: Make this an orphan
 instance (Num (Mana 'NoVar snow mt)) => ForceVars (Mana var snow mt) (Mana 'NoVar snow mt) where
+  forceVars :: (Num (Mana 'NoVar snow mt)) => Mana var snow mt -> Mana 'NoVar snow mt
   forceVars = \case
     Mana n -> Mana n
     VariableMana (ReifiedVariable _ n) -> Mana n

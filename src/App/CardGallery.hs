@@ -137,16 +137,22 @@ newtype Gallery a = Gallery
   }
 
 instance Functor Gallery where
+  fmap :: (a -> b) -> Gallery a -> Gallery b
   fmap f = Gallery . fmap f . unGallery
 
 instance Applicative Gallery where
+  pure :: a -> Gallery a
   pure = Gallery . pure
+
+  (<*>) :: Gallery (a -> b) -> Gallery a -> Gallery b
   f <*> x = Gallery $ unGallery f <*> unGallery x
 
 instance Monad Gallery where
+  (>>=) :: Gallery a -> (a -> Gallery b) -> Gallery b
   x >>= f = Gallery $ unGallery x >>= unGallery . f
 
 instance M.MonadIO Gallery where
+  liftIO :: IO a -> Gallery a
   liftIO = Gallery . M.liftIO
 
 runGallery :: Gallery a -> IO a

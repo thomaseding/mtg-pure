@@ -32,12 +32,15 @@ class IsElectStage (s :: ElectStage) where
   singElectStage :: SElectStage s
 
 instance IsElectStage 'IntrinsicStage where
+  singElectStage :: SElectStage 'IntrinsicStage
   singElectStage = SIntrinsicStage
 
 instance IsElectStage 'TargetStage where
+  singElectStage :: SElectStage 'TargetStage
   singElectStage = STargetStage
 
 instance IsElectStage 'ResolveStage where
+  singElectStage :: SElectStage 'ResolveStage
   singElectStage = SResolveStage
 
 data NonIntrinsicStage (s :: ElectStage) :: Type where
@@ -48,9 +51,11 @@ class (IsElectStage s) => CoNonIntrinsicStage (s :: ElectStage) where
   coNonIntrinsicStage :: NonIntrinsicStage s
 
 instance CoNonIntrinsicStage 'TargetStage where
+  coNonIntrinsicStage :: NonIntrinsicStage 'TargetStage
   coNonIntrinsicStage = NonIntrinsicTargetStage
 
 instance CoNonIntrinsicStage 'ResolveStage where
+  coNonIntrinsicStage :: NonIntrinsicStage 'ResolveStage
   coNonIntrinsicStage = NonIntrinsicResolveStage
 
 type family ElectStageRW (s :: ElectStage) = (rw :: ReadWrite) where
