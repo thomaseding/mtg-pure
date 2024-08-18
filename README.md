@@ -49,6 +49,7 @@ Purely functional Haskell "Magic: The Gathering" card model and game engine.
 
 ### Quickstart:
 ```
+$ cabal install fourmolu  # for code generation ; add to PATH if needed
 $ cd src
 $ runhaskell MtgPure/Model/Object/ToObjectN/CodeGen.hs
 $ cd ..

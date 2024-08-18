@@ -11,12 +11,14 @@
 {-# HLINT ignore "Use ++" #-}
 {-# HLINT ignore "Use tuple-section" #-}
 {-# HLINT ignore "Use if" #-}
+{-# HLINT ignore "Use camelCase" #-}
 
 module MtgPure.Model.Object.ToObjectN.CodeGen (
   main,
   mainCodeGenToObjectN,
 ) where
 
+import safe Data.Char (toLower)
 import safe Data.List (intercalate, sort, sortBy, subsequences, (\\))
 import safe Data.Maybe (catMaybes)
 import safe qualified Data.Set as Set
@@ -69,7 +71,6 @@ mkInstancesHeaderN n =
     , "{-# LANGUAGE Safe #-}"
     , "{-# LANGUAGE ScopedTypeVariables #-}"
     , "{-# LANGUAGE TypeFamilyDependencies #-}"
-    , "{-# OPTIONS_GHC -Wno-missing-signatures #-}"
     , "{-# OPTIONS_GHC -Wno-orphans #-}"
     , "{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}"
     , ""
@@ -82,13 +83,15 @@ mkInstancesHeaderN n =
     , ""
     , "import safe Data.Inst (Inst" ++ show n ++ ")"
     , "import safe MtgPure.Model.Object.IsObjectType (IsObjectType)"
+    , "import safe MtgPure.Model.Object.OTN (OT" ++ show n ++ ")"
+    , "import safe MtgPure.Model.Object.Object (Object)"
     , "import safe MtgPure.Model.Object.ObjectN (ObjectN (..))"
-    , "import safe MtgPure.Model.Object.ToObjectN.Classes(ToObject" ++ show n ++ "'(..))"
+    , "import safe MtgPure.Model.Object.ToObjectN.Classes (ToObject" ++ show n ++ "'(..))"
     , ""
     ]
 
-mkInstancesHeaderMN :: [Dependency] -> Int -> Int -> String
-mkInstancesHeaderMN deps m n =
+mkInstancesHeaderMN :: [Char] -> [Dependency] -> Int -> Int -> String
+mkInstancesHeaderMN letters deps m n =
   unlines
     [ "{-# LANGUAGE ConstraintKinds #-}"
     , "{-# LANGUAGE DataKinds #-}"
@@ -102,7 +105,6 @@ mkInstancesHeaderMN deps m n =
     , "{-# LANGUAGE Safe #-}"
     , "{-# LANGUAGE ScopedTypeVariables #-}"
     , "{-# LANGUAGE TypeFamilyDependencies #-}"
-    , "{-# OPTIONS_GHC -Wno-missing-signatures #-}"
     , "{-# OPTIONS_GHC -Wno-orphans #-}"
     , "{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}"
     , ""
@@ -115,16 +117,23 @@ mkInstancesHeaderMN deps m n =
     , ""
     , "import safe Data.Inst (Inst" ++ show n ++ ")"
     , "import safe MtgPure.Model.Object.IsObjectType (IsObjectType)"
-    , if
-        | m == n -> ""
-        | not (null deps) || m + 1 == n -> "import safe MtgPure.Model.Object.ObjectN (ObjectN (..))"
-        | otherwise -> ""
-    , "import safe MtgPure.Model.Object.OTN (OTN)"
+    , "import safe MtgPure.Model.Object.ObjectN (ObjectN (..))"
+    , "import safe MtgPure.Model.Object.OTN ("
+    , "  OTN,"
+    , forDeps \case
+        Dep_ToObject{} -> ""
+        Dep_toObject{} -> ""
+        Dep_OT x -> "  OT" ++ show x ++ ","
+        Alias_ON -> ""
+    , "  )"
     , "import safe MtgPure.Model.Object.ToObjectN.Classes ("
     , forDeps \case
-        ToObject x -> case x == 1 && n > 1 of
+        Dep_ToObject x -> case x == 1 && n > 1 of
           True -> ""
           False -> "  ToObject" ++ show x ++ "(..),"
+        Dep_toObject{} -> ""
+        Dep_OT{} -> ""
+        Alias_ON -> ""
     , "  )"
     , m_to_n_pairs \x y -> do
         if
@@ -134,15 +143,23 @@ mkInstancesHeaderMN deps m n =
           | otherwise -> ""
     , ""
     , if
-        | length deps > 1 -> "type ON = ObjectN"
+        | Alias_ON `elem` deps -> "type ON = ObjectN"
         | otherwise -> ""
     , if
         | length deps <= 1 -> ""
         | otherwise -> forDeps \case
-            ToObject 1 -> ""
-            ToObject x -> "to" ++ show x ++ " = toObject" ++ show x
+            Dep_ToObject{} -> ""
+            Dep_toObject 1 -> ""
+            Dep_toObject x ->
+              unlines
+                [ "to" ++ show x ++ " :: ToObject" ++ show x ++ " ot " ++ spacesLetters x ++ " => ObjectN ot -> ObjectN (OT" ++ show x ++ " " ++ spacesLetters x ++ ")"
+                , "to" ++ show x ++ " = toObject" ++ show x
+                ]
+            Dep_OT{} -> ""
+            Alias_ON -> ""
     ]
  where
+  spacesLetters x = unwords $ map pure $ take x letters
   forDeps f = unlines $ map f deps
   m_to_n_pairs f = unlines $ filter (not . null) $ map (uncurry f) $ nubOrd do
     x <- [m .. n]
@@ -230,7 +247,7 @@ mainCodeGenToObjectN = do
             let hsPath :: FilePath = instancesDir ++ "/ToObject_" ++ show m ++ "_" ++ show n ++ ".hs"
             withFile hsPath WriteMode \h -> do
               print (m, n)
-              hPutStrLn h $ mkInstancesHeaderMN deps m n
+              hPutStrLn h $ mkInstancesHeaderMN (map toLower letters) deps m n
               hPutStrLn h $ unlines results
               hFlush h -- needed?
             runFourmolu hsPath
@@ -275,29 +292,44 @@ generateObjectToObjectN :: SymDesc -> Sym -> [Sym] -> Maybe String
 generateObjectToObjectN desc sym symN =
   if
     | n < 1 -> Nothing
-    | otherwise -> Just $ instanceLine ++ "\n  " ++ funcLine ++ "\n"
+    | otherwise -> Just $ instanceLine ++ "\n" ++ signatureLine ++ "\n" ++ implLine ++ "\n"
  where
   n = length symN
 
-  instanceLine =
-    unwords $
-      ["instance", "Inst" ++ show n, "IsObjectType"]
-        ++ map (interpretSym desc) symN
-        ++ ["=>", "ToObject" ++ show n ++ "'", interpretSym desc sym]
-        ++ map (interpretSym desc) symN
-        ++ ["where"]
+  letter = interpretSym desc sym
+  spacesLetters = unwords $ map (interpretSym desc) symN
+  s_Inst = "Inst" ++ show n ++ " IsObjectType " ++ spacesLetters
+  s_ToObject' = "ToObject" ++ show n ++ "' " ++ letter ++ " " ++ spacesLetters
+  s_toObject' = "toObject" ++ show n ++ "'"
+  s_OT = "OT" ++ show n ++ " " ++ spacesLetters
 
-  funcLine =
-    unwords
-      [ "toObject" ++ show n ++ "'"
-      , "="
-      , "O" ++ if n == 1 then "1" else show n ++ interpretSym SymObject sym
-      ]
+  instanceLine = "instance " ++ s_Inst ++ " => " ++ s_ToObject' ++ " where"
+
+  signatureLine =
+    "  "
+      ++ s_toObject'
+      ++ " :: "
+      ++ s_Inst
+      ++ " => Object "
+      ++ letter
+      ++ " -> ObjectN "
+      ++ parens s_OT
+
+  implLine =
+    "  toObject"
+      ++ show n
+      ++ "'= O"
+      ++ if n == 1
+        then "1"
+        else show n ++ letter
 
 ----------------------------------------
 
-newtype Dependency
-  = ToObject Int
+data Dependency
+  = Dep_ToObject Int
+  | Dep_toObject Int
+  | Dep_OT Int
+  | Alias_ON
   deriving (Eq, Ord, Show)
 
 objectMsToObjectN :: SymDesc -> Int -> Int -> [(String, [Dependency])]
@@ -328,35 +360,36 @@ generateObjectMToObjectN :: SymDesc -> [Sym] -> [Sym] -> Maybe (String, [Depende
 generateObjectMToObjectN desc symsM symsN =
   if
     | m == n ->
-        Just
-          ( instanceLine ++ "\n  toObject" ++ show n ++ " = id\n"
-          , [ToObject n]
-          )
+        let
+          implLine = "  toObject" ++ show n ++ " = id"
+         in
+          Just
+            ( instanceLine ++ "\n" ++ signatureLine ++ "\n" ++ implLine ++ "\n"
+            , [Dep_ToObject n, Dep_OT n]
+            )
     | n <= 1 ->
         Nothing
     | m < 1 ->
         Nothing
     | m + 1 == n ->
-        Just
-          ( instanceLine
-              ++ "\n  toObject"
-              ++ show n
-              ++ " = ON"
-              ++ show n
-              ++ letterMissing
-              ++ "\n"
-          , [ToObject n]
-          )
+        let
+          implLine = "  toObject" ++ show n ++ " = ON" ++ show n ++ letterMissing
+         in
+          Just
+            ( instanceLine ++ "\n" ++ signatureLine ++ "\n" ++ implLine ++ "\n"
+            , [Dep_ToObject n, Dep_OT n]
+            )
     | otherwise ->
-        Just
-          ( instanceLine
-              ++ "\n  toObject"
-              ++ show n
-              ++ " x = "
-              ++ telescope
-              ++ "\n"
-          , map ToObject [m + 1 .. n]
-          )
+        let
+          implLine = "  toObject" ++ show n ++ " x = " ++ telescope
+         in
+          Just
+            ( instanceLine ++ "\n" ++ signatureLine ++ "\n" ++ implLine ++ "\n"
+            , map Dep_ToObject [m + 1 .. n]
+                ++ map Dep_toObject [m + 1 .. n]
+                ++ map Dep_OT [m + 1 .. n]
+                ++ [Alias_ON]
+            )
  where
   m = length symsM
   n = length symsN
@@ -365,13 +398,34 @@ generateObjectMToObjectN desc symsM symsN =
     _ -> error "impossible"
   seqSymsM = commas $ map (interpretSym desc) symsM
   telescope = telescopeToObjectN desc "x" symsM symsN
+  letters = map (interpretSym desc) symsN
+  s_Inst = "Inst" ++ show n ++ " IsObjectType " ++ unwords letters
+  s_OT = "OT" ++ show n ++ " " ++ unwords letters
+  s_OTN = "OTN '[" ++ seqSymsM ++ "]"
+  s_ToObject = "ToObject" ++ show n
+  s_toObject = "toObject" ++ show n
   instanceLine =
-    unwords $
-      ["instance", "Inst" ++ show n, "IsObjectType"]
-        ++ map (interpretSym desc) symsN
-        ++ ["=>", "ToObject" ++ show n, "(OTN '[" ++ seqSymsM ++ "])"]
-        ++ map (interpretSym desc) symsN
-        ++ ["where"]
+    "instance "
+      ++ s_Inst
+      ++ "=>"
+      ++ s_ToObject
+      ++ parens s_OTN
+      ++ unwords letters
+      ++ " where"
+  signatureLine =
+    "  "
+      ++ s_toObject
+      ++ "::"
+      ++ s_Inst
+      ++ "=>"
+      ++ "ObjectN"
+      ++ parens s_OTN
+      ++ "->"
+      ++ "ObjectN"
+      ++ parens s_OT
+
+parens :: String -> String
+parens x = "(" ++ x ++ ")"
 
 telescopeToObjectN :: SymDesc -> String -> [Sym] -> [Sym] -> String
 telescopeToObjectN desc acc symsM symsN = case m < n of
