@@ -54,24 +54,24 @@ $ runhaskell MtgPure/Model/Object/ToObjectN/CodeGen.hs
 $ cd ..
 $ cabal build
 $ cabal repl
-MtgPure> :m +MtgPure MtgPure.AllCards MtgPure.Cards MtgPure.Model.BasicLandType MtgPure.Model.LandType MtgPure.Model.Recursive
-MtgPure> :i allCards
+ghci> :m +MtgPure MtgPure.AllCards MtgPure.Cards MtgPure.Model.BasicLandType MtgPure.Model.LandType MtgPure.Model.Recursive
+ghci> :i allCards
 allCards :: [AnyCard]   -- Defined in `MtgPure.AllCards'
-MtgPure> :i island
+ghci> :i island
 island :: Card OTLand   -- Defined in `MtgPure.Cards'
-MtgPure> compare island island
+ghci> compare island island
 EQ
-MtgPure> print island
+ghci> print island
 Card "Island" $ ElectCardFacet $ LandCharacteristic [] [BasicLand Island] $ LandSpec []
-MtgPure> island == (Card "Island" $ ElectCardFacet $ LandCharacteristic [] [BasicLand Island] $ LandSpec [])
+ghci> island == (Card "Island" $ ElectCardFacet $ LandCharacteristic [] [BasicLand Island] $ LandSpec [])
 True
-MtgPure> island == (Card "Island" $ ElectCardFacet $ LandCharacteristic [] [BasicLand Mountain] $ LandSpec [])
+ghci> island == (Card "Island" $ ElectCardFacet $ LandCharacteristic [] [BasicLand Mountain] $ LandSpec [])
 False
-MtgPure> mainDemoGameplay -- runs Demo.MtgPure.Gameplay
+ghci> mainDemoGameplay -- runs Demo.MtgPure.Gameplay
 ```
 Notes:
  - Setting `-Wno-type-defaults` so the `Show` instances for cards don't need to constantly specify `Num` types when `Integer` is good enough for authoring. (Too much noise adding annotations for `Integer` or even `Int` or an alias `I`.)
- - `src/MtgPure/Model/Object/ToObjectN/Instances.hs` is a multi-megabyte file and will take a while to compile, hence the `-fobject-code` flag to cache the result inside the `ghci-compiled.bat` script. It is recommended you don't open this file with the Haskell Language Server active unless you want to max out and throttle your computer's RAM.
+ - `src/MtgPure/Model/Object/ToObjectN/Instances.hs` imports large generated files and will take a while to compile, hence the `-fobject-code` flag to cache the result inside the `ghci-compiled.bat` script.
 - Using `-fobject-code` with `ghci` seems to require quitting and reentering `ghci` in order to get it to pick up the right runtime behavior after making code changes.
 ---
 
