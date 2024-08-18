@@ -693,29 +693,9 @@ reifyWithLinkedObject zo withLinked = viewOTN bundle (linkedObjN bundle) goView
     LinkedBundle liftOT zone (OTN otk) ->
     OTN otk ->
     liftOT (OTN otk)
-  goView = curry \case
-    (bundle', OT1) ->
-      let go :: (ot ~ OT1 a) => LinkedBundle liftOT zone ot -> liftOT ot
-          go bundle'' = case linkedWith bundle'' of
-            Linked1 _reqs cont -> cont $ linkedZO bundle''
-       in go bundle'
-    (bundle', OT2) ->
-      let go :: (ot ~ OT2 a b) => LinkedBundle liftOT zone ot -> liftOT ot
-          go bundle'' = case linkedWith bundle'' of
-            Linked2 _reqs cont -> cont $ linkedZO bundle''
-       in go bundle'
-    (bundle', OT3) ->
-      let go :: (ot ~ OT3 a b c) => LinkedBundle liftOT zone ot -> liftOT ot
-          go bundle'' = case linkedWith bundle'' of
-            Linked3 _reqs cont -> cont $ linkedZO bundle''
-       in go bundle'
-    (bundle', OT4) ->
-      let go :: (ot ~ OT4 a b c d) => LinkedBundle liftOT zone ot -> liftOT ot
-          go bundle'' = case linkedWith bundle'' of
-            Linked4 _reqs cont -> cont $ linkedZO bundle''
-       in go bundle'
-    (bundle', OT5) ->
-      let go :: (ot ~ OT5 a b c d e) => LinkedBundle liftOT zone ot -> liftOT ot
-          go bundle'' = case linkedWith bundle'' of
-            Linked5 _reqs cont -> cont $ linkedZO bundle''
-       in go bundle'
+  goView bundle' _ = case linkedWith bundle' of
+    Linked1 _reqs cont -> cont $ linkedZO bundle'
+    Linked2 _reqs cont -> cont $ linkedZO bundle'
+    Linked3 _reqs cont -> cont $ linkedZO bundle'
+    Linked4 _reqs cont -> cont $ linkedZO bundle'
+    Linked5 _reqs cont -> cont $ linkedZO bundle'
