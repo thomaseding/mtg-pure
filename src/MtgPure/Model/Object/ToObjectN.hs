@@ -12,14 +12,15 @@ module MtgPure.Model.Object.ToObjectN (
 import safe MtgPure.Model.Object.OT (OT (..))
 import safe MtgPure.Model.Object.OTNAliases (OTNAny)
 import safe MtgPure.Model.Object.ObjectN (ObjectN)
-import safe MtgPure.Model.Object.ToObjectN.Classes
+import safe MtgPure.Model.Object.ToObjectN.Classes (ToObject13 (..))
 import safe MtgPure.Model.Object.ToObjectN.Instances ()
 
 toObjectNAny ::
-  ( ToObject12
+  ( ToObject13
       ot
       'OTActivatedAbility
       'OTArtifact
+      'OTBattle
       'OTCreature
       'OTEmblem
       'OTEnchantment
@@ -33,4 +34,4 @@ toObjectNAny ::
   ) =>
   ObjectN ot ->
   ObjectN OTNAny
-toObjectNAny = toObject12
+toObjectNAny = toObject13

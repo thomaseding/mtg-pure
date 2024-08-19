@@ -17,6 +17,7 @@ module Data.Inst (
   Inst10,
   Inst11,
   Inst12,
+  Inst13,
 ) where
 
 import safe Data.Kind (Constraint)
@@ -49,3 +50,6 @@ type Inst11 (x :: k' -> Constraint) a b c d e f g h i j k =
 
 type Inst12 (x :: k' -> Constraint) a b c d e f g h i j k l =
   (Inst11 x a b c d e f g h i j k, x l)
+
+type Inst13 (x :: k' -> Constraint) a b c d e f g h i j k l m =
+  (Inst12 x a b c d e f g h i j k l, x m)

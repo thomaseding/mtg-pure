@@ -18,6 +18,7 @@ module MtgPure.Model.Object.ToObjectN.Classes (
   ToObject10' (..),
   ToObject11' (..),
   ToObject12' (..),
+  ToObject13' (..),
   ToObject1 (..),
   ToObject2 (..),
   ToObject3 (..),
@@ -30,6 +31,7 @@ module MtgPure.Model.Object.ToObjectN.Classes (
   ToObject10 (..),
   ToObject11 (..),
   ToObject12 (..),
+  ToObject13 (..),
 ) where
 
 import safe Data.Inst (
@@ -37,6 +39,7 @@ import safe Data.Inst (
   Inst10,
   Inst11,
   Inst12,
+  Inst13,
   Inst2,
   Inst3,
   Inst4,
@@ -55,6 +58,7 @@ import safe MtgPure.Model.Object.OTN (
   OT10,
   OT11,
   OT12,
+  OT13,
   OT2,
   OT3,
   OT4,
@@ -68,6 +72,8 @@ import safe MtgPure.Model.Object.Object (
   Object (..),
  )
 import safe MtgPure.Model.Object.ObjectN (ObjectN (O0, O1))
+
+--------------------------------------------------------------------------------
 
 class (IsObjectType z, Inst1 IsObjectType a) => ToObject1' z a where
   -- NOTE: This is the same as `O1` for N=1, but uniqueness is not guaranteed
@@ -107,6 +113,11 @@ class (IsObjectType z, Inst11 IsObjectType a b c d e f g h i j k) => ToObject11'
 class (IsObjectType z, Inst12 IsObjectType a b c d e f g h i j k l) => ToObject12' z a b c d e f g h i j k l where
   toObject12' :: Object z -> ObjectN (OT12 a b c d e f g h i j k l)
 
+class (IsObjectType z, Inst13 IsObjectType a b c d e f g h i j k l m) => ToObject13' z a b c d e f g h i j k l m where
+  toObject13' :: Object z -> ObjectN (OT13 a b c d e f g h i j k l m)
+
+--------------------------------------------------------------------------------
+
 class (Inst1 IsObjectType a) => ToObject1 ot a where
   toObject1 :: ObjectN ot -> ObjectN (OT1 a)
 
@@ -142,6 +153,11 @@ class (Inst11 IsObjectType a b c d e f g h i j k) => ToObject11 ot a b c d e f g
 
 class (Inst12 IsObjectType a b c d e f g h i j k l) => ToObject12 ot a b c d e f g h i j k l where
   toObject12 :: ObjectN ot -> ObjectN (OT12 a b c d e f g h i j k l)
+
+class (Inst13 IsObjectType a b c d e f g h i j k l m) => ToObject13 ot a b c d e f g h i j k l m where
+  toObject13 :: ObjectN ot -> ObjectN (OT13 a b c d e f g h i j k l m)
+
+--------------------------------------------------------------------------------
 
 instance (IsObjectType a) => ToObject1 OT0 a where
   toObject1 :: (IsObjectType a) => ObjectN OT0 -> ObjectN (OT1 a)

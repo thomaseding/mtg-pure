@@ -22,6 +22,7 @@ import safe MtgPure.Model.Object.OTN (
   OT10,
   OT11,
   OT12,
+  OT13,
   OT2,
   OT3,
   OT4,
@@ -38,6 +39,7 @@ import safe MtgPure.Model.Object.ObjectN (
   ON10,
   ON11,
   ON12,
+  ON13,
   ON2,
   ON3,
   ON4,
@@ -177,6 +179,22 @@ data ObjectVisitorN (ret :: Type) (ot :: Type) :: Type where
     , visitObject12l :: Object l -> ret
     } ->
     ObjectVisitorN ret (OT12 a b c d e f g h i j k l)
+  ObjectVisitor13 ::
+    { visitObject13a :: Object a -> ret
+    , visitObject13b :: Object b -> ret
+    , visitObject13c :: Object c -> ret
+    , visitObject13d :: Object d -> ret
+    , visitObject13e :: Object e -> ret
+    , visitObject13f :: Object f -> ret
+    , visitObject13g :: Object g -> ret
+    , visitObject13h :: Object h -> ret
+    , visitObject13i :: Object i -> ret
+    , visitObject13j :: Object j -> ret
+    , visitObject13k :: Object k -> ret
+    , visitObject13l :: Object l -> ret
+    , visitObject13m :: Object m -> ret
+    } ->
+    ObjectVisitorN ret (OT13 a b c d e f g h i j k l m)
 
 visitObjectN' :: (forall a. (IsObjectType a) => Object a -> ret) -> ObjectN ot -> ret
 visitObjectN' f objN' = viewOTN' objN' \objN ot -> case ot of
@@ -193,6 +211,7 @@ visitObjectN' f objN' = viewOTN' objN' \objN ot -> case ot of
   OT10 -> visitObjectN (ObjectVisitor10 f f f f f f f f f f) objN
   OT11 -> visitObjectN (ObjectVisitor11 f f f f f f f f f f f) objN
   OT12 -> visitObjectN (ObjectVisitor12 f f f f f f f f f f f f) objN
+  OT13 -> visitObjectN (ObjectVisitor13 f f f f f f f f f f f f f) objN
 
 vn :: ObjectVisitorN ret ot -> ObjectN ot -> ret
 vn = visitObjectN
@@ -219,6 +238,7 @@ visitObjectNImpl (VOUser v objN) otn = case otn of
   OT10 -> visitObject10 v objN
   OT11 -> visitObject11 v objN
   OT12 -> visitObject12 v objN
+  OT13 -> visitObject13 v objN
 
 visitObject2 :: ObjectVisitorN ret (OT2 a b) -> ON2 a b -> ret
 visitObject2 v objN =
@@ -494,3 +514,46 @@ visitObject12 v objN =
         ON12j x -> vn (ObjectVisitor11 a b c d e f g h i k l) x
         ON12k x -> vn (ObjectVisitor11 a b c d e f g h i j l) x
         ON12l x -> vn (ObjectVisitor11 a b c d e f g h i j k) x
+
+visitObject13 :: ObjectVisitorN ret (OT13 a b c d e f g h i j k l m) -> ON13 a b c d e f g h i j k l m -> ret
+visitObject13 v objN =
+  let a = visitObject13a v
+      b = visitObject13b v
+      c = visitObject13c v
+      d = visitObject13d v
+      e = visitObject13e v
+      f = visitObject13f v
+      g = visitObject13g v
+      h = visitObject13h v
+      i = visitObject13i v
+      j = visitObject13j v
+      k = visitObject13k v
+      l = visitObject13l v
+      m = visitObject13m v
+   in case objN of
+        O13a x -> a x
+        O13b x -> b x
+        O13c x -> c x
+        O13d x -> d x
+        O13e x -> e x
+        O13f x -> f x
+        O13g x -> g x
+        O13h x -> h x
+        O13i x -> i x
+        O13j x -> j x
+        O13k x -> k x
+        O13l x -> l x
+        O13m x -> m x
+        ON13a x -> vn (ObjectVisitor12 b c d e f g h i j k l m) x
+        ON13b x -> vn (ObjectVisitor12 a c d e f g h i j k l m) x
+        ON13c x -> vn (ObjectVisitor12 a b d e f g h i j k l m) x
+        ON13d x -> vn (ObjectVisitor12 a b c e f g h i j k l m) x
+        ON13e x -> vn (ObjectVisitor12 a b c d f g h i j k l m) x
+        ON13f x -> vn (ObjectVisitor12 a b c d e g h i j k l m) x
+        ON13g x -> vn (ObjectVisitor12 a b c d e f h i j k l m) x
+        ON13h x -> vn (ObjectVisitor12 a b c d e f g i j k l m) x
+        ON13i x -> vn (ObjectVisitor12 a b c d e f g h j k l m) x
+        ON13j x -> vn (ObjectVisitor12 a b c d e f g h i k l m) x
+        ON13k x -> vn (ObjectVisitor12 a b c d e f g h i j l m) x
+        ON13l x -> vn (ObjectVisitor12 a b c d e f g h i j k m) x
+        ON13m x -> vn (ObjectVisitor12 a b c d e f g h i j k l) x

@@ -13,6 +13,7 @@ import safe Data.Inst (
   Inst10,
   Inst11,
   Inst12,
+  Inst13,
   Inst2,
   Inst3,
   Inst4,
@@ -30,6 +31,7 @@ import safe MtgPure.Model.Object.OTN (
   OT10,
   OT11,
   OT12,
+  OT13,
   OT2,
   OT3,
   OT4,
@@ -134,4 +136,11 @@ instance (Inst12 IsObjectType a b c d e f g h i j k l) => LitOTN (OT12 a b c d e
   litOTN = OT12
 
   mapOTN :: (Inst12 IsObjectType a b c d e f g h i j k l) => (forall k1 (otk :: k1). (OT12 a b c d e f g h i j k l ~ OTN otk) => OTN otk -> liftOT (OTN otk)) -> liftOT (OT12 a b c d e f g h i j k l)
+  mapOTN f = f litOTN
+
+instance (Inst13 IsObjectType a b c d e f g h i j k l m) => LitOTN (OT13 a b c d e f g h i j k l m) where
+  litOTN :: (Inst13 IsObjectType a b c d e f g h i j k l m) => OT13 a b c d e f g h i j k l m
+  litOTN = OT13
+
+  mapOTN :: (Inst13 IsObjectType a b c d e f g h i j k l m) => (forall k1 (otk :: k1). (OT13 a b c d e f g h i j k l m ~ OTN otk) => OTN otk -> liftOT (OTN otk)) -> liftOT (OT13 a b c d e f g h i j k l m)
   mapOTN f = f litOTN

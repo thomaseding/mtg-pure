@@ -75,6 +75,7 @@ import safe MtgPure.Model.Object.OTN (OT0, OTN)
 import safe MtgPure.Model.Object.OTNAliases (
   OTNArtifact,
   OTNArtifactCreature,
+  OTNBattle,
   OTNCreature,
   OTNEnchantment,
   OTNEnchantmentCreature,
@@ -91,7 +92,7 @@ import safe MtgPure.Model.Object.ObjectId (
   pattern DefaultObjectDiscriminant,
  )
 import safe MtgPure.Model.Object.PromoteIdToObjectN (promoteIdToObjectN)
-import safe MtgPure.Model.Object.ToObjectN.Classes (ToObject2' (..), ToObject6' (..))
+import safe MtgPure.Model.Object.ToObjectN.Classes (ToObject2' (..), ToObject7' (..))
 import safe MtgPure.Model.PhaseStep (PhaseStep (..))
 import safe MtgPure.Model.Player (Player (..))
 import safe MtgPure.Model.Recursive (
@@ -209,6 +210,13 @@ artifactCreatureCastMeta =
   CastMeta
     { castMeta_effect = Nothing
     , castMeta_cost = artifactCreature_cost
+    }
+
+battleCastMeta :: CastMeta OTNBattle
+battleCastMeta =
+  CastMeta
+    { castMeta_effect = Nothing
+    , castMeta_cost = battle_cost
     }
 
 creatureCastMeta :: CastMeta OTNCreature
@@ -336,6 +344,7 @@ castSpellCard zoStack zoSpellCard oCaster card = logCall 'castSpellCard case car
     --
     ArtifactCharacteristic{} -> goPerm $ artifact_spec character
     ArtifactCreatureCharacteristic{} -> goPerm $ artifactCreature_spec character
+    BattleCharacteristic{} -> goPerm $ battle_spec character
     CreatureCharacteristic{} -> goPerm $ creature_spec character
     EnchantmentCharacteristic{} -> goPerm $ enchantment_spec character
     EnchantmentCreatureCharacteristic{} -> goPerm $ enchantmentCreature_spec character
@@ -356,6 +365,7 @@ castSpellCard zoStack zoSpellCard oCaster card = logCall 'castSpellCard case car
     --
     ArtifactSpec{} -> go artifactCastMeta
     ArtifactCreatureSpec{} -> go artifactCreatureCastMeta
+    BattleSpec{} -> go battleCastMeta
     CreatureSpec{} -> go creatureCastMeta
     EnchantmentSpec{} -> go enchantmentCastMeta
     EnchantmentCreatureSpec{} -> go enchantmentCreatureCastMeta
@@ -386,6 +396,8 @@ castSpellCard zoStack zoSpellCard oCaster card = logCall 'castSpellCard case car
             ArtifactCard{} ->
               payElectedAndPutOnStack @'Cast zoStack electedSpell
             ArtifactCreatureCard{} -> do
+              payElectedAndPutOnStack @'Cast zoStack electedSpell
+            BattleCard{} -> do
               payElectedAndPutOnStack @'Cast zoStack electedSpell
             CreatureCard{} -> do
               payElectedAndPutOnStack @'Cast zoStack electedSpell
@@ -592,6 +604,10 @@ instance PayElected 'Cast OTNArtifactCreature OTNArtifactCreature where
   payElectedAndPutOnStack' :: (Monad m) => ZO 'ZStack OT0 -> Elected 'TargetStage OTNArtifactCreature -> Magic 'Private 'RW m Legality
   payElectedAndPutOnStack' = payElectedAndPutOnStackSpell @'OTCreature
 
+instance PayElected 'Cast OTNBattle OTNBattle where
+  payElectedAndPutOnStack' :: (Monad m) => ZO 'ZStack OT0 -> Elected 'TargetStage OTNBattle -> Magic 'Private 'RW m Legality
+  payElectedAndPutOnStack' = payElectedAndPutOnStackSpell @'OTBattle
+
 instance PayElected 'Cast OTNCreature OTNCreature where
   payElectedAndPutOnStack' :: (Monad m) => ZO 'ZStack OT0 -> Elected 'TargetStage OTNCreature -> Magic 'Private 'RW m Legality
   payElectedAndPutOnStack' = payElectedAndPutOnStackSpell @'OTCreature
@@ -634,7 +650,7 @@ payElectedAndPutOnStackSpell ::
   Elected 'TargetStage ot ->
   Magic 'Private 'RW m Legality
 payElectedAndPutOnStackSpell zo = payElectedAndPutOnStackImpl zo \i ->
-  let toObjectSpell' = toObject6'
+  let toObjectSpell' = toObject7'
       o = idToObject @a $ UntypedObject DefaultObjectDiscriminant i
    in StackSpell $ ZO SingZStack $ toObjectSpell' o
 

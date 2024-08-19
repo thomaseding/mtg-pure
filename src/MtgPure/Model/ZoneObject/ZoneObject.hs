@@ -17,6 +17,7 @@ module MtgPure.Model.ZoneObject.ZoneObject (
   ZOAny,
   ZOArtifact,
   ZOArtifactCreature,
+  ZOBattle,
   ZOCard,
   ZOCreature,
   ZOCreaturePlaneswalker,
@@ -51,6 +52,7 @@ import safe MtgPure.Model.Object.OTNAliases (
   OTNAny,
   OTNArtifact,
   OTNArtifactCreature,
+  OTNBattle,
   OTNCard,
   OTNCreature,
   OTNCreaturePlaneswalker,
@@ -134,6 +136,8 @@ type ZOActivatedOrTriggeredAbility =
 type ZOArtifact = ZO 'ZBattlefield OTNArtifact
 
 type ZOArtifactCreature = ZO 'ZBattlefield OTNArtifactCreature
+
+type ZOBattle = ZO 'ZBattlefield OTNBattle
 
 type ZOCard = ZO 'ZBattlefield OTNCard
 

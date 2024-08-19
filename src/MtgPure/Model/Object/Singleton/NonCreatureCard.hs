@@ -26,6 +26,7 @@ import safe MtgPure.Model.Object.OTN (
  )
 import safe MtgPure.Model.Object.OTNAliases (
   OTNArtifact,
+  OTNBattle,
   OTNEnchantment,
   OTNInstant,
   OTNLand,
@@ -37,6 +38,7 @@ import safe MtgPure.Model.ZoneObject.ZoneObject (IsOTN, ZO)
 
 data NonCreatureCardType
   = NCTArtifact
+  | NCTBattle
   | NCTEnchantment
   | NCTInstant
   | NCTLand
@@ -47,6 +49,7 @@ data NonCreatureCardType
 -- Witness type
 data WNonCreatureCard :: Type -> Type where
   WNonCreatureArtifact :: WNonCreatureCard OTNArtifact
+  WNonCreatureBattle :: WNonCreatureCard OTNBattle
   WNonCreatureEnchantment :: WNonCreatureCard OTNEnchantment
   WNonCreatureInstant :: WNonCreatureCard OTNInstant
   WNonCreatureLand :: WNonCreatureCard OTNLand
@@ -61,8 +64,9 @@ deriving instance Show (WNonCreatureCard a)
 
 data NonCreatureCardVisitor zone z = NonCreatureCardVisitor
   { visitNCArtifact :: ZO zone OTNArtifact -> z
-  , visitNCInstant :: ZO zone OTNInstant -> z
+  , visitNCBattle :: ZO zone OTNBattle -> z
   , visitNCEnchantment :: ZO zone OTNEnchantment -> z
+  , visitNCInstant :: ZO zone OTNInstant -> z
   , visitNCLand :: ZO zone OTNLand -> z
   , visitNCPlaneswalker :: ZO zone OTNPlaneswalker -> z
   , visitNCSorcery :: ZO zone OTNSorcery -> z
@@ -80,7 +84,7 @@ visitNonCreature' ::
   WNonCreatureCard (OT1 a) ->
   ZO zone (OT1 a) ->
   z
-visitNonCreature' f = visitNonCreatureCard $ NonCreatureCardVisitor f f f f f f
+visitNonCreature' f = visitNonCreatureCard $ NonCreatureCardVisitor f f f f f f f
 
 instance IsNonCreatureCardType 'OTArtifact where
   singNonCreatureCardType :: Proxy 'OTArtifact -> NonCreatureCardType
@@ -91,6 +95,16 @@ instance IsNonCreatureCardType 'OTArtifact where
 
   visitNonCreatureCard :: NonCreatureCardVisitor zone z -> WNonCreatureCard (OT1 'OTArtifact) -> ZO zone (OT1 'OTArtifact) -> z
   visitNonCreatureCard v _ = visitNCArtifact v
+
+instance IsNonCreatureCardType 'OTBattle where
+  singNonCreatureCardType :: Proxy 'OTBattle -> NonCreatureCardType
+  singNonCreatureCardType _ = NCTBattle
+
+  singNonCreatureCard :: Proxy 'OTBattle -> WNonCreatureCard (OT1 'OTBattle)
+  singNonCreatureCard _ = WNonCreatureBattle
+
+  visitNonCreatureCard :: NonCreatureCardVisitor zone z -> WNonCreatureCard (OT1 'OTBattle) -> ZO zone (OT1 'OTBattle) -> z
+  visitNonCreatureCard v _ = visitNCBattle v
 
 instance IsNonCreatureCardType 'OTEnchantment where
   singNonCreatureCardType :: Proxy 'OTEnchantment -> NonCreatureCardType
@@ -148,6 +162,10 @@ class (IsOTN ot) => CoNonCreatureCard ot where
 instance CoNonCreatureCard OTNArtifact where
   coNonCreatureCard :: WNonCreatureCard OTNArtifact
   coNonCreatureCard = WNonCreatureArtifact
+
+instance CoNonCreatureCard OTNBattle where
+  coNonCreatureCard :: WNonCreatureCard OTNBattle
+  coNonCreatureCard = WNonCreatureBattle
 
 instance CoNonCreatureCard OTNEnchantment where
   coNonCreatureCard :: WNonCreatureCard OTNEnchantment

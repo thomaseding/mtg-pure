@@ -17,6 +17,7 @@ module MtgPure.Model.Permanent (
 import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
 import safe MtgPure.Model.Artifact (Artifact (..))
+import safe MtgPure.Model.Battle (Battle (..))
 import safe MtgPure.Model.Colors (Colors)
 import safe MtgPure.Model.Creature (Creature (..))
 import safe MtgPure.Model.Damage (Damage, Damage' (..))
@@ -26,6 +27,7 @@ import safe MtgPure.Model.Object.OTNAliases (
   OTNArtifact,
   OTNArtifactCreature,
   OTNArtifactLand,
+  OTNBattle,
   OTNCreature,
   OTNEnchantment,
   OTNEnchantmentCreature,
@@ -63,6 +65,7 @@ data Permanent :: Type where
   Permanent ::
     { permanentAbilities :: [SomeOT (SomeZone WithThisAbility) OTNPermanent]
     , permanentArtifact :: Maybe Artifact
+    , permanentBattle :: Maybe Battle
     , permanentCard :: Either AnyCard AnyToken -- SomeCardOrToken OTNPermanent
     , permanentCardCharacteristic :: SomeOT CardCharacteristic OTNPermanent
     , permanentColors :: Colors
@@ -92,6 +95,9 @@ getColors = \case
   ArtifactLandCharacteristic
     {
     } -> mempty
+  BattleCharacteristic
+    { battle_colors = colors
+    } -> colors
   CreatureCharacteristic
     { creature_colors = colors
     } -> colors
@@ -115,28 +121,31 @@ getColors = \case
     } -> colors
 
 someArtifact :: liftOT OTNArtifact -> SomeOT liftOT OTNPermanent
-someArtifact = Some5a . SomeArtifact
+someArtifact = Some6a . SomeArtifact
+
+someBattle :: liftOT OTNBattle -> SomeOT liftOT OTNPermanent
+someBattle = Some6b . SomeBattle
 
 someCreature :: liftOT OTNCreature -> SomeOT liftOT OTNPermanent
-someCreature = Some5b . SomeCreature
+someCreature = Some6c . SomeCreature
 
 someEnchantment :: liftOT OTNEnchantment -> SomeOT liftOT OTNPermanent
-someEnchantment = Some5c . SomeEnchantment
+someEnchantment = Some6d . SomeEnchantment
 
 someLand :: liftOT OTNLand -> SomeOT liftOT OTNPermanent
-someLand = Some5d . SomeLand
+someLand = Some6e . SomeLand
 
 somePlaneswalker :: liftOT OTNPlaneswalker -> SomeOT liftOT OTNPermanent
-somePlaneswalker = Some5e . SomePlaneswalker
+somePlaneswalker = Some6f . SomePlaneswalker
 
 someArtifactCreature :: liftOT OTNArtifactCreature -> SomeOT liftOT OTNPermanent
-someArtifactCreature = Some5ab . SomeArtifactCreature
+someArtifactCreature = Some6ac . SomeArtifactCreature
 
 someArtifactLand :: liftOT OTNArtifactLand -> SomeOT liftOT OTNPermanent
-someArtifactLand = Some5ad . SomeArtifactLand
+someArtifactLand = Some6ae . SomeArtifactLand
 
 someEnchantmentCreature :: liftOT OTNEnchantmentCreature -> SomeOT liftOT OTNPermanent
-someEnchantmentCreature = Some5bc . SomeEnchantmentCreature
+someEnchantmentCreature = Some6cd . SomeEnchantmentCreature
 
 -- | Usage requirement: The provided characters must actually be part of the provided AnyCard.
 cardToPermanent ::
@@ -151,6 +160,7 @@ cardToPermanent card character spec = case viewPermanentCharacteristic character
       Permanent
         { permanentAbilities = permanentAbilitiesOf spec
         , permanentArtifact = characterToArtifact character
+        , permanentBattle = characterToBattle character
         , permanentCard = Left card
         , permanentCardCharacteristic = someCharacteristic
         , permanentColors = getColors character
@@ -171,7 +181,9 @@ viewPermanentCharacteristic :: CardCharacteristic ot -> Maybe (SomeOT CardCharac
 viewPermanentCharacteristic character = case character of
   InstantCharacteristic{} -> Nothing
   SorceryCharacteristic{} -> Nothing
+  --
   ArtifactCharacteristic{} -> Just $ someArtifact character
+  BattleCharacteristic{} -> Just $ someBattle character
   CreatureCharacteristic{} -> Just $ someCreature character
   EnchantmentCharacteristic{} -> Just $ someEnchantment character
   LandCharacteristic{} -> Just $ someLand character
@@ -184,7 +196,9 @@ permanentAbilitiesOf :: CardSpec ot -> [SomeOT (SomeZone WithThisAbility) OTNPer
 permanentAbilitiesOf spec = case spec of
   InstantSpec{} -> []
   SorcerySpec{} -> []
+  --
   ArtifactSpec{} -> map someArtifact $ artifact_abilities spec
+  BattleSpec{} -> map someBattle $ battle_abilities spec
   CreatureSpec{} -> map someCreature $ creature_abilities spec
   EnchantmentSpec{} -> map someEnchantment $ enchantment_abilities spec
   LandSpec{} -> map someLand $ land_abilities spec
@@ -212,9 +226,11 @@ characterToSupertypes :: CardCharacteristic ot -> [SomeOT Supertype OTNPermanent
 characterToSupertypes character = case character of
   InstantCharacteristic{} -> []
   SorceryCharacteristic{} -> []
+  --
   ArtifactCharacteristic{} -> map someArtifact $ artifact_supertypes character
   ArtifactCreatureCharacteristic{} -> map someArtifactCreature $ artifactCreature_supertypes character
   ArtifactLandCharacteristic{} -> map someArtifactLand $ artifactLand_supertypes character
+  BattleCharacteristic{} -> map someBattle $ battle_supertypes character
   CreatureCharacteristic{} -> map someCreature $ creature_supertypes character
   EnchantmentCharacteristic{} -> map someEnchantment $ enchantment_supertypes character
   EnchantmentCreatureCharacteristic{} -> map someEnchantmentCreature $ enchantmentCreature_supertypes character
@@ -237,6 +253,15 @@ characterToArtifact character = case character of
     Just
       Artifact
         { artifactTypes = artifactLand_artifactTypes character
+        }
+  _ -> Nothing
+
+characterToBattle :: CardCharacteristic ot -> Maybe Battle
+characterToBattle character = case character of
+  BattleCharacteristic{} ->
+    Just
+      Battle
+        { battleTypes = battle_battleTypes character
         }
   _ -> Nothing
 

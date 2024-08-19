@@ -30,6 +30,7 @@ import safe MtgPure.Model.Object.OTN (
  )
 import safe MtgPure.Model.Object.OTNAliases (
   OTNArtifact,
+  OTNBattle,
   OTNCard,
   OTNCreature,
   OTNEnchantment,
@@ -43,6 +44,7 @@ import safe MtgPure.Model.ZoneObject.ZoneObject (IsOTN, ZO)
 -- Witness type
 data WCard :: Type -> Type where
   WCardArtifact :: WCard OTNArtifact
+  WCardBattle :: WCard OTNBattle
   WCardCreature :: WCard OTNCreature
   WCardEnchantment :: WCard OTNEnchantment
   WCardInstant :: WCard OTNInstant
@@ -58,6 +60,7 @@ deriving instance Show (WCard a)
 
 data CardVisitor zone z = CardVisitor
   { visitCArtifact :: ZO zone OTNArtifact -> z
+  , visitCBattle :: ZO zone OTNBattle -> z
   , visitCCreature :: ZO zone OTNCreature -> z
   , visitCInstant :: ZO zone OTNInstant -> z
   , visitCEnchantment :: ZO zone OTNEnchantment -> z
@@ -79,7 +82,7 @@ visitCard' ::
   WCard (OT1 a) ->
   ZO zone (OT1 a) ->
   z
-visitCard' f = visitCard $ CardVisitor f f f f f f f
+visitCard' f = visitCard $ CardVisitor f f f f f f f f
 
 instance IsCardType 'OTArtifact where
   litCardType :: CardType
@@ -93,6 +96,19 @@ instance IsCardType 'OTArtifact where
 
   visitCard :: CardVisitor zone z -> WCard (OT1 'OTArtifact) -> ZO zone (OT1 'OTArtifact) -> z
   visitCard v _ = visitCArtifact v
+
+instance IsCardType 'OTBattle where
+  litCardType :: CardType
+  litCardType = CTBattle
+
+  singCardType :: SCardType (ObjectTypeToCardType 'OTBattle)
+  singCardType = SCTBattle
+
+  singCard :: WCard (OT1 'OTBattle)
+  singCard = WCardBattle
+
+  visitCard :: CardVisitor zone z -> WCard (OT1 'OTBattle) -> ZO zone (OT1 'OTBattle) -> z
+  visitCard v _ = visitCBattle v
 
 instance IsCardType 'OTCreature where
   litCardType :: CardType
@@ -178,6 +194,10 @@ class (IsOTN ot) => CoCard ot where
 instance CoCard OTNArtifact where
   coCard :: WCard OTNArtifact
   coCard = WCardArtifact
+
+instance CoCard OTNBattle where
+  coCard :: WCard OTNBattle
+  coCard = WCardBattle
 
 instance CoCard OTNCreature where
   coCard :: WCard OTNCreature

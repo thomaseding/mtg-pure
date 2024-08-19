@@ -292,6 +292,7 @@ electA sel zoStack failureX goElect oPlayer = logCall 'electA \case
   Masked4 reqs zoToElect -> go reqs zoToElect
   Masked5 reqs zoToElect -> go reqs zoToElect
   Masked6 reqs zoToElect -> go reqs zoToElect
+  Masked7 reqs zoToElect -> go reqs zoToElect
  where
   go ::
     (IsZO zone ot', Eq (ZO zone ot')) =>
@@ -329,6 +330,7 @@ electAll goElect = logCall 'electAll \case
   Maskeds4 reqs zosToElect -> go reqs zosToElect
   Maskeds5 reqs zosToElect -> go reqs zosToElect
   Maskeds6 reqs zosToElect -> go reqs zosToElect
+  Maskeds7 reqs zosToElect -> go reqs zosToElect
  where
   go ::
     (IsZO zone ot', Eq (ZO zone ot')) =>

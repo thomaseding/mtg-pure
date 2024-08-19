@@ -16,6 +16,7 @@ import safe MtgPure.Model.Object.OT (OT (..))
 
 data CardType :: Type where
   CTArtifact :: CardType
+  CTBattle :: CardType
   CTCreature :: CardType
   CTEnchantment :: CardType
   CTInstant :: CardType
@@ -26,6 +27,7 @@ data CardType :: Type where
 
 data SCardType (ct :: CardType) :: Type where
   SCTArtifact :: SCardType 'CTArtifact
+  SCTBattle :: SCardType 'CTBattle
   SCTCreature :: SCardType 'CTCreature
   SCTEnchantment :: SCardType 'CTEnchantment
   SCTInstant :: SCardType 'CTInstant
@@ -36,6 +38,7 @@ data SCardType (ct :: CardType) :: Type where
 
 type family ObjectTypeToCardType (a :: OT) = (ct :: CardType) | ct -> a where
   ObjectTypeToCardType 'OTArtifact = 'CTArtifact
+  ObjectTypeToCardType 'OTBattle = 'CTBattle
   ObjectTypeToCardType 'OTCreature = 'CTCreature
   ObjectTypeToCardType 'OTEnchantment = 'CTEnchantment
   ObjectTypeToCardType 'OTInstant = 'CTInstant

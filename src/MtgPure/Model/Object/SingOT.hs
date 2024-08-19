@@ -15,6 +15,7 @@ import safe MtgPure.Model.Object.OT (OT (..))
 data SingOT (ot :: OT) where
   SingActivatedAbility :: SingOT 'OTActivatedAbility
   SingArtifact :: SingOT 'OTArtifact
+  SingBattle :: SingOT 'OTBattle
   SingCreature :: SingOT 'OTCreature
   SingEmblem :: SingOT 'OTEmblem
   SingEnchantment :: SingOT 'OTEnchantment

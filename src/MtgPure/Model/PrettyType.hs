@@ -14,6 +14,7 @@ import safe Data.Inst (
   Inst10,
   Inst11,
   Inst12,
+  Inst13,
   Inst2,
   Inst3,
   Inst4,
@@ -37,6 +38,7 @@ import safe MtgPure.Model.Object.OTN (
   OT10,
   OT11,
   OT12,
+  OT13,
   OT2,
   OT3,
   OT4,
@@ -78,6 +80,7 @@ instance (IsObjectType a) => PrettyType (OT1 a) where
   prettyType = case litObjectType @a of
     OTActivatedAbility -> "OTActivatedAbility"
     OTArtifact -> "OTArtifact"
+    OTBattle -> "OTBattle"
     OTCreature -> "OTCreature"
     OTEmblem -> "OTEmblem"
     OTEnchantment -> "OTEnchantment"
@@ -331,6 +334,39 @@ instance (Inst12 IsObjectType a b c d e f g h i j k l) => PrettyType (OT12 a b c
   prettyType :: (Inst12 IsObjectType a b c d e f g h i j k l) => String
   prettyType =
     if
+      | otherwise ->
+          "OTN '["
+            ++ show (getRep @a)
+            ++ ", "
+            ++ show (getRep @b)
+            ++ ", "
+            ++ show (getRep @c)
+            ++ ", "
+            ++ show (getRep @d)
+            ++ ", "
+            ++ show (getRep @e)
+            ++ ", "
+            ++ show (getRep @f)
+            ++ ", "
+            ++ show (getRep @g)
+            ++ ", "
+            ++ show (getRep @h)
+            ++ ","
+            ++ show (getRep @i)
+            ++ ","
+            ++ show (getRep @j)
+            ++ ","
+            ++ show (getRep @k)
+            ++ ","
+            ++ show (getRep @l)
+            ++ "]"
+   where
+    _rep = getRep @(OT12 a b c d e f g h i j k l)
+
+instance (Inst13 IsObjectType a b c d e f g h i j k l m) => PrettyType (OT13 a b c d e f g h i j k l m) where
+  prettyType :: (Inst13 IsObjectType a b c d e f g h i j k l m) => String
+  prettyType =
+    if
       | rep == getRep @OTNAny ->
           "OTNAny"
       | otherwise ->
@@ -359,6 +395,8 @@ instance (Inst12 IsObjectType a b c d e f g h i j k l) => PrettyType (OT12 a b c
               ++ show (getRep @k)
               ++ ","
               ++ show (getRep @l)
+              ++ ","
+              ++ show (getRep @m)
               ++ "]"
    where
-    rep = getRep @(OT12 a b c d e f g h i j k l)
+    rep = getRep @(OT13 a b c d e f g h i j k l m)

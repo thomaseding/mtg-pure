@@ -20,6 +20,7 @@ module MtgPure.Model.Object.ObjectN (
   ON10,
   ON11,
   ON12,
+  ON13,
 ) where
 
 import safe Data.Inst (
@@ -27,6 +28,7 @@ import safe Data.Inst (
   Inst10,
   Inst11,
   Inst12,
+  Inst13,
   Inst2,
   Inst3,
   Inst4,
@@ -45,6 +47,7 @@ import safe MtgPure.Model.Object.OTN (
   OT10,
   OT11,
   OT12,
+  OT13,
   OT2,
   OT3,
   OT4,
@@ -82,6 +85,8 @@ type ON10 a b c d e f g h i j = ObjectN (OT10 a b c d e f g h i j)
 type ON11 a b c d e f g h i j k = ObjectN (OT11 a b c d e f g h i j k)
 
 type ON12 a b c d e f g h i j k l = ObjectN (OT12 a b c d e f g h i j k l)
+
+type ON13 a b c d e f g h i j k l m = ObjectN (OT13 a b c d e f g h i j k l m)
 
 -- NOTE: There is no need to use something like `(otk :: OTK)`.
 -- That just makes the types harder to pass around. Use `ViewObjectN` to
@@ -256,6 +261,33 @@ data ObjectN (otn :: Type) :: Type where
   ON12k :: (Inst12 IsObjectType a b c d e f g h i j k l) => ON11 a b c d e f g h i j l -> ON12 a b c d e f g h i j k l
   ON12l :: (Inst12 IsObjectType a b c d e f g h i j k l) => ON11 a b c d e f g h i j k -> ON12 a b c d e f g h i j k l
   --
+  O13a :: (Inst13 IsObjectType a b c d e f g h i j k l m) => Object a -> ON13 a b c d e f g h i j k l m
+  O13b :: (Inst13 IsObjectType a b c d e f g h i j k l m) => Object b -> ON13 a b c d e f g h i j k l m
+  O13c :: (Inst13 IsObjectType a b c d e f g h i j k l m) => Object c -> ON13 a b c d e f g h i j k l m
+  O13d :: (Inst13 IsObjectType a b c d e f g h i j k l m) => Object d -> ON13 a b c d e f g h i j k l m
+  O13e :: (Inst13 IsObjectType a b c d e f g h i j k l m) => Object e -> ON13 a b c d e f g h i j k l m
+  O13f :: (Inst13 IsObjectType a b c d e f g h i j k l m) => Object f -> ON13 a b c d e f g h i j k l m
+  O13g :: (Inst13 IsObjectType a b c d e f g h i j k l m) => Object g -> ON13 a b c d e f g h i j k l m
+  O13h :: (Inst13 IsObjectType a b c d e f g h i j k l m) => Object h -> ON13 a b c d e f g h i j k l m
+  O13i :: (Inst13 IsObjectType a b c d e f g h i j k l m) => Object i -> ON13 a b c d e f g h i j k l m
+  O13j :: (Inst13 IsObjectType a b c d e f g h i j k l m) => Object j -> ON13 a b c d e f g h i j k l m
+  O13k :: (Inst13 IsObjectType a b c d e f g h i j k l m) => Object k -> ON13 a b c d e f g h i j k l m
+  O13l :: (Inst13 IsObjectType a b c d e f g h i j k l m) => Object l -> ON13 a b c d e f g h i j k l m
+  O13m :: (Inst13 IsObjectType a b c d e f g h i j k l m) => Object m -> ON13 a b c d e f g h i j k l m
+  ON13a :: (Inst13 IsObjectType a b c d e f g h i j k l m) => ON12 b c d e f g h i j k l m -> ON13 a b c d e f g h i j k l m
+  ON13b :: (Inst13 IsObjectType a b c d e f g h i j k l m) => ON12 a c d e f g h i j k l m -> ON13 a b c d e f g h i j k l m
+  ON13c :: (Inst13 IsObjectType a b c d e f g h i j k l m) => ON12 a b d e f g h i j k l m -> ON13 a b c d e f g h i j k l m
+  ON13d :: (Inst13 IsObjectType a b c d e f g h i j k l m) => ON12 a b c e f g h i j k l m -> ON13 a b c d e f g h i j k l m
+  ON13e :: (Inst13 IsObjectType a b c d e f g h i j k l m) => ON12 a b c d f g h i j k l m -> ON13 a b c d e f g h i j k l m
+  ON13f :: (Inst13 IsObjectType a b c d e f g h i j k l m) => ON12 a b c d e g h i j k l m -> ON13 a b c d e f g h i j k l m
+  ON13g :: (Inst13 IsObjectType a b c d e f g h i j k l m) => ON12 a b c d e f h i j k l m -> ON13 a b c d e f g h i j k l m
+  ON13h :: (Inst13 IsObjectType a b c d e f g h i j k l m) => ON12 a b c d e f g i j k l m -> ON13 a b c d e f g h i j k l m
+  ON13i :: (Inst13 IsObjectType a b c d e f g h i j k l m) => ON12 a b c d e f g h j k l m -> ON13 a b c d e f g h i j k l m
+  ON13j :: (Inst13 IsObjectType a b c d e f g h i j k l m) => ON12 a b c d e f g h i k l m -> ON13 a b c d e f g h i j k l m
+  ON13k :: (Inst13 IsObjectType a b c d e f g h i j k l m) => ON12 a b c d e f g h i j l m -> ON13 a b c d e f g h i j k l m
+  ON13l :: (Inst13 IsObjectType a b c d e f g h i j k l m) => ON12 a b c d e f g h i j k m -> ON13 a b c d e f g h i j k l m
+  ON13m :: (Inst13 IsObjectType a b c d e f g h i j k l m) => ON12 a b c d e f g h i j k l -> ON13 a b c d e f g h i j k l m
+  --
   deriving (Typeable)
 
 deriving instance (Inst1 IsObjectType a) => Show (ObjectN (OT1 a))
@@ -281,3 +313,5 @@ deriving instance (Inst10 IsObjectType a b c d e f g h i j) => Show (ObjectN (OT
 deriving instance (Inst11 IsObjectType a b c d e f g h i j k) => Show (ObjectN (OT11 a b c d e f g h i j k))
 
 deriving instance (Inst12 IsObjectType a b c d e f g h i j k l) => Show (ObjectN (OT12 a b c d e f g h i j k l))
+
+deriving instance (Inst13 IsObjectType a b c d e f g h i j k l m) => Show (ObjectN (OT13 a b c d e f g h i j k l m))

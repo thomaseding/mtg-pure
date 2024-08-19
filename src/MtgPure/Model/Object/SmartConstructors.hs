@@ -129,8 +129,8 @@ module MtgPure.Model.Object.SmartConstructors (
   mkON10h,
   mkON10i,
   mkON10j,
-  mkO11b,
   mkO11a,
+  mkO11b,
   mkO11c,
   mkO11d,
   mkO11e,
@@ -151,8 +151,8 @@ module MtgPure.Model.Object.SmartConstructors (
   mkON11i,
   mkON11j,
   mkON11k,
-  mkO12b,
   mkO12a,
+  mkO12b,
   mkO12c,
   mkO12d,
   mkO12e,
@@ -175,6 +175,32 @@ module MtgPure.Model.Object.SmartConstructors (
   mkON12j,
   mkON12k,
   mkON12l,
+  mkO13a,
+  mkO13b,
+  mkO13c,
+  mkO13d,
+  mkO13e,
+  mkO13f,
+  mkO13g,
+  mkO13h,
+  mkO13i,
+  mkO13j,
+  mkO13k,
+  mkO13l,
+  mkO13m,
+  mkON13a,
+  mkON13b,
+  mkON13c,
+  mkON13d,
+  mkON13e,
+  mkON13f,
+  mkON13g,
+  mkON13h,
+  mkON13i,
+  mkON13j,
+  mkON13k,
+  mkON13l,
+  mkON13m,
 ) where
 
 import safe Data.Inst (
@@ -182,6 +208,7 @@ import safe Data.Inst (
   Inst10,
   Inst11,
   Inst12,
+  Inst13,
   Inst2,
   Inst3,
   Inst4,
@@ -216,6 +243,7 @@ import safe MtgPure.Model.Object.ObjectN (
   ON10,
   ON11,
   ON12,
+  ON13,
   ON2,
   ON3,
   ON4,
@@ -733,3 +761,81 @@ mkON12k = ON12k
 
 mkON12l :: (Inst12 IsObjectType a b c d e f g h i j k l) => ON11 a b c d e f g h i j k -> ON12 a b c d e f g h i j k l
 mkON12l = ON12l
+
+mkO13a :: (Inst13 IsObjectType a b c d e f g h i j k l m) => Object a -> ON13 a b c d e f g h i j k l m
+mkO13a = O13a
+
+mkO13b :: (Inst13 IsObjectType a b c d e f g h i j k l m) => Object b -> ON13 a b c d e f g h i j k l m
+mkO13b = O13b
+
+mkO13c :: (Inst13 IsObjectType a b c d e f g h i j k l m) => Object c -> ON13 a b c d e f g h i j k l m
+mkO13c = O13c
+
+mkO13d :: (Inst13 IsObjectType a b c d e f g h i j k l m) => Object d -> ON13 a b c d e f g h i j k l m
+mkO13d = O13d
+
+mkO13e :: (Inst13 IsObjectType a b c d e f g h i j k l m) => Object e -> ON13 a b c d e f g h i j k l m
+mkO13e = O13e
+
+mkO13f :: (Inst13 IsObjectType a b c d e f g h i j k l m) => Object f -> ON13 a b c d e f g h i j k l m
+mkO13f = O13f
+
+mkO13g :: (Inst13 IsObjectType a b c d e f g h i j k l m) => Object g -> ON13 a b c d e f g h i j k l m
+mkO13g = O13g
+
+mkO13h :: (Inst13 IsObjectType a b c d e f g h i j k l m) => Object h -> ON13 a b c d e f g h i j k l m
+mkO13h = O13h
+
+mkO13i :: (Inst13 IsObjectType a b c d e f g h i j k l m) => Object i -> ON13 a b c d e f g h i j k l m
+mkO13i = O13i
+
+mkO13j :: (Inst13 IsObjectType a b c d e f g h i j k l m) => Object j -> ON13 a b c d e f g h i j k l m
+mkO13j = O13j
+
+mkO13k :: (Inst13 IsObjectType a b c d e f g h i j k l m) => Object k -> ON13 a b c d e f g h i j k l m
+mkO13k = O13k
+
+mkO13l :: (Inst13 IsObjectType a b c d e f g h i j k l m) => Object l -> ON13 a b c d e f g h i j k l m
+mkO13l = O13l
+
+mkO13m :: (Inst13 IsObjectType a b c d e f g h i j k l m) => Object m -> ON13 a b c d e f g h i j k l m
+mkO13m = O13m
+
+mkON13a :: (Inst13 IsObjectType a b c d e f g h i j k l m) => ON12 b c d e f g h i j k l m -> ON13 a b c d e f g h i j k l m
+mkON13a = ON13a
+
+mkON13b :: (Inst13 IsObjectType a b c d e f g h i j k l m) => ON12 a c d e f g h i j k l m -> ON13 a b c d e f g h i j k l m
+mkON13b = ON13b
+
+mkON13c :: (Inst13 IsObjectType a b c d e f g h i j k l m) => ON12 a b d e f g h i j k l m -> ON13 a b c d e f g h i j k l m
+mkON13c = ON13c
+
+mkON13d :: (Inst13 IsObjectType a b c d e f g h i j k l m) => ON12 a b c e f g h i j k l m -> ON13 a b c d e f g h i j k l m
+mkON13d = ON13d
+
+mkON13e :: (Inst13 IsObjectType a b c d e f g h i j k l m) => ON12 a b c d f g h i j k l m -> ON13 a b c d e f g h i j k l m
+mkON13e = ON13e
+
+mkON13f :: (Inst13 IsObjectType a b c d e f g h i j k l m) => ON12 a b c d e g h i j k l m -> ON13 a b c d e f g h i j k l m
+mkON13f = ON13f
+
+mkON13g :: (Inst13 IsObjectType a b c d e f g h i j k l m) => ON12 a b c d e f h i j k l m -> ON13 a b c d e f g h i j k l m
+mkON13g = ON13g
+
+mkON13h :: (Inst13 IsObjectType a b c d e f g h i j k l m) => ON12 a b c d e f g i j k l m -> ON13 a b c d e f g h i j k l m
+mkON13h = ON13h
+
+mkON13i :: (Inst13 IsObjectType a b c d e f g h i j k l m) => ON12 a b c d e f g h j k l m -> ON13 a b c d e f g h i j k l m
+mkON13i = ON13i
+
+mkON13j :: (Inst13 IsObjectType a b c d e f g h i j k l m) => ON12 a b c d e f g h i k l m -> ON13 a b c d e f g h i j k l m
+mkON13j = ON13j
+
+mkON13k :: (Inst13 IsObjectType a b c d e f g h i j k l m) => ON12 a b c d e f g h i j l m -> ON13 a b c d e f g h i j k l m
+mkON13k = ON13k
+
+mkON13l :: (Inst13 IsObjectType a b c d e f g h i j k l m) => ON12 a b c d e f g h i j k m -> ON13 a b c d e f g h i j k l m
+mkON13l = ON13l
+
+mkON13m :: (Inst13 IsObjectType a b c d e f g h i j k l m) => ON12 a b c d e f g h i j k l -> ON13 a b c d e f g h i j k l m
+mkON13m = ON13m

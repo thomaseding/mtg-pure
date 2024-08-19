@@ -77,6 +77,7 @@ putOntoBattlefield oPlayer zo = logCall 'putOntoBattlefield do
     ArtifactCharacteristic{} -> go $ artifact_spec character
     ArtifactCreatureCharacteristic{} -> go $ artifactCreature_spec character
     ArtifactLandCharacteristic{} -> go $ artifactLand_spec character
+    BattleCharacteristic{} -> go $ battle_spec character
     CreatureCharacteristic{} -> go $ creature_spec character
     EnchantmentCharacteristic{} -> go $ enchantment_spec character
     EnchantmentCreatureCharacteristic{} -> go $ enchantmentCreature_spec character

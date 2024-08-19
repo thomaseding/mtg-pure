@@ -27,7 +27,7 @@ module MtgPure.Model.Recursive.Ord (
 import safe qualified Control.Monad.State.Strict as State
 import safe Data.ConsIndex (ConsIndex (consIndex))
 import safe Data.Function (on)
-import safe Data.Inst (Inst1, Inst2, Inst3, Inst4, Inst5, Inst6)
+import safe Data.Inst (Inst1, Inst2, Inst3, Inst4, Inst5, Inst6, Inst7)
 import safe Data.Nat (Fin (..), IsNat (..), NatList (..))
 import safe Data.Proxy (Proxy (Proxy))
 import safe Data.Typeable (Typeable, cast, typeRep)
@@ -49,6 +49,7 @@ import safe MtgPure.Model.Object.OTN (
   OT4,
   OT5,
   OT6,
+  OT7,
  )
 import safe MtgPure.Model.Object.OTNAliases (OTNAny, OTNDamageSource)
 import safe MtgPure.Model.Object.Object (Object (..))
@@ -67,6 +68,7 @@ import safe MtgPure.Model.Recursive (
   ActivatedAbility (..),
   AnyCard (..),
   AnyToken (..),
+  BattleType (..),
   Card (..),
   CardCharacteristic (..),
   CardSpec (..),
@@ -125,6 +127,10 @@ instance Eq AnyToken where
   (==) :: AnyToken -> AnyToken -> Bool
   (==) x y = runEnvM (ordAnyToken x y) == EQ
 
+instance Eq BattleType where
+  (==) :: BattleType -> BattleType -> Bool
+  (==) x y = runEnvM (ordBattleType x y) == EQ
+
 instance Eq (Card ot) where
   (==) :: Card ot -> Card ot -> Bool
   (==) x y = runEnvM (ordCard x y) == EQ
@@ -148,6 +154,10 @@ instance (Typeable ef) => Eq (Effect ef) where
 instance (Typeable el, Typeable s, IsOTN ot) => Eq (Elect s el ot) where
   (==) :: (Typeable el, Typeable s, IsOTN ot) => Elect s el ot -> Elect s el ot -> Bool
   (==) x y = runEnvM (ordElectEl x y) == EQ
+
+instance Eq (EnchantmentType ot) where
+  (==) :: EnchantmentType ot -> EnchantmentType ot -> Bool
+  (==) x y = runEnvM (ordEnchantmentType x y) == EQ
 
 instance Eq EventListener where
   (==) :: EventListener -> EventListener -> Bool
@@ -215,6 +225,10 @@ instance Ord AnyToken where
   compare :: AnyToken -> AnyToken -> Ordering
   compare x y = runEnvM (ordAnyToken x y)
 
+instance Ord BattleType where
+  compare :: BattleType -> BattleType -> Ordering
+  compare x y = runEnvM (ordBattleType x y)
+
 instance Ord (Card ot) where
   compare :: Card ot -> Card ot -> Ordering
   compare x y = runEnvM (ordCard x y)
@@ -238,6 +252,10 @@ instance (Typeable ef) => Ord (Effect ef) where
 instance (Typeable el, Typeable s, IsOTN ot) => Ord (Elect s el ot) where
   compare :: (Typeable el, Typeable s, IsOTN ot) => Elect s el ot -> Elect s el ot -> Ordering
   compare x y = runEnvM (ordElectEl x y)
+
+instance Ord (EnchantmentType ot) where
+  compare :: EnchantmentType ot -> EnchantmentType ot -> Ordering
+  compare x y = runEnvM (ordEnchantmentType x y)
 
 instance Ord EventListener where
   compare :: EventListener -> EventListener -> Ordering
@@ -490,6 +508,14 @@ ordCard x = case x of
         ]
     y -> compareIndexM x y
 
+ordBattleType :: BattleType -> BattleType -> EnvM Ordering
+ordBattleType = \case
+  Seige -> \case
+    Seige -> pure EQ
+
+ordBattleTypes :: [BattleType] -> [BattleType] -> EnvM Ordering
+ordBattleTypes = listM ordBattleType
+
 ordCardCharacteristic :: CardCharacteristic ot -> CardCharacteristic ot -> EnvM Ordering
 ordCardCharacteristic = \case
   ArtifactCharacteristic colors1 sups1 artTypes1 spec1 -> \case
@@ -517,6 +543,15 @@ ordCardCharacteristic = \case
         [ pure $ compare sups1 sups2
         , pure $ compare artTypes1 artTypes2
         , pure $ compare landTypes1 landTypes2
+        , ordCardSpec spec1 spec2
+        ]
+  BattleCharacteristic colors1 sups1 types1 defense1 spec1 -> \case
+    BattleCharacteristic colors2 sups2 types2 defense2 spec2 ->
+      seqM
+        [ ordColors colors1 colors2
+        , pure $ compare sups1 sups2
+        , ordBattleTypes types1 types2
+        , pure $ compare defense1 defense2
         , ordCardSpec spec1 spec2
         ]
   CreatureCharacteristic colors1 sups1 creatTypes1 power1 toughness1 spec1 -> \case
@@ -599,6 +634,12 @@ ordCardSpec = \case
         [ listM ordSomeZoneWithThisAbility artAbils1 artAbils2
         , listM ordSomeZoneWithThisAbility landAbils1 landAbils2
         , listM ordSomeZoneWithThisAbility bothAbils1 bothAbils2
+        ]
+  BattleSpec cost1 abilities1 -> \case
+    BattleSpec cost2 abilities2 ->
+      seqM
+        [ ordCost cost1 cost2
+        , listM ordSomeZoneWithThisAbility abilities1 abilities2
         ]
   CreatureSpec cost1 abilities1 -> \case
     CreatureSpec cost2 abilities2 ->
@@ -1586,6 +1627,33 @@ ordO6 ordM reqs1 reqs2 cont1 cont2 = case cast' (reqs2, cont2) of
       ([Requirement zone (OT6 a b c d e f)], ZO zone (OT6 a b c d e f) -> x)
   cast' = cast
 
+ordO7 ::
+  forall zone a b c d e f g x ot.
+  ( Typeable x
+  , IsZO zone ot
+  , Inst7 IsObjectType a b c d e f g
+  , IsZO zone (OT7 a b c d e f g)
+  ) =>
+  (x -> x -> EnvM Ordering) ->
+  [Requirement zone (OT7 a b c d e f g)] ->
+  [Requirement zone ot] ->
+  (ZO zone (OT7 a b c d e f g) -> x) ->
+  (ZO zone ot -> x) ->
+  EnvM Ordering
+ordO7 ordM reqs1 reqs2 cont1 cont2 = case cast' (reqs2, cont2) of
+  Nothing -> compareOT @(OT7 a b c d e f g) @ot
+  Just (reqs2, cont2) ->
+    seqM
+      [ ordRequirements reqs1 reqs2
+      , withObjectCont @a ordM O7a (cont1 . toZone) (cont2 . toZone)
+      ]
+ where
+  cast' ::
+    ([Requirement zone ot], ZO zone ot -> x) ->
+    Maybe
+      ([Requirement zone (OT7 a b c d e f g)], ZO zone (OT7 a b c d e f g) -> x)
+  cast' = cast
+
 ordObject0 :: ObjectN OT0 -> ObjectN OT0 -> EnvM Ordering
 ordObject0 objN1 objN2 = do
   let i1 = getObjectId objN1
@@ -1606,8 +1674,8 @@ ordObjectN objN1 objN2 = case objN1 of
   O2b{} -> ordObjectN' objN1 objN2
   ON2b{} -> ordObjectN' objN1 objN2
   ON2a{} -> ordObjectN' objN1 objN2
-  O3b{} -> ordObjectN' objN1 objN2
   O3a{} -> ordObjectN' objN1 objN2
+  O3b{} -> ordObjectN' objN1 objN2
   O3c{} -> ordObjectN' objN1 objN2
   ON3a{} -> ordObjectN' objN1 objN2
   ON3b{} -> ordObjectN' objN1 objN2
@@ -1620,8 +1688,8 @@ ordObjectN objN1 objN2 = case objN1 of
   ON4b{} -> ordObjectN' objN1 objN2
   ON4c{} -> ordObjectN' objN1 objN2
   ON4d{} -> ordObjectN' objN1 objN2
-  O5b{} -> ordObjectN' objN1 objN2
   O5a{} -> ordObjectN' objN1 objN2
+  O5b{} -> ordObjectN' objN1 objN2
   O5c{} -> ordObjectN' objN1 objN2
   O5d{} -> ordObjectN' objN1 objN2
   O5e{} -> ordObjectN' objN1 objN2
@@ -1710,8 +1778,8 @@ ordObjectN objN1 objN2 = case objN1 of
   ON10h{} -> ordObjectN' objN1 objN2
   ON10i{} -> ordObjectN' objN1 objN2
   ON10j{} -> ordObjectN' objN1 objN2
-  O11b{} -> ordObjectN' objN1 objN2
   O11a{} -> ordObjectN' objN1 objN2
+  O11b{} -> ordObjectN' objN1 objN2
   O11c{} -> ordObjectN' objN1 objN2
   O11d{} -> ordObjectN' objN1 objN2
   O11e{} -> ordObjectN' objN1 objN2
@@ -1732,8 +1800,8 @@ ordObjectN objN1 objN2 = case objN1 of
   ON11i{} -> ordObjectN' objN1 objN2
   ON11j{} -> ordObjectN' objN1 objN2
   ON11k{} -> ordObjectN' objN1 objN2
-  O12b{} -> ordObjectN' objN1 objN2
   O12a{} -> ordObjectN' objN1 objN2
+  O12b{} -> ordObjectN' objN1 objN2
   O12c{} -> ordObjectN' objN1 objN2
   O12d{} -> ordObjectN' objN1 objN2
   O12e{} -> ordObjectN' objN1 objN2
@@ -1756,6 +1824,32 @@ ordObjectN objN1 objN2 = case objN1 of
   ON12j{} -> ordObjectN' objN1 objN2
   ON12k{} -> ordObjectN' objN1 objN2
   ON12l{} -> ordObjectN' objN1 objN2
+  O13a{} -> ordObjectN' objN1 objN2
+  O13b{} -> ordObjectN' objN1 objN2
+  O13c{} -> ordObjectN' objN1 objN2
+  O13d{} -> ordObjectN' objN1 objN2
+  O13e{} -> ordObjectN' objN1 objN2
+  O13f{} -> ordObjectN' objN1 objN2
+  O13g{} -> ordObjectN' objN1 objN2
+  O13h{} -> ordObjectN' objN1 objN2
+  O13i{} -> ordObjectN' objN1 objN2
+  O13j{} -> ordObjectN' objN1 objN2
+  O13k{} -> ordObjectN' objN1 objN2
+  O13l{} -> ordObjectN' objN1 objN2
+  O13m{} -> ordObjectN' objN1 objN2
+  ON13a{} -> ordObjectN' objN1 objN2
+  ON13b{} -> ordObjectN' objN1 objN2
+  ON13c{} -> ordObjectN' objN1 objN2
+  ON13d{} -> ordObjectN' objN1 objN2
+  ON13e{} -> ordObjectN' objN1 objN2
+  ON13f{} -> ordObjectN' objN1 objN2
+  ON13g{} -> ordObjectN' objN1 objN2
+  ON13h{} -> ordObjectN' objN1 objN2
+  ON13i{} -> ordObjectN' objN1 objN2
+  ON13j{} -> ordObjectN' objN1 objN2
+  ON13k{} -> ordObjectN' objN1 objN2
+  ON13l{} -> ordObjectN' objN1 objN2
+  ON13m{} -> ordObjectN' objN1 objN2
 
 ordRequirement :: (IndexOT ot) => Requirement zone ot -> Requirement zone ot -> EnvM Ordering
 ordRequirement x = case x of
@@ -2060,6 +2154,9 @@ ordWithMaskedObjectElectEl x = case x of
   Masked6 reqs1 cont1 -> \case
     Masked6 reqs2 cont2 -> ordO6 ordM reqs1 reqs2 cont1 cont2
     y -> pure $ compare (consIndex x) (consIndex y)
+  Masked7 reqs1 cont1 -> \case
+    Masked7 reqs2 cont2 -> ordO7 ordM reqs1 reqs2 cont1 cont2
+    y -> pure $ compare (consIndex x) (consIndex y)
  where
   ordM = ordElectEl
 
@@ -2088,6 +2185,9 @@ ordWithMaskedObjectsElectEl x = case x of
     y -> pure $ compare (consIndex x) (consIndex y)
   Maskeds6 reqs1 cont1 -> \case
     Maskeds6 reqs2 cont2 -> ordO6 ordM reqs1 reqs2 (cont1 . pure) (cont2 . pure)
+    y -> pure $ compare (consIndex x) (consIndex y)
+  Maskeds7 reqs1 cont1 -> \case
+    Maskeds7 reqs2 cont2 -> ordO7 ordM reqs1 reqs2 (cont1 . pure) (cont2 . pure)
     y -> pure $ compare (consIndex x) (consIndex y)
  where
   ordM = ordElectEl
@@ -2195,6 +2295,37 @@ ordWithThis ordM = \case
                 objNe = toZone objNe'
                 lifted1 = cont1 (objNa, objNb, objNc, objNd, objNe)
                 lifted2 = cont2 (objNa, objNb, objNc, objNd, objNe)
+            ordM lifted1 lifted2
+       in go cont1 cont2
+  This6 cont1 -> \case
+    This6 cont2 ->
+      let go ::
+            forall a b c d e f ota otb otc otd ote otf.
+            (ota ~ OT1 a) =>
+            (otb ~ OT1 b) =>
+            (otc ~ OT1 c) =>
+            (otd ~ OT1 d) =>
+            (ote ~ OT1 e) =>
+            (otf ~ OT1 f) =>
+            (Inst6 IsObjectType a b c d e f) =>
+            ((ZO zone ota, ZO zone otb, ZO zone otc, ZO zone otd, ZO zone ote, ZO zone otf) -> liftOT ot) ->
+            ((ZO zone ota, ZO zone otb, ZO zone otc, ZO zone otd, ZO zone ote, ZO zone otf) -> liftOT ot) ->
+            EnvM Ordering
+          go cont1 cont2 = do
+            objNa' <- newObjectN @a O1
+            objNb' <- newObjectN @b O1
+            objNc' <- newObjectN @c O1
+            objNd' <- newObjectN @d O1
+            objNe' <- newObjectN @e O1
+            objNf' <- newObjectN @f O1
+            let objNa = toZone objNa'
+                objNb = toZone objNb'
+                objNc = toZone objNc'
+                objNd = toZone objNd'
+                objNe = toZone objNe'
+                objNf = toZone objNf'
+                lifted1 = cont1 (objNa, objNb, objNc, objNd, objNe, objNf)
+                lifted2 = cont2 (objNa, objNb, objNc, objNd, objNe, objNf)
             ordM lifted1 lifted2
        in go cont1 cont2
  where

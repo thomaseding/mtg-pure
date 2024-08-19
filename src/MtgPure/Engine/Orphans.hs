@@ -30,6 +30,7 @@ import safe MtgPure.Engine.State (
   GameState (..),
  )
 import safe MtgPure.Model.Artifact (Artifact (..))
+import MtgPure.Model.Battle (Battle (..))
 import safe MtgPure.Model.CardName (HasCardName (getCardName))
 import safe MtgPure.Model.Creature (Creature (..))
 import safe MtgPure.Model.Damage (Damage, Damage' (..))
@@ -471,6 +472,8 @@ instance ForceVars (ManaCost var) (ManaCost 'NoVar) where
 deriving instance Show (AnyElected s)
 
 deriving instance Show Artifact
+
+deriving instance Show Battle
 
 deriving instance Show Creature
 

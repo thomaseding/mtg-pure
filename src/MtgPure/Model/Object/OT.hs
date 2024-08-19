@@ -21,6 +21,7 @@ import safe Data.Typeable (Typeable)
 data OT
   = OTActivatedAbility
   | OTArtifact
+  | OTBattle
   | OTCreature
   | OTEmblem
   | OTEnchantment

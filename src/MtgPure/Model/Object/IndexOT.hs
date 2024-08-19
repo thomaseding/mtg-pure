@@ -15,6 +15,7 @@ import safe Data.Inst (
   Inst10,
   Inst11,
   Inst12,
+  Inst13,
   Inst2,
   Inst3,
   Inst4,
@@ -33,6 +34,7 @@ import safe MtgPure.Model.Object.OTN (
   OT10,
   OT11,
   OT12,
+  OT13,
   OT2,
   OT3,
   OT4,
@@ -186,6 +188,29 @@ instance
       , idx @j
       , idx @k
       , idx @l
+      ]
+    ]
+
+instance
+  (Inst13 IsObjectType a b c d e f g h i j k l m) =>
+  IndexOT (OT13 a b c d e f g h i j k l m)
+  where
+  indexOT :: (Inst13 IsObjectType a b c d e f g h i j k l m) => [[OT]]
+  indexOT =
+    [
+      [ idx @a
+      , idx @b
+      , idx @c
+      , idx @d
+      , idx @e
+      , idx @f
+      , idx @g
+      , idx @h
+      , idx @i
+      , idx @j
+      , idx @k
+      , idx @l
+      , idx @m
       ]
     ]
 

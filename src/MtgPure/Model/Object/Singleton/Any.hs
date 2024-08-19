@@ -17,6 +17,7 @@ import safe MtgPure.Model.Object.OTN (OT2, OT3, OT4, OT5, OT6)
 import safe MtgPure.Model.Object.OTNAliases (
   OTNAny,
   OTNArtifact,
+  OTNBattle,
   OTNCreature,
   OTNEnchantment,
   OTNInstant,
@@ -29,6 +30,7 @@ import safe MtgPure.Model.ZoneObject.ZoneObject (IsOTN)
 
 data SingCoAny ot where
   CoAnyArtifact :: SingCoAny OTNArtifact
+  CoAnyBattle :: SingCoAny OTNBattle
   CoAnyCreature :: SingCoAny OTNCreature
   CoAnyEnchantment :: SingCoAny OTNEnchantment
   CoAnyInstant :: SingCoAny OTNInstant
@@ -51,21 +53,13 @@ type IsAnyType = IsObjectType
 class (IsOTN ot) => CoAny ot where
   coAny :: SingCoAny ot
 
-instance CoAny OTNInstant where
-  coAny :: SingCoAny OTNInstant
-  coAny = CoAnyInstant
-
-instance CoAny OTNSorcery where
-  coAny :: SingCoAny OTNSorcery
-  coAny = CoAnySorcery
-
-instance CoAny OTNPlayer where
-  coAny :: SingCoAny OTNPlayer
-  coAny = CoAnyPlayer
-
 instance CoAny OTNArtifact where
   coAny :: SingCoAny OTNArtifact
   coAny = CoAnyArtifact
+
+instance CoAny OTNBattle where
+  coAny :: SingCoAny OTNBattle
+  coAny = CoAnyBattle
 
 instance CoAny OTNCreature where
   coAny :: SingCoAny OTNCreature
@@ -75,6 +69,10 @@ instance CoAny OTNEnchantment where
   coAny :: SingCoAny OTNEnchantment
   coAny = CoAnyEnchantment
 
+instance CoAny OTNInstant where
+  coAny :: SingCoAny OTNInstant
+  coAny = CoAnyInstant
+
 instance CoAny OTNLand where
   coAny :: SingCoAny OTNLand
   coAny = CoAnyLand
@@ -82,6 +80,14 @@ instance CoAny OTNLand where
 instance CoAny OTNPlaneswalker where
   coAny :: SingCoAny OTNPlaneswalker
   coAny = CoAnyPlaneswalker
+
+instance CoAny OTNPlayer where
+  coAny :: SingCoAny OTNPlayer
+  coAny = CoAnyPlayer
+
+instance CoAny OTNSorcery where
+  coAny :: SingCoAny OTNSorcery
+  coAny = CoAnySorcery
 
 instance (Inst2 IsAnyType a b) => CoAny (OT2 a b) where
   coAny :: (Inst2 IsAnyType a b) => SingCoAny (OT2 a b)
@@ -98,3 +104,7 @@ instance (Inst4 IsAnyType a b c d) => CoAny (OT4 a b c d) where
 instance (Inst5 IsAnyType a b c d e) => CoAny (OT5 a b c d e) where
   coAny :: (Inst5 IsAnyType a b c d e) => SingCoAny (OT5 a b c d e)
   coAny = CoAny5
+
+instance (Inst6 IsAnyType a b c d e f) => CoAny (OT6 a b c d e f) where
+  coAny :: (Inst6 IsAnyType a b c d e f) => SingCoAny (OT6 a b c d e f)
+  coAny = CoAny6

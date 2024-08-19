@@ -20,6 +20,7 @@ module MtgPure.Model.Object.OTN (
   OT10,
   OT11,
   OT12,
+  OT13,
 ) where
 
 import safe Data.Inst (
@@ -27,6 +28,7 @@ import safe Data.Inst (
   Inst10,
   Inst11,
   Inst12,
+  Inst13,
   Inst2,
   Inst3,
   Inst4,
@@ -44,6 +46,7 @@ import safe MtgPure.Model.Object.OTKN (
   OTK10,
   OTK11,
   OTK12,
+  OTK13,
   OTK2,
   OTK3,
   OTK4,
@@ -68,6 +71,7 @@ data OTN (otk :: k) :: Type where
   OT10 :: (Inst10 IsObjectType a b c d e f g h i j) => OTN (OTK10 a b c d e f g h i j)
   OT11 :: (Inst11 IsObjectType a b c d e f g h i j k) => OTN (OTK11 a b c d e f g h i j k)
   OT12 :: (Inst12 IsObjectType a b c d e f g h i j k l) => OTN (OTK12 a b c d e f g h i j k l)
+  OT13 :: (Inst13 IsObjectType a b c d e f g h i j k l m) => OTN (OTK13 a b c d e f g h i j k l m)
 
 type OT0 = OTN OTK0
 
@@ -94,3 +98,5 @@ type OT10 a b c d e f g h i j = OTN (OTK10 a b c d e f g h i j)
 type OT11 a b c d e f g h i j k = OTN (OTK11 a b c d e f g h i j k)
 
 type OT12 a b c d e f g h i j k l = OTN (OTK12 a b c d e f g h i j k l)
+
+type OT13 a b c d e f g h i j k l m = OTN (OTK13 a b c d e f g h i j k l m)

@@ -19,6 +19,7 @@ module MtgPure.Model.Object.OTKN (
   OTK10,
   OTK11,
   OTK12,
+  OTK13,
 ) where
 
 import safe MtgPure.Model.Object.OT (OT)
@@ -48,3 +49,5 @@ type OTK10 a b c d e f g h i j = '[a, b, c, d, e, f, g, h, i, j] :: [OT]
 type OTK11 a b c d e f g h i j k = '[a, b, c, d, e, f, g, h, i, j, k] :: [OT]
 
 type OTK12 a b c d e f g h i j k l = '[a, b, c, d, e, f, g, h, i, j, k, l] :: [OT]
+
+type OTK13 a b c d e f g h i j k l m = '[a, b, c, d, e, f, g, h, i, j, k, l, m] :: [OT]

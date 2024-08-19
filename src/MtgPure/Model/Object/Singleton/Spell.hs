@@ -27,6 +27,7 @@ import safe MtgPure.Model.Object.OTN (
  )
 import safe MtgPure.Model.Object.OTNAliases (
   OTNArtifact,
+  OTNBattle,
   OTNCreature,
   OTNEnchantment,
   OTNInstant,
@@ -38,6 +39,7 @@ import safe MtgPure.Model.ZoneObject.ZoneObject (IsOTN, ZO)
 
 data SpellType
   = STArtifact
+  | STBattle
   | STCreature
   | STEnchantment
   | STInstant
@@ -48,6 +50,7 @@ data SpellType
 -- Witness type
 data WSpell :: Type -> Type where
   WSpellArtifact :: WSpell OTNArtifact
+  WSpellBattle :: WSpell OTNBattle
   WSpellCreature :: WSpell OTNCreature
   WSpellEnchantment :: WSpell OTNEnchantment
   WSpellInstant :: WSpell OTNInstant
@@ -63,6 +66,7 @@ deriving instance Show (WSpell a)
 
 data SpellVisitor zone z = SpellVisitor
   { visitSArtifact :: ZO zone OTNArtifact -> z
+  , visitSBattle :: ZO zone OTNBattle -> z
   , visitSCreature :: ZO zone OTNCreature -> z
   , visitSEnchantment :: ZO zone OTNEnchantment -> z
   , visitSInstant :: ZO zone OTNInstant -> z
@@ -82,7 +86,7 @@ visitSpell' ::
   WSpell (OT1 a) ->
   ZO zone (OT1 a) ->
   z
-visitSpell' f = visitSpell $ SpellVisitor f f f f f f
+visitSpell' f = visitSpell $ SpellVisitor f f f f f f f
 
 instance IsSpellType 'OTArtifact where
   singSpellType :: Proxy 'OTArtifact -> SpellType
@@ -93,6 +97,16 @@ instance IsSpellType 'OTArtifact where
 
   visitSpell :: SpellVisitor zone z -> WSpell (OT1 'OTArtifact) -> ZO zone (OT1 'OTArtifact) -> z
   visitSpell v _ = visitSArtifact v
+
+instance IsSpellType 'OTBattle where
+  singSpellType :: Proxy 'OTBattle -> SpellType
+  singSpellType _ = STBattle
+
+  singSpell :: Proxy 'OTBattle -> WSpell (OT1 'OTBattle)
+  singSpell _ = WSpellBattle
+
+  visitSpell :: SpellVisitor zone z -> WSpell (OT1 'OTBattle) -> ZO zone (OT1 'OTBattle) -> z
+  visitSpell v _ = visitSBattle v
 
 instance IsSpellType 'OTCreature where
   singSpellType :: Proxy 'OTCreature -> SpellType
@@ -150,6 +164,10 @@ class (IsOTN ot) => CoSpell ot where
 instance CoSpell OTNArtifact where
   coSpell :: WSpell OTNArtifact
   coSpell = WSpellArtifact
+
+instance CoSpell OTNBattle where
+  coSpell :: WSpell OTNBattle
+  coSpell = WSpellBattle
 
 instance CoSpell OTNCreature where
   coSpell :: WSpell OTNCreature

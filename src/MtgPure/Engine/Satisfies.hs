@@ -130,6 +130,7 @@ hasLandType' zo landType = logCall 'hasLandType' case singZone @zone of
     --
     ArtifactCharacteristic{} -> pure False
     ArtifactCreatureCharacteristic{} -> pure False
+    BattleCharacteristic{} -> pure False
     CreatureCharacteristic{} -> pure False
     EnchantmentCharacteristic{} -> pure False
     EnchantmentCreatureCharacteristic{} -> pure False

@@ -394,6 +394,7 @@ instance (IsZone zone) => IsManaAbilityImpl (WithMaskedObject (Elect s el) zone 
     Masked4 _reqs cont -> isManaAbilityImpl $ cont dummyZO
     Masked5 _reqs cont -> isManaAbilityImpl $ cont dummyZO
     Masked6 _reqs cont -> isManaAbilityImpl $ cont dummyZO
+    Masked7 _reqs cont -> isManaAbilityImpl $ cont dummyZO
 
   isTrivialManaAbilityImpl :: (IsZone zone) => StageTrivial -> WithMaskedObject (Elect s el) zone ot -> TrivialManaAbilityResult
   isTrivialManaAbilityImpl _ _ = Nothing
@@ -407,6 +408,7 @@ instance IsManaAbilityImpl (WithMaskedObjects (Elect s el) zone ot) where
     Maskeds4 _reqs cont -> isManaAbilityImpl $ cont $ List []
     Maskeds5 _reqs cont -> isManaAbilityImpl $ cont $ List []
     Maskeds6 _reqs cont -> isManaAbilityImpl $ cont $ List []
+    Maskeds7 _reqs cont -> isManaAbilityImpl $ cont $ List []
 
   isTrivialManaAbilityImpl :: StageTrivial -> WithMaskedObjects (Elect s el) zone ot -> TrivialManaAbilityResult
   isTrivialManaAbilityImpl _ _ = Nothing

@@ -23,6 +23,7 @@ import safe Data.Inst (
   Inst10,
   Inst11,
   Inst12,
+  Inst13,
   Inst2,
   Inst3,
   Inst4,
@@ -47,6 +48,7 @@ import safe MtgPure.Model.Color (Color (..))
 import safe MtgPure.Model.Colors (Colors (..))
 import safe MtgPure.Model.CreatureType (CreatureType)
 import safe MtgPure.Model.Damage (Damage, Damage' (..))
+import safe MtgPure.Model.Defense (Defense (..))
 import safe MtgPure.Model.LandType (LandType (..))
 import safe MtgPure.Model.Loyalty (Loyalty)
 import safe MtgPure.Model.Mana.Mana (Mana (..))
@@ -61,7 +63,15 @@ import safe MtgPure.Model.Mana.ManaPool (CompleteManaPool (..), ManaPool (..))
 import safe MtgPure.Model.Mana.ManaSymbol (ManaSymbol (..))
 import safe MtgPure.Model.Object.IsObjectType (IsObjectType (..))
 import safe MtgPure.Model.Object.OT (OT (..))
-import safe MtgPure.Model.Object.OTN (OT1, OT2, OT3, OT4, OT5, OTN (..))
+import safe MtgPure.Model.Object.OTN (
+  OT1,
+  OT2,
+  OT3,
+  OT4,
+  OT5,
+  OT6,
+  OTN (..),
+ )
 import safe MtgPure.Model.Object.OTNAliases (
   OTNAny,
   OTNCreaturePlaneswalker,
@@ -85,6 +95,7 @@ import safe MtgPure.Model.Object.ObjectN (
   ON10,
   ON11,
   ON12,
+  ON13,
   ON2,
   ON3,
   ON4,
@@ -104,6 +115,7 @@ import safe MtgPure.Model.Recursive (
   ActivatedAbility (..),
   AnyCard (..),
   AnyToken (..),
+  BattleType (..),
   Card (..),
   CardCharacteristic (..),
   CardSpec (..),
@@ -181,6 +193,10 @@ instance Show AnyCard where
 instance Show AnyToken where
   show :: AnyToken -> String
   show = runEnvM defaultDepthLimit . showAnyToken
+
+instance Show BattleType where
+  show :: BattleType -> String
+  show = runEnvM defaultDepthLimit . showBattleType
 
 instance Show (Card ot) where
   show :: Card ot -> String
@@ -575,6 +591,14 @@ showArtifactTypes = showListM showArtifactType
 showBasicLandType :: BasicLandType -> EnvM ParenItems
 showBasicLandType = noParens . pure . pure . fromString . show
 
+showBattleType :: BattleType -> EnvM ParenItems
+showBattleType = \case
+  Seige -> noParens do
+    pure $ pure "Seige"
+
+showBattleTypes :: [BattleType] -> EnvM ParenItems
+showBattleTypes = showListM showBattleType
+
 showCard :: Card ot -> EnvM ParenItems
 showCard card = case card of
   Card name yourCard -> showCardImpl "Card" card do
@@ -662,6 +686,23 @@ showCardCharacteristic = \case
           <> sArtTypes
           <> pure " "
           <> sLandTypes
+          <> sSpec
+  BattleCharacteristic colors sups battleTypes defense spec ->
+    yesParens do
+      sColors <- parens <$> showColors colors
+      sSups <- parens <$> showSupertypes sups
+      sBattleTypes <- parens <$> showBattleTypes battleTypes
+      sDefense <- parens <$> showDefense defense
+      sSpec <- dollar <$> showCardSpec spec
+      pure $
+        pure "BattleCharacteristic "
+          <> sColors
+          <> pure " "
+          <> sSups
+          <> pure " "
+          <> sBattleTypes
+          <> pure " "
+          <> sDefense
           <> sSpec
   CreatureCharacteristic colors sups creatureTypes power toughness spec ->
     yesParens do
@@ -794,6 +835,13 @@ showCardSpec = \case
           <> pure " "
           <> sLandAbils
           <> sBothAbils
+  BattleSpec cost abilities -> yesParens do
+    sCost <- parens <$> showCost cost
+    sAbilities <- dollar <$> showListM (showSomeZone (showWithThisAbility "this")) abilities
+    pure $
+      pure "BattleSpec "
+        <> sCost
+        <> sAbilities
   CreatureSpec cost abilities ->
     yesParens do
       sCost <- parens <$> showCost cost
@@ -967,6 +1015,9 @@ showDamage =
     VariableDamage var -> do
       let varName = getVarName var
       pure $ DList.fromList [fromString "VariableDamage ", varName]
+
+showDefense :: Defense -> EnvM ParenItems
+showDefense = yesParens . pure . pure . fromString . show
 
 showEffect :: Effect e -> EnvM ParenItems
 showEffect = \case
@@ -1715,6 +1766,16 @@ showO6 ::
   EnvM ParenItems
 showO6 = showONImpl @zone O6a
 
+showO7 ::
+  forall zone a b c d e f g z.
+  (IsZone zone, Inst7 IsObjectType a b c d e f g) =>
+  Plurality ->
+  (z -> EnvM ParenItems) ->
+  String ->
+  (ON7 a b c d e f g -> z) ->
+  EnvM ParenItems
+showO7 = showONImpl @zone O7a
+
 showONImpl ::
   forall zone z a ot.
   (IsZone zone, IsOTN ot, IsObjectType a) =>
@@ -1940,8 +2001,22 @@ showObject12 objN = visitObjectN' visit objN
   visit =
     showObjectNImpl rep $
       if
-        | rep == typeRep (Proxy @(ObjectN OTNAny)) -> "asAny"
         | otherwise -> "toZO12"
+
+showObject13 ::
+  forall zone a b c d e f g h i j k l m.
+  (IsZone zone, Inst13 IsObjectType a b c d e f g h i j k l m) =>
+  ON13 a b c d e f g h i j k l m ->
+  EnvM ParenItems
+showObject13 objN = visitObjectN' visit objN
+ where
+  rep = typeOf objN
+  visit :: (IsObjectType x) => Object x -> EnvM ParenItems
+  visit =
+    showObjectNImpl rep $
+      if
+        | rep == typeRep (Proxy @(ObjectN OTNAny)) -> "asAny"
+        | otherwise -> "toZO13"
 
 showObjectN :: forall zone ot. (IsZO zone ot) => ObjectN ot -> EnvM ParenItems
 showObjectN objN' = viewOTN' objN' go
@@ -1961,6 +2036,7 @@ showObjectN objN' = viewOTN' objN' go
     OT10 -> showObject10 @zone objN
     OT11 -> showObject11 @zone objN
     OT12 -> showObject12 @zone objN
+    OT13 -> showObject13 @zone objN
 
 showPower :: Power -> EnvM ParenItems
 showPower = yesParens . pure . pure . fromString . show
@@ -2233,6 +2309,8 @@ showWithMaskedObject showM memo = \case
     let ty = getType reqs in go ty reqs $ showO5 @zone p showM memo (cont . toZone)
   Masked6 reqs cont ->
     let ty = getType reqs in go ty reqs $ showO6 @zone p showM memo (cont . toZone)
+  Masked7 reqs cont ->
+    let ty = getType reqs in go ty reqs $ showO7 @zone p showM memo (cont . toZone)
  where
   p = Singular
 
@@ -2265,6 +2343,8 @@ showWithMaskedObjects showM memo = \case
     let ty = getType reqs in go ty reqs $ showO5 @zone p showM memo (cont . pure . toZone)
   Maskeds6 reqs cont ->
     let ty = getType reqs in go ty reqs $ showO6 @zone p showM memo (cont . pure . toZone)
+  Maskeds7 reqs cont ->
+    let ty = getType reqs in go ty reqs $ showO7 @zone p showM memo (cont . pure . toZone)
  where
   p = Plural
 
@@ -2413,6 +2493,47 @@ showWithThis showM memo = \case
               <> sObjNd
               <> pure ", "
               <> sObjNe
+              <> pure ") -> "
+              <> sElect
+     in go cont
+  This6 cont ->
+    let go ::
+          forall a b c d e f.
+          (IsOTN (OT6 a b c d e f), Inst6 IsObjectType a b c d e f) =>
+          ((ZO zone (OT1 a), ZO zone (OT1 b), ZO zone (OT1 c), ZO zone (OT1 d), ZO zone (OT1 e), ZO zone (OT1 f)) -> liftOT (OT6 a b c d e f)) ->
+          EnvM ParenItems
+        go cont' = yesParens do
+          sTy <- parens <$> showTypeOf (Proxy @ot)
+          (objNa, snap) <- newObjectN @a O1 memo
+          (objNb, _) <- newObjectN @b O1 memo
+          (objNc, _) <- newObjectN @c O1 memo
+          (objNd, _) <- newObjectN @d O1 memo
+          (objNe, _) <- newObjectN @e O1 memo
+          (objNf, _) <- newObjectN @f O1 memo
+          sObjNa <- parens <$> showObjectN @zone objNa
+          sObjNb <- parens <$> showObjectN @zone objNb
+          sObjNc <- parens <$> showObjectN @zone objNc
+          sObjNd <- parens <$> showObjectN @zone objNd
+          sObjNe <- parens <$> showObjectN @zone objNe
+          sObjNf <- parens <$> showObjectN @zone objNf
+          let elect = cont' (toZone objNa, toZone objNb, toZone objNc, toZone objNd, toZone objNe, toZone objNf)
+          sElect <- dropParens <$> showM elect
+          restoreObject snap
+          pure $
+            pure "thisObject @"
+              <> sTy
+              <> pure " $ \\("
+              <> sObjNa
+              <> pure ", "
+              <> sObjNb
+              <> pure ", "
+              <> sObjNc
+              <> pure ", "
+              <> sObjNd
+              <> pure ", "
+              <> sObjNe
+              <> pure ", "
+              <> sObjNf
               <> pure ") -> "
               <> sElect
      in go cont

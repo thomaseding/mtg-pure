@@ -21,6 +21,7 @@ module MtgPure.Model.ZoneObject.Convert (
   toZO10,
   toZO11,
   toZO12,
+  toZO13,
   castOToON,
   castONToON,
   castO0ToON,
@@ -56,6 +57,7 @@ import safe Data.Inst (
   Inst10,
   Inst11,
   Inst12,
+  Inst13,
   Inst2,
   Inst3,
   Inst4,
@@ -79,6 +81,7 @@ import safe MtgPure.Model.Object.OTN (
   OT10,
   OT11,
   OT12,
+  OT13,
   OT2,
   OT3,
   OT4,
@@ -115,13 +118,14 @@ import safe MtgPure.Model.Object.ToObjectN.Classes (
   ToObject10 (..),
   ToObject11 (..),
   ToObject12 (..),
+  ToObject13 (..),
   ToObject2 (..),
   ToObject3 (..),
   ToObject4 (..),
   ToObject5 (..),
   ToObject6 (..),
-  ToObject6',
   ToObject7 (..),
+  ToObject7',
   ToObject8 (..),
   ToObject9 (..),
  )
@@ -223,6 +227,13 @@ toZO12 ::
 toZO12 = \case
   ZO sZone o -> ZO sZone $ toObject12 o
 
+toZO13 ::
+  (ToObject13 ot a b c d e f g h i j k l m) =>
+  ZO zone ot ->
+  ZO zone (OT13 a b c d e f g h i j k l m)
+toZO13 = \case
+  ZO sZone o -> ZO sZone $ toObject13 o
+
 oToZO1 :: (IsZone zone, IsObjectType a) => Object a -> ZO zone (OT1 a)
 oToZO1 = toZone . O1
 
@@ -280,6 +291,10 @@ castO0ToON objN = mapOTN @ot \case
     let go :: forall a b c d e f g h i j k l. (ot ~ OT12 a b c d e f g h i j k l) => ot -> ObjectN ot
         go _ = O12a $ Object (singObjectType @a) u
      in go ot
+  ot@OT13 ->
+    let go :: forall a b c d e f g h i j k l m. (ot ~ OT13 a b c d e f g h i j k l m) => ot -> ObjectN ot
+        go _ = O13a $ Object (singObjectType @a) u
+     in go ot
  where
   u = getUntypedObject objN
 
@@ -333,6 +348,10 @@ castONToON objN = viewOTN' objN $ curry \case
   (_, ot@OT12) ->
     let go :: forall a b c d e f g h i j k l. (Inst12 IsObjectType a b c d e f g h i j k l) => OT12 a b c d e f g h i j k l -> Maybe (ObjectN ot')
         go _ = goCast @a >> goCast @b >> goCast @c >> goCast @d >> goCast @e >> goCast @f >> goCast @g >> goCast @h >> goCast @i >> goCast @j >> goCast @k >> goCast @l
+     in go ot
+  (_, ot@OT13) ->
+    let go :: forall a b c d e f g h i j k l m. (Inst13 IsObjectType a b c d e f g h i j k l m) => OT13 a b c d e f g h i j k l m -> Maybe (ObjectN ot')
+        go _ = goCast @a >> goCast @b >> goCast @c >> goCast @d >> goCast @e >> goCast @f >> goCast @g >> goCast @h >> goCast @i >> goCast @j >> goCast @k >> goCast @l >> goCast @m
      in go ot
  where
   u = getUntypedObject objN
@@ -499,6 +518,24 @@ castOToON o = objN
                 , goCast $ O12l @a @b @c @d @e @f @g @h @i @j @k @l
                 ]
          in go ot
+      ot@OT13 ->
+        let go :: forall a b c d e f g h i j k l m. (Inst13 IsObjectType a b c d e f g h i j k l m) => OT13 a b c d e f g h i j k l m -> MaybeObjectN (OT13 a b c d e f g h i j k l m)
+            go _ =
+              goConcat
+                [ goCast $ O13a @a @b @c @d @e @f @g @h @i @j @k @l @m
+                , goCast $ O13b @a @b @c @d @e @f @g @h @i @j @k @l @m
+                , goCast $ O13c @a @b @c @d @e @f @g @h @i @j @k @l @m
+                , goCast $ O13d @a @b @c @d @e @f @g @h @i @j @k @l @m
+                , goCast $ O13e @a @b @c @d @e @f @g @h @i @j @k @l @m
+                , goCast $ O13f @a @b @c @d @e @f @g @h @i @j @k @l @m
+                , goCast $ O13g @a @b @c @d @e @f @g @h @i @j @k @l @m
+                , goCast $ O13h @a @b @c @d @e @f @g @h @i @j @k @l @m
+                , goCast $ O13i @a @b @c @d @e @f @g @h @i @j @k @l @m
+                , goCast $ O13j @a @b @c @d @e @f @g @h @i @j @k @l @m
+                , goCast $ O13k @a @b @c @d @e @f @g @h @i @j @k @l @m
+                , goCast $ O13l @a @b @c @d @e @f @g @h @i @j @k @l @m
+                ]
+         in go ot
    where
     goConcat = MaybeObjectN . getFirst . mconcat . map First
 
@@ -522,47 +559,51 @@ type AsCreaturePlayerPlaneswalker ot =
     'OTPlaneswalker
     'OTPlayer
 
-type ToPermanent = ToObject5
+type ToPermanent = ToObject6
 
 type AsPermanent ot =
   ToPermanent
     ot
     'OTArtifact
+    'OTBattle
     'OTCreature
     'OTEnchantment
     'OTLand
     'OTPlaneswalker
 
-type ToSpell' = ToObject6'
+type ToSpell' = ToObject7'
 
 type AsSpell' ot =
   ToSpell'
     ot
     'OTArtifact
+    'OTBattle
     'OTCreature
     'OTEnchantment
     'OTInstant
     'OTPlaneswalker
     'OTSorcery
 
-type ToSpell = ToObject6
+type ToSpell = ToObject7
 
 type AsSpell ot =
   ToSpell
     ot
     'OTArtifact
+    'OTBattle
     'OTCreature
     'OTEnchantment
     'OTInstant
     'OTPlaneswalker
     'OTSorcery
 
-type ToCard = ToObject7
+type ToCard = ToObject8
 
 type AsCard ot =
   ToCard
     ot
     'OTArtifact
+    'OTBattle
     'OTCreature
     'OTEnchantment
     'OTInstant
@@ -570,12 +611,13 @@ type AsCard ot =
     'OTPlaneswalker
     'OTSorcery
 
-type ToDamageSource = ToObject8
+type ToDamageSource = ToObject9
 
 type AsDamageSource ot =
   ToDamageSource
     ot
     'OTArtifact
+    'OTBattle
     'OTCreature
     'OTEnchantment
     'OTInstant
@@ -584,13 +626,14 @@ type AsDamageSource ot =
     'OTPlayer
     'OTSorcery
 
-type ToAny = ToObject12
+type ToAny = ToObject13
 
 type AsAny ot =
   ToAny
     ot
     'OTActivatedAbility
     'OTArtifact
+    'OTBattle
     'OTCreature
     'OTEmblem
     'OTEnchantment
@@ -615,19 +658,19 @@ asCreaturePlayerPlaneswalker ::
 asCreaturePlayerPlaneswalker = toZO3
 
 asPermanent :: (AsPermanent ot) => ZO zone ot -> ZO zone OTNPermanent
-asPermanent = toZO5
+asPermanent = toZO6
 
 asSpell :: (AsSpell ot) => ZO zone ot -> ZO zone OTNSpell
-asSpell = toZO6
+asSpell = toZO7
 
 asCard :: (AsCard ot) => ZO zone ot -> ZO zone OTNCard
-asCard = toZO7
+asCard = toZO8
 
 asDamageSource :: (AsDamageSource ot) => ZO zone ot -> ZO zone OTNDamageSource
-asDamageSource = toZO8
+asDamageSource = toZO9
 
 asAny :: (AsAny ot) => ZO zone ot -> ZO zone OTNAny
-asAny = toZO12
+asAny = toZO13
 
 asAny0 :: ZO zone OT0 -> ZO zone OTNAny
 asAny0 = asAny . toZO1 @OT0 @'OTArtifact
@@ -656,6 +699,7 @@ reifyWithThis i = \case
   This3 cont -> cont (toZO1 zo0, toZO1 zo0, toZO1 zo0)
   This4 cont -> cont (toZO1 zo0, toZO1 zo0, toZO1 zo0, toZO1 zo0)
   This5 cont -> cont (toZO1 zo0, toZO1 zo0, toZO1 zo0, toZO1 zo0, toZO1 zo0)
+  This6 cont -> cont (toZO1 zo0, toZO1 zo0, toZO1 zo0, toZO1 zo0, toZO1 zo0, toZO1 zo0)
  where
   zo0 = toZO0 @zone i
 

@@ -21,6 +21,7 @@ import safe MtgPure.Model.Object.SingOT (SingOT (..))
 data ObjectVisitor a = ObjectVisitor
   { visitOActivatedAbility :: Object 'OTActivatedAbility -> a
   , visitOArtifact :: Object 'OTArtifact -> a
+  , visitOBattle :: Object 'OTBattle -> a
   , visitOCreature :: Object 'OTCreature -> a
   , visitOEmblem :: Object 'OTEmblem -> a
   , visitOEnchantment :: Object 'OTEnchantment -> a
@@ -46,7 +47,7 @@ visitObject' ::
   (forall b. (IsObjectType b) => Object b -> x) ->
   Object a ->
   x
-visitObject' f = visitObject $ ObjectVisitor f f f f f f f f f f f f
+visitObject' f = visitObject $ ObjectVisitor f f f f f f f f f f f f f
 
 instance IsObjectType 'OTActivatedAbility where
   idToObject :: UntypedObject -> Object 'OTActivatedAbility
@@ -79,6 +80,22 @@ instance IsObjectType 'OTArtifact where
 
   visitObject :: ObjectVisitor b -> Object 'OTArtifact -> b
   visitObject = visitOArtifact
+
+instance IsObjectType 'OTBattle where
+  idToObject :: UntypedObject -> Object 'OTBattle
+  idToObject = Object SingBattle
+
+  objectToId :: Object 'OTBattle -> ObjectId
+  objectToId (Object SingBattle (UntypedObject _ i)) = i
+
+  singObjectType :: SingOT 'OTBattle
+  singObjectType = SingBattle
+
+  litObjectType :: OT
+  litObjectType = OTBattle
+
+  visitObject :: ObjectVisitor b -> Object 'OTBattle -> b
+  visitObject = visitOBattle
 
 instance IsObjectType 'OTCreature where
   idToObject :: UntypedObject -> Object 'OTCreature

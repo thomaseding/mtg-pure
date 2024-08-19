@@ -14,6 +14,7 @@ import safe Data.Inst (
   Inst10,
   Inst11,
   Inst12,
+  Inst13,
   Inst2,
   Inst3,
   Inst4,
@@ -30,6 +31,7 @@ import safe MtgPure.Model.Object.OTN (
   OT10,
   OT11,
   OT12,
+  OT13,
   OT2,
   OT3,
   OT4,
@@ -101,3 +103,7 @@ instance (Inst11 IsObjectType a b c d e f g h i j k) => PromoteIdToObjectN (OT11
 instance (Inst12 IsObjectType a b c d e f g h i j k l) => PromoteIdToObjectN (OT12 a b c d e f g h i j k l) where
   promoteIdToObjectN :: (Inst12 IsObjectType a b c d e f g h i j k l) => ObjectId -> ObjectN (OT12 a b c d e f g h i j k l)
   promoteIdToObjectN = O12a . Object (singObjectType @a) . UntypedObject DefaultObjectDiscriminant
+
+instance (Inst13 IsObjectType a b c d e f g h i j k l m) => PromoteIdToObjectN (OT13 a b c d e f g h i j k l m) where
+  promoteIdToObjectN :: (Inst13 IsObjectType a b c d e f g h i j k l m) => ObjectId -> ObjectN (OT13 a b c d e f g h i j k l m)
+  promoteIdToObjectN = O13a . Object (singObjectType @a) . UntypedObject DefaultObjectDiscriminant

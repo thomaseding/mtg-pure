@@ -191,3 +191,30 @@ mapObjectN f = \case
   ON12j x -> ON12j $ mapObjectN f x
   ON12k x -> ON12k $ mapObjectN f x
   ON12l x -> ON12l $ mapObjectN f x
+  --
+  O13a x -> O13a $ f x
+  O13b x -> O13b $ f x
+  O13c x -> O13c $ f x
+  O13d x -> O13d $ f x
+  O13e x -> O13e $ f x
+  O13f x -> O13f $ f x
+  O13g x -> O13g $ f x
+  O13h x -> O13h $ f x
+  O13i x -> O13i $ f x
+  O13j x -> O13j $ f x
+  O13k x -> O13k $ f x
+  O13l x -> O13l $ f x
+  O13m x -> O13m $ f x
+  ON13a x -> ON13a $ mapObjectN f x
+  ON13b x -> ON13b $ mapObjectN f x
+  ON13c x -> ON13c $ mapObjectN f x
+  ON13d x -> ON13d $ mapObjectN f x
+  ON13e x -> ON13e $ mapObjectN f x
+  ON13f x -> ON13f $ mapObjectN f x
+  ON13g x -> ON13g $ mapObjectN f x
+  ON13h x -> ON13h $ mapObjectN f x
+  ON13i x -> ON13i $ mapObjectN f x
+  ON13j x -> ON13j $ mapObjectN f x
+  ON13k x -> ON13k $ mapObjectN f x
+  ON13l x -> ON13l $ mapObjectN f x
+  ON13m x -> ON13m $ mapObjectN f x

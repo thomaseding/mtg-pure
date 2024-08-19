@@ -16,6 +16,7 @@ import safe Data.Inst (
   Inst10,
   Inst11,
   Inst12,
+  Inst13,
   Inst2,
   Inst3,
   Inst4,
@@ -32,6 +33,7 @@ import safe MtgPure.Model.Object.OTN (
   OT10,
   OT11,
   OT12,
+  OT13,
   OT2,
   OT3,
   OT4,
@@ -227,6 +229,33 @@ viewOTN user' objN cont = case objN of
   ON12j{} -> go12 user'
   ON12k{} -> go12 user'
   ON12l{} -> go12 user'
+  --
+  O13b{} -> go13 user'
+  O13a{} -> go13 user'
+  O13c{} -> go13 user'
+  O13d{} -> go13 user'
+  O13e{} -> go13 user'
+  O13f{} -> go13 user'
+  O13g{} -> go13 user'
+  O13h{} -> go13 user'
+  O13i{} -> go13 user'
+  O13j{} -> go13 user'
+  O13k{} -> go13 user'
+  O13l{} -> go13 user'
+  O13m{} -> go13 user'
+  ON13a{} -> go13 user'
+  ON13b{} -> go13 user'
+  ON13c{} -> go13 user'
+  ON13d{} -> go13 user'
+  ON13e{} -> go13 user'
+  ON13f{} -> go13 user'
+  ON13g{} -> go13 user'
+  ON13h{} -> go13 user'
+  ON13i{} -> go13 user'
+  ON13j{} -> go13 user'
+  ON13k{} -> go13 user'
+  ON13l{} -> go13 user'
+  ON13m{} -> go13 user'
  where
   go0 :: (otn ~ OT0) => user OT0 -> ret
   go0 user = cont user OT0
@@ -314,3 +343,10 @@ viewOTN user' objN cont = case objN of
     user (OT12 a b c d e f g h i j k l) ->
     ret
   go12 user = cont user $ OT12 @a @b @c @d @e @f @g @h @i @j @k @l
+
+  go13 ::
+    forall a b c d e f g h i j k l m.
+    (Inst13 IsObjectType a b c d e f g h i j k l m, otn ~ OT13 a b c d e f g h i j k l m) =>
+    user (OT13 a b c d e f g h i j k l m) ->
+    ret
+  go13 user = cont user $ OT13 @a @b @c @d @e @f @g @h @i @j @k @l @m

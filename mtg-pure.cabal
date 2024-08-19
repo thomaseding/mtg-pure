@@ -64,10 +64,10 @@ library
         MtgPure
         MtgPure.AllCards
         MtgPure.Cards
+        MtgPure.Client.Terminal.CommandInput
         MtgPure.Client.Terminal.Fwd.Api
         MtgPure.Client.Terminal.Fwd.Impl
         MtgPure.Client.Terminal.Fwd.Type
-        MtgPure.Client.Terminal.CommandInput
         MtgPure.Client.Terminal.Monad
         MtgPure.Client.Terminal.PriorityAction
         MtgPure.Client.Terminal.Render
@@ -99,20 +99,22 @@ library
         MtgPure.Model.Artifact
         MtgPure.Model.ArtifactType
         MtgPure.Model.BasicLandType
+        MtgPure.Model.Battle
         MtgPure.Model.Battlefield
         MtgPure.Model.CardName
         MtgPure.Model.CardSet
         MtgPure.Model.CardType
         MtgPure.Model.Color
-        MtgPure.Model.ColorToManaType
         MtgPure.Model.Colors
         MtgPure.Model.ColorsLike
+        MtgPure.Model.ColorToManaType
         MtgPure.Model.Combinators
         MtgPure.Model.Counter
         MtgPure.Model.Creature
         MtgPure.Model.CreatureType
         MtgPure.Model.Damage
         MtgPure.Model.Deck
+        MtgPure.Model.Defense
         MtgPure.Model.EffectType
         MtgPure.Model.ElectStage
         MtgPure.Model.Enchantment
@@ -144,115 +146,129 @@ library
         MtgPure.Model.Object.IsObjectType
         MtgPure.Model.Object.LitOTN
         MtgPure.Model.Object.MapObjectN
+        MtgPure.Model.Object.Object
+        MtgPure.Model.Object.ObjectId
+        MtgPure.Model.Object.ObjectN
         MtgPure.Model.Object.OT
         MtgPure.Model.Object.OTKN
         MtgPure.Model.Object.OTN
         MtgPure.Model.Object.OTNAliases
-        MtgPure.Model.Object.Object
-        MtgPure.Model.Object.ObjectId
-        MtgPure.Model.Object.ObjectN
         MtgPure.Model.Object.PromoteIdToObjectN
-        MtgPure.Model.Object.SingOT
         MtgPure.Model.Object.Singleton.Any
         MtgPure.Model.Object.Singleton.Card
         MtgPure.Model.Object.Singleton.NonCreatureCard
         MtgPure.Model.Object.Singleton.Permanent
         MtgPure.Model.Object.Singleton.Spell
+        MtgPure.Model.Object.SingOT
         MtgPure.Model.Object.SmartConstructors
         MtgPure.Model.Object.ToObjectN
         MtgPure.Model.Object.ToObjectN.Classes
         MtgPure.Model.Object.ToObjectN.CodeGen
         MtgPure.Model.Object.ToObjectN.Instances
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_1
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_01
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_01_01
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_02
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_02_01
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_02_02
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_03
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_03_01
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_03_02
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_03_03
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_04
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_04_01
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_04_02
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_04_03
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_04_04
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_05
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_05_01
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_05_02
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_05_03
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_05_04
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_05_05
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_06
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_06_01
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_06_02
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_06_03
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_06_04
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_06_05
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_06_06
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_07
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_07_01
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_07_02
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_07_03
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_07_04
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_07_05
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_07_06
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_07_07
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_08
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_08_01
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_08_02
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_08_03
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_08_04
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_08_05
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_08_06
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_08_07
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_08_08
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_09
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_09_01
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_09_02
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_09_03
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_09_04
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_09_05
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_09_06
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_09_07
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_09_08
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_09_09
         MtgPure.Model.Object.ToObjectN.Instances.ToObject_10
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_10_01
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_10_02
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_10_03
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_10_04
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_10_05
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_10_06
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_10_07
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_10_08
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_10_09
         MtgPure.Model.Object.ToObjectN.Instances.ToObject_10_10
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_10_11
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_10_12
         MtgPure.Model.Object.ToObjectN.Instances.ToObject_11
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_11_01
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_11_02
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_11_03
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_11_04
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_11_05
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_11_06
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_11_07
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_11_08
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_11_09
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_11_10
         MtgPure.Model.Object.ToObjectN.Instances.ToObject_11_11
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_11_12
         MtgPure.Model.Object.ToObjectN.Instances.ToObject_12
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_12_01
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_12_02
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_12_03
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_12_04
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_12_05
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_12_06
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_12_07
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_12_08
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_12_09
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_12_10
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_12_11
         MtgPure.Model.Object.ToObjectN.Instances.ToObject_12_12
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_1_1
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_1_10
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_1_11
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_1_12
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_1_2
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_1_3
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_1_4
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_1_5
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_1_6
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_1_7
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_1_8
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_1_9
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_2
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_2_10
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_2_11
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_2_12
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_2_2
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_2_3
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_2_4
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_2_5
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_2_6
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_2_7
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_2_8
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_2_9
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_3
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_3_10
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_3_11
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_3_12
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_3_3
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_3_4
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_3_5
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_3_6
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_3_7
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_3_8
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_3_9
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_4
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_4_10
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_4_11
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_4_12
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_4_4
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_4_5
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_4_6
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_4_7
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_4_8
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_4_9
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_5
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_5_10
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_5_11
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_5_12
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_5_5
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_5_6
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_5_7
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_5_8
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_5_9
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_6
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_6_10
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_6_11
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_6_12
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_6_6
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_6_7
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_6_8
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_6_9
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_7
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_7_10
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_7_11
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_7_12
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_7_7
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_7_8
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_7_9
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_8
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_8_10
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_8_11
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_8_12
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_8_8
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_8_9
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_9
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_9_10
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_9_11
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_9_12
-        MtgPure.Model.Object.ToObjectN.Instances.ToObject_9_9
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_13
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_13_01
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_13_02
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_13_03
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_13_04
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_13_05
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_13_06
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_13_07
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_13_08
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_13_09
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_13_10
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_13_11
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_13_12
+        MtgPure.Model.Object.ToObjectN.Instances.ToObject_13_13
         MtgPure.Model.Object.ViewObjectN
         MtgPure.Model.Object.VisitObjectN
         MtgPure.Model.Permanent

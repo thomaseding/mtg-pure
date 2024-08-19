@@ -80,6 +80,7 @@ import safe Data.Inst (
   Inst4,
   Inst5,
   Inst6,
+  Inst7,
  )
 import safe Data.Kind (Type)
 import safe Data.Nat (Fin, NatList (..), ToNat)
@@ -107,6 +108,7 @@ import safe MtgPure.Model.Object.OTN (
   OT4,
   OT5,
   OT6,
+  OT7,
   OTN (..),
  )
 import safe MtgPure.Model.Object.OTNAliases (
@@ -256,6 +258,10 @@ instance (Inst6 IsObjectType a b c d e f) => AsWithMaskedObject (OT6 a b c d e f
   masked :: (Inst6 IsObjectType a b c d e f, Typeable (liftOT ot')) => [Requirement zone (OT6 a b c d e f)] -> (ZO zone (OT6 a b c d e f) -> liftOT ot') -> WithMaskedObject liftOT zone ot'
   masked = Masked6
 
+instance (Inst7 IsObjectType a b c d e f g) => AsWithMaskedObject (OT7 a b c d e f g) where
+  masked :: (Inst7 IsObjectType a b c d e f g, Typeable (liftOT ot')) => [Requirement zone (OT7 a b c d e f g)] -> (ZO zone (OT7 a b c d e f g) -> liftOT ot') -> WithMaskedObject liftOT zone ot'
+  masked = Masked7
+
 class AsWithMaskedObjects ot where
   maskeds ::
     forall zone liftOT ot'.
@@ -288,12 +294,17 @@ instance (Inst6 IsObjectType a b c d e f) => AsWithMaskedObjects (OT6 a b c d e 
   maskeds :: (Inst6 IsObjectType a b c d e f, Typeable (liftOT ot')) => [Requirement zone (OT6 a b c d e f)] -> (List (ZO zone (OT6 a b c d e f)) -> liftOT ot') -> WithMaskedObjects liftOT zone ot'
   maskeds = Maskeds6
 
+instance (Inst7 IsObjectType a b c d e f g) => AsWithMaskedObjects (OT7 a b c d e f g) where
+  maskeds :: (Inst7 IsObjectType a b c d e f g, Typeable (liftOT ot')) => [Requirement zone (OT7 a b c d e f g)] -> (List (ZO zone (OT7 a b c d e f g)) -> liftOT ot') -> WithMaskedObjects liftOT zone ot'
+  maskeds = Maskeds7
+
 type family ThisFromOTN zone ot where
   ThisFromOTN zone (OT1 a) = ZO zone (OT1 a)
   ThisFromOTN zone (OT2 a b) = (ZO zone (OT1 a), ZO zone (OT1 b))
   ThisFromOTN zone (OT3 a b c) = (ZO zone (OT1 a), ZO zone (OT1 b), ZO zone (OT1 c))
   ThisFromOTN zone (OT4 a b c d) = (ZO zone (OT1 a), ZO zone (OT1 b), ZO zone (OT1 c), ZO zone (OT1 d))
   ThisFromOTN zone (OT5 a b c d e) = (ZO zone (OT1 a), ZO zone (OT1 b), ZO zone (OT1 c), ZO zone (OT1 d), ZO zone (OT1 e))
+  ThisFromOTN zone (OT6 a b c d e f) = (ZO zone (OT1 a), ZO zone (OT1 b), ZO zone (OT1 c), ZO zone (OT1 d), ZO zone (OT1 e), ZO zone (OT1 f))
 
 type family OT1FromOTN ot where
   OT1FromOTN (OT1 a) = OT1 a
@@ -301,6 +312,7 @@ type family OT1FromOTN ot where
   OT1FromOTN (OT3 a b c) = OT1 a
   OT1FromOTN (OT4 a b c d) = OT1 a
   OT1FromOTN (OT5 a b c d e) = OT1 a
+  OT1FromOTN (OT6 a b c d e f) = OT1 a
 
 class (IsZO zone ot) => AsWithThis zone ot where
   thisObject :: (ThisFromOTN zone ot -> liftOT ot) -> WithThis liftOT zone ot
@@ -350,6 +362,15 @@ instance (IsZO zone (OT5 a b c d e)) => AsWithThis zone (OT5 a b c d e) where
   thisObject1 :: (IsZO zone (OT5 a b c d e)) => (ZO zone (OT1FromOTN (OT5 a b c d e)) -> liftOT (OT5 a b c d e)) -> WithThis liftOT zone (OT5 a b c d e)
   thisObject1 = case litOTN @(OT5 a b c d e) of
     OT5 -> \goThis1 -> This5 \(a, _, _, _, _) -> goThis1 a
+
+instance (IsZO zone (OT6 a b c d e f)) => AsWithThis zone (OT6 a b c d e f) where
+  thisObject :: (IsZO zone (OT6 a b c d e f)) => (ThisFromOTN zone (OT6 a b c d e f) -> liftOT (OT6 a b c d e f)) -> WithThis liftOT zone (OT6 a b c d e f)
+  thisObject = case litOTN @(OT6 a b c d e f) of
+    OT6 -> This6
+
+  thisObject1 :: (IsZO zone (OT6 a b c d e f)) => (ZO zone (OT1FromOTN (OT6 a b c d e f)) -> liftOT (OT6 a b c d e f)) -> WithThis liftOT zone (OT6 a b c d e f)
+  thisObject1 = case litOTN @(OT6 a b c d e f) of
+    OT6 -> \goThis1 -> This6 \(a, _, _, _, _, _) -> goThis1 a
 
 activatedOT' :: (AsWithThis zone ot) => (ThisFromOTN zone ot -> ElectOT 'TargetStage (ActivatedAbility zone) ot) -> WithThisAbility zone ot
 activatedOT' = WithThisActivated . thisObject

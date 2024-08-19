@@ -12,6 +12,7 @@ module MtgPure.Model.Object.OTNAliases (
   OTNArtifact,
   OTNArtifactCreature,
   OTNArtifactLand,
+  OTNBattle,
   OTNCard,
   OTNCreature,
   OTNCreaturePlaneswalker,
@@ -59,6 +60,8 @@ import safe MtgPure.Model.Object.OTN (OTN)
 type OTNActivatedAbility = OTN '[ 'OTActivatedAbility]
 
 type OTNArtifact = OTN '[ 'OTArtifact]
+
+type OTNBattle = OTN '[ 'OTBattle]
 
 type OTNCreature = OTN '[ 'OTCreature]
 
@@ -141,6 +144,7 @@ type OTNCreaturePlayerPlaneswalker =
 type OTNNonArtifactPermanent =
   OTN
     '[ 'OTCreature
+     , 'OTBattle
      , 'OTEnchantment
      , 'OTLand
      , 'OTPlaneswalker
@@ -149,6 +153,7 @@ type OTNNonArtifactPermanent =
 type OTNNonCreaturePermanent =
   OTN
     '[ 'OTArtifact
+     , 'OTBattle
      , 'OTEnchantment
      , 'OTLand
      , 'OTPlaneswalker
@@ -157,6 +162,7 @@ type OTNNonCreaturePermanent =
 type OTNNonEnchantmentPermanent =
   OTN
     '[ 'OTArtifact
+     , 'OTBattle
      , 'OTCreature
      , 'OTLand
      , 'OTPlaneswalker
@@ -165,6 +171,7 @@ type OTNNonEnchantmentPermanent =
 type OTNNonLandPermanent =
   OTN
     '[ 'OTArtifact
+     , 'OTBattle
      , 'OTCreature
      , 'OTEnchantment
      , 'OTPlaneswalker
@@ -173,6 +180,7 @@ type OTNNonLandPermanent =
 type OTNNonPlaneswalkerPermanent =
   OTN
     '[ 'OTArtifact
+     , 'OTBattle
      , 'OTCreature
      , 'OTEnchantment
      , 'OTLand
@@ -181,6 +189,7 @@ type OTNNonPlaneswalkerPermanent =
 type OTNPermanent =
   OTN
     '[ 'OTArtifact
+     , 'OTBattle
      , 'OTCreature
      , 'OTEnchantment
      , 'OTLand
@@ -190,6 +199,7 @@ type OTNPermanent =
 type OTNNonCreature =
   OTN
     '[ 'OTArtifact
+     , 'OTBattle
      , 'OTEnchantment
      , 'OTInstant
      , 'OTLand
@@ -200,6 +210,7 @@ type OTNNonCreature =
 type OTNSpell =
   OTN
     '[ 'OTArtifact
+     , 'OTBattle
      , 'OTCreature
      , 'OTEnchantment
      , 'OTInstant
@@ -210,6 +221,7 @@ type OTNSpell =
 type OTNCard =
   OTN
     '[ 'OTArtifact
+     , 'OTBattle
      , 'OTCreature
      , 'OTEnchantment
      , 'OTInstant
@@ -221,6 +233,7 @@ type OTNCard =
 type OTNDamageSource =
   OTN
     '[ 'OTArtifact
+     , 'OTBattle
      , 'OTCreature
      , 'OTEnchantment
      , 'OTInstant
@@ -234,6 +247,7 @@ type OTNAny =
   OTN
     '[ 'OTActivatedAbility
      , 'OTArtifact
+     , 'OTBattle
      , 'OTCreature
      , 'OTEmblem
      , 'OTEnchantment

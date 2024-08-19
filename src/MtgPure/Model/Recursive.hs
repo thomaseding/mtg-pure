@@ -10,6 +10,7 @@ module MtgPure.Model.Recursive (
   ActivatedAbility (..),
   AnyCard (..),
   AnyToken (..),
+  BattleType (..),
   Card (..),
   CardCharacteristic (..),
   CardSpec (..),
@@ -62,7 +63,7 @@ module MtgPure.Model.Recursive (
 ) where
 
 import safe Data.ConsIndex (ConsIndex (..))
-import safe Data.Inst (Inst1, Inst2, Inst3, Inst4, Inst5, Inst6)
+import safe Data.Inst (Inst1, Inst2, Inst3, Inst4, Inst5, Inst6, Inst7)
 import safe Data.Kind (Type)
 import safe Data.Nat (Fin (..), IsNat, NatList (..), ToNat)
 import safe Data.Proxy (Proxy (..))
@@ -74,6 +75,7 @@ import safe MtgPure.Model.Color (Color)
 import safe MtgPure.Model.Colors (Colors)
 import safe MtgPure.Model.CreatureType (CreatureType)
 import safe MtgPure.Model.Damage (Damage)
+import safe MtgPure.Model.Defense (Defense)
 import safe MtgPure.Model.EffectType (EffectType (..))
 import safe MtgPure.Model.ElectStage (CoNonIntrinsicStage, ElectStage (..))
 import safe MtgPure.Model.LandType (LandType)
@@ -82,13 +84,14 @@ import safe MtgPure.Model.Mana.ManaCost (ManaCost)
 import safe MtgPure.Model.Mana.ManaPool (ManaPool)
 import safe MtgPure.Model.Mana.Snow (Snow (..))
 import safe MtgPure.Model.Object.IsObjectType (IsObjectType)
-import safe MtgPure.Model.Object.OTN (OT1, OT2, OT3, OT4, OT5, OT6, OTN)
+import safe MtgPure.Model.Object.OTN (OT1, OT2, OT3, OT4, OT5, OT6, OT7, OTN)
 import safe MtgPure.Model.Object.OTNAliases (
   OTNActivatedOrTriggeredAbility,
   OTNAny,
   OTNArtifact,
   OTNArtifactCreature,
   OTNArtifactLand,
+  OTNBattle,
   OTNCreature,
   OTNDamageSource,
   OTNEnchantment,
@@ -199,6 +202,7 @@ data SpecificCard (ot :: Type) :: Type where
   ArtifactCard :: (OTNArtifact ~ ot) => SpecificCard ot
   ArtifactCreatureCard :: (OTNArtifactCreature ~ ot) => SpecificCard ot
   ArtifactLandCard :: (OTNArtifactLand ~ ot) => SpecificCard ot
+  BattleCard :: (OTNBattle ~ ot) => SpecificCard ot
   CreatureCard :: (OTNCreature ~ ot) => SpecificCard ot
   EnchantmentCard :: (OTNEnchantment ~ ot) => SpecificCard ot
   EnchantmentCreatureCard :: (OTNEnchantmentCreature ~ ot) => SpecificCard ot
@@ -214,13 +218,14 @@ instance ConsIndex (SpecificCard ot) where
     ArtifactCard{} -> 1
     ArtifactCreatureCard{} -> 2
     ArtifactLandCard{} -> 3
-    CreatureCard{} -> 4
-    EnchantmentCard{} -> 5
-    EnchantmentCreatureCard{} -> 6
-    InstantCard{} -> 7
-    LandCard{} -> 8
-    PlaneswalkerCard{} -> 9
-    SorceryCard{} -> 10
+    BattleCard{} -> 4
+    CreatureCard{} -> 5
+    EnchantmentCard{} -> 6
+    EnchantmentCreatureCard{} -> 7
+    InstantCard{} -> 8
+    LandCard{} -> 9
+    PlaneswalkerCard{} -> 10
+    SorceryCard{} -> 11
 
 class (IsOTN ot) => IsSpecificCard (ot :: Type) where
   singSpecificCard :: SpecificCard ot
@@ -236,6 +241,10 @@ instance IsSpecificCard OTNArtifactCreature where
 instance IsSpecificCard OTNArtifactLand where
   singSpecificCard :: SpecificCard OTNArtifactLand
   singSpecificCard = ArtifactLandCard
+
+instance IsSpecificCard OTNBattle where
+  singSpecificCard :: SpecificCard OTNBattle
+  singSpecificCard = BattleCard
 
 instance IsSpecificCard OTNCreature where
   singSpecificCard :: SpecificCard OTNCreature
@@ -302,6 +311,18 @@ instance HasCardName AnyToken where
 
 --------------------------------------------------------------------------------
 
+data BattleType :: Type where
+  -- TODO: flip side
+  Seige :: BattleType
+  deriving (Typeable)
+
+instance ConsIndex BattleType where
+  consIndex :: BattleType -> Int
+  consIndex = \case
+    Seige{} -> 1
+
+--------------------------------------------------------------------------------
+
 data Card (ot :: Type) :: Type where
   Card :: (ot ~ OTN x, IsSpecificCard ot) => CardName -> Elect 'IntrinsicStage (CardCharacteristic ot) ot -> Card ot
   DoubleSidedCard :: (ot1 ~ OTN x, ot2 ~ OTN y, Inst2 IsSpecificCard ot1 ot2) => Card ot1 -> Card ot2 -> Card (ot1, ot2)
@@ -355,6 +376,14 @@ data CardCharacteristic (ot :: Type) :: Type where
     , artifactLand_spec :: CardSpec OTNArtifactLand
     } ->
     CardCharacteristic OTNArtifactLand
+  BattleCharacteristic ::
+    { battle_colors :: Colors
+    , battle_supertypes :: [Supertype OTNBattle]
+    , battle_battleTypes :: [BattleType]
+    , battle_defense :: Defense
+    , battle_spec :: CardSpec OTNBattle
+    } ->
+    CardCharacteristic OTNBattle
   CreatureCharacteristic ::
     { creature_colors :: Colors
     , creature_supertypes :: [Supertype OTNCreature]
@@ -413,13 +442,14 @@ instance ConsIndex (CardCharacteristic ot) where
     ArtifactCharacteristic{} -> 1
     ArtifactCreatureCharacteristic{} -> 2
     ArtifactLandCharacteristic{} -> 3
-    CreatureCharacteristic{} -> 4
-    EnchantmentCreatureCharacteristic{} -> 5
-    EnchantmentCharacteristic{} -> 6
-    InstantCharacteristic{} -> 7
-    LandCharacteristic{} -> 8
-    PlaneswalkerCharacteristic{} -> 9
-    SorceryCharacteristic{} -> 10
+    BattleCharacteristic{} -> 4
+    CreatureCharacteristic{} -> 5
+    EnchantmentCreatureCharacteristic{} -> 6
+    EnchantmentCharacteristic{} -> 7
+    InstantCharacteristic{} -> 8
+    LandCharacteristic{} -> 9
+    PlaneswalkerCharacteristic{} -> 10
+    SorceryCharacteristic{} -> 11
 
 --------------------------------------------------------------------------------
 
@@ -443,6 +473,11 @@ data CardSpec (ot :: Type) :: Type where
     , artifactLand_artifactLandAbilities :: [SomeZone WithThisAbility OTNArtifactLand]
     } ->
     CardSpec OTNArtifactLand
+  BattleSpec ::
+    { battle_cost :: Cost
+    , battle_abilities :: [SomeZone WithThisAbility OTNBattle]
+    } ->
+    CardSpec OTNBattle
   CreatureSpec ::
     { creature_cost :: Cost
     , creature_abilities :: [SomeZone WithThisAbility OTNCreature]
@@ -490,13 +525,14 @@ instance ConsIndex (CardSpec ot) where
     ArtifactSpec{} -> 1
     ArtifactCreatureSpec{} -> 2
     ArtifactLandSpec{} -> 3
-    CreatureSpec{} -> 4
-    EnchantmentCreatureSpec{} -> 5
-    EnchantmentSpec{} -> 6
-    InstantSpec{} -> 7
-    LandSpec{} -> 8
-    PlaneswalkerSpec{} -> 9
-    SorcerySpec{} -> 10
+    BattleSpec{} -> 4
+    CreatureSpec{} -> 5
+    EnchantmentCreatureSpec{} -> 6
+    EnchantmentSpec{} -> 7
+    InstantSpec{} -> 8
+    LandSpec{} -> 9
+    PlaneswalkerSpec{} -> 10
+    SorcerySpec{} -> 11
 
 --------------------------------------------------------------------------------
 
@@ -959,12 +995,16 @@ data SomeOT (liftOT :: Type -> Type) (ot :: Type) :: Type where
   Some6e :: (Inst6 IsObjectType a b c d e f) => SomeTerm liftOT (OT1 e) -> SomeOT liftOT (OT6 a b c d e f)
   Some6f :: (Inst6 IsObjectType a b c d e f) => SomeTerm liftOT (OT1 f) -> SomeOT liftOT (OT6 a b c d e f)
   Some6ab :: (Inst6 IsObjectType a b c d e f) => SomeTerm liftOT (OT2 a b) -> SomeOT liftOT (OT6 a b c d e f)
+  Some6ac :: (Inst6 IsObjectType a b c d e f) => SomeTerm liftOT (OT2 a c) -> SomeOT liftOT (OT6 a b c d e f)
+  Some6ae :: (Inst6 IsObjectType a b c d e f) => SomeTerm liftOT (OT2 a e) -> SomeOT liftOT (OT6 a b c d e f)
   Some6bc :: (Inst6 IsObjectType a b c d e f) => SomeTerm liftOT (OT2 b c) -> SomeOT liftOT (OT6 a b c d e f)
+  Some6cd :: (Inst6 IsObjectType a b c d e f) => SomeTerm liftOT (OT2 c d) -> SomeOT liftOT (OT6 a b c d e f)
   -- TODO: Write a script to generate other Some6xy flavors
   deriving (Typeable)
 
 data SomeTerm (liftOT :: Type -> Type) (ot :: Type) :: Type where
   SomeArtifact :: liftOT OTNArtifact -> SomeTerm liftOT OTNArtifact
+  SomeBattle :: liftOT OTNBattle -> SomeTerm liftOT OTNBattle
   SomeCreature :: liftOT OTNCreature -> SomeTerm liftOT OTNCreature
   SomeEnchantment :: liftOT OTNEnchantment -> SomeTerm liftOT OTNEnchantment
   SomeInstant :: liftOT OTNInstant -> SomeTerm liftOT OTNInstant
@@ -1010,11 +1050,15 @@ mapSomeOT some f = case some of
   Some6e term -> Some6e <$> goTerm term
   Some6f term -> Some6f <$> goTerm term
   Some6ab term -> Some6ab <$> goTerm term
+  Some6ac term -> Some6ac <$> goTerm term
+  Some6ae term -> Some6ae <$> goTerm term
   Some6bc term -> Some6bc <$> goTerm term
+  Some6cd term -> Some6cd <$> goTerm term
  where
   goTerm :: SomeTerm liftOT ot' -> Maybe (SomeTerm liftOT' ot')
   goTerm = \case
     SomeArtifact x -> SomeArtifact <$> f x
+    SomeBattle x -> SomeBattle <$> f x
     SomeCreature x -> SomeCreature <$> f x
     SomeEnchantment x -> SomeEnchantment <$> f x
     SomeInstant x -> SomeInstant <$> f x
@@ -1048,11 +1092,15 @@ fromSomeOT some f = case some of
   Some6e term -> goTerm term
   Some6f term -> goTerm term
   Some6ab term -> goTerm term
+  Some6ac term -> goTerm term
+  Some6ae term -> goTerm term
   Some6bc term -> goTerm term
+  Some6cd term -> goTerm term
  where
   goTerm :: SomeTerm liftOT ot' -> x
   goTerm = \case
     SomeArtifact x -> f x
+    SomeBattle x -> f x
     SomeCreature x -> f x
     SomeEnchantment x -> f x
     SomeInstant x -> f x
@@ -1234,6 +1282,11 @@ data WithMaskedObject (liftOT :: Type -> Type) (zone :: Zone) (ot :: Type) :: Ty
     [Requirement zone ot'] ->
     (ZO zone ot' -> liftOT ot) ->
     WithMaskedObject liftOT zone ot
+  Masked7 ::
+    (Typeable (liftOT ot), ot' ~ OT7 a b c d e f g, IsOTN ot', Inst7 IsObjectType a b c d e f g) =>
+    [Requirement zone ot'] ->
+    (ZO zone ot' -> liftOT ot) ->
+    WithMaskedObject liftOT zone ot
   deriving (Typeable)
 
 instance ConsIndex (WithMaskedObject liftOT zone ot) where
@@ -1245,6 +1298,7 @@ instance ConsIndex (WithMaskedObject liftOT zone ot) where
     Masked4{} -> 4
     Masked5{} -> 5
     Masked6{} -> 6
+    Masked7{} -> 7
 
 --------------------------------------------------------------------------------
 
@@ -1279,6 +1333,11 @@ data WithMaskedObjects (liftOT :: Type -> Type) (zone :: Zone) (ot :: Type) :: T
     [Requirement zone ot'] ->
     (List (ZO zone ot') -> liftOT ot) ->
     WithMaskedObjects liftOT zone ot
+  Maskeds7 ::
+    (Typeable (liftOT ot), ot' ~ OT7 a b c d e f g, IsOTN ot', Inst7 IsObjectType a b c d e f g) =>
+    [Requirement zone ot'] ->
+    (List (ZO zone ot') -> liftOT ot) ->
+    WithMaskedObjects liftOT zone ot
   deriving (Typeable)
 
 instance ConsIndex (WithMaskedObjects liftOT zone ot) where
@@ -1290,11 +1349,12 @@ instance ConsIndex (WithMaskedObjects liftOT zone ot) where
     Maskeds4{} -> 4
     Maskeds5{} -> 5
     Maskeds6{} -> 6
+    Maskeds7{} -> 7
 
 --------------------------------------------------------------------------------
 
 -- NOTE: At the moment there don't exist any cards with more than 3 characters. That said, extending
--- to This4 and This5, we get OTNPermanent support, which is useful. It lets the engine do some
+-- to This4 through This6, we get OTNPermanent support, which is useful. It lets the engine do some
 -- things by only specifying OTNPermanent and not all the combinations of OT's that constitute
 -- OTNPermanent. Currently this is leveraged to by the UI through `getIntrinsicManaAbilities` to
 -- discover the mana abilities of permanents without caring too much about the specific type.
@@ -1333,6 +1393,10 @@ data WithThis (liftOT :: Type -> Type) (zone :: Zone) (ot :: Type) :: Type where
     (IsOTN (OT5 a b c d e), Inst5 IsObjectType a b c d e) =>
     ((ZO zone (OT1 a), ZO zone (OT1 b), ZO zone (OT1 c), ZO zone (OT1 d), ZO zone (OT1 e)) -> liftOT (OT5 a b c d e)) ->
     WithThis liftOT zone (OT5 a b c d e)
+  This6 ::
+    (IsOTN (OT6 a b c d e f), Inst6 IsObjectType a b c d e f) =>
+    ((ZO zone (OT1 a), ZO zone (OT1 b), ZO zone (OT1 c), ZO zone (OT1 d), ZO zone (OT1 e), ZO zone (OT1 f)) -> liftOT (OT6 a b c d e f)) ->
+    WithThis liftOT zone (OT6 a b c d e f)
   deriving (Typeable)
 
 instance ConsIndex (WithThis zone liftOT ot) where
@@ -1343,6 +1407,7 @@ instance ConsIndex (WithThis zone liftOT ot) where
     This3{} -> 3
     This4{} -> 4
     This5{} -> 5
+    This6{} -> 6
 
 -- XXX: Can this be changed to ResolveStage if I remove WithThis and use an Elect This constructor?
 type WithThisActivated zone = WithThis (ElectOT 'TargetStage (ActivatedAbility zone)) zone

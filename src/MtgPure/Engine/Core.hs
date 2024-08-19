@@ -131,7 +131,8 @@ import safe MtgPure.Model.Object.ObjectId (
  )
 import safe MtgPure.Model.Object.ObjectN (ObjectN (O0))
 import safe MtgPure.Model.Object.SingOT (SingOT (..))
-import safe MtgPure.Model.Object.ToObjectN (toObject1, toObjectNAny)
+import safe MtgPure.Model.Object.ToObjectN (toObjectNAny)
+import safe MtgPure.Model.Object.ToObjectN.Classes (ToObject1 (..))
 import safe MtgPure.Model.Permanent (Permanent (..))
 import safe MtgPure.Model.Player (Player (..))
 import safe MtgPure.Model.Recursive (
