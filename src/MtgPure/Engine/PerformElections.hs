@@ -130,7 +130,7 @@ performElections' failureX input goTerm = logCall 'performElections' \case
   ControllerOf zo cont -> electControllerOf goRec zo cont
   Cost cost -> goTerm cost
   ElectActivated activated -> goTerm activated
-  ElectCardFacet character -> goTerm character
+  ElectCardCharacteristic character -> goTerm character
   ElectCardSpec spec -> goTerm spec
   ElectCase case_ -> caseOf goRec case_
   Effect effect -> goTerm $ Sequence effect

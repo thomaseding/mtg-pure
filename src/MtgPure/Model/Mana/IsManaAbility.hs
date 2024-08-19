@@ -252,7 +252,7 @@ instance IsManaAbilityImpl (Elect s el ot) where
     Cost{} -> IsNotManaAbility
     Effect effects -> mconcat $ map isManaAbilityImpl effects
     ElectActivated ability -> isManaAbilityImpl ability
-    ElectCardFacet{} -> IsNotManaAbility
+    ElectCardCharacteristic{} -> IsNotManaAbility
     ElectCardSpec{} -> IsNotManaAbility
     ElectCase case_ -> isManaAbilityImpl case_
     EndTargets elect -> isManaAbilityImpl elect

@@ -1230,8 +1230,8 @@ ordElectEl x = case x of
             Just ability2 -> ordActivatedAbility ability1 ability2
        in go ability1 ability2
     y -> compareIndexM x y
-  ElectCardFacet card1 -> \case
-    ElectCardFacet card2 -> ordCardCharacteristic card1 card2
+  ElectCardCharacteristic card1 -> \case
+    ElectCardCharacteristic card2 -> ordCardCharacteristic card1 card2
     y -> compareIndexM x y
   ElectCardSpec card1 -> \case
     ElectCardSpec card2 -> ordCardSpec card1 card2
@@ -2042,6 +2042,9 @@ ordStaticAbility x = case x of
     y -> compareIndexM x y
   Trample -> \case
     Trample -> pure EQ
+    y -> compareIndexM x y
+  Vigilance -> \case
+    Vigilance -> pure EQ
     y -> compareIndexM x y
 
 ordTimePoint :: TimePoint p -> TimePoint p -> EnvM Ordering

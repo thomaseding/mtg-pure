@@ -63,10 +63,10 @@ island :: Card OTLand   -- Defined in `MtgPure.Cards'
 ghci> compare island island
 EQ
 ghci> print island
-Card "Island" $ ElectCardFacet $ LandCharacteristic [] [BasicLand Island] $ LandSpec []
-ghci> island == (Card "Island" $ ElectCardFacet $ LandCharacteristic [] [BasicLand Island] $ LandSpec [])
+Card "Island" $ ElectCardCharacteristic $ LandCharacteristic [] [BasicLand Island] $ LandSpec []
+ghci> island == (Card "Island" $ ElectCardCharacteristic $ LandCharacteristic [] [BasicLand Island] $ LandSpec [])
 True
-ghci> island == (Card "Island" $ ElectCardFacet $ LandCharacteristic [] [BasicLand Mountain] $ LandSpec [])
+ghci> island == (Card "Island" $ ElectCardCharacteristic $ LandCharacteristic [] [BasicLand Mountain] $ LandSpec [])
 False
 ghci> mainDemoGameplay -- runs Demo.MtgPure.Gameplay
 ```

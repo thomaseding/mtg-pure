@@ -11,15 +11,15 @@ module MtgPure.Model.Enchantment (
 
 import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
-import safe MtgPure.Model.Recursive (EnchantmentType)
+import safe MtgPure.Model.Recursive (EnchantmentType, Flags)
 import safe MtgPure.Model.ZoneObject.ZoneObject (IsOTN)
 
-data AnyEnchantmentType :: Type where
-  AnyEnchantmentType :: (IsOTN ot) => EnchantmentType ot -> AnyEnchantmentType
+data AnyEnchantmentType (fs :: Flags) :: Type where
+  AnyEnchantmentType :: (IsOTN ot) => EnchantmentType fs ot -> AnyEnchantmentType fs
 
-data Enchantment :: Type where
+data Enchantment (fs :: Flags) :: Type where
   Enchantment ::
-    { enchantmentTypes :: [AnyEnchantmentType]
+    { enchantmentTypes :: [AnyEnchantmentType fs]
     } ->
-    Enchantment
+    Enchantment fs
   deriving (Typeable)

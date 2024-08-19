@@ -10,11 +10,11 @@ module MtgPure.Model.Battle (
 
 import safe Data.Kind (Type)
 import safe Data.Typeable (Typeable)
-import safe MtgPure.Model.Recursive (BattleType)
+import safe MtgPure.Model.Recursive (BattleType, Flags)
 
-data Battle :: Type where
+data Battle (fs :: Flags) :: Type where
   Battle ::
-    { battleTypes :: [BattleType]
+    { battleTypes :: [BattleType fs]
     } ->
-    Battle
+    Battle fs
   deriving (Typeable)

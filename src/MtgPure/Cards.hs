@@ -50,6 +50,7 @@ module MtgPure.Cards (
   holyStrength,
   icehideGolem,
   iceTunnel,
+  invasionOfDominaria,
   island,
   lavaAxe,
   lightningBolt,
@@ -73,6 +74,7 @@ module MtgPure.Cards (
   plummet,
   pollutedDelta,
   pradeshGypsies,
+  serraFaithKeeper,
   shatter,
   shock,
   sinkhole,
@@ -254,7 +256,8 @@ import safe MtgPure.Model.Recursive (
     Phasing,
     StaticContinuous,
     Suspend,
-    Trample
+    Trample,
+    Vigilance
   ),
   Token (..),
   TriggeredAbility (When),
@@ -1247,6 +1250,43 @@ icehideGolem =
 
 iceTunnel :: Card OTNLand
 iceTunnel = mkSnowCoveredTapDualLand "Ice Tunnel" Island Swamp
+
+invasionOfDominaria :: Card OTNBattle
+invasionOfDominaria =
+  Card "Invasion of Dominaria" $
+    ElectCardFacet
+      BattleCharacteristic
+        { battle_colors = toColors W
+        , battle_supertypes = []
+        , battle_battleTypes = [Seige]
+        , battle_defense = Defense 5
+        , battle_spec =
+            BattleSpec
+              { battle_colors = manaCost (2, W)
+              , battle_abilities = [] -- TODO: ETB gain 4 life and draw a card
+              }
+        }
+
+-- TODO: encode flip side as [Invasion of Dominaria]
+serraFaithKeeper :: Card OTNCreature
+serraFaithKeeper =
+  Card "Serra Faithkeeper" $
+    ElectCardFacet
+      CreatureCharacteristic
+        { creature_colors = toColors W
+        , creature_supertypes = []
+        , creature_creatureTypes = [Angel]
+        , creature_power = Power 4
+        , creature_toughness = Toughness 4
+        , creature_spec =
+            CreatureSpec
+              { creature_cost = noCost
+              , creature_abilities =
+                  [ static \_this -> Flying
+                  , static \_this -> Vigilance
+                  ]
+              }
+        }
 
 island :: Card OTNLand
 island = mkBasicLand Island

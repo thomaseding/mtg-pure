@@ -1175,9 +1175,9 @@ showElect = \case
   ElectActivated activated -> yesParens do
     sPost <- dollar <$> showActivatedAbility activated
     pure $ pure "ElectActivated" <> sPost
-  ElectCardFacet post -> yesParens do
+  ElectCardCharacteristic post -> yesParens do
     sPost <- dollar <$> showCardCharacteristic post
-    pure $ pure "ElectCardFacet" <> sPost
+    pure $ pure "ElectCardCharacteristic" <> sPost
   ElectCardSpec post -> yesParens do
     sPost <- dollar <$> showCardSpec post
     pure $ pure "ElectCardSpec" <> sPost
@@ -2184,6 +2184,8 @@ showStaticAbility = \case
     pure $ pure "Suspend " <> sTime <> sCost
   Trample -> noParens do
     pure $ pure "Trample"
+  Vigilance -> noParens do
+    pure $ pure "Vigilance"
 
 showSupertypes :: [Supertype ot] -> EnvM ParenItems
 showSupertypes = showListM showSupertype
