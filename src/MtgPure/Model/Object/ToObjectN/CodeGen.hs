@@ -18,7 +18,7 @@ module MtgPure.Model.Object.ToObjectN.CodeGen (
   mainCodeGenToObjectN,
 ) where
 
-import safe Data.List (intercalate, sort, sortBy, subsequences, (\\))
+import safe Data.List (sort, sortBy, subsequences, (\\))
 import safe Data.Maybe (catMaybes)
 import safe qualified Data.Set as Set
 import safe qualified Data.Traversable as T
@@ -118,7 +118,6 @@ mkInstancesHeaderMN deps m n =
     , "import safe MtgPure.Model.Object.IsObjectType (IsObjectType)"
     , "import safe MtgPure.Model.Object.ObjectN (ObjectN (..))"
     , "import safe MtgPure.Model.Object.OTN ("
-    , "  OTN,"
     , forDeps \case
         Dep_ToObject{} -> ""
         Dep_toObject{} -> ""
@@ -347,7 +346,7 @@ generateObjectMToObjectN desc symsM symsN =
          in
           Just
             ( instanceLine ++ "\n" ++ signatureLine ++ "\n" ++ implLine ++ "\n"
-            , [Dep_ToObject n, Dep_OT n]
+            , [Dep_ToObject n, Dep_OT n, Dep_OT m]
             )
     | n <= 1 ->
         Nothing
@@ -359,7 +358,7 @@ generateObjectMToObjectN desc symsM symsN =
          in
           Just
             ( instanceLine ++ "\n" ++ signatureLine ++ "\n" ++ implLine ++ "\n"
-            , [Dep_ToObject n, Dep_OT n]
+            , [Dep_ToObject n, Dep_OT n, Dep_OT m]
             )
     | otherwise ->
         let
@@ -369,7 +368,7 @@ generateObjectMToObjectN desc symsM symsN =
             ( instanceLine ++ "\n" ++ signatureLine ++ "\n" ++ implLine ++ "\n"
             , map Dep_ToObject [m + 1, n]
                 ++ map Dep_toObject [m + 1, n]
-                ++ [Dep_OT n]
+                ++ map Dep_OT [m, m + 1, n]
             )
  where
   m = length symsM
@@ -377,12 +376,13 @@ generateObjectMToObjectN desc symsM symsN =
   letterMissing = case symsN \\ symsM of
     [x] -> interpretSym SymObject x
     _ -> error "impossible"
-  seqSymsM = commas $ map (interpretSym desc) symsM
+  lettersM = map (interpretSym desc) symsM
+  spacesLettersM = unwords lettersM
   telescope = telescopeToObjectN desc symsM symsN
   letters = map (interpretSym desc) symsN
-  s_Inst = "Inst" ++ show n ++ " IsObjectType " ++ unwords letters
-  s_OT = "OT" ++ show n ++ " " ++ unwords letters
-  s_OTN = "OTN '[" ++ seqSymsM ++ "]"
+  s_Inst = parens $ "Inst" ++ show n ++ " IsObjectType " ++ unwords letters
+  s_OT_N = "OT" ++ show n ++ " " ++ unwords letters
+  s_OT_M = "OT" ++ show m ++ " " ++ spacesLettersM
   s_ToObject = "ToObject" ++ show n
   s_toObject = "toObject" ++ show n
   instanceLine =
@@ -390,7 +390,7 @@ generateObjectMToObjectN desc symsM symsN =
       ++ s_Inst
       ++ "=>"
       ++ s_ToObject
-      ++ parens s_OTN
+      ++ parens s_OT_M
       ++ unwords letters
       ++ " where"
   signatureLine =
@@ -400,10 +400,10 @@ generateObjectMToObjectN desc symsM symsN =
       ++ s_Inst
       ++ "=>"
       ++ "ObjectN"
-      ++ parens s_OTN
+      ++ parens s_OT_M
       ++ "->"
       ++ "ObjectN"
-      ++ parens s_OT
+      ++ parens s_OT_N
 
 telescopeToObjectN :: SymDesc -> [Sym] -> [Sym] -> String
 telescopeToObjectN desc symsM symsN = "toObject" ++ show n ++ " x = " ++ toN
@@ -413,14 +413,11 @@ telescopeToObjectN desc symsM symsN = "toObject" ++ show n ++ " x = " ++ toN
   m = length symsM + 1
   n = length symsN
   lettersM = map (interpretSym desc) symsSucc
-  commaLettersM = commas lettersM
-  otnM = "OTN '[" ++ commaLettersM ++ "]"
+  spacesLettersM = unwords lettersM
+  otnM = "OT" ++ show m ++ " " ++ spacesLettersM
   objectM = "ObjectN " ++ parens otnM
   toM = parens $ "toObject" ++ show m ++ " x :: " ++ objectM
   toN = "toObject" ++ show n ++ " " ++ toM
 
 parens :: String -> String
 parens x = "(" ++ x ++ ")"
-
-commas :: [String] -> String
-commas = intercalate ", "
