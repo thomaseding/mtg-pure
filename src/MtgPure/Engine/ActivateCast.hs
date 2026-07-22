@@ -571,11 +571,11 @@ payElectedManaAbilityAndResolve zoAbility elected = logCall 'payElectedManaAbili
     Illegal -> pure CantPay
     Legal -> do
       resolveTopOfStack <&> \case
-        Nothing -> error $ show (undefined :: InternalLogicError) -- we just pushed it on the stack
+        Nothing -> error $ show CantHappenByConstruction -- we just pushed it on the stack
         Just resolution -> case resolution of
           ResolvedEffect evs -> ResolvedManaAbility evs
-          Fizzled -> error $ show (undefined :: InternalLogicError) -- mana abilities don't have targets
-          PermanentResolved -> error $ show (undefined :: InternalLogicError) -- mana abilities are abilities
+          Fizzled -> error $ show CantHappenByConstruction -- mana abilities don't have targets
+          PermanentResolved -> error $ show CantHappenByConstruction -- mana abilities are abilities
 
 data ActivateCast = Activate | Cast
 

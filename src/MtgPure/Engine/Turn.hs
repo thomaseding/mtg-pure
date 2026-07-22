@@ -396,7 +396,7 @@ mkAttackerToBlockers attackers blockers =
         Just blockers' -> blockers'
         Nothing -> case attacker `elem` attackers' of
           True -> []
-          False -> error $ show (undefined :: InternalLogicError)
+          False -> error $ show CantHappenByConstruction
 
 attackerToBlockers' :: [DeclaredBlocker] -> Map.Map (ZO 'ZBattlefield OTNCreature) [ZO 'ZBattlefield OTNCreature]
 attackerToBlockers' blockers = Map.fromListWith (++) $ do
@@ -434,7 +434,7 @@ applyDamageInOrder (DefendingPlayer oDefender) zoSource zoVictims = logCall 'app
   let go remainingDamage zoVictim = do
         victimPerm <- fromRO $ getPermanent $ asPermanent zoVictim
         case permanentCreature victimPerm of
-          Nothing -> error $ show (undefined :: InternalLogicError) -- pre-filtering should have prevented this
+          Nothing -> error $ show CantHappenByConstruction -- pre-filtering should have prevented this
           Just creat -> do
             let Toughness toughness = creatureToughness creat
             let amountToVictim = min remainingDamage toughness

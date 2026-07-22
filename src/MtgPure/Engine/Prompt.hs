@@ -98,6 +98,15 @@ import safe MtgPure.Model.Variable (Var (..))
 import safe MtgPure.Model.Zone (IsZone, Zone (..))
 import safe MtgPure.Model.ZoneObject.ZoneObject (IsOTN, IsZO, ZO)
 
+-- | Errors for "impossible" code: states that the types permit but the game
+-- logic forbids. This is the preferred way to mark unreachable code, in
+-- preference to `undefined`: each constructor documents *why* the site is
+-- impossible, and `Show` gives an informative message if the impossible ever
+-- happens.
+--
+-- NOTE: `CantHappenByConstruction` is a generic placeholder. When you touch a
+-- site that uses it, add an appropriately-named constructor here that explains
+-- the specific impossibility, and use that instead.
 data InternalLogicError :: Type where
   CantHappenByConstruction :: InternalLogicError -- TODO: ditch this for informative constructors
   CorruptCallStackLogging :: InternalLogicError
