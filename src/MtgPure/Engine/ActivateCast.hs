@@ -307,7 +307,9 @@ castSpell oCaster = logCall 'castSpell \case
                             { magicControllerMap = Map.insert stackId oCaster $ magicControllerMap st'
                             , magicOwnerMap = Map.insert stackId oCaster $ magicOwnerMap st'
                             }
-                        castSpellCard zoStack zoSpell oCaster card
+                        castSpellCard zoStack zoSpell oCaster card >>= \case
+                          Illegal -> invalid CastSpell_CantPayCost
+                          Legal -> pure Legal
                     AnyCard2{} -> undefined
 
 castSpellCard ::

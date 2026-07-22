@@ -79,6 +79,7 @@ import safe MtgPure.Engine.Priority (
   gainPriority,
   getHasPriority,
   getPlayerWithPriority,
+  resumePriority,
  )
 import safe MtgPure.Engine.PutOntoBattlefield (putOntoBattlefield)
 import safe MtgPure.Engine.Resolve (
@@ -90,7 +91,7 @@ import safe MtgPure.Engine.Resolve (
 import safe MtgPure.Engine.Satisfies (isSatisfied, satisfies, zosSatisfying)
 import safe MtgPure.Engine.State (Fwd)
 import safe MtgPure.Engine.StateBasedActions (performStateBasedActions)
-import safe MtgPure.Engine.Turn (startGame)
+import safe MtgPure.Engine.Turn (resumeGameLoop, startGame)
 
 fwdImpl :: (Monad m) => Fwd m
 fwdImpl =
@@ -153,6 +154,8 @@ fwdImpl =
     , fwd_resolveElected = resolveElected
     , fwd_resolveTopOfStack = resolveTopOfStack
     , fwd_resolveTopOfStackCont = resolveTopOfStackCont
+    , fwd_resumeGame = resumeGameLoop
+    , fwd_resumePriority = resumePriority
     , fwd_rewindIllegal = rewindIllegal
     , fwd_rewindIllegalActivation = rewindIllegalActivation
     , fwd_rewindNothing = rewindNothing

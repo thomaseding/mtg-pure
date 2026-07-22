@@ -78,6 +78,8 @@ module MtgPure.Engine.Fwd.Api (
   resolveTopOfStack,
   resolveTopOfStackCont,
   resolveElected,
+  resumeGameLoop,
+  resumePriority,
   satisfies,
   setPermanent,
   setPlayer,
@@ -315,6 +317,11 @@ resolveTopOfStackCont = do
   fwd <- liftCont getFwd
   fwd_resolveTopOfStackCont fwd
 
+resumePriority :: (Monad m) => MagicCont 'Private 'RW Void m ()
+resumePriority = do
+  fwd <- liftCont getFwd
+  fwd_resumePriority fwd
+
 ----------------------------------------
 
 activatedToIndex :: (IsZO zone ot, Monad m) => SomeActivatedAbility zone ot -> Magic 'Private 'RO m AbsoluteActivatedAbilityIndex
@@ -513,6 +520,9 @@ setPermanent = fwd2 fwd_setPermanent
 
 setPlayer :: (Monad m) => Object 'OTPlayer -> Player -> Magic 'Private 'RW m ()
 setPlayer = fwd2 fwd_setPlayer
+
+resumeGameLoop :: (Monad m) => Magic 'Private 'RW m Void
+resumeGameLoop = fwd0 fwd_resumeGame
 
 startGame :: (Monad m) => Magic 'Private 'RW m Void
 startGame = fwd0 fwd_startGame

@@ -14,6 +14,7 @@
 
 module MtgPure.Client.Terminal.PriorityAction (
   playTerminalGame,
+  terminalPrompt,
 ) where
 
 import safe Ansi.Box (clearScreenWithoutPaging, withHiddenCursor)
@@ -93,6 +94,7 @@ import safe MtgPure.Engine.State (
   GameState (..),
   Magic,
   OpaqueGameState,
+  Prompt,
   getOpaqueGameState,
   queryMagic,
  )
@@ -145,31 +147,38 @@ gameInput cheats decks =
     , gameInput_gameCheats = cheats
     , gameInput_gameFormat = Vintage
     , gameInput_mulligan = DisableMulligan
-    , gameInput_prompt =
-        Prompt
-          { exceptionCantBeginGameWithoutPlayers = liftIO $ putStrLn "exceptionCantBeginGameWithoutPlayers"
-          , exceptionInvalidCastSpell = \_ _ _ -> liftIO $ putStrLn "exceptionInvalidCastSpell"
-          , exceptionInvalidGenericManaPayment = \_ _ -> liftIO $ putStrLn "exceptionInvalidGenericManaPayment"
-          , exceptionInvalidPlayLand = \_ player msg -> liftIO $ print (player, msg)
-          , exceptionInvalidShuffle = \_ _ -> liftIO $ putStrLn "exceptionInvalidShuffle"
-          , exceptionInvalidStartingPlayer = \_ _ -> liftIO $ putStrLn "exceptionInvalidStartingPlayer"
-          , exceptionZoneObjectDoesNotExist = \zo -> liftIO $ print ("exceptionZoneObjectDoesNotExist", zo)
-          , promptChooseAttackers = terminalChooseAttackers
-          , promptChooseBlockers = terminalChooseBlockers
-          , promptChooseOption = terminalChooseOption
-          , promptDebugMessage = \p msg -> liftIO do
-              putStrLn $ "DEBUG: " ++ msg
-              IO.hFlush IO.stdout
-              M.when (p == Pause) pause
-          , promptGetStartingPlayer = \_attempt _count -> pure $ PlayerIndex 0
-          , promptLogCallPop = terminalLogCallPop
-          , promptLogCallPush = terminalLogCallPush
-          , promptPayDynamicMana = terminalPromptPayDynamicMana
-          , promptPerformMulligan = \_attempt _p _hand -> pure False
-          , promptPick = terminalPick
-          , promptPriorityAction = terminalPriorityAction
-          , promptShuffle = \_attempt (CardCount n) _player -> pure $ map CardIndex [0 .. n - 1]
-          }
+    , gameInput_prompt = terminalPrompt
+    }
+
+-- | The interactive terminal prompt: renders the game and reads commands from
+-- the console (falling back to any scripted replay inputs in 'TerminalState').
+-- Exposed so a game can be resumed under it (see @resumeGame@), not just started
+-- via 'playTerminalGame'.
+terminalPrompt :: Prompt Terminal
+terminalPrompt =
+  Prompt
+    { exceptionCantBeginGameWithoutPlayers = liftIO $ putStrLn "exceptionCantBeginGameWithoutPlayers"
+    , exceptionInvalidCastSpell = \_ _ _ -> liftIO $ putStrLn "exceptionInvalidCastSpell"
+    , exceptionInvalidGenericManaPayment = \_ _ -> liftIO $ putStrLn "exceptionInvalidGenericManaPayment"
+    , exceptionInvalidPlayLand = \_ player msg -> liftIO $ print (player, msg)
+    , exceptionInvalidShuffle = \_ _ -> liftIO $ putStrLn "exceptionInvalidShuffle"
+    , exceptionInvalidStartingPlayer = \_ _ -> liftIO $ putStrLn "exceptionInvalidStartingPlayer"
+    , exceptionZoneObjectDoesNotExist = \zo -> liftIO $ print ("exceptionZoneObjectDoesNotExist", zo)
+    , promptChooseAttackers = terminalChooseAttackers
+    , promptChooseBlockers = terminalChooseBlockers
+    , promptChooseOption = terminalChooseOption
+    , promptDebugMessage = \p msg -> liftIO do
+        putStrLn $ "DEBUG: " ++ msg
+        IO.hFlush IO.stdout
+        M.when (p == Pause) pause
+    , promptGetStartingPlayer = \_attempt _count -> pure $ PlayerIndex 0
+    , promptLogCallPop = terminalLogCallPop
+    , promptLogCallPush = terminalLogCallPush
+    , promptPayDynamicMana = terminalPromptPayDynamicMana
+    , promptPerformMulligan = \_attempt _p _hand -> pure False
+    , promptPick = terminalPick
+    , promptPriorityAction = terminalPriorityAction
+    , promptShuffle = \_attempt (CardCount n) _player -> pure $ map CardIndex [0 .. n - 1]
     }
 
 parsePriorityAction :: CIPriorityAction -> Magic 'Public 'RO Terminal (PriorityAction ())

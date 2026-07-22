@@ -8,6 +8,7 @@
 
 module MtgPure.Engine.PlayGame (
   playGame,
+  resumeGame,
 ) where
 
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
@@ -20,6 +21,7 @@ import safe MtgPure.Engine.Fwd.Api (
   getAlivePlayers,
   getPlayer,
   pushLibraryCard,
+  resumeGameLoop,
   startGame,
  )
 import safe MtgPure.Engine.Fwd.Impl (fwdImpl)
@@ -33,7 +35,10 @@ import safe MtgPure.Engine.State (
   GameResult,
   GameState (..),
   Magic,
+  OpaqueGameState,
+  emptyCombatState,
   logCall,
+  unOpaqueGameState,
  )
 import safe MtgPure.Model.Deck (Deck (..))
 import safe MtgPure.Model.Graveyard (Graveyard (..))
@@ -70,6 +75,14 @@ startGame' :: (Monad m) => Magic 'Private 'RW m Void
 startGame' = logCall 'startGame' do
   initLibraries
   startGame
+
+-- | Resume a previously-suspended game (see @resumeGameLoop@) instead of
+-- starting a fresh one from a 'GameInput'.
+resumeGame :: (Monad m) => OpaqueGameState m -> m (Maybe (GameResult m))
+resumeGame opaque =
+  runMagicRW (unOpaqueGameState opaque) resumeGameLoop <&> \case
+    Left result -> Just result
+    Right v -> absurd v
 
 initLibraries :: (Monad m) => Magic 'Private 'RW m ()
 initLibraries = logCall 'initLibraries do
@@ -110,6 +123,7 @@ mkGameState fwd input = case playerObjects of
     Just
       GameState
         { magic_ = ()
+        , magicCombat = emptyCombatState
         , magicControllerMap = controllerMap
         , magicCurrentTurn = 0
         , magicExiledCards = mempty

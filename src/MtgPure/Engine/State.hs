@@ -19,10 +19,14 @@ module MtgPure.Engine.State (
   ToPriorityEnd (..),
   --
   mkOpaqueGameState,
+  unOpaqueGameState,
   getOpaqueGameState,
   concatGameResults,
   OpaqueGameState,
   GameState (..),
+  CombatState (..),
+  AssignedCombatOrdering,
+  emptyCombatState,
   GameCheats (..),
   noGameCheats,
   GameInput (..),
@@ -86,6 +90,7 @@ import safe MtgPure.Engine.Prompt (
   AnyElected,
   CardCount (..),
   CardIndex (..),
+  DeclaredAttacker,
   Ev,
   InternalLogicError (..),
   PlayerIndex (..),
@@ -100,6 +105,7 @@ import safe MtgPure.Model.Object.OT (
   OT (..),
  )
 import safe MtgPure.Model.Object.OTN (OT0)
+import safe MtgPure.Model.Object.OTNAliases (OTNCreature)
 import safe MtgPure.Model.Object.Object (Object)
 import safe MtgPure.Model.Object.ObjectId (ObjectDiscriminant, ObjectId (..))
 import safe MtgPure.Model.Permanent (Permanent)
@@ -146,6 +152,7 @@ data GameState (m :: Type -> Type) where
   -- Simply knowing that a non-visible ID exists allow players to cheat (clients could spam it and then glean zone information and whatnot).
   GameState ::
     { magic_ :: ()
+    , magicCombat :: CombatState
     , magicControllerMap :: Map.Map ObjectId (Object 'OTPlayer)
     , magicCurrentTurn :: Int
     , magicExiledCards :: Map.Map (ZO 'ZExile OT0) AnyCard
@@ -183,6 +190,27 @@ newtype OpaqueGameState m = OpaqueGameState (GameState m)
 instance Show (OpaqueGameState m) where
   show :: OpaqueGameState m -> String
   show _ = show ''OpaqueGameState
+
+-- | The combat-damage assignment order: for each attacker/blocker, the ordered
+-- list of creatures it assigns its combat damage to.
+type AssignedCombatOrdering = Map.Map (ZO 'ZBattlefield OTNCreature) [ZO 'ZBattlefield OTNCreature]
+
+-- | The combat context that the declare-attackers / declare-blockers steps build
+-- up and later combat steps consume. It lives in 'GameState' (rather than only on
+-- the engine call stack) so that a game suspended at a combat priority round can
+-- be resumed from state alone (see @resumeGame@); it also gives future Elects and
+-- Effects a place to read the current attackers/blockers from.
+data CombatState = CombatState
+  { combatAttackers :: [DeclaredAttacker]
+  -- ^ attackers declared this combat, empty before the declare-attackers step
+  , combatOrdering :: AssignedCombatOrdering
+  -- ^ damage-assignment order fixed at the declare-blockers step, empty before it
+  }
+
+-- | The combat context before any attackers have been declared (also used to
+-- reset it at the start of each combat phase).
+emptyCombatState :: CombatState
+emptyCombatState = CombatState{combatAttackers = [], combatOrdering = Map.empty}
 
 class RegisterEventListener (v :: Visibility) (rw :: ReadWrite) where
   registerListener :: (Monad m) => EvListener v rw m -> Magic 'Private 'RW m EvListenerId
@@ -278,6 +306,9 @@ type MagicCont v rw bail m a = MagicCont' (GameResult m) (GameState m) v rw bail
 
 mkOpaqueGameState :: GameState m -> OpaqueGameState m
 mkOpaqueGameState = OpaqueGameState
+
+unOpaqueGameState :: OpaqueGameState m -> GameState m
+unOpaqueGameState (OpaqueGameState st) = st
 
 getOpaqueGameState :: (Monad m) => Magic 'Public 'RO m (OpaqueGameState m)
 getOpaqueGameState = internalFromPrivate $ gets mkOpaqueGameState

@@ -13,6 +13,7 @@
 module MtgPure.Engine.Priority (
   askPriorityAction,
   gainPriority,
+  resumePriority,
   bailGainPriority,
   getHasPriority,
   getPlayerWithPriority,
@@ -80,6 +81,10 @@ gainPriority oPlayer = do
       PlayerCount n <- fromPublicRO getAlivePlayerCount
       ps <- fromRO $ Stream.take n . Stream.dropWhile (/= oPlayer) <$> getAPNAP
       modify \st -> st{magicPlayerOrderPriority = ps}
+  resumePriority
+
+resumePriority :: (Monad m) => MagicCont 'Private 'RW Void m ()
+resumePriority = logCall 'resumePriority do
   endOrVoid <- liftCont $ runMagicCont runPriorityQueue
   case endOrVoid of
     Right v -> absurd v

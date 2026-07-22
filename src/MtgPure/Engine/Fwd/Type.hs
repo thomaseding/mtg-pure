@@ -124,6 +124,8 @@ data Fwd' ex st m where
     , fwd_resolveElected :: forall ot. (IsOTN ot) => ZO 'ZStack OT0 -> Elected 'TargetStage ot -> Magic' ex st 'Private 'RW m ResolveElected
     , fwd_resolveTopOfStack :: (Monad m) => Magic' ex st 'Private 'RW m (Maybe ResolveElected)
     , fwd_resolveTopOfStackCont :: MagicCont' ex st 'Private 'RW PriorityEnd m Void
+    , fwd_resumeGame :: Magic' ex st 'Private 'RW m Void
+    , fwd_resumePriority :: MagicCont' ex st 'Private 'RW Void m ()
     , fwd_rewindIllegal :: Magic' ex st 'Private 'RW m Legality -> Magic' ex st 'Private 'RW m Bool
     , fwd_rewindIllegalActivation :: Magic' ex st 'Private 'RW m ActivateResult -> Magic' ex st 'Private 'RW m ActivateResult
     , fwd_rewindNothing :: forall a. Magic' ex st 'Private 'RW m (Maybe a) -> Magic' ex st 'Private 'RW m (Maybe a)

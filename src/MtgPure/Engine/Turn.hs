@@ -12,6 +12,7 @@
 {-# HLINT ignore "Use &&" #-}
 
 module MtgPure.Engine.Turn (
+  resumeGameLoop,
   startGame,
 ) where
 
@@ -39,6 +40,7 @@ import safe MtgPure.Engine.Fwd.Api (
   getAlivePlayers,
   getPermanent,
   getPlayer,
+  resumePriority,
   setPermanent,
   setPlayer,
   staticAbilitiesOf,
@@ -66,9 +68,12 @@ import safe MtgPure.Engine.Prompt (
   SourceZO (..),
  )
 import safe MtgPure.Engine.State (
+  AssignedCombatOrdering,
+  CombatState (..),
   GameState (..),
   Magic,
   MagicCont,
+  emptyCombatState,
   logCall,
   mkOpaqueGameState,
   runMagicCont,
@@ -105,6 +110,49 @@ startGame = logCall 'startGame do
 
   -- NOTE: MagicCont is appropriate in order to nicely support cards like [Stasis] and [Time Stop]
   either id id <$> runMagicCont startTurn
+
+-- | Resume a game that was suspended at a priority action, continuing the turn
+-- loop from the current 'magicPhaseStep' instead of setting a new game up. This
+-- is the counterpart of 'startGame' used by @resumeGame@: it skips setup
+-- (shuffling, drawing opening hands) and re-enters the phase chain, finishing
+-- the in-progress priority round ('resumePriority') before handing off to the
+-- normal per-phase successor.
+--
+-- The suspension point is always a priority prompt, so the reconstructed
+-- continuation only needs the current phase plus the persisted priority order.
+resumeGameLoop :: (Monad m) => Magic 'Private 'RW m Void
+resumeGameLoop = logCall 'resumeGameLoop do
+  phaseStep <- fromRO $ gets magicPhaseStep
+  either id id <$> runMagicCont (resumeAt phaseStep)
+
+resumeAt :: (Monad m) => PhaseStep -> MagicCont 'Private 'RW Void m Void
+resumeAt phaseStep = M.join $ logCall 'resumeAt $ case phaseStep of
+  PSBeginningPhase UntapStep -> pure upkeepStep -- no priority in the untap step
+  PSBeginningPhase UpkeepStep -> resumePriority >> pure drawStep
+  PSBeginningPhase DrawStep -> resumePriority >> pure precombatMainPhase
+  PSPreCombatMainPhase -> resumePriority >> pure beginningOfCombatStep
+  PSCombatPhase BeginningOfCombatStep -> do
+    resumePriority
+    defendingPlayer <- liftCont $ fromRO promptForADefendingPlayer
+    pure $ declareAttackersStep defendingPlayer
+  PSCombatPhase DeclareAttackersStep -> do
+    resumePriority
+    attackers <- liftCont $ fromRO $ gets $ combatAttackers . magicCombat
+    case NonEmpty.nonEmpty attackers of
+      Nothing -> pure endOfCombatStep -- no attackers were declared
+      Just attackers' -> do
+        defendingPlayer <- liftCont $ fromRO promptForADefendingPlayer
+        pure $ declareBlockersStep defendingPlayer attackers'
+  PSCombatPhase DeclareBlockersStep -> do
+    resumePriority
+    ordering <- liftCont $ fromRO $ gets $ combatOrdering . magicCombat
+    defendingPlayer <- liftCont $ fromRO promptForADefendingPlayer
+    pure $ combatDamageStep defendingPlayer ordering
+  PSCombatPhase CombatDamageStep -> resumePriority >> pure endOfCombatStep
+  PSCombatPhase EndOfCombatStep -> resumePriority >> pure postcombatMainPhase
+  PSPostCombatMainPhase -> resumePriority >> pure endStep
+  PSEndingPhase EndStep -> resumePriority >> pure cleanupStep
+  PSEndingPhase CleanupStep -> pure startTurn -- no priority in the cleanup step
 
 -- (103.1)
 determineStartingPlayer :: (Monad m) => Magic 'Private 'RW m ()
@@ -145,6 +193,23 @@ drawStartingHand oPlayer = logCall 'drawStartingHand do
 setPhaseStep :: PhaseStep -> (Monad m) => Magic 'Private 'RW m ()
 setPhaseStep phaseStep = logCall 'setPhaseStep do
   modify \st -> st{magicPhaseStep = phaseStep}
+
+-- | Record the attackers declared this combat, so a game suspended at the
+-- declare-attackers priority round can rebuild the transition to blockers.
+setCombatAttackers :: (Monad m) => [DeclaredAttacker] -> Magic 'Private 'RW m ()
+setCombatAttackers attackers = modify \st ->
+  st{magicCombat = (magicCombat st){combatAttackers = attackers}}
+
+-- | Record the combat-damage assignment order fixed at the declare-blockers
+-- step, so a game suspended at the declare-blockers priority round can rebuild
+-- the transition to the combat-damage step.
+setCombatOrdering :: (Monad m) => AssignedCombatOrdering -> Magic 'Private 'RW m ()
+setCombatOrdering ordering = modify \st ->
+  st{magicCombat = (magicCombat st){combatOrdering = ordering}}
+
+-- | Clear the combat context at the start of a combat phase.
+resetCombat :: (Monad m) => Magic 'Private 'RW m ()
+resetCombat = modify \st -> st{magicCombat = emptyCombatState}
 
 -- NOTE: This hangs if there are not enough unique items.
 takeUnique :: (Eq a) => Int -> Stream.Stream a -> [a]
@@ -288,6 +353,7 @@ promptForADefendingPlayer = do
 beginningOfCombatStep :: (Monad m) => MagicCont 'Private 'RW Void m Void
 beginningOfCombatStep = M.join $ logCall 'beginningOfCombatStep do
   liftCont $ setPhaseStep $ PSCombatPhase BeginningOfCombatStep
+  liftCont resetCombat
   defendingPlayer <- liftCont $ fromRO promptForADefendingPlayer
   oActive <- liftCont $ fromPublicRO getActivePlayer
   gainPriority oActive
@@ -359,12 +425,11 @@ declareAttackersStep defendingPlayer = M.join $ logCall 'declareAttackersStep do
             pure $ Just attackers
   liftCont $ F.for_ attackers \attacker -> do
     M.void $ enact Nothing $ Tap $ declaredAttacker_attacker attacker
+  liftCont $ setCombatAttackers attackers
   gainPriority oActive
   pure case NonEmpty.nonEmpty attackers of
     Just attackers' -> declareBlockersStep defendingPlayer attackers'
     Nothing -> endOfCombatStep
-
-type AssignedCombatOrdering = Map.Map (ZO 'ZBattlefield OTNCreature) [ZO 'ZBattlefield OTNCreature]
 
 assignCombatDamageOrder ::
   (Monad m) =>
@@ -423,6 +488,7 @@ declareBlockersStep defendingPlayer attackers = M.join $ logCall 'declareBlocker
             pure $ Just blockers
     ordering <- assignCombatDamageOrder attackers blockers
     pure ordering
+  liftCont $ setCombatOrdering ordering
   gainPriority oActive
   pure $ combatDamageStep defendingPlayer ordering
 

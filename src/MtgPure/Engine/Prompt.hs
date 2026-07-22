@@ -448,6 +448,7 @@ deriving instance Show InvalidPlayLand
 
 data InvalidCastSpell :: Type where
   CastSpell_CannotPlayFromZone :: (IsZone zone) => ZO zone OTNSpell -> InvalidCastSpell
+  CastSpell_CantPayCost :: (IsZone zone) => ZO zone OTNSpell -> InvalidCastSpell
   CastSpell_NoPriority :: (IsZone zone) => ZO zone OTNSpell -> InvalidCastSpell
   CastSpell_NotASpell :: (IsZone zone) => ZO zone OTNSpell -> InvalidCastSpell
   CastSpell_NotInZone :: ZO zone OTNSpell -> InvalidCastSpell
