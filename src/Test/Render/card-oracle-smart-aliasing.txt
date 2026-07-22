@@ -1,0 +1,309 @@
+==== Acceptable Losses ====
+AnyCard1 $ Card "Acceptable Losses" $ Your $ \you1 -> ElectCardFacet $ SorceryCharacteristic (toColors R) [] $ Target you1 $ masked @(OT1 'OTCreature) [] $ \target2 -> ElectCardSpec $ SorcerySpec (AndCosts [manaCost (3, R), DiscardRandomCost 1]) [] $ thisObject $ \this3 -> Effect [DealDamage (asDamageSource this3) (asCreaturePlayerPlaneswalker target2) $ Damage 5]
+
+==== All Is Dust ====
+AnyCard1 $ Card "All Is Dust" $ ElectCardFacet $ SorceryCharacteristic (toColors ()) [Tribal [Eldrazi]] $ ElectCardSpec $ SorcerySpec (manaCost 7) [] $ thisObject $ \_this1 -> All $ maskeds @(OT1 'OTPlayer) [] $ \obj2s -> All $ maskeds @OTNPermanent [ROr [OfColors $ toColors W, OfColors $ toColors U, OfColors $ toColors B, OfColors $ toColors R, OfColors $ toColors G]] $ \obj3s -> Effect [WithList $ Each obj2s $ \obj2 -> WithList $ SuchThat [ControlledBy obj2] $ Each obj3s $ \obj3 -> Sacrifice obj2 [Is obj3]]
+
+==== Alpine Meadow ====
+AnyCard1 $ Card "Alpine Meadow" $ ElectCardFacet $ LandCharacteristic [Snow] [BasicLand Mountain, BasicLand Plains] $ LandSpec [static @'ZBattlefield $ \_this1 -> Enters EntersTapped]
+
+==== Ancestral Recall ====
+AnyCard1 $ Card "Ancestral Recall" $ Your $ \you1 -> ElectCardFacet $ InstantCharacteristic (toColors U) [] $ ElectCardSpec $ InstantSpec (OrCosts []) [] $ thisObject $ \_this2 -> Effect [DrawCards you1 3]
+
+==== Ancestral Vision ====
+AnyCard1 $ Card "Ancestral Vision" $ Your $ \you1 -> ElectCardFacet $ SorceryCharacteristic (toColors U) [] $ Target you1 $ masked @(OT1 'OTPlayer) [] $ \target2 -> ElectCardSpec $ SorcerySpec (OrCosts []) [static @'ZBattlefield $ \_this3 -> Suspend 4 $ Cost $ manaCost U] $ thisObject $ \_this4 -> Effect [DrawCards target2 3]
+
+==== Arctic Flats ====
+AnyCard1 $ Card "Arctic Flats" $ ElectCardFacet $ LandCharacteristic [Snow] [] $ LandSpec [activated @'ZBattlefield $ \this1 -> ControllerOf (asAny this1) $ \you2 -> ElectActivated $ Ability (TapCost [Is this1]) $ Effect [AddMana you2 $ toManaPool G], activated @'ZBattlefield $ \this3 -> ControllerOf (asAny this3) $ \you4 -> ElectActivated $ Ability (TapCost [Is this3]) $ Effect [AddMana you4 $ toManaPool W]]
+
+==== Arctic Treeline ====
+AnyCard1 $ Card "Arctic Treeline" $ ElectCardFacet $ LandCharacteristic [Snow] [BasicLand Forest, BasicLand Plains] $ LandSpec [static @'ZBattlefield $ \_this1 -> Enters EntersTapped]
+
+==== Backlash ====
+AnyCard1 $ Card "Backlash" $ Your $ \you1 -> ElectCardFacet $ InstantCharacteristic (toColors (B,R)) [] $ Target you1 $ masked @(OT1 'OTCreature) [Not IsTapped] $ \target2 -> ElectCardSpec $ InstantSpec (manaCost (1, B, R)) [] $ thisObject $ \_this3 -> ControllerOf (asAny target2) $ \controller4 -> VariableFromPower target2 $ \x -> Effect [DealDamage (asDamageSource target2) (asCreaturePlayerPlaneswalker controller4) $ VariableDamage x]
+
+==== Bayou ====
+AnyCard1 $ Card "Bayou" $ ElectCardFacet $ LandCharacteristic [] [BasicLand Forest, BasicLand Swamp] $ LandSpec []
+
+==== Birds of Paradise ====
+AnyCard1 $ Card "Birds of Paradise" $ ElectCardFacet $ CreatureCharacteristic (toColors G) [] [Bird] (Power 0) (Toughness 1) $ CreatureSpec (manaCost G) [activated @'ZBattlefield $ \this1 -> ControllerOf (asAny this1) $ \you2 -> ElectActivated $ Ability (TapCost [Is this1]) $ ChooseOption you2 (LS (White) (CAnd []) $ LS (Blue) (CAnd []) $ LS (Black) (CAnd []) $ LS (Red) (CAnd []) $ LZ (Green) $ CAnd []) $ \x -> Effect [EffectCase $ CaseFin x $ LS (()) (AddMana you2 $ toManaPool W) $ LS (()) (AddMana you2 $ toManaPool U) $ LS (()) (AddMana you2 $ toManaPool B) $ LS (()) (AddMana you2 $ toManaPool R) $ LZ (()) $ AddMana you2 $ toManaPool G]]
+
+==== Black Lotus ====
+AnyCard1 $ Card "Black Lotus" $ ElectCardFacet $ ArtifactCharacteristic (toColors ()) [] [] $ ArtifactSpec (manaCost 0) [activated @'ZBattlefield $ \this1 -> ControllerOf (asAny this1) $ \you2 -> ElectActivated $ Ability (AndCosts [TapCost [Is this1], SacrificeCost @(OT1 'OTArtifact) [Is this1]]) $ ChooseOption you2 (LS (White) (CAnd []) $ LS (Blue) (CAnd []) $ LS (Black) (CAnd []) $ LS (Red) (CAnd []) $ LZ (Green) $ CAnd []) $ \x -> Effect [EffectCase $ CaseFin x $ LS (()) (AddMana you2 $ toManaPool (W, W, W)) $ LS (()) (AddMana you2 $ toManaPool (U, U, U)) $ LS (()) (AddMana you2 $ toManaPool (B, B, B)) $ LS (()) (AddMana you2 $ toManaPool (R, R, R)) $ LZ (()) $ AddMana you2 $ toManaPool (G, G, G)]]
+
+==== Blaze ====
+AnyCard1 $ Card "Blaze" $ Your $ \you1 -> ElectCardFacet $ SorceryCharacteristic (toColors R) [] $ VariableInt $ \x -> Target you1 $ masked @OTNCreaturePlayerPlaneswalker [] $ \target2 -> ElectCardSpec $ SorcerySpec (manaCost (VariableMana @'NonSnow @'Ty1 x, R)) [] $ thisObject $ \this3 -> Effect [DealDamage (asDamageSource this3) target2 $ VariableDamage x]
+
+==== Blood Moon ====
+AnyCard1 $ Card "Blood Moon" $ ElectCardFacet $ EnchantmentCharacteristic (toColors R) [] [] $ EnchantmentSpec (manaCost (2, R)) [static @'ZBattlefield $ \_this1 -> StaticContinuous $ All $ maskeds @(OT1 'OTLand) [RAnd [Not $ HasLandType $ BasicLand Forest, Not $ HasLandType $ BasicLand Island, Not $ HasLandType $ BasicLand Mountain, Not $ HasLandType $ BasicLand Plains, Not $ HasLandType $ BasicLand Swamp]] $ \obj2s -> Effect [WithList $ Each obj2s $ \obj2 -> ChangeTo (asPermanent obj2) $ Card "Mountain" $ ElectCardFacet $ LandCharacteristic [] [BasicLand Mountain] $ LandSpec []]]
+
+==== Boreal Druid ====
+AnyCard1 $ Card "Boreal Druid" $ ElectCardFacet $ CreatureCharacteristic (toColors G) [Snow] [Elf, Druid] (Power 1) (Toughness 1) $ CreatureSpec (manaCost G) [activated @'ZBattlefield $ \this1 -> ControllerOf (asAny this1) $ \you2 -> ElectActivated $ Ability (TapCost [Is this1]) $ Effect [AddMana you2 $ toManaPool C]]
+
+==== Boreal Shelf ====
+AnyCard1 $ Card "Boreal Shelf" $ ElectCardFacet $ LandCharacteristic [Snow] [] $ LandSpec [activated @'ZBattlefield $ \this1 -> ControllerOf (asAny this1) $ \you2 -> ElectActivated $ Ability (TapCost [Is this1]) $ Effect [AddMana you2 $ toManaPool W], activated @'ZBattlefield $ \this3 -> ControllerOf (asAny this3) $ \you4 -> ElectActivated $ Ability (TapCost [Is this3]) $ Effect [AddMana you4 $ toManaPool U]]
+
+==== Braidwood Cup ====
+AnyCard1 $ Card "Braidwood Cup" $ ElectCardFacet $ ArtifactCharacteristic (toColors ()) [] [] $ ArtifactSpec (manaCost 3) [activated @'ZBattlefield $ \this1 -> ControllerOf (asAny this1) $ \you2 -> ElectActivated $ Ability (TapCost [Is this1]) $ Effect [GainLife you2 1]]
+
+==== City of Brass ====
+AnyCard1 $ Card "City of Brass" $ ElectCardFacet $ LandCharacteristic [] [] $ LandSpec [triggered @'ZBattlefield $ \this1 -> When $ Listen $ BecomesTapped $ linked @(OT1 'OTLand) [Is this1] $ \_perm2 -> ControllerOf (asAny this1) $ \you3 -> Effect [DealDamage (asDamageSource this1) (asCreaturePlayerPlaneswalker you3) $ Damage 1], activated @'ZBattlefield $ \this4 -> ControllerOf (asAny this4) $ \you5 -> ElectActivated $ Ability (TapCost [Is this4]) $ ChooseOption you5 (LS (White) (CAnd []) $ LS (Blue) (CAnd []) $ LS (Black) (CAnd []) $ LS (Red) (CAnd []) $ LZ (Green) $ CAnd []) $ \x -> Effect [EffectCase $ CaseFin x $ LS (()) (AddMana you5 $ toManaPool W) $ LS (()) (AddMana you5 $ toManaPool U) $ LS (()) (AddMana you5 $ toManaPool B) $ LS (()) (AddMana you5 $ toManaPool R) $ LZ (()) $ AddMana you5 $ toManaPool G]]
+
+==== Cleanse ====
+AnyCard1 $ Card "Cleanse" $ ElectCardFacet $ SorceryCharacteristic (toColors W) [] $ ElectCardSpec $ SorcerySpec (manaCost (2, W, W)) [] $ thisObject $ \_this1 -> All $ maskeds @(OT1 'OTCreature) [OfColors $ toColors B] $ \obj2s -> Effect [WithList $ Each obj2s $ \obj2 -> Destroy $ asPermanent obj2]
+
+==== Conversion ====
+AnyCard1 $ Card "Conversion" $ ElectCardFacet $ EnchantmentCharacteristic (toColors W) [] [] $ EnchantmentSpec (manaCost (2, W, W)) [triggered @'ZBattlefield $ \this1 -> When $ ActivePlayer $ \active2 -> ControllerOf (asAny this1) $ \you3 -> If (Satisfies  you3 [Is active2]) (Listen $ TimePoint (StepBegin UpkeepStep) $ PlayerPays you3 (manaCost (W, W)) $ \x -> Effect [EffectCase $ CaseFin x $ LS (()) (Sequence []) $ LZ (()) $ Sacrifice you3 [Is this1]]) ElseEvent, static @'ZBattlefield $ \_this4 -> StaticContinuous $ All $ maskeds @(OT1 'OTLand) [HasLandType $ BasicLand Mountain] $ \obj5s -> Effect [WithList $ Each obj5s $ \obj5 -> ChangeTo (asPermanent obj5) $ Card "Plains" $ ElectCardFacet $ LandCharacteristic [] [BasicLand Plains] $ LandSpec []]]
+
+==== Corrosive Gale ====
+AnyCard1 $ Card "Corrosive Gale" $ ElectCardFacet $ SorceryCharacteristic (toColors G) [] $ VariableInt $ \x -> ElectCardSpec $ SorcerySpec (manaCost (VariableMana @'NonSnow @'Ty1 x, PG)) [] $ thisObject $ \this1 -> All $ maskeds @(OT1 'OTCreature) [HasAbility $ static @'ZBattlefield $ \_this2 -> Flying] $ \obj3s -> Effect [WithList $ Each obj3s $ \obj3 -> DealDamage (asDamageSource this1) (asCreaturePlayerPlaneswalker obj3) $ VariableDamage x]
+
+==== Counterspell ====
+AnyCard1 $ Card "Counterspell" $ Your $ \you1 -> ElectCardFacet $ InstantCharacteristic (toColors U) [] $ Target you1 $ masked @OTNSpell [] $ \target2 -> ElectCardSpec $ InstantSpec (manaCost (U, U)) [] $ thisObject $ \_this3 -> Effect [CounterSpell target2]
+
+==== Damnation ====
+AnyCard1 $ Card "Damnation" $ ElectCardFacet $ SorceryCharacteristic (toColors B) [] $ ElectCardSpec $ SorcerySpec (manaCost (2, B, B)) [] $ thisObject $ \_this1 -> All $ maskeds @(OT1 'OTCreature) [] $ \obj2s -> Effect [WithList $ Each obj2s $ \obj2 -> Sequence [Destroy $ asPermanent obj2, EffectContinuous $ CantBeRegenerated obj2]]
+
+==== Dark Ritual ====
+AnyCard1 $ Card "Dark Ritual" $ Your $ \you1 -> ElectCardFacet $ InstantCharacteristic (toColors B) [] $ ElectCardSpec $ InstantSpec (manaCost B) [] $ thisObject $ \_this2 -> Effect [AddMana you1 $ toManaPool (B, B, B)]
+
+==== Deathrite Shaman ====
+AnyCard1 $ Card "Deathrite Shaman" $ ElectCardFacet $ CreatureCharacteristic (toColors (B,G)) [] [Elf, Shaman] (Power 1) (Toughness 2) $ CreatureSpec (manaCost BG) [activated @'ZBattlefield $ \this1 -> ControllerOf (asAny this1) $ \you2 -> Target you2 $ masked @(OT1 'OTLand) @'ZGraveyard [] $ \target3 -> ElectActivated $ Ability (AndCosts [TapCost [Is this1], ExileCost [Is target3]]) $ ChooseOption you2 (LS (White) (CAnd []) $ LS (Blue) (CAnd []) $ LS (Black) (CAnd []) $ LS (Red) (CAnd []) $ LZ (Green) $ CAnd []) $ \x -> Effect [EffectCase $ CaseFin x $ LS (()) (AddMana you2 $ toManaPool W) $ LS (()) (AddMana you2 $ toManaPool U) $ LS (()) (AddMana you2 $ toManaPool B) $ LS (()) (AddMana you2 $ toManaPool R) $ LZ (()) $ AddMana you2 $ toManaPool G], activated @'ZBattlefield $ \this4 -> ControllerOf (asAny this4) $ \you5 -> Target you5 $ masked @(OT2 'OTInstant 'OTSorcery) @'ZGraveyard [] $ \target6 -> ElectActivated $ Ability (AndCosts [manaCost B, TapCost [Is this4], ExileCost [Is target6]]) $ All $ maskeds @(OT1 'OTPlayer) [IsOpponentOf you5] $ \obj7s -> Effect [WithList $ Each obj7s $ \obj7 -> LoseLife obj7 2], activated @'ZBattlefield $ \this8 -> ControllerOf (asAny this8) $ \you9 -> Target you9 $ masked @(OT1 'OTCreature) @'ZGraveyard [] $ \target10 -> ElectActivated $ Ability (AndCosts [manaCost G, TapCost [Is this8], ExileCost [Is target10]]) $ Effect [GainLife you9 2]]
+
+==== Dismember ====
+AnyCard1 $ Card "Dismember" $ Your $ \you1 -> ElectCardFacet $ InstantCharacteristic (toColors B) [] $ Target you1 $ masked @(OT1 'OTCreature) [] $ \target2 -> ElectCardSpec $ InstantSpec (manaCost (1, PB, PB)) [] $ thisObject $ \_this3 -> Effect [EffectContinuous $ Until (Event $ TimePoint (StepBegin CleanupStep) Proxy) $ GainAbility target2 $ WithThisStatic $ thisObject $ \_this4 -> StaticContinuous $ Effect [StatDelta target2 (Power (-5)) $ Toughness (-5)]]
+
+==== Divination ====
+AnyCard1 $ Card "Divination" $ Your $ \you1 -> ElectCardFacet $ SorceryCharacteristic (toColors U) [] $ ElectCardSpec $ SorcerySpec (manaCost (2, U)) [] $ thisObject $ \_this2 -> Effect [DrawCards you1 2]
+
+==== Elvish Hexhunter ====
+AnyCard1 $ Card "Elvish Hexhunter" $ ElectCardFacet $ CreatureCharacteristic (toColors (W,G)) [] [Elf, Shaman] (Power 1) (Toughness 1) $ CreatureSpec (manaCost GW) [activated @'ZBattlefield $ \this1 -> ControllerOf (asAny this1) $ \you2 -> Target you2 $ masked @(OT1 'OTEnchantment) [] $ \target3 -> ElectActivated $ Ability (AndCosts [manaCost GW, TapCost [Is this1], SacrificeCost @(OT1 'OTCreature) [Is this1]]) $ Effect [Destroy $ asPermanent target3]]
+
+==== Fling ====
+AnyCard1 $ Card "Fling" $ Your $ \you1 -> ElectCardFacet $ InstantCharacteristic (toColors R) [] $ Choose you1 $ masked @(OT1 'OTCreature) [ControlledBy you1] $ \choose2 -> Target you1 $ masked @OTNCreaturePlayer [] $ \target3 -> ElectCardSpec $ InstantSpec (AndCosts [manaCost (1, R), SacrificeCost @(OT1 'OTCreature) [Is choose2]]) [] $ thisObject $ \_this4 -> VariableFromPower choose2 $ \x -> Effect [DealDamage (asDamageSource choose2) (asCreaturePlayerPlaneswalker target3) $ VariableDamage x]
+
+==== Forest ====
+AnyCard1 $ Card "Forest" $ ElectCardFacet $ LandCharacteristic [] [BasicLand Forest] $ LandSpec []
+
+==== Fulminator Mage ====
+AnyCard1 $ Card "Fulminator Mage" $ ElectCardFacet $ CreatureCharacteristic (toColors (B,R)) [] [Elemental, Shaman] (Power 2) (Toughness 2) $ CreatureSpec (manaCost (1, BR, BR)) [activated @'ZBattlefield $ \this1 -> ControllerOf (asAny this1) $ \you2 -> Target you2 $ masked @(OT1 'OTLand) [RAnd [Not $ HasLandType $ BasicLand Forest, Not $ HasLandType $ BasicLand Island, Not $ HasLandType $ BasicLand Mountain, Not $ HasLandType $ BasicLand Plains, Not $ HasLandType $ BasicLand Swamp]] $ \target3 -> ElectActivated $ Ability (SacrificeCost @(OT1 'OTCreature) [Is this1]) $ Effect [Destroy $ asPermanent target3]]
+
+==== Frost Marsh ====
+AnyCard1 $ Card "Frost Marsh" $ ElectCardFacet $ LandCharacteristic [Snow] [] $ LandSpec [activated @'ZBattlefield $ \this1 -> ControllerOf (asAny this1) $ \you2 -> ElectActivated $ Ability (TapCost [Is this1]) $ Effect [AddMana you2 $ toManaPool U], activated @'ZBattlefield $ \this3 -> ControllerOf (asAny this3) $ \you4 -> ElectActivated $ Ability (TapCost [Is this3]) $ Effect [AddMana you4 $ toManaPool B]]
+
+==== Giant Growth ====
+AnyCard1 $ Card "Giant Growth" $ Your $ \you1 -> ElectCardFacet $ InstantCharacteristic (toColors G) [] $ Target you1 $ masked @(OT1 'OTCreature) [] $ \target2 -> ElectCardSpec $ InstantSpec (manaCost G) [] $ thisObject $ \_this3 -> Effect [EffectContinuous $ Until (Event $ TimePoint (StepBegin CleanupStep) Proxy) $ GainAbility target2 $ WithThisStatic $ thisObject $ \_this4 -> StaticContinuous $ Effect [StatDelta target2 (Power 3) $ Toughness 3]]
+
+==== Glacial Floodplain ====
+AnyCard1 $ Card "Glacial Floodplain" $ ElectCardFacet $ LandCharacteristic [Snow] [BasicLand Plains, BasicLand Island] $ LandSpec [static @'ZBattlefield $ \_this1 -> Enters EntersTapped]
+
+==== Grizzly Bears ====
+AnyCard1 $ Card "Grizzly Bears" $ ElectCardFacet $ CreatureCharacteristic (toColors G) [] [Bear] (Power 2) (Toughness 2) $ CreatureSpec (manaCost (1, G)) []
+
+==== Gutless Ghoul ====
+AnyCard1 $ Card "Gutless Ghoul" $ ElectCardFacet $ CreatureCharacteristic (toColors B) [Snow] [Zombie] (Power 2) (Toughness 2) $ CreatureSpec (manaCost (2, B)) [activated @'ZBattlefield $ \this1 -> ControllerOf (asAny this1) $ \you2 -> ElectActivated $ Ability (AndCosts [manaCost 1, SacrificeCost @(OT1 'OTCreature) []]) $ Effect [GainLife you2 2]]
+
+==== Gut Shot ====
+AnyCard1 $ Card "Gut Shot" $ Your $ \you1 -> ElectCardFacet $ InstantCharacteristic (toColors R) [] $ Target you1 $ masked @OTNCreaturePlayer [] $ \target2 -> ElectCardSpec $ InstantSpec (manaCost PR) [] $ thisObject $ \this3 -> Effect [DealDamage (asDamageSource this3) (asCreaturePlayerPlaneswalker target2) $ Damage 1]
+
+==== Highland Forest ====
+AnyCard1 $ Card "Highland Forest" $ ElectCardFacet $ LandCharacteristic [Snow] [BasicLand Mountain, BasicLand Forest] $ LandSpec [static @'ZBattlefield $ \_this1 -> Enters EntersTapped]
+
+==== Highland Weald ====
+AnyCard1 $ Card "Highland Weald" $ ElectCardFacet $ LandCharacteristic [Snow] [] $ LandSpec [activated @'ZBattlefield $ \this1 -> ControllerOf (asAny this1) $ \you2 -> ElectActivated $ Ability (TapCost [Is this1]) $ Effect [AddMana you2 $ toManaPool R], activated @'ZBattlefield $ \this3 -> ControllerOf (asAny this3) $ \you4 -> ElectActivated $ Ability (TapCost [Is this3]) $ Effect [AddMana you4 $ toManaPool G]]
+
+==== Icehide Golem ====
+AnyCard1 $ Card "Icehide Golem" $ ElectCardFacet $ ArtifactCreatureCharacteristic (toColors ()) [Snow] [] [] (Power 2) (Toughness 2) $ ArtifactCreatureSpec (manaCost 1) [] [] []
+
+==== Ice Tunnel ====
+AnyCard1 $ Card "Ice Tunnel" $ ElectCardFacet $ LandCharacteristic [Snow] [BasicLand Island, BasicLand Swamp] $ LandSpec [static @'ZBattlefield $ \_this1 -> Enters EntersTapped]
+
+==== Holy Strength ====
+AnyCard1 $ Card "Holy Strength" $ ElectCardFacet $ EnchantmentCharacteristic (toColors W) [] [Aura $ Enchant $ linked @(OT1 'OTCreature) [] $ \enchanted1 -> Effect [StatDelta enchanted1 (Power 1) $ Toughness 2]] $ EnchantmentSpec (manaCost W) []
+
+==== Island ====
+AnyCard1 $ Card "Island" $ ElectCardFacet $ LandCharacteristic [] [BasicLand Island] $ LandSpec []
+
+==== Lava Axe ====
+AnyCard1 $ Card "Lava Axe" $ Your $ \you1 -> ElectCardFacet $ SorceryCharacteristic (toColors R) [] $ Target you1 $ masked @OTNPlayerPlaneswalker [] $ \target2 -> ElectCardSpec $ SorcerySpec (manaCost (4, R)) [] $ thisObject $ \this3 -> Effect [DealDamage (asDamageSource this3) (asCreaturePlayerPlaneswalker target2) $ Damage 5]
+
+==== Lightning Bolt ====
+AnyCard1 $ Card "Lightning Bolt" $ Your $ \you1 -> ElectCardFacet $ InstantCharacteristic (toColors R) [] $ Target you1 $ masked @OTNCreaturePlayerPlaneswalker [] $ \target2 -> ElectCardSpec $ InstantSpec (manaCost R) [] $ thisObject $ \this3 -> Effect [DealDamage (asDamageSource this3) target2 $ Damage 3]
+
+==== Llanowar Elves ====
+AnyCard1 $ Card "Llanowar Elves" $ ElectCardFacet $ CreatureCharacteristic (toColors G) [] [Elf] (Power 1) (Toughness 1) $ CreatureSpec (manaCost G) [activated @'ZBattlefield $ \this1 -> ControllerOf (asAny this1) $ \you2 -> ElectActivated $ Ability (TapCost [Is this1]) $ Effect [AddMana you2 $ toManaPool G]]
+
+==== Mana Leak ====
+AnyCard1 $ Card "Mana Leak" $ Your $ \you1 -> ElectCardFacet $ InstantCharacteristic (toColors U) [] $ Target you1 $ masked @OTNSpell [] $ \target2 -> ElectCardSpec $ InstantSpec (manaCost (1, U)) [] $ thisObject $ \_this3 -> ControllerOf (asAny target2) $ \controller4 -> PlayerPays controller4 (manaCost 3) $ \x -> Effect [EffectCase $ CaseFin x $ LS (()) (Sequence []) $ LZ (()) $ CounterSpell target2]
+
+==== Moltensteel Dragon ====
+AnyCard1 $ Card "Moltensteel Dragon" $ ElectCardFacet $ ArtifactCreatureCharacteristic (toColors R) [] [] [Dragon] (Power 4) (Toughness 4) $ ArtifactCreatureSpec (manaCost (4, PR, PR)) [] [static @'ZBattlefield $ \_this1 -> Flying, activated @'ZBattlefield $ \this2 -> ElectActivated $ Ability (manaCost PR) $ Effect [EffectContinuous $ Until (Event $ TimePoint (StepBegin CleanupStep) Proxy) $ GainAbility this2 $ WithThisStatic $ thisObject $ \_this3 -> StaticContinuous $ Effect [StatDelta this2 (Power 1) $ Toughness 0]]] []
+
+==== Mouth of Ronom ====
+AnyCard1 $ Card "Mouth of Ronom" $ ElectCardFacet $ LandCharacteristic [Snow] [] $ LandSpec [activated @'ZBattlefield $ \this1 -> ControllerOf (asAny this1) $ \you2 -> ElectActivated $ Ability (TapCost [Is this1]) $ Effect [AddMana you2 $ toManaPool C], activated @'ZBattlefield $ \this3 -> ControllerOf (asAny this3) $ \you4 -> Target you4 $ masked @(OT1 'OTCreature) [] $ \target5 -> ElectActivated $ Ability (AndCosts [manaCost (4, S), TapCost [Is this3], SacrificeCost @(OT1 'OTLand) [Is this3]]) $ Effect [DealDamage (asDamageSource this3) (asCreaturePlayerPlaneswalker target5) $ Damage 4]]
+
+==== Mountain ====
+AnyCard1 $ Card "Mountain" $ ElectCardFacet $ LandCharacteristic [] [BasicLand Mountain] $ LandSpec []
+
+==== Mox Emerald ====
+AnyCard1 $ Card "Mox Emerald" $ ElectCardFacet $ ArtifactCharacteristic (toColors ()) [] [] $ ArtifactSpec (manaCost 0) [activated @'ZBattlefield $ \this1 -> ControllerOf (asAny this1) $ \you2 -> ElectActivated $ Ability (TapCost [Is this1]) $ Effect [AddMana you2 $ toManaPool G]]
+
+==== Mox Jet ====
+AnyCard1 $ Card "Mox Jet" $ ElectCardFacet $ ArtifactCharacteristic (toColors ()) [] [] $ ArtifactSpec (manaCost 0) [activated @'ZBattlefield $ \this1 -> ControllerOf (asAny this1) $ \you2 -> ElectActivated $ Ability (TapCost [Is this1]) $ Effect [AddMana you2 $ toManaPool B]]
+
+==== Mox Pearl ====
+AnyCard1 $ Card "Mox Pearl" $ ElectCardFacet $ ArtifactCharacteristic (toColors ()) [] [] $ ArtifactSpec (manaCost 0) [activated @'ZBattlefield $ \this1 -> ControllerOf (asAny this1) $ \you2 -> ElectActivated $ Ability (TapCost [Is this1]) $ Effect [AddMana you2 $ toManaPool W]]
+
+==== Mox Ruby ====
+AnyCard1 $ Card "Mox Ruby" $ ElectCardFacet $ ArtifactCharacteristic (toColors ()) [] [] $ ArtifactSpec (manaCost 0) [activated @'ZBattlefield $ \this1 -> ControllerOf (asAny this1) $ \you2 -> ElectActivated $ Ability (TapCost [Is this1]) $ Effect [AddMana you2 $ toManaPool R]]
+
+==== Mox Sapphire ====
+AnyCard1 $ Card "Mox Sapphire" $ ElectCardFacet $ ArtifactCharacteristic (toColors ()) [] [] $ ArtifactSpec (manaCost 0) [activated @'ZBattlefield $ \this1 -> ControllerOf (asAny this1) $ \you2 -> ElectActivated $ Ability (TapCost [Is this1]) $ Effect [AddMana you2 $ toManaPool U]]
+
+==== Mutagenic Growth ====
+AnyCard1 $ Card "Mutagenic Growth" $ Your $ \you1 -> ElectCardFacet $ InstantCharacteristic (toColors G) [] $ Target you1 $ masked @(OT1 'OTCreature) [] $ \target2 -> ElectCardSpec $ InstantSpec (manaCost PG) [] $ thisObject $ \_this3 -> Effect [EffectContinuous $ Until (Event $ TimePoint (StepBegin CleanupStep) Proxy) $ GainAbility target2 $ WithThisStatic $ thisObject $ \_this4 -> StaticContinuous $ Effect [StatDelta target2 (Power 2) $ Toughness 2]]
+
+==== Nyxborn Rollicker ====
+AnyCard1 $ Card "Nyxborn Rollicker" $ ElectCardFacet $ EnchantmentCreatureCharacteristic (toColors R) [] [Satyr] [] (Power 1) (Toughness 1) $ EnchantmentCreatureSpec (manaCost R) [] [] [static @'ZBattlefield $ \(_this1, _this2) -> Bestow (Cost $ manaCost (1, R)) $ Enchant $ linked @(OT1 'OTCreature) [] $ \enchanted3 -> Effect [StatDelta enchanted3 (Power 1) $ Toughness 1]]
+
+==== Ornithopter ====
+AnyCard1 $ Card "Ornithopter" $ ElectCardFacet $ ArtifactCreatureCharacteristic (toColors ()) [] [] [] (Power 0) (Toughness 2) $ ArtifactCreatureSpec (manaCost 0) [] [static @'ZBattlefield $ \_this1 -> Flying] []
+
+==== Porcelain Legionnaire ====
+AnyCard1 $ Card "Porcelain Legionnaire" $ ElectCardFacet $ ArtifactCreatureCharacteristic (toColors W) [] [] [Soldier] (Power 3) (Toughness 1) $ ArtifactCreatureSpec (manaCost (2, PW)) [] [static @'ZBattlefield $ \_this1 -> FirstStrike] []
+
+==== Raging Goblin ====
+AnyCard1 $ Card "Raging Goblin" $ ElectCardFacet $ CreatureCharacteristic (toColors R) [] [Goblin] (Power 1) (Toughness 1) $ CreatureSpec (manaCost R) [static @'ZBattlefield $ \_this1 -> Haste]
+
+==== Plains ====
+AnyCard1 $ Card "Plains" $ ElectCardFacet $ LandCharacteristic [] [BasicLand Plains] $ LandSpec []
+
+==== Plummet ====
+AnyCard1 $ Card "Plummet" $ Your $ \you1 -> ElectCardFacet $ InstantCharacteristic (toColors G) [] $ Target you1 $ masked @(OT1 'OTCreature) [HasAbility $ static @'ZBattlefield $ \_this2 -> Flying] $ \target3 -> ElectCardSpec $ InstantSpec (manaCost (1, G)) [] $ thisObject $ \_this4 -> Effect [Destroy $ asPermanent target3]
+
+==== Polluted Delta ====
+AnyCard1 $ Card "Polluted Delta" $ ElectCardFacet $ LandCharacteristic [] [] $ LandSpec [activated @'ZBattlefield $ \this1 -> ControllerOf (asAny this1) $ \you2 -> ElectActivated $ Ability (AndCosts [TapCost [Is this1], PayLife 1, SacrificeCost @(OT1 'OTLand) [Is this1]]) $ Effect [SearchLibrary you2 you2 $ linked @(OT1 'OTLand) [ROr [HasLandType $ BasicLand Island, HasLandType $ BasicLand Swamp]] $ \card3 -> Effect [PutOntoBattlefield you2 card3]]]
+
+==== Pradesh Gypsies ====
+AnyCard1 $ Card "Pradesh Gypsies" $ ElectCardFacet $ CreatureCharacteristic (toColors G) [] [Human, Nomad] (Power 1) (Toughness 1) $ CreatureSpec (manaCost (2, G)) [activated @'ZBattlefield $ \this1 -> ControllerOf (asAny this1) $ \you2 -> Target you2 $ masked @(OT1 'OTCreature) [] $ \target3 -> ElectActivated $ Ability (AndCosts [manaCost (1, G), TapCost [Is this1]]) $ Effect [EffectContinuous $ Until (Event $ TimePoint (StepBegin CleanupStep) Proxy) $ GainAbility target3 $ WithThisStatic $ thisObject $ \_this4 -> StaticContinuous $ Effect [StatDelta target3 (Power (-2)) $ Toughness 0]]]
+
+==== Rimewood Falls ====
+AnyCard1 $ Card "Rimewood Falls" $ ElectCardFacet $ LandCharacteristic [Snow] [BasicLand Forest, BasicLand Island] $ LandSpec [static @'ZBattlefield $ \_this1 -> Enters EntersTapped]
+
+==== Shatter ====
+AnyCard1 $ Card "Shatter" $ Your $ \you1 -> ElectCardFacet $ InstantCharacteristic (toColors R) [] $ Target you1 $ masked @(OT1 'OTArtifact) [] $ \target2 -> ElectCardSpec $ InstantSpec (manaCost (1, R)) [] $ thisObject $ \_this3 -> Effect [Destroy $ asPermanent target2]
+
+==== Shock ====
+AnyCard1 $ Card "Shock" $ Your $ \you1 -> ElectCardFacet $ InstantCharacteristic (toColors R) [] $ Target you1 $ masked @OTNCreaturePlayerPlaneswalker [] $ \target2 -> ElectCardSpec $ InstantSpec (manaCost R) [] $ thisObject $ \this3 -> Effect [DealDamage (asDamageSource this3) target2 $ Damage 2]
+
+==== Sinkhole ====
+AnyCard1 $ Card "Sinkhole" $ Your $ \you1 -> ElectCardFacet $ SorceryCharacteristic (toColors B) [] $ Target you1 $ masked @(OT1 'OTLand) [] $ \target2 -> ElectCardSpec $ SorcerySpec (manaCost (B, B)) [] $ thisObject $ \_this3 -> Effect [Destroy $ asPermanent target2]
+
+==== Slash Panther ====
+AnyCard1 $ Card "Slash Panther" $ ElectCardFacet $ ArtifactCreatureCharacteristic (toColors R) [] [] [Cat] (Power 4) (Toughness 2) $ ArtifactCreatureSpec (manaCost (4, PR)) [] [static @'ZBattlefield $ \_this1 -> Haste] []
+
+==== Snow-Covered Forest ====
+AnyCard1 $ Card "Snow-Covered Forest" $ ElectCardFacet $ LandCharacteristic [Snow] [BasicLand Forest] $ LandSpec []
+
+==== Snow-Covered Island ====
+AnyCard1 $ Card "Snow-Covered Island" $ ElectCardFacet $ LandCharacteristic [Snow] [BasicLand Island] $ LandSpec []
+
+==== Snow-Covered Mountain ====
+AnyCard1 $ Card "Snow-Covered Mountain" $ ElectCardFacet $ LandCharacteristic [Snow] [BasicLand Mountain] $ LandSpec []
+
+==== Snow-Covered Plains ====
+AnyCard1 $ Card "Snow-Covered Plains" $ ElectCardFacet $ LandCharacteristic [Snow] [BasicLand Plains] $ LandSpec []
+
+==== Snow-Covered Swamp ====
+AnyCard1 $ Card "Snow-Covered Swamp" $ ElectCardFacet $ LandCharacteristic [Snow] [BasicLand Swamp] $ LandSpec []
+
+==== Snowfield Sinkhole ====
+AnyCard1 $ Card "Snowfield Sinkhole" $ ElectCardFacet $ LandCharacteristic [Snow] [BasicLand Plains, BasicLand Swamp] $ LandSpec [static @'ZBattlefield $ \_this1 -> Enters EntersTapped]
+
+==== Snuff Out ====
+AnyCard1 $ Card "Snuff Out" $ Your $ \you1 -> ElectCardFacet $ InstantCharacteristic (toColors B) [] $ ChooseOption you1 (LS ("pay mana") (CAnd []) $ LZ ("pay life") $ Satisfies  you1 [ControlsA $ HasLandType $ BasicLand Swamp]) $ \x -> Target you1 $ masked @(OT1 'OTCreature) [Not $ OfColors $ toColors B] $ \target2 -> ElectCardSpec $ InstantSpec (CostCase $ CaseFin x $ LS (()) (manaCost (3, B)) $ LZ (()) $ PayLife 4) [] $ thisObject $ \_this3 -> Effect [Destroy $ asPermanent target2, EffectContinuous $ CantBeRegenerated target2]
+
+==== Spined Thopter ====
+AnyCard1 $ Card "Spined Thopter" $ ElectCardFacet $ ArtifactCreatureCharacteristic (toColors U) [] [] [Thopter] (Power 2) (Toughness 1) $ ArtifactCreatureSpec (manaCost (2, PU)) [] [static @'ZBattlefield $ \_this1 -> Flying] []
+
+==== Squall Drifter ====
+AnyCard1 $ Card "Squall Drifter" $ ElectCardFacet $ CreatureCharacteristic (toColors W) [Snow] [Elemental] (Power 1) (Toughness 1) $ CreatureSpec (manaCost (1, W)) [static @'ZBattlefield $ \_this1 -> Flying, activated @'ZBattlefield $ \this2 -> ControllerOf (asAny this2) $ \you3 -> Target you3 $ masked @(OT1 'OTCreature) [] $ \target4 -> ElectActivated $ Ability (AndCosts [manaCost W, TapCost [Is this2]]) $ Effect [Tap target4]]
+
+==== Squall Line ====
+AnyCard1 $ Card "Squall Line" $ ElectCardFacet $ InstantCharacteristic (toColors G) [] $ VariableInt $ \x -> ElectCardSpec $ InstantSpec (manaCost (VariableMana @'NonSnow @'Ty1 x, G, G)) [] $ thisObject $ \this1 -> All $ maskeds @(OT1 'OTCreature) [HasAbility $ static @'ZBattlefield $ \_this2 -> Flying] $ \obj3s -> All $ maskeds @(OT1 'OTPlayer) [] $ \obj4s -> Effect [WithList $ Each obj3s $ \obj3 -> DealDamage (asDamageSource this1) (asCreaturePlayerPlaneswalker obj3) $ VariableDamage x, WithList $ Each obj4s $ \obj4 -> DealDamage (asDamageSource this1) (asCreaturePlayerPlaneswalker obj4) $ VariableDamage x]
+
+==== Stifle ====
+AnyCard1 $ Card "Stifle" $ Your $ \you1 -> ElectCardFacet $ InstantCharacteristic (toColors U) [] $ Target you1 $ masked @(OT2 'OTActivatedAbility 'OTTriggeredAbility) [] $ \target2 -> ElectCardSpec $ InstantSpec (manaCost U) [] $ thisObject $ \_this3 -> Effect [CounterAbility target2]
+
+==== Stone Rain ====
+AnyCard1 $ Card "Stone Rain" $ Your $ \you1 -> ElectCardFacet $ SorceryCharacteristic (toColors R) [] $ Target you1 $ masked @(OT1 'OTLand) [] $ \target2 -> ElectCardSpec $ SorcerySpec (manaCost (2, R)) [] $ thisObject $ \_this3 -> Effect [Destroy $ asPermanent target2]
+
+==== Stone-Throwing Devils ====
+AnyCard1 $ Card "Stone-Throwing Devils" $ ElectCardFacet $ CreatureCharacteristic (toColors B) [] [Devil] (Power 1) (Toughness 1) $ CreatureSpec (manaCost B) [static @'ZBattlefield $ \_this1 -> FirstStrike]
+
+==== Strip Mine ====
+AnyCard1 $ Card "Strip Mine" $ ElectCardFacet $ LandCharacteristic [] [] $ LandSpec [activated @'ZBattlefield $ \this1 -> ControllerOf (asAny this1) $ \you2 -> ElectActivated $ Ability (TapCost [Is this1]) $ Effect [AddMana you2 $ toManaPool C], activated @'ZBattlefield $ \this3 -> ControllerOf (asAny this3) $ \you4 -> Target you4 $ masked @(OT1 'OTLand) [] $ \target5 -> ElectActivated $ Ability (AndCosts [TapCost [Is this3], SacrificeCost @(OT1 'OTLand) [Is this3]]) $ Effect [Destroy $ asPermanent target5]]
+
+==== Sulfurous Mire ====
+AnyCard1 $ Card "Sulfurous Mire" $ ElectCardFacet $ LandCharacteristic [Snow] [BasicLand Swamp, BasicLand Mountain] $ LandSpec [static @'ZBattlefield $ \_this1 -> Enters EntersTapped]
+
+==== Sunken Ruins ====
+AnyCard1 $ Card "Sunken Ruins" $ ElectCardFacet $ LandCharacteristic [] [] $ LandSpec [activated @'ZBattlefield $ \this1 -> ControllerOf (asAny this1) $ \you2 -> ElectActivated $ Ability (AndCosts [manaCost UB, TapCost [Is this1]]) $ ChooseOption you2 (LS ("UU") (CAnd []) $ LS ("UB") (CAnd []) $ LZ ("BB") $ CAnd []) $ \x -> Effect [EffectCase $ CaseFin x $ LS (()) (AddMana you2 $ toManaPool (U, U, ())) $ LS (()) (AddMana you2 $ toManaPool (U, B, ())) $ LZ (()) $ AddMana you2 $ toManaPool (B, B, ())]]
+
+==== Swamp ====
+AnyCard1 $ Card "Swamp" $ ElectCardFacet $ LandCharacteristic [] [BasicLand Swamp] $ LandSpec []
+
+==== Swan Song ====
+AnyCard1 $ Card "Swan Song" $ Your $ \you1 -> ElectCardFacet $ InstantCharacteristic (toColors U) [] $ Target you1 $ masked @(OT3 'OTEnchantment 'OTInstant 'OTSorcery) [] $ \target2 -> ControllerOf (asAny target2) $ \controller3 -> ElectCardSpec $ InstantSpec (manaCost U) [] $ thisObject $ \_this4 -> Effect [CounterSpell $ asSpell target2, AddToBattlefield controller3 $ Token $ Card "Bird Token" $ ElectCardFacet $ CreatureCharacteristic (toColors U) [] [Bird] (Power 2) (Toughness 2) $ CreatureSpec (OrCosts []) [static @'ZBattlefield $ \_this5 -> Flying]]
+
+==== Teferi's Isle ====
+AnyCard1 $ Card "Teferi's Isle" $ ElectCardFacet $ LandCharacteristic [Legendary] [] $ LandSpec [static @'ZBattlefield $ \_this1 -> Phasing, static @'ZBattlefield $ \_this2 -> Enters EntersTapped, activated @'ZBattlefield $ \this3 -> ControllerOf (asAny this3) $ \you4 -> ElectActivated $ Ability (TapCost [Is this3]) $ Effect [AddMana you4 $ toManaPool (U, U, ())]]
+
+==== Thermopod ====
+AnyCard1 $ Card "Thermopod" $ ElectCardFacet $ CreatureCharacteristic (toColors R) [Snow] [Slug] (Power 4) (Toughness 3) $ CreatureSpec (manaCost (1, R)) [activated @'ZBattlefield $ \this1 -> ElectActivated $ Ability (manaCost S) $ Effect [EffectContinuous $ Until (Event $ TimePoint (StepBegin CleanupStep) Proxy) $ GainAbility this1 $ WithThisStatic $ thisObject $ \_this2 -> Haste], activated @'ZBattlefield $ \this3 -> ControllerOf (asAny this3) $ \you4 -> ElectActivated $ Ability (SacrificeCost @(OT1 'OTCreature) []) $ Effect [AddMana you4 $ toManaPool R]]
+
+==== Thundering Tanadon ====
+AnyCard1 $ Card "Thundering Tanadon" $ ElectCardFacet $ ArtifactCreatureCharacteristic (toColors G) [] [] [Beast] (Power 5) (Toughness 4) $ ArtifactCreatureSpec (manaCost (4, PG, PG)) [] [static @'ZBattlefield $ \_this1 -> Trample] []
+
+==== Tresserhorn Sinks ====
+AnyCard1 $ Card "Tresserhorn Sinks" $ ElectCardFacet $ LandCharacteristic [Snow] [] $ LandSpec [activated @'ZBattlefield $ \this1 -> ControllerOf (asAny this1) $ \you2 -> ElectActivated $ Ability (TapCost [Is this1]) $ Effect [AddMana you2 $ toManaPool B], activated @'ZBattlefield $ \this3 -> ControllerOf (asAny this3) $ \you4 -> ElectActivated $ Ability (TapCost [Is this3]) $ Effect [AddMana you4 $ toManaPool R]]
+
+==== Unholy Strength ====
+AnyCard1 $ Card "Unholy Strength" $ ElectCardFacet $ EnchantmentCharacteristic (toColors B) [] [Aura $ Enchant $ linked @(OT1 'OTCreature) [] $ \enchanted1 -> Effect [StatDelta enchanted1 (Power 2) $ Toughness 1]] $ EnchantmentSpec (manaCost B) []
+
+==== Vindicate ====
+AnyCard1 $ Card "Vindicate" $ Your $ \you1 -> ElectCardFacet $ SorceryCharacteristic (toColors (W,B)) [] $ Target you1 $ masked @OTNPermanent [] $ \target2 -> ElectCardSpec $ SorcerySpec (manaCost (1, W, B)) [] $ thisObject $ \_this3 -> Effect [Destroy target2]
+
+==== Volatile Fjord ====
+AnyCard1 $ Card "Volatile Fjord" $ ElectCardFacet $ LandCharacteristic [Snow] [BasicLand Island, BasicLand Mountain] $ LandSpec [static @'ZBattlefield $ \_this1 -> Enters EntersTapped]
+
+==== Wall of Earth ====
+AnyCard1 $ Card "Wall of Earth" $ ElectCardFacet $ CreatureCharacteristic (toColors R) [] [Wall] (Power 0) (Toughness 6) $ CreatureSpec (manaCost (1, R)) [static @'ZBattlefield $ \_this1 -> Defender]
+
+==== Wasp Lancer ====
+AnyCard1 $ Card "Wasp Lancer" $ ElectCardFacet $ CreatureCharacteristic (toColors (U,B)) [] [Faerie, Soldier] (Power 3) (Toughness 2) $ CreatureSpec (manaCost (UB, UB, UB)) [static @'ZBattlefield $ \_this1 -> Flying]
+
+==== Wasteland ====
+AnyCard1 $ Card "Wasteland" $ ElectCardFacet $ LandCharacteristic [] [] $ LandSpec [activated @'ZBattlefield $ \this1 -> ControllerOf (asAny this1) $ \you2 -> ElectActivated $ Ability (TapCost [Is this1]) $ Effect [AddMana you2 $ toManaPool C], activated @'ZBattlefield $ \this3 -> ControllerOf (asAny this3) $ \you4 -> Target you4 $ masked @(OT1 'OTLand) [RAnd [Not $ HasLandType $ BasicLand Forest, Not $ HasLandType $ BasicLand Island, Not $ HasLandType $ BasicLand Mountain, Not $ HasLandType $ BasicLand Plains, Not $ HasLandType $ BasicLand Swamp]] $ \target5 -> ElectActivated $ Ability (AndCosts [TapCost [Is this3], SacrificeCost @(OT1 'OTLand) [Is this3]]) $ Effect [Destroy $ asPermanent target5]]
+
+==== Wastes ====
+AnyCard1 $ Card "Wastes" $ ElectCardFacet $ LandCharacteristic [Basic] [] $ LandSpec [activated @'ZBattlefield $ \this1 -> ControllerOf (asAny this1) $ \you2 -> ElectActivated $ Ability (TapCost [Is this1]) $ Effect [AddMana you2 $ toManaPool C]]
+
+==== Wear // Tear ====
+AnyCard2 $ SplitCard (Card "Wear" $ Your $ \you1 -> ElectCardFacet $ InstantCharacteristic (toColors R) [] $ Target you1 $ masked @(OT1 'OTArtifact) [] $ \target2 -> ElectCardSpec $ InstantSpec (manaCost (1, R)) [] $ thisObject $ \_this3 -> Effect [Destroy $ asPermanent target2]) (Card "Tear" $ Your $ \you4 -> ElectCardFacet $ InstantCharacteristic (toColors W) [] $ Target you4 $ masked @(OT1 'OTEnchantment) [] $ \target5 -> ElectCardSpec $ InstantSpec (manaCost W) [] $ thisObject $ \_this6 -> Effect [Destroy $ asPermanent target5]) [SomeZone2 $ Static Fuse]
+
+==== Witch Engine ====
+AnyCard1 $ Card "Witch Engine" $ ElectCardFacet $ CreatureCharacteristic (toColors B) [] [Horror] (Power 4) (Toughness 4) $ CreatureSpec (manaCost (5, B)) [static @'ZBattlefield $ \_this1 -> Landwalk [HasLandType $ BasicLand Swamp], activated @'ZBattlefield $ \this2 -> ControllerOf (asAny this2) $ \you3 -> Target you3 $ masked @(OT1 'OTPlayer) [IsOpponentOf you3] $ \target4 -> ElectActivated $ Ability (AndCosts [TapCost [Is this2]]) $ Effect [AddMana you3 $ toManaPool (B, B, B, B), EffectContinuous $ GainControl target4 this2]]
+
+==== Woodland Chasm ====
+AnyCard1 $ Card "Woodland Chasm" $ ElectCardFacet $ LandCharacteristic [Snow] [BasicLand Swamp, BasicLand Forest] $ LandSpec [static @'ZBattlefield $ \_this1 -> Enters EntersTapped]
+
+==== Wrath of God ====
+AnyCard1 $ Card "Wrath of God" $ ElectCardFacet $ SorceryCharacteristic (toColors W) [] $ ElectCardSpec $ SorcerySpec (manaCost (2, W, W)) [] $ thisObject $ \_this1 -> All $ maskeds @(OT1 'OTCreature) [] $ \obj2s -> Effect [WithList $ Each obj2s $ \obj2 -> Sequence [Destroy $ asPermanent obj2, EffectContinuous $ CantBeRegenerated obj2]]
+
+==== token: Bird Token ====
+AnyToken $ Token $ Card "Bird Token" $ ElectCardFacet $ CreatureCharacteristic (toColors U) [] [Bird] (Power 2) (Toughness 2) $ CreatureSpec (OrCosts []) [static @'ZBattlefield $ \_this1 -> Flying]
+
+==== token: Soldier Token ====
+AnyToken $ Token $ Card "Soldier Token" $ ElectCardFacet $ CreatureCharacteristic (toColors W) [] [Soldier] (Power 1) (Toughness 1) $ CreatureSpec (OrCosts []) []
+

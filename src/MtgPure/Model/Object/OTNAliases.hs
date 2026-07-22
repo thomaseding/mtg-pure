@@ -41,8 +41,40 @@ module MtgPure.Model.Object.OTNAliases (
   OTNTriggeredAbility,
 ) where
 
-import safe MtgPure.Model.Object.OT (
-  OT (..),
+import safe MtgPure.Model.Object.OTKAliases (
+  OTKAbility,
+  OTKActivatedAbility,
+  OTKActivatedOrTriggeredAbility,
+  OTKAny,
+  OTKArtifact,
+  OTKArtifactCreature,
+  OTKArtifactLand,
+  OTKBattle,
+  OTKCard,
+  OTKCreature,
+  OTKCreaturePlaneswalker,
+  OTKCreaturePlayer,
+  OTKCreaturePlayerPlaneswalker,
+  OTKDamageSource,
+  OTKEmblem,
+  OTKEnchantment,
+  OTKEnchantmentCreature,
+  OTKInstant,
+  OTKLand,
+  OTKNonArtifactPermanent,
+  OTKNonCreature,
+  OTKNonCreaturePermanent,
+  OTKNonEnchantmentPermanent,
+  OTKNonLandPermanent,
+  OTKNonPlaneswalkerPermanent,
+  OTKPermanent,
+  OTKPlaneswalker,
+  OTKPlayer,
+  OTKPlayerPlaneswalker,
+  OTKSorcery,
+  OTKSpell,
+  OTKStaticAbility,
+  OTKTriggeredAbility,
  )
 import safe MtgPure.Model.Object.OTN (OTN)
 
@@ -57,205 +89,70 @@ import safe MtgPure.Model.Object.OTN (OTN)
 --   MkOT '(a, b, c, d, e, f) = '(OTN, a :: OT, b :: OT, c :: OT, d :: OT, e :: OT, f :: OT)
 --   MkOT '(a, b, c, d, e, f, g) = '(OTN, a :: OT, b :: OT, c :: OT, d :: OT, e :: OT, f :: OT, g :: OT)
 
-type OTNActivatedAbility = OTN '[ 'OTActivatedAbility]
+type OTNActivatedAbility = OTN OTKActivatedAbility
 
-type OTNArtifact = OTN '[ 'OTArtifact]
+type OTNArtifact = OTN OTKArtifact
 
-type OTNBattle = OTN '[ 'OTBattle]
+type OTNBattle = OTN OTKBattle
 
-type OTNCreature = OTN '[ 'OTCreature]
+type OTNCreature = OTN OTKCreature
 
-type OTNEmblem = OTN '[ 'OTEmblem]
+type OTNEmblem = OTN OTKEmblem
 
-type OTNEnchantment = OTN '[ 'OTEnchantment]
+type OTNEnchantment = OTN OTKEnchantment
 
-type OTNInstant = OTN '[ 'OTInstant]
+type OTNInstant = OTN OTKInstant
 
-type OTNLand = OTN '[ 'OTLand]
+type OTNLand = OTN OTKLand
 
-type OTNPlaneswalker = OTN '[ 'OTPlaneswalker]
+type OTNPlaneswalker = OTN OTKPlaneswalker
 
-type OTNPlayer = OTN '[ 'OTPlayer]
+type OTNPlayer = OTN OTKPlayer
 
-type OTNSorcery = OTN '[ 'OTSorcery]
+type OTNSorcery = OTN OTKSorcery
 
-type OTNStaticAbility = OTN '[ 'OTStaticAbility]
+type OTNStaticAbility = OTN OTKStaticAbility
 
-type OTNTriggeredAbility = OTN '[ 'OTTriggeredAbility]
+type OTNTriggeredAbility = OTN OTKTriggeredAbility
 
 type OTNToken = OTNPermanent
 
-type OTNAbility =
-  OTN
-    '[ 'OTActivatedAbility
-     , 'OTStaticAbility
-     , 'OTTriggeredAbility
-     ]
+type OTNAbility = OTN OTKAbility
 
-type OTNActivatedOrTriggeredAbility =
-  OTN
-    '[ 'OTActivatedAbility
-     , 'OTTriggeredAbility
-     ]
+type OTNActivatedOrTriggeredAbility = OTN OTKActivatedOrTriggeredAbility
 
-type OTNArtifactCreature =
-  OTN
-    '[ 'OTArtifact
-     , 'OTCreature
-     ]
+type OTNArtifactCreature = OTN OTKArtifactCreature
 
-type OTNArtifactLand =
-  OTN
-    '[ 'OTArtifact
-     , 'OTLand
-     ]
+type OTNArtifactLand = OTN OTKArtifactLand
 
-type OTNCreaturePlayer =
-  OTN
-    '[ 'OTCreature
-     , 'OTPlayer
-     ]
+type OTNCreaturePlayer = OTN OTKCreaturePlayer
 
-type OTNCreaturePlaneswalker =
-  OTN
-    '[ 'OTCreature
-     , 'OTPlaneswalker
-     ]
+type OTNCreaturePlaneswalker = OTN OTKCreaturePlaneswalker
 
-type OTNPlayerPlaneswalker =
-  OTN
-    '[ 'OTPlaneswalker
-     , 'OTPlayer
-     ]
+type OTNPlayerPlaneswalker = OTN OTKPlayerPlaneswalker
 
-type OTNEnchantmentCreature =
-  OTN
-    '[ 'OTCreature
-     , 'OTEnchantment
-     ]
+type OTNEnchantmentCreature = OTN OTKEnchantmentCreature
 
-type OTNCreaturePlayerPlaneswalker =
-  OTN
-    '[ 'OTCreature
-     , 'OTPlaneswalker
-     , 'OTPlayer
-     ]
+type OTNCreaturePlayerPlaneswalker = OTN OTKCreaturePlayerPlaneswalker
 
-type OTNNonArtifactPermanent =
-  OTN
-    '[ 'OTCreature
-     , 'OTBattle
-     , 'OTEnchantment
-     , 'OTLand
-     , 'OTPlaneswalker
-     ]
+type OTNNonArtifactPermanent = OTN OTKNonArtifactPermanent
 
-type OTNNonCreaturePermanent =
-  OTN
-    '[ 'OTArtifact
-     , 'OTBattle
-     , 'OTEnchantment
-     , 'OTLand
-     , 'OTPlaneswalker
-     ]
+type OTNNonCreaturePermanent = OTN OTKNonCreaturePermanent
 
-type OTNNonEnchantmentPermanent =
-  OTN
-    '[ 'OTArtifact
-     , 'OTBattle
-     , 'OTCreature
-     , 'OTLand
-     , 'OTPlaneswalker
-     ]
+type OTNNonEnchantmentPermanent = OTN OTKNonEnchantmentPermanent
 
-type OTNNonLandPermanent =
-  OTN
-    '[ 'OTArtifact
-     , 'OTBattle
-     , 'OTCreature
-     , 'OTEnchantment
-     , 'OTPlaneswalker
-     ]
+type OTNNonLandPermanent = OTN OTKNonLandPermanent
 
-type OTNNonPlaneswalkerPermanent =
-  OTN
-    '[ 'OTArtifact
-     , 'OTBattle
-     , 'OTCreature
-     , 'OTEnchantment
-     , 'OTLand
-     ]
+type OTNNonPlaneswalkerPermanent = OTN OTKNonPlaneswalkerPermanent
 
-type OTNPermanent =
-  OTN
-    '[ 'OTArtifact
-     , 'OTBattle
-     , 'OTCreature
-     , 'OTEnchantment
-     , 'OTLand
-     , 'OTPlaneswalker
-     ]
+type OTNPermanent = OTN OTKPermanent
 
-type OTNNonCreature =
-  OTN
-    '[ 'OTArtifact
-     , 'OTBattle
-     , 'OTEnchantment
-     , 'OTInstant
-     , 'OTLand
-     , 'OTPlaneswalker
-     , 'OTSorcery
-     ]
+type OTNNonCreature = OTN OTKNonCreature
 
-type OTNSpell =
-  OTN
-    '[ 'OTArtifact
-     , 'OTBattle
-     , 'OTCreature
-     , 'OTEnchantment
-     , 'OTInstant
-     , 'OTPlaneswalker
-     , 'OTSorcery
-     ]
+type OTNSpell = OTN OTKSpell
 
-type OTNCard =
-  OTN
-    '[ 'OTArtifact
-     , 'OTBattle
-     , 'OTCreature
-     , 'OTEnchantment
-     , 'OTInstant
-     , 'OTLand
-     , 'OTPlaneswalker
-     , 'OTSorcery
-     ]
+type OTNCard = OTN OTKCard
 
-type OTNDamageSource =
-  OTN
-    '[ 'OTArtifact
-     , 'OTBattle
-     , 'OTCreature
-     , 'OTEnchantment
-     , 'OTInstant
-     , 'OTLand
-     , 'OTPlaneswalker
-     , 'OTPlayer
-     , 'OTSorcery
-     ]
+type OTNDamageSource = OTN OTKDamageSource
 
-type OTNAny =
-  OTN
-    '[ 'OTActivatedAbility
-     , 'OTArtifact
-     , 'OTBattle
-     , 'OTCreature
-     , 'OTEmblem
-     , 'OTEnchantment
-     , 'OTInstant
-     , 'OTLand
-     , 'OTPlaneswalker
-     , 'OTPlayer
-     , 'OTSorcery
-     , 'OTStaticAbility
-     , 'OTTriggeredAbility
-     ]
+type OTNAny = OTN OTKAny

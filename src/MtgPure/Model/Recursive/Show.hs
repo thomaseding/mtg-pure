@@ -5,42 +5,35 @@
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Use const" #-}
 {-# HLINT ignore "Use if" #-}
-{-# HLINT ignore "Redundant multi-way if" #-}
 
 module MtgPure.Model.Recursive.Show (
   CardDepth,
+  DataCombinators (..),
+  ShowOptions (..),
+  defaultShowOptions,
   runEnvM,
+  runEnvMWith,
   showCard,
   showToken,
   showSetCard,
   showSetToken,
+  showCardWith,
+  showTokenWith,
+  showSetCardWith,
+  showSetTokenWith,
+  showAnyCardWith,
+  showAnyTokenWith,
 ) where
 
-import safe qualified Control.Monad as M
 import safe qualified Control.Monad.State.Strict as State
-import safe qualified Data.DList as DList
-import safe Data.Inst (
-  Inst10,
-  Inst11,
-  Inst12,
-  Inst13,
-  Inst2,
-  Inst3,
-  Inst4,
-  Inst5,
-  Inst6,
-  Inst7,
-  Inst8,
-  Inst9,
- )
 import safe Data.Kind (Type)
 import safe qualified Data.List as List
 import safe qualified Data.Map.Strict as Map
-import safe Data.Maybe (catMaybes)
-import safe Data.Nat (Fin (..), NatList (..))
+import safe Data.Maybe (catMaybes, fromMaybe)
+import safe Data.Nat (NatList (..))
 import safe Data.Proxy (Proxy (Proxy))
 import safe Data.String (IsString (..))
-import safe Data.Typeable (TypeRep, Typeable, typeOf, typeRep)
+import safe Data.Typeable (TypeRep, Typeable, typeOf, typeRep, typeRepArgs)
 import safe MtgPure.Model.ArtifactType (ArtifactType)
 import safe MtgPure.Model.BasicLandType (BasicLandType)
 import safe MtgPure.Model.CardName (CardName (CardName), HasCardName (..))
@@ -57,55 +50,53 @@ import safe MtgPure.Model.Mana.ManaCost (
   HybridManaCost (..),
   ManaCost (..),
   PhyrexianManaCost (..),
-  isOnlyGeneric,
  )
 import safe MtgPure.Model.Mana.ManaPool (CompleteManaPool (..), ManaPool (..))
 import safe MtgPure.Model.Mana.ManaSymbol (ManaSymbol (..))
 import safe MtgPure.Model.Object.IsObjectType (IsObjectType (..))
-import safe MtgPure.Model.Object.OT (OT (..))
 import safe MtgPure.Model.Object.OTN (
-  OT1,
-  OT2,
-  OT3,
-  OT4,
-  OT5,
-  OT6,
   OTN (..),
  )
 import safe MtgPure.Model.Object.OTNAliases (
+  OTNAbility,
+  OTNActivatedAbility,
+  OTNActivatedOrTriggeredAbility,
   OTNAny,
+  OTNArtifact,
+  OTNArtifactLand,
+  OTNBattle,
+  OTNCard,
+  OTNCreature,
   OTNCreaturePlaneswalker,
   OTNCreaturePlayer,
   OTNCreaturePlayerPlaneswalker,
   OTNDamageSource,
+  OTNEmblem,
+  OTNEnchantment,
+  OTNInstant,
+  OTNLand,
+  OTNNonArtifactPermanent,
+  OTNNonCreature,
+  OTNNonCreaturePermanent,
+  OTNNonEnchantmentPermanent,
+  OTNNonLandPermanent,
+  OTNNonPlaneswalkerPermanent,
   OTNPermanent,
+  OTNPlaneswalker,
+  OTNPlayer,
   OTNPlayerPlaneswalker,
+  OTNSorcery,
   OTNSpell,
+  OTNStaticAbility,
+  OTNTriggeredAbility,
  )
 import safe MtgPure.Model.Object.Object (Object (..))
 import safe MtgPure.Model.Object.ObjectId (
   ObjectId (ObjectId),
   UntypedObject (..),
   getObjectId,
-  pattern DefaultObjectDiscriminant,
  )
-import safe MtgPure.Model.Object.ObjectN (
-  ON0,
-  ON1,
-  ON10,
-  ON11,
-  ON12,
-  ON13,
-  ON2,
-  ON3,
-  ON4,
-  ON5,
-  ON6,
-  ON7,
-  ON8,
-  ON9,
-  ObjectN (..),
- )
+import safe MtgPure.Model.Object.ObjectN (ObjectN)
 import safe MtgPure.Model.Object.ViewObjectN (viewOTN')
 import safe MtgPure.Model.Object.VisitObjectN (visitObjectN')
 import safe MtgPure.Model.Power (Power)
@@ -124,7 +115,6 @@ import safe MtgPure.Model.Recursive (
   Cost (..),
   Effect (..),
   Elect (..),
-  ElectOT (unElectOT),
   Else (..),
   Enchant (..),
   EnchantmentType (..),
@@ -135,8 +125,8 @@ import safe MtgPure.Model.Recursive (
   IsUser (..),
   List (..),
   Requirement (..),
-  SetCard (SetCard),
-  SetToken (SetToken),
+  SetCard,
+  SetToken,
   SomeZone (..),
   StaticAbility (..),
   Token (..),
@@ -152,6 +142,12 @@ import safe MtgPure.Model.Recursive (
   WithThisStatic,
   WithThisTriggered,
   WithThisZ (..),
+ )
+import safe MtgPure.Model.Recursive.Tree (
+  BuildTree,
+  Tree (..),
+  TreeConfig (..),
+  buildTree,
  )
 import safe MtgPure.Model.Supertype (Supertype (..))
 import safe MtgPure.Model.TimePoint (TimePoint (..))
@@ -169,7 +165,6 @@ import safe MtgPure.Model.ZoneObject.ZoneObject (
   IsZO,
   ZO,
   ZoneObject (..),
-  toZone,
  )
 import safe Prelude hiding (showList)
 
@@ -178,153 +173,189 @@ import safe Prelude hiding (showList)
 defaultDepthLimit :: Maybe Int
 defaultDepthLimit = Nothing
 
+-- | @buildTree@ always constructs the full tree; card-depth truncation happens
+-- in the renderer via the 'EnvM' 'cardDepth' seeded by 'runEnvM'.
+fullTreeConfig :: TreeConfig
+fullTreeConfig = treeConfigForDepth Nothing
+
+showViaTree :: (BuildTree a) => (Tree a -> EnvM Doc) -> a -> EnvM Doc
+showViaTree render = render . buildTree fullTreeConfig
+
+runShowWith :: ShowOptions -> (a -> EnvM Doc) -> a -> String
+runShowWith opts render = runEnvMWith opts defaultDepthLimit . render
+
+runShow :: (a -> EnvM Doc) -> a -> String
+runShow = runShowWith defaultShowOptions
+
+treeShow :: (BuildTree a) => (Tree a -> EnvM Doc) -> a -> String
+treeShow render = runShow (showViaTree render)
+
+-- | Render a value with explicit 'ShowOptions'.
+showCardWith :: ShowOptions -> Card ot -> String
+showCardWith opts = runShowWith opts showCard
+
+showTokenWith :: ShowOptions -> Token ot -> String
+showTokenWith opts = runShowWith opts showToken
+
+showSetCardWith :: ShowOptions -> SetCard ot -> String
+showSetCardWith opts = runShowWith opts showSetCard
+
+showSetTokenWith :: ShowOptions -> SetToken ot -> String
+showSetTokenWith opts = runShowWith opts showSetToken
+
+showAnyCardWith :: ShowOptions -> AnyCard -> String
+showAnyCardWith opts = runShowWith opts showAnyCard
+
+showAnyTokenWith :: ShowOptions -> AnyToken -> String
+showAnyTokenWith opts = runShowWith opts showAnyToken
+
 instance Show (Ability zone ot) where
   show :: Ability zone ot -> String
-  show = runEnvM defaultDepthLimit . showAbility
+  show = treeShow showTreeAbility
 
 instance Show (ActivatedAbility zone ot) where
   show :: ActivatedAbility zone ot -> String
-  show = runEnvM defaultDepthLimit . showActivatedAbility
+  show = treeShow showTreeActivatedAbility
 
 instance Show AnyCard where
   show :: AnyCard -> String
-  show = runEnvM defaultDepthLimit . showAnyCard
+  show = runShow showAnyCard
 
 instance Show AnyToken where
   show :: AnyToken -> String
-  show = runEnvM defaultDepthLimit . showAnyToken
+  show = runShow showAnyToken
 
 instance Show BattleType where
   show :: BattleType -> String
-  show = runEnvM defaultDepthLimit . showBattleType
+  show = treeShow showTreeBattleType
 
 instance Show (Card ot) where
   show :: Card ot -> String
-  show = runEnvM defaultDepthLimit . showCard
+  show = runShow showCard
 
 instance Show (CardCharacteristic ot) where
   show :: CardCharacteristic ot -> String
-  show = runEnvM defaultDepthLimit . showCardCharacteristic
+  show = treeShow showTreeCardCharacteristic
 
 instance Show (CardSpec ot) where
   show :: CardSpec ot -> String
-  show = runEnvM defaultDepthLimit . showCardSpec
+  show = treeShow showTreeCardSpec
 
 instance Show CompleteManaPool where
   show :: CompleteManaPool -> String
-  show = runEnvM defaultDepthLimit . showCompleteManaPool
+  show = runShow showCompleteManaPool
 
 instance Show Condition where
   show :: Condition -> String
-  show = runEnvM defaultDepthLimit . showCondition
+  show = treeShow showTreeCondition
 
 instance Show Cost where
   show :: Cost -> String
-  show = runEnvM defaultDepthLimit . showCost
+  show = treeShow showTreeCost
 
 instance Show (DynamicManaCost var) where
   show :: DynamicManaCost var -> String
-  show = runEnvM defaultDepthLimit . showDynamicManaCost
+  show = runShow showDynamicManaCost
 
 instance Show (Effect ef) where
   show :: Effect ef -> String
-  show = runEnvM defaultDepthLimit . showEffect
+  show = treeShow showTreeEffect
 
 instance Show (Elect s el ot) where
   show :: Elect s el ot -> String
-  show = runEnvM defaultDepthLimit . showElect
+  show = treeShow showTreeElect
 
 instance Show (EnchantmentType ot) where
   show :: EnchantmentType ot -> String
-  show = runEnvM defaultDepthLimit . showEnchantmentType
+  show = treeShow showTreeEnchantmentType
 
 instance Show EventListener where
   show :: EventListener -> String
-  show = runEnvM defaultDepthLimit . showEventListener
+  show = treeShow showTreeEventListener
 
 instance Show (HybridManaCost var) where
   show :: HybridManaCost var -> String
-  show = runEnvM defaultDepthLimit . showHybridManaCost
+  show = runShow showHybridManaCost
 
 instance Show (ManaCost var) where
   show :: ManaCost var -> String
-  show = runEnvM defaultDepthLimit . showManaCost
+  show = runShow showManaCost
 
 instance Show (ManaPool snow) where
   show :: ManaPool snow -> String
-  show = runEnvM defaultDepthLimit . showManaPool
+  show = runShow showManaPool
 
 instance Show (PhyrexianManaCost var) where
   show :: PhyrexianManaCost var -> String
-  show = runEnvM defaultDepthLimit . showPhyrexianManaCost
+  show = runShow showPhyrexianManaCost
 
 instance Show (Requirement zone ot) where
   show :: Requirement zone ot -> String
-  show = runEnvM defaultDepthLimit . showRequirement
+  show = treeShow showTreeRequirement
 
 instance Show (SetCard ot) where
   show :: SetCard ot -> String
-  show = runEnvM defaultDepthLimit . showSetCard
+  show = runShow showSetCard
 
 instance Show (SetToken ot) where
   show :: SetToken ot -> String
-  show = runEnvM defaultDepthLimit . showSetToken
+  show = runShow showSetToken
 
 instance Show (StaticAbility zone ot) where
   show :: StaticAbility zone ot -> String
-  show = runEnvM defaultDepthLimit . showStaticAbility
+  show = treeShow showTreeStaticAbility
 
 instance Show (Token ot) where
   show :: Token ot -> String
-  show = runEnvM defaultDepthLimit . showToken
+  show = runShow showToken
 
 instance Show (TriggeredAbility zone ot) where
   show :: TriggeredAbility zone ot -> String
-  show = runEnvM defaultDepthLimit . showTriggeredAbility
+  show = treeShow showTreeTriggeredAbility
 
 instance (IsZO zone ot) => Show (WithMaskedObject (Elect s e) zone ot) where
   show :: (IsZO zone ot) => WithMaskedObject (Elect s e) zone ot -> String
-  show = runEnvM defaultDepthLimit . showWithMaskedObject showElect "obj"
+  show = treeShow (showTreeWithMaskedObject showTreeElect "obj")
 
 instance (IsOTN ot) => Show (SomeZone WithThisAbility ot) where
   show :: (IsOTN ot) => SomeZone WithThisAbility ot -> String
-  show = runEnvM defaultDepthLimit . showSomeZone (showWithThisAbility "this")
+  show = treeShow (showTreeSomeZoneWithThisAbility "this")
 
 instance (IsOTN ot) => Show (SomeZone (WithThisZ ActivatedAbility) ot) where
   show :: (IsOTN ot) => SomeZone (WithThisZ ActivatedAbility) ot -> String
-  show = runEnvM defaultDepthLimit . showSomeZone (showWithThisZ showActivatedAbility "this")
+  show = treeShow (showTreeSomeZone (showTreeWithThisZ showTreeActivatedAbility "this"))
 
 instance (IsOTN ot) => Show (SomeZone (WithThisZ StaticAbility) ot) where
   show :: (IsOTN ot) => SomeZone (WithThisZ StaticAbility) ot -> String
-  show = runEnvM defaultDepthLimit . showSomeZone (showWithThisZ showStaticAbility "this")
+  show = treeShow (showTreeSomeZone (showTreeWithThisZ showTreeStaticAbility "this"))
 
 instance (IsOTN ot) => Show (SomeZone (WithThisZ TriggeredAbility) ot) where
   show :: (IsOTN ot) => SomeZone (WithThisZ TriggeredAbility) ot -> String
-  show = runEnvM defaultDepthLimit . showSomeZone (showWithThisZ showTriggeredAbility "this")
+  show = treeShow (showTreeSomeZone (showTreeWithThisZ showTreeTriggeredAbility "this"))
 
 instance (IsZO zone ot) => Show (WithThis (Ability zone) zone ot) where
   show :: (IsZO zone ot) => WithThis (Ability zone) zone ot -> String
-  show = runEnvM defaultDepthLimit . showWithThis showAbility "this"
+  show = treeShow (showTreeWithThis showTreeAbility "this")
 
 instance (IsZO zone ot) => Show (WithThisAbility zone ot) where
   show :: (IsZO zone ot) => WithThisAbility zone ot -> String
-  show = runEnvM defaultDepthLimit . showWithThisAbility "this"
+  show = treeShow (showTreeWithThisAbility "this")
 
 instance (IsZO zone ot) => Show (WithThisActivated zone ot) where
   show :: (IsZO zone ot) => WithThisActivated zone ot -> String
-  show = runEnvM defaultDepthLimit . showWithThis (showElect . unElectOT) "this"
+  show = treeShow (showTreeWithThis (\case TreeElectOT e -> showTreeElect e) "this")
 
 instance (IsZO 'ZStack ot) => Show (WithThisOneShot ot) where
   show :: (IsZO 'ZStack ot) => WithThisOneShot ot -> String
-  show = runEnvM defaultDepthLimit . showWithThis showElect "this"
+  show = treeShow (showTreeWithThis showTreeElect "this")
 
 instance (IsZO zone ot) => Show (WithThisStatic zone ot) where
   show :: (IsZO zone ot) => WithThisStatic zone ot -> String
-  show = runEnvM defaultDepthLimit . showWithThis showStaticAbility "this"
+  show = treeShow (showTreeWithThis showTreeStaticAbility "this")
 
 instance (IsZO zone ot) => Show (WithThisTriggered zone ot) where
   show :: (IsZO zone ot) => WithThisTriggered zone ot -> String
-  show = runEnvM defaultDepthLimit . showWithThis showTriggeredAbility "this"
+  show = treeShow (showTreeWithThis showTreeTriggeredAbility "this")
 
 ----------------------------------------
 
@@ -339,47 +370,456 @@ litMana = \case
   Mana x -> x
 
 ----------------------------------------
+-- Render tree.
+--
+-- Structural renderers build a `Doc`: a faithful AST of the Haskell expression
+-- being shown (applications, lambdas, records, lists, type applications, and
+-- atoms). The `Doc` itself carries no surface-syntax decisions. A single
+-- `layout` pass flattens it to a stream of atoms, and that pass is the ONLY
+-- place that considers parentheses, `$`, block arguments, and multiline
+-- formatting -- all derived from the `Doc`'s shape (see `needsParens`).
+-- Object/variable references stay as atoms so id-remapping and used/wildcard
+-- analysis happen in the final `[Doc] -> String` pass.
 
-data Item :: Type where
-  StringItem :: String -> Item
-  ObjectItem :: ObjectId -> Generation -> Item
-  VariableItem :: VariableId -> Item
-  deriving (Show)
+data Doc :: Type where
+  -- | A rendered token: a name, number, mana string, etc. Kept as a single
+  -- unit; a Haskell application is a 'DApp', not a baked-in @DString "Foo x"@.
+  -- (A pre-rendered token /may/ contain spaces -- e.g. @toManaCost (W,W)@ or a
+  -- @show@n enum -- as long as it holds no object/variable atom; `needsParens`
+  -- then parenthesizes it by the presence of a space.)
+  DString :: String -> Doc
+  -- | An object reference: its id and the generation that disambiguates
+  -- shadowed binders. Rendered (and remapped) in the final pass.
+  DObject :: ObjectId -> Generation -> Doc
+  -- | A variable reference. Rendered (and remapped) in the final pass.
+  DVariable :: VariableId -> Doc
+  -- | A flat sequence of docs. The concatenation vehicle for `layout`'s output
+  -- (it replaces the old @Items@ @DList@); 'Semigroup'/'Monoid' go through it.
+  DSeq :: [Doc] -> Doc
+  -- | Application: @head arg1 arg2 ...@.
+  DApp :: Doc -> [Doc] -> Doc
+  -- | @\\binder -> body@. The binder already includes the leading backslash.
+  DLam :: Doc -> Doc -> Doc
+  -- | Record constructor. Single-line: positional like 'DApp'. Multiline (D):
+  -- record syntax with each field on its own (leading-comma) line.
+  DRec :: Doc -> [(String, Doc)] -> Doc
+  -- | @[d1, d2, ...]@.
+  DList :: [Doc] -> Doc
+  -- | Type application @head \@ty1 \@ty2 ... arg1 ...@: each @ty@ atom is kept as
+  -- its own child 'Doc' (not flattened into the head) so the smart-aliasing pass
+  -- (E) can match and replace it structurally, and so `layout` can parenthesize
+  -- @\@(ty)@ when the type token needs it. The first list is the @\@ty@ type
+  -- arguments (e.g. @masked \@ot \@'ZGraveyard@); the second the value arguments.
+  DTypeApp :: String -> [Doc] -> [Doc] -> Doc
+  -- | A piece of a destructured object binder, used by (F)
+  -- 'NoDataCombinators' to rebuild coerced object references with constructors
+  -- (see 'ObjectPart'). Rendered (and numbered like the object's 'DObject'
+  -- atom) in the final pass.
+  DObjectPart :: ObjectPart -> ObjectId -> Generation -> Doc
+  deriving (Eq)
 
-instance IsString Item where
-  fromString :: String -> Item
-  fromString = StringItem
+-- | Which piece of a destructured object binder a 'DObjectPart' atom is. Under
+-- (F) 'NoDataCombinators' a binder renders as @name\@(ZO sng\<n\> objN\<n\>)@
+-- and a use-site that views the object at a wider type rebuilds it as
+-- @ZO sng\<n\> (ON\<k\>\<letter\> (... objN\<n\>))@ -- constructors only, no
+-- @toZO\<n\>@\/@asFoo@ coercion functions.
+data ObjectPart :: Type where
+  -- | The @\@(ZO sng\<n\> objN\<n\>)@ as-pattern suffix on the binder name.
+  -- Renders as the empty string unless some use-site coerces this binder
+  -- (i.e. some 'ObjectPartSing'\/'ObjectPartPayload' atom shares its id and
+  -- generation), so an undestructured binder stays a bare name.
+  ObjectPartPattern :: ObjectPart
+  -- | The bound @SingZone zone@ payload, rendered @sng\<n\>@.
+  ObjectPartSing :: ObjectPart
+  -- | The bound @ObjectN ot@ payload, rendered @objN\<n\>@.
+  ObjectPartPayload :: ObjectPart
+  deriving (Eq, Typeable)
 
-type Items = DList.DList Item
+instance IsString Doc where
+  fromString :: String -> Doc
+  fromString = DString
 
-data Paren = NeedsParen | DoesNotNeedParam
+instance Semigroup Doc where
+  (<>) :: Doc -> Doc -> Doc
+  DSeq xs <> DSeq ys = DSeq (xs <> ys)
+  DSeq xs <> y = DSeq (xs <> [y])
+  x <> DSeq ys = DSeq (x : ys)
+  x <> y = DSeq [x, y]
 
-type ParenItems = (Paren, Items)
+instance Monoid Doc where
+  mempty :: Doc
+  mempty = DSeq []
 
-parens :: ParenItems -> Items
-parens (p, s) = case p of
-  NeedsParen -> pure "(" <> s <> pure ")"
-  DoesNotNeedParam -> s
+dintercalate :: Doc -> [Doc] -> Doc
+dintercalate sep = mconcat . List.intersperse sep
 
-dollar :: ParenItems -> Items
-dollar (p, s) = case p of
-  NeedsParen -> pure " $ " <> s
-  DoesNotNeedParam -> pure " " <> s
+-- | Does this 'Doc' need surrounding parens when it appears as a function
+-- argument? Purely a function of shape -- no flag is stored anywhere. A
+-- pre-rendered 'DString' token needs them iff it contains a space (a multi-word
+-- token like @Damage 3@ or @toManaCost (W,W)@); a lone token or an already
+-- self-bracketed one (@(W,W)@) does not.
+needsParens :: Doc -> Bool
+needsParens = \case
+  DApp _ args -> not (null args)
+  DTypeApp _ tys args -> not (null args) || not (null tys)
+  DLam{} -> True
+  DRec{} -> True
+  DString s -> ' ' `elem` s
+  DObject{} -> False
+  DObjectPart{} -> False
+  DVariable{} -> False
+  DSeq{} -> False
+  DList{} -> False
 
-dropParens :: ParenItems -> Items
-dropParens = snd
+parenIf :: Bool -> Doc -> Doc
+parenIf True d = "(" <> d <> ")"
+parenIf False d = d
 
-noParens :: EnvM Items -> EnvM ParenItems
-noParens = fmap $ (,) DoesNotNeedParam
+-- | Application with a plain-string head.
+dApp :: String -> [Doc] -> Doc
+dApp hd = DApp (fromString hd)
 
-yesParens :: EnvM Items -> EnvM ParenItems
-yesParens = fmap $ (,) NeedsParen
+-- | An atomic bare name (no arguments), e.g. @Flying@ or a quoted string.
+dName :: String -> Doc
+dName s = DApp (fromString s) []
+
+-- | @head \@ty arg1 ...@ keeping @ty@ as a matchable child 'Doc'. See 'DTypeApp'.
+dTypeApp :: String -> Doc -> [Doc] -> Doc
+dTypeApp hd ty = DTypeApp hd [ty]
+
+-- | Like 'dTypeApp' but with several @\@ty@ type arguments, e.g.
+-- @masked \@ot \@'ZGraveyard@.
+dTypeApps :: String -> [Doc] -> [Doc] -> Doc
+dTypeApps = DTypeApp
+
+-- | The @\@zone@ type application(s) to append after a @masked@/@maskeds@
+-- @\@ot@. Empty for the zones the cards leave implicit -- battlefield and stack,
+-- which are inferred -- otherwise the explicit @\@'ZGraveyard@ / @\@'ZExile@ /
+-- etc. that the source spells out for off-battlefield targets.
+zoneTypeArgs :: forall zone. (IsZone zone) => [Doc]
+zoneTypeArgs = case litZone @zone of
+  ZBattlefield -> []
+  ZStack -> []
+  z@ZExile -> [zoneAtom z]
+  z@ZGraveyard -> [zoneAtom z]
+  z@ZHand -> [zoneAtom z]
+  z@ZLibrary -> [zoneAtom z]
+ where
+  zoneAtom z = DString ('\'' : show z)
+
+-- | @\\<name> -> body@ where @name@ is an already-rendered doc (e.g. an object).
+dLam :: Doc -> Doc -> Doc
+dLam binder = DLam ("\\" <> binder)
+
+-- | @(name :: ty)@: a type-annotated lambda binder. Used by (F) below
+-- 'HighDataCombinators' to pin the existential mask\/zone types on the raw
+-- constructors' lambdas -- the job the @\@ty@ applications do on the
+-- combinator forms.
+dAnnBinder :: Doc -> Doc -> Doc
+dAnnBinder nm ty = "(" <> nm <> " :: " <> ty <> ")"
+
+dNewline :: Int -> Doc
+dNewline n = fromString $ "\n" <> replicate n ' '
+
+-- | Walk a 'Doc' to a flat 'Doc' (atoms and 'DSeq' only) with all parens, @$@,
+-- block arguments, and multiline formatting placed. This is the only phase that
+-- makes those surface-syntax decisions; each is derived from the input 'Doc'
+-- shape (see 'needsParens'). @ind@ is the column to indent continuation lines
+-- to.
+layout :: ShowOptions -> Int -> Doc -> Doc
+layout opts ind = \case
+  d@DString{} -> d
+  d@DObject{} -> d
+  d@DObjectPart{} -> d
+  d@DVariable{} -> d
+  d@DSeq{} -> d
+  DList kids
+    | showOptions_multiline opts && any (isMultilineChild opts ind) kids ->
+        layoutList opts ind kids
+    | otherwise ->
+        "[" <> dintercalate ", " (map (layout opts ind) kids) <> "]"
+  DApp hd [] -> layout opts ind hd
+  DApp hd kids -> hd <> layoutArgs opts ind kids
+  DTypeApp hd tys kids ->
+    let hdItems =
+          fromString hd
+            <> mconcat [" @" <> parenIf (needsParens ty) (layout opts ind ty) | ty <- tys]
+     in case kids of
+          [] -> hdItems
+          _ -> hdItems <> layoutArgs opts ind kids
+  DLam binder body -> layoutLam opts ind binder body
+  DRec hd fields
+    | showOptions_multiline opts -> layoutRec opts ind hd fields
+    | otherwise -> hd <> layoutArgs opts ind (map snd fields)
+
+layoutArgs :: ShowOptions -> Int -> [Doc] -> Doc
+layoutArgs opts ind kids =
+  mconcat (map (layoutArgParen opts ind) (init kids)) <> layoutArgLast opts ind (last kids)
+
+layoutArgParen :: ShowOptions -> Int -> Doc -> Doc
+layoutArgParen opts ind k = " " <> parenIf (needsParens k) (layout opts ind k)
+
+layoutArgLast :: ShowOptions -> Int -> Doc -> Doc
+layoutArgLast opts ind k
+  | not (needsParens k) = " " <> laid
+  | showOptions_blockArguments opts && isBlockDoc opts k = " " <> laid
+  | otherwise = " $ " <> laid
+ where
+  laid = layout opts ind k
+
+-- | Docs that can be a trailing block argument (drop @$@ under (C)).
+isBlockDoc :: ShowOptions -> Doc -> Bool
+isBlockDoc _ DLam{} = True
+isBlockDoc opts DRec{} = showOptions_multiline opts
+isBlockDoc _ _ = False
+
+layoutLam :: ShowOptions -> Int -> Doc -> Doc -> Doc
+layoutLam opts ind binder body
+  | showOptions_multiline opts =
+      binder <> " ->" <> dNewline ind' <> layout opts ind' body
+  | otherwise = binder <> " -> " <> layout opts ind body
+ where
+  ind' = ind + 2
+
+layoutRec :: ShowOptions -> Int -> Doc -> [(String, Doc)] -> Doc
+layoutRec opts ind hd fields =
+  hd <> mconcat (zipWith field [0 :: Int ..] fields) <> dNewline ind2 <> "}"
+ where
+  ind2 = ind + 2
+  field i (name, val) =
+    dNewline ind2
+      <> (if i == 0 then "{ " else ", ")
+      <> fromString (name <> " = ")
+      <> layout opts (ind2 + 2) val
+
+-- | Multiline list (D): each element on its own leading-comma line, mirroring
+-- the record layout. The whole list drops onto its own set of lines so a value
+-- like @land_abilities =@ is followed by an aligned @[ ... , ... ]@ block. The
+-- leading newline leaves a trailing space on the preceding @=@ line, stripped
+-- by 'stripTrailingSpaces' in the final pass.
+layoutList :: ShowOptions -> Int -> [Doc] -> Doc
+layoutList opts ind kids =
+  mconcat (zipWith element [0 :: Int ..] kids) <> dNewline ind <> "]"
+ where
+  element i k =
+    dNewline ind
+      <> (if i == 0 then "[ " else ", ")
+      <> layout opts (ind + 2) k
+
+-- | Whether a list element renders across multiple lines, in which case the
+-- whole list switches to the multiline 'layoutList' form.
+isMultilineChild :: ShowOptions -> Int -> Doc -> Bool
+isMultilineChild opts ind = docHasNewline . layout opts (ind + 2)
+
+docHasNewline :: Doc -> Bool
+docHasNewline = \case
+  DString s -> '\n' `elem` s
+  DObject{} -> False
+  DObjectPart{} -> False
+  DVariable{} -> False
+  DSeq ds -> any docHasNewline ds
+  DApp hd kids -> docHasNewline hd || any docHasNewline kids
+  DLam binder body -> docHasNewline binder || docHasNewline body
+  DRec hd fields -> docHasNewline hd || any (docHasNewline . snd) fields
+  DList kids -> any docHasNewline kids
+  DTypeApp _ tys kids -> any docHasNewline tys || any docHasNewline kids
+
+-- | Drop spaces that immediately precede a newline. The multiline list/record
+-- layouts can leave a trailing space on the line before a broken-out block;
+-- trailing whitespace is never meaningful in the rendered output.
+stripTrailingSpaces :: String -> String
+stripTrailingSpaces = foldr step ""
+ where
+  step ' ' acc@('\n' : _) = acc
+  step c acc = c : acc
+
+----------------------------------------
+-- Smart aliasing (E): a self-contained `Doc -> Doc` pass, working entirely in
+-- `Doc` space.
+--
+-- Independent of any particular renderer: it walks a finished 'Doc' and, at
+-- every sub-'Doc', replaces it with the 'aliasMap' value keyed by that exact
+-- sub-'Doc'. The map is built once by rendering each imported alias two ways --
+-- its verbose form (the key 'Doc') and its shorthand name (the value 'Doc') --
+-- so a card's @masked \@(OTN \'[...])@ type atom, which 'dTypeApp' keeps as its
+-- own child 'Doc', matches the key and is swapped for @OTNPermanent@. Because
+-- the value 'Doc' is a space-free 'DString', 'layout' emits it without the
+-- wrapping parens automatically -- no string surgery.
+--
+-- 'runEnvMWith' runs the pass over the whole 'Doc' when
+-- 'showOptions_smartAliasing' is set. Replacement is iterated to a fixed point
+-- (bounded by 'maxAliasIterations') so chained aliases compose.
+
+-- | Rewrite a 'Doc' by replacing matching sub-'Doc's until a fixed point.
+aliasDoc :: Doc -> Doc
+aliasDoc = go maxAliasIterations
+ where
+  go n d
+    | d' == d = d
+    | n <= 0 = error "logic error: cyclic aliasMap"
+    | otherwise = go (n - 1) d'
+   where
+    d' = rewriteDoc d
+
+-- | One bottom-up rewrite pass: recurse into children, then look the (rewritten)
+-- node up in 'aliasMap'.
+rewriteDoc :: Doc -> Doc
+rewriteDoc d = fromMaybe descended (lookup descended aliasMap)
+ where
+  descended = case d of
+    DString{} -> d
+    DObject{} -> d
+    DObjectPart{} -> d
+    DVariable{} -> d
+    DSeq ds -> DSeq (map rewriteDoc ds)
+    DApp hd kids -> DApp hd (map rewriteDoc kids)
+    DLam binder body -> DLam binder (rewriteDoc body)
+    DRec hd fields -> DRec hd (map (fmap rewriteDoc) fields)
+    DList kids -> DList (map rewriteDoc kids)
+    DTypeApp hd tys kids -> DTypeApp hd (map rewriteDoc tys) (map rewriteDoc kids)
+
+-- | The @(keyDoc, valueDoc)@ replacements: each alias's verbose type atom mapped
+-- to its shorthand-name atom. Aliases that 'prettyType' already renders in
+-- shorthand (the two/three-tag ones with a dedicated 'PrettyType' branch) lack
+-- the @OTN \'[@ prefix, never appear verbose, and are dropped here.
+aliasMap :: [(Doc, Doc)]
+aliasMap =
+  [ (typeAtom pretty, typeAtom name)
+  | (name, pretty) <- aliasSpecs
+  , "OTN '[" `List.isPrefixOf` pretty
+  ]
+
+-- | The 'Doc' a type atom renders to for a given 'prettyType' string -- the same
+-- 'DString' 'showTypeOf' produces. Parenthesization of @\@(ty)@ is decided later
+-- by 'layout' (via 'needsParens', i.e. iff the token contains a space).
+typeAtom :: String -> Doc
+typeAtom = DString
+
+-- | Every alias we can collapse, as @(OTN-name, prettyType\@OTN-alias)@. The
+-- second element is the alias rendered with smart-aliasing off and every other
+-- option on; type rendering is option-independent, so 'prettyType' (the same
+-- primitive 'showTypeOf' uses) is that rendering.
+aliasSpecs :: [(String, String)]
+aliasSpecs =
+  [ ("OTNPermanent", prettyType @OTNPermanent)
+  , ("OTNSpell", prettyType @OTNSpell)
+  , ("OTNCard", prettyType @OTNCard)
+  , ("OTNDamageSource", prettyType @OTNDamageSource)
+  , ("OTNNonCreature", prettyType @OTNNonCreature)
+  , ("OTNNonArtifactPermanent", prettyType @OTNNonArtifactPermanent)
+  , ("OTNNonCreaturePermanent", prettyType @OTNNonCreaturePermanent)
+  , ("OTNNonEnchantmentPermanent", prettyType @OTNNonEnchantmentPermanent)
+  , ("OTNNonLandPermanent", prettyType @OTNNonLandPermanent)
+  , ("OTNNonPlaneswalkerPermanent", prettyType @OTNNonPlaneswalkerPermanent)
+  , ("OTNAbility", prettyType @OTNAbility)
+  , ("OTNActivatedOrTriggeredAbility", prettyType @OTNActivatedOrTriggeredAbility)
+  , ("OTNArtifactLand", prettyType @OTNArtifactLand)
+  , -- Single-tag @OTN '[ 'OTFoo]@ wrappers collapse to their @OTNFoo@ shorthand.
+    ("OTNActivatedAbility", prettyType @OTNActivatedAbility)
+  , ("OTNArtifact", prettyType @OTNArtifact)
+  , ("OTNBattle", prettyType @OTNBattle)
+  , ("OTNCreature", prettyType @OTNCreature)
+  , ("OTNEmblem", prettyType @OTNEmblem)
+  , ("OTNEnchantment", prettyType @OTNEnchantment)
+  , ("OTNInstant", prettyType @OTNInstant)
+  , ("OTNLand", prettyType @OTNLand)
+  , ("OTNPlaneswalker", prettyType @OTNPlaneswalker)
+  , ("OTNPlayer", prettyType @OTNPlayer)
+  , ("OTNSorcery", prettyType @OTNSorcery)
+  , ("OTNStaticAbility", prettyType @OTNStaticAbility)
+  , ("OTNTriggeredAbility", prettyType @OTNTriggeredAbility)
+  ]
+
+-- | Replacement recursion bound. Direct atom swaps reach a fixed point in one
+-- pass; exceeding this signals a malformed (cyclic) 'aliasMap'.
+maxAliasIterations :: Int
+maxAliasIterations = 32
 
 ----------------------------------------
 
 type CardDepth = Maybe Int
 
 type Generation = Int
+
+-- | (F) How much of the card-authoring combinator vocabulary the renderer may
+-- use when spelling out data, from constructors-only up to everything the
+-- hand-written cards use. See 'showOptions_dataCombinators'.
+data DataCombinators :: Type where
+  -- | Constructors only. @toColors@\/@manaCost@\/@toManaCost@\/@toManaPool@
+  -- render as their record constructors (no @mempty@ shortcuts), and even the
+  -- object coercions are spelled with constructors: a binder whose object some
+  -- use-site views at a wider type gains a @name\@(ZO sng\<n\> objN\<n\>)@
+  -- as-pattern, and the coerced use rebuilds the wider @ObjectN@ from the
+  -- bound payloads with the @ON\<k\>\<letter\>@ nesting constructors, e.g.
+  -- @ZO sng3 (ON9a (... (ON2a objN3)))@ -- no @toZO\<n\>@\/@asFoo@ functions.
+  NoDataCombinators :: DataCombinators
+  -- | Raw structural constructors, but the highly-compacting leaf helpers
+  -- stay: @toColors@, @manaCost@\/@toManaCost@, @toManaPool@, and the
+  -- @asFoo@\/@toZO\<n\>@ object coercions render as in 'HighDataCombinators'.
+  LowDataCombinators :: DataCombinators
+  -- | The full authoring vocabulary, as the hand-written cards use it.
+  HighDataCombinators :: DataCombinators
+  deriving (Eq, Ord, Show, Typeable)
+
+-- | Knobs controlling how a value is rendered. 'defaultShowOptions' (used by
+-- the 'Show' instances) enables every cleanup option -- the fully-cleaned,
+-- multiline, block-argument, wildcarded rendering -- and leaves (F)
+-- 'showOptions_dataCombinators' at 'HighDataCombinators'.
+data ShowOptions = ShowOptions
+  { showOptions_wildcardUnusedVars :: Bool
+  -- ^ (B) Render unused bindings as @_@. Wildcarded bindings do not consume
+  -- a remap slot (object/variable ids are always remapped so the first
+  -- occurrence of each is numbered @1,2,3,...@ / @x,y,z,...@ in left-DFS order,
+  -- with no gaps).
+  , showOptions_blockArguments :: Bool
+  -- ^ (C) Omit the superfluous @$@ before a trailing lambda/record argument.
+  , showOptions_multiline :: Bool
+  -- ^ (D) Break record fields and lambda bodies onto indented lines.
+  , showOptions_smartAliasing :: Bool
+  -- ^ (E) Collapse the verbose type atoms in @\@Ty@ applications to the
+  -- shorthand @OTN@ aliases they stand for, e.g.
+  -- @masked \@(OTN \'[\'OTArtifact, \'OTBattle, \'OTCreature, \'OTEnchantment, \'OTLand, \'OTPlaneswalker])@
+  -- becomes @masked \@OTNPermanent@. A standalone 'Doc'-space pass; see
+  -- 'aliasDoc' / 'aliasMap'.
+  , showOptions_dataCombinators :: DataCombinators
+  -- ^ (F) Below 'HighDataCombinators', build data with raw constructors
+  -- instead of the authoring combinators:
+  -- @masked@\/@maskeds@\/@linked@\/@thisObject@ and the ability combinators
+  -- (@activated@\/@static@\/@triggered@) render as their
+  -- @MaskedN@\/@MaskedsN@\/@LinkedN@\/@ThisN@\/@SomeZone@+@WithThis*@
+  -- constructors, with the existential mask\/zone types pinned by @::@
+  -- annotations on the lambda binders instead of @\@ty@ applications (types may
+  -- still use aliases). 'NoDataCombinators' additionally drops the compacting
+  -- leaf\/coercion helpers ('LowDataCombinators' keeps them); see
+  -- 'DataCombinators'. Below 'HighDataCombinators',
+  -- 'showOptions_smartAliasing' is forced off via 'massageOptions' (and
+  -- 'NoDataCombinators' also forces 'showOptions_wildcardUnusedVars' off: a
+  -- wildcarded binder cannot carry the @\@(ZO ...)@ as-pattern -- @_\@pat@ is
+  -- not valid Haskell).
+  }
+
+defaultShowOptions :: ShowOptions
+defaultShowOptions =
+  ShowOptions
+    { showOptions_wildcardUnusedVars = True
+    , showOptions_blockArguments = True
+    , showOptions_multiline = True
+    , showOptions_smartAliasing = True
+    , showOptions_dataCombinators = HighDataCombinators
+    }
+
+-- | Normalize a 'ShowOptions' to the combination actually rendered: below
+-- 'HighDataCombinators', (F) forces 'showOptions_smartAliasing' off (the alias
+-- pass exists to shorten the @\@ty@ atoms the combinator forms emit; raw
+-- constructors keep their types verbatim), and 'NoDataCombinators' forces
+-- 'showOptions_wildcardUnusedVars' off (its destructured binders cannot render
+-- as @_@). Applied by 'runEnvMWith', so every render sees the massaged options.
+massageOptions :: ShowOptions -> ShowOptions
+massageOptions opts = case showOptions_dataCombinators opts of
+  NoDataCombinators ->
+    opts{showOptions_smartAliasing = False, showOptions_wildcardUnusedVars = False}
+  LowDataCombinators -> opts{showOptions_smartAliasing = False}
+  HighDataCombinators -> opts
 
 data Env = Env
   { nextObjectId :: ObjectId
@@ -389,10 +829,11 @@ data Env = Env
   , objectGenerations :: Map.Map ObjectId Generation
   , objectNames :: Map.Map ObjectId String
   , cardDepth :: CardDepth
+  , showOptions :: ShowOptions
   }
 
-mkEnv :: CardDepth -> Env
-mkEnv depth =
+mkEnv :: ShowOptions -> CardDepth -> Env
+mkEnv opts depth =
   Env
     { nextObjectId = ObjectId 1
     , nextVariableId = VariableId 0
@@ -401,6 +842,7 @@ mkEnv depth =
     , objectGenerations = mempty
     , objectNames = mempty
     , cardDepth = max 0 <$> depth
+    , showOptions = opts
     }
 
 newtype EnvM a = EnvM {unEnvM :: State.State Env a}
@@ -417,27 +859,85 @@ instance Monad EnvM where
   (>>=) :: EnvM a -> (a -> EnvM b) -> EnvM b
   EnvM a >>= f = EnvM $ a >>= unEnvM . f
 
-runEnvM :: CardDepth -> EnvM ParenItems -> String
-runEnvM depth m = concat $ State.evalState strsM $ mkEnv depth
+-- | Render a built `Doc` to a 'String' at the given depth.
+runEnvM :: CardDepth -> EnvM Doc -> String
+runEnvM = runEnvMWith defaultShowOptions
+
+runEnvMWith :: ShowOptions -> CardDepth -> EnvM Doc -> String
+runEnvMWith (massageOptions -> opts) depth docM =
+  stripTrailingSpaces $ concat $ State.evalState (unEnvM atomStrsM) $ mkEnv opts depth
  where
-  itemsM = DList.toList . dropParens <$> m
-  EnvM strsM =
-    itemsM >>= \items -> do
-      let used = getUsed items
-      mapM (showItem used) items
-  showItem used = \case
-    StringItem s -> pure s
-    ObjectItem i@(ObjectId n) g -> do
+  aliasPass = if showOptions_smartAliasing opts then aliasDoc else id
+  atomStrsM :: EnvM [String]
+  atomStrsM = do
+    atoms <- flattenDoc . layout opts 0 . aliasPass <$> docM
+    let used = getUsed atoms
+        objRemap = mkObjRemap opts used atoms
+        varRemap = mkVarRemap opts used atoms
+    mapM (showAtom used objRemap varRemap) atoms
+  -- The used/unused treatment shared by object and variable atoms: an unused
+  -- binding renders as @_@ under (B), or keeps its name behind an @_@ prefix
+  -- otherwise.
+  nameOrWildcard :: Bool -> String -> String
+  nameOrWildcard isUsed name
+    | isUsed = name
+    | showOptions_wildcardUnusedVars opts = "_"
+    | otherwise = '_' : name
+  showAtom :: Used -> Map.Map ObjectId Int -> Map.Map VariableId Int -> Doc -> EnvM String
+  showAtom used objRemap varRemap = \case
+    DString s -> pure s
+    DObject i@(ObjectId n) g -> do
       prefix <- getObjectNamePrefix i
-      let name = prefix ++ show n
-      pure case Map.findWithDefault False (i, g) (usedObjects used) of
-        False -> "_" ++ name
-        True -> name
-    VariableItem vid@(VariableId i) -> do
-      let name = varNames !! i
-      pure case Map.findWithDefault False vid (usedVariables used) of
-        False -> "_" ++ name
-        True -> name
+      let name = prefix ++ show (Map.findWithDefault n i objRemap)
+      pure $ nameOrWildcard (Map.findWithDefault False (i, g) (usedObjects used)) name
+    DObjectPart part i@(ObjectId n) g -> do
+      let num = show (Map.findWithDefault n i objRemap)
+      pure case part of
+        ObjectPartPattern -> case Map.findWithDefault False (i, g) (coercedObjects used) of
+          True -> "@(ZO sng" ++ num ++ " objN" ++ num ++ ")"
+          False -> ""
+        ObjectPartSing -> "sng" ++ num
+        ObjectPartPayload -> "objN" ++ num
+    DVariable vid@(VariableId i) -> do
+      let name = varNames !! Map.findWithDefault i vid varRemap
+      pure $ nameOrWildcard (Map.findWithDefault False vid (usedVariables used)) name
+    _ -> error "logic error: flattenDoc emitted a non-atom"
+
+-- | Flatten a laid-out 'Doc' to its stream of atoms
+-- ('DString'/'DObject'/'DObjectPart'/'DVariable').
+flattenDoc :: Doc -> [Doc]
+flattenDoc = \case
+  d@DString{} -> [d]
+  d@DObject{} -> [d]
+  d@DObjectPart{} -> [d]
+  d@DVariable{} -> [d]
+  DSeq ds -> concatMap flattenDoc ds
+  DApp hd kids -> flattenDoc hd <> concatMap flattenDoc kids
+  DLam binder body -> flattenDoc binder <> flattenDoc body
+  DRec hd fields -> flattenDoc hd <> concatMap (flattenDoc . snd) fields
+  DList kids -> concatMap flattenDoc kids
+  DTypeApp hd tys kids -> DString hd : concatMap flattenDoc tys <> concatMap flattenDoc kids
+
+-- | Remap object ids to @1,2,3,...@ by first-occurrence (left-DFS) order,
+-- skipping objects that render as wildcards (B) so the remaining ids stay
+-- gapless.
+mkObjRemap :: ShowOptions -> Used -> [Doc] -> Map.Map ObjectId Int
+mkObjRemap opts used items = Map.fromList $ zip kept [1 ..]
+ where
+  kept = List.nub [i | DObject i g <- items, not (skip i g)]
+  skip i g =
+    showOptions_wildcardUnusedVars opts
+      && not (Map.findWithDefault False (i, g) (usedObjects used))
+
+-- | Remap variable ids to @0,1,2,...@ (indices into 'varNames') by
+-- first-occurrence order, skipping variables that render as wildcards (B).
+mkVarRemap :: ShowOptions -> Used -> [Doc] -> Map.Map VariableId Int
+mkVarRemap opts used items = Map.fromList $ zip kept [0 ..]
+ where
+  kept = List.nub [vid | DVariable vid <- items, not (skip vid)]
+  skip vid =
+    showOptions_wildcardUnusedVars opts
+      && not (Map.findWithDefault False vid (usedVariables used))
 
 type UsedObjects = Map.Map (ObjectId, Generation) Bool
 
@@ -446,25 +946,32 @@ type UsedVariables = Map.Map VariableId Bool
 data Used = Used
   { usedObjects :: UsedObjects
   , usedVariables :: UsedVariables
+  , coercedObjects :: Map.Map (ObjectId, Generation) Bool
+  -- ^ Objects some use-site rebuilds from a binder's destructured payloads
+  -- under (F) 'NoDataCombinators'; their binders render the
+  -- @\@(ZO sng\<n\> objN\<n\>)@ as-pattern (see 'ObjectPartPattern').
   }
 
-getUsed :: [Item] -> Used
+getUsed :: [Doc] -> Used
 getUsed = flip foldr empty \item used -> case item of
-  StringItem{} -> used
-  ObjectItem i g ->
+  DObject i g ->
     used
       { usedObjects =
           Map.insertWith (\_ _ -> True) (i, g) False $
             usedObjects used
       }
-  VariableItem var ->
+  DObjectPart part i g -> case part of
+    ObjectPartPattern -> used
+    _ -> used{coercedObjects = Map.insert (i, g) True $ coercedObjects used}
+  DVariable var ->
     used
       { usedVariables =
           Map.insertWith (\_ _ -> True) var False $
             usedVariables used
       }
+  _ -> used
  where
-  empty = Used mempty mempty
+  empty = Used mempty mempty mempty
 
 -- TODO: Make this better now that variables can be procured through various abstract means.
 varNames :: [String]
@@ -473,61 +980,52 @@ varNames = "x" : "y" : "z" : map f [0 ..]
   f :: Int -> String
   f n = "var" ++ show n
 
-getVarName :: Variable a -> Item
-getVarName = VariableItem . getVariableId
+getVarName :: Variable a -> Doc
+getVarName = DVariable . getVariableId
 
-getObjectName :: Object a -> EnvM Item
+getObjectName :: Object a -> EnvM Doc
 getObjectName (Object _ (UntypedObject _ i)) = EnvM do
   gens <- State.gets objectGenerations
   case Map.lookup i gens of
-    Nothing -> pure $ ObjectItem i (-1) -- Object is an unbound variable. Can happen when walking past a variable binding before showing the rest of the tree.
-    Just g -> pure $ ObjectItem i g
+    Nothing -> pure $ DObject i (-1) -- Object is an unbound variable. Can happen when walking past a variable binding before showing the rest of the tree.
+    Just g -> pure $ DObject i g
 
-newtype ObjectIdState = ObjectIdState ObjectId
+-- | Register an object that already exists in a `Tree` binder (rather than
+-- minting a fresh one via 'newObjectN'): assign it a fresh generation and its
+-- lambda-parameter name so later uses resolve correctly. Mirrors the state
+-- effects of 'newObjectN' (whose fresh id we do not need -- the `Tree` carries
+-- the id already, numbered to match 'newObjectN' by starting at 1).
+registerTreeObject ::
+  forall zone ot. (Typeable (ObjectN ot)) => String -> ZO zone ot -> EnvM ()
+registerTreeObject name (ZO _ objN) = EnvM $ State.modify' \st ->
+  let i = getObjectId objN
+   in st
+        { originalObjectRep = Map.insert i (typeOf objN) $ originalObjectRep st
+        , currentGeneration = currentGeneration st + 1
+        , objectGenerations = Map.insert i (currentGeneration st) $ objectGenerations st
+        , objectNames = Map.insert i name $ objectNames st
+        }
 
-newObject ::
-  forall a. (IsObjectType a) => String -> EnvM (Object a, ObjectIdState)
-newObject name = EnvM do
-  i@(ObjectId raw) <- State.gets nextObjectId
-  let obj = idToObject @a $ UntypedObject DefaultObjectDiscriminant i
-  State.modify' \st ->
-    st
-      { nextObjectId = ObjectId $ raw + 1
-      , originalObjectRep = Map.insert i (typeOf obj) $ originalObjectRep st
-      , currentGeneration = currentGeneration st + 1
-      , objectGenerations =
-          Map.insert i (currentGeneration st) $
-            objectGenerations st
-      , objectNames = Map.insert i name $ objectNames st
-      }
-  pure (obj, ObjectIdState i)
+treeConfigForDepth :: CardDepth -> TreeConfig
+treeConfigForDepth depth =
+  TreeConfig{treeConfig_ = (), treeConfig_maxCardDepth = depth}
 
-newObjectN ::
-  forall a ot.
-  (Typeable (ObjectN ot), IsObjectType a) =>
-  (Object a -> ObjectN ot) ->
-  String ->
-  EnvM (ObjectN ot, ObjectIdState)
-newObjectN make name = do
-  (obj, snap) <- newObject @a name
-  let i = objectToId obj
-      objN = make obj
-  EnvM $ State.modify' \st ->
-    st
-      { originalObjectRep = Map.insert i (typeOf objN) $ originalObjectRep st
-      }
-  pure (objN, snap)
+pluralize :: EnvM Doc -> EnvM Doc
+pluralize = fmap (appendToken "s")
 
-restoreObject :: ObjectIdState -> EnvM ()
--- restoreObject (ObjectIdState i) = State.modify' \st -> st {nextObjectId = i}
-restoreObject _ = pure ()
-
-data Plurality = Singular | Plural
-
-pluralize :: EnvM ParenItems -> EnvM ParenItems
-pluralize m = do
-  (p, items) <- m
-  pure (p, items <> pure "s")
+-- | Append a literal suffix to the last atom of a 'Doc', preserving structure
+-- (so a coerced object like @asPermanent obj@ pluralizes to @asPermanent objs@,
+-- not a broken sequence).
+appendToken :: String -> Doc -> Doc
+appendToken t = \case
+  DString s -> DString (s <> t)
+  DObject i g -> DSeq [DObject i g, DString t]
+  DVariable v -> DSeq [DVariable v, DString t]
+  DSeq ds | not (null ds) -> DSeq (init ds <> [appendToken t (last ds)])
+  DApp hd kids
+    | null kids -> DApp (appendToken t hd) []
+    | otherwise -> DApp hd (init kids <> [appendToken t (last kids)])
+  d -> d <> DString t
 
 lenseList :: List x -> x
 lenseList = \case
@@ -538,825 +1036,156 @@ getObjectNamePrefix :: ObjectId -> EnvM String
 getObjectNamePrefix i = EnvM do
   State.gets (Map.findWithDefault "unboundVariable" i . objectNames)
 
-showListM :: (a -> EnvM ParenItems) -> [a] -> EnvM ParenItems
-showListM f xs = noParens do
-  ss <- mapM (fmap dropParens . f) xs
-  pure $ pure "[" <> DList.intercalate (pure ", ") ss <> pure "]"
+-- | The (F) 'showOptions_dataCombinators' level in effect for this render.
+getDataCombinators :: EnvM DataCombinators
+getDataCombinators = EnvM do
+  State.gets (showOptions_dataCombinators . showOptions)
+
+-- | The @ON\<k\>\<letter\>@ constructor chain (outermost first) that widens an
+-- @ObjectN@ from the source type to the target type, or 'Nothing' when no such
+-- chain exists (e.g. an @OT0@ source, or an unrelated pair). Both arguments are
+-- @ObjectN otn@ 'TypeRep's. Each @ON\<k\>\<letter\>@ nesting constructor embeds
+-- the @ObjectN@ that omits slot @\<letter\>@ of its @k@ object types, so the
+-- chain is found by deleting, one at a time, the target slots the source lacks.
+objectNChain :: TypeRep -> TypeRep -> Maybe [String]
+objectNChain sourceRep targetRep = case (objNSlots sourceRep, objNSlots targetRep) of
+  (Just source, Just target)
+    | not (null source)
+    , length source < length target ->
+        go source target
+  _ -> Nothing
+ where
+  go :: [TypeRep] -> [TypeRep] -> Maybe [String]
+  go source current
+    | length current == length source = case current == source of
+        True -> Just []
+        False -> Nothing
+    | otherwise = case List.findIndex (`notElem` source) current of
+        Nothing -> Nothing
+        Just idx ->
+          let consName = "ON" ++ show (length current) ++ [['a' ..] !! idx]
+              rest = take idx current ++ drop (idx + 1) current
+           in (consName :) <$> go source rest
+
+-- | The promoted @[OT]@ slot list of an @ObjectN otn@ 'TypeRep', or 'Nothing'
+-- if the rep does not decompose as expected. Tolerates the kind argument that
+-- 'typeRepArgs' may or may not surface for the poly-kinded @OTN@ and the
+-- promoted list constructors.
+objNSlots :: TypeRep -> Maybe [TypeRep]
+objNSlots rep = case typeRepArgs rep of
+  [otn] -> Just $ listSlots $ otkOf otn
+  _ -> Nothing
+ where
+  otkOf otn = case typeRepArgs otn of
+    [otk] -> otk
+    [_kind, otk] -> otk
+    _ -> otn
+  listSlots :: TypeRep -> [TypeRep]
+  listSlots r = case typeRepArgs r of
+    [_kind, hd, tl] -> hd : listSlots tl
+    [hd, tl] -> hd : listSlots tl
+    _ -> []
+
+showListM :: (a -> EnvM Doc) -> [a] -> EnvM Doc
+showListM f xs = DList <$> mapM f xs
 
 ----------------------------------------
 
-showAbility :: Ability zone ot -> EnvM ParenItems
-showAbility = \case
-  Activated ability -> yesParens do
-    sAbility <- dollar <$> showElect ability
-    pure $ pure "Activated" <> sAbility
-  Static ability -> yesParens do
-    sAbility <- dollar <$> showStaticAbility ability
-    pure $ pure "Static" <> sAbility
-  Triggered ability -> yesParens do
-    sAbility <- dollar <$> showTriggeredAbility ability
-    pure $ pure "Triggered" <> sAbility
+showAnyCard :: AnyCard -> EnvM Doc
+showAnyCard = showViaTree showTreeAnyCard
 
-showAnyCard :: AnyCard -> EnvM ParenItems
-showAnyCard = \case
-  AnyCard1 card -> yesParens do
-    sCard <- dollar <$> showCard card
-    pure $ pure "AnyCard1" <> sCard
-  AnyCard2 card -> yesParens do
-    sCard <- dollar <$> showCard card
-    pure $ pure "AnyCard2" <> sCard
+showAnyToken :: AnyToken -> EnvM Doc
+showAnyToken = showViaTree showTreeAnyToken
 
-showAnyToken :: AnyToken -> EnvM ParenItems
-showAnyToken = \case
-  AnyToken token -> yesParens do
-    sToken <- dollar <$> showToken token
-    pure $ pure "AnyToken" <> sToken
+showArtifactType :: ArtifactType -> EnvM Doc
+showArtifactType = pure . DString . show
 
-showActivatedAbility :: ActivatedAbility zone ot -> EnvM ParenItems
-showActivatedAbility = \case
-  Ability cost effect -> yesParens do
-    sCost <- parens <$> showCost cost
-    sEffect <- dollar <$> showElect effect
-    pure $ pure "Ability " <> sCost <> sEffect
-  Cycling cost -> yesParens do
-    sCost <- parens <$> showCost cost
-    pure $ pure "Cycling " <> sCost
-
-showArtifactType :: ArtifactType -> EnvM ParenItems
-showArtifactType = noParens . pure . pure . fromString . show
-
-showArtifactTypes :: [ArtifactType] -> EnvM ParenItems
+showArtifactTypes :: [ArtifactType] -> EnvM Doc
 showArtifactTypes = showListM showArtifactType
 
-showBasicLandType :: BasicLandType -> EnvM ParenItems
-showBasicLandType = noParens . pure . pure . fromString . show
+showBasicLandType :: BasicLandType -> EnvM Doc
+showBasicLandType = pure . DString . show
 
-showBattleType :: BattleType -> EnvM ParenItems
+showBattleType :: BattleType -> EnvM Doc
 showBattleType = \case
-  Seige -> noParens do
-    pure $ pure "Seige"
+  Seige -> pure $ DString "Seige"
 
-showBattleTypes :: [BattleType] -> EnvM ParenItems
+showBattleTypes :: [BattleType] -> EnvM Doc
 showBattleTypes = showListM showBattleType
 
-showCard :: Card ot -> EnvM ParenItems
-showCard card = case card of
-  Card name yourCard -> showCardImpl "Card" card do
-    let sName = pure $ fromString $ show name
-    sYourCard <- dollar <$> showElect yourCard
-    pure $
-      pure "Card "
-        <> sName
-        <> sYourCard
-  DoubleSidedCard card1 card2 -> showCardImpl "DoubleSidedCard" card do
-    sCard1 <- parens <$> showCard card1
-    sCard2 <- dollar <$> showCard card2
-    pure $
-      pure "DoubleSidedCard "
-        <> sCard1
-        <> sCard2
-  SplitCard card1 card2 splitAbilities -> showCardImpl "SplitCard" card do
-    sCard1 <- parens <$> showCard card1
-    sCard2 <- parens <$> showCard card2
-    sSplitAbilities <- dollar <$> showListM (showSomeZone showAbility) splitAbilities
-    pure $
-      pure "SplitCard "
-        <> sCard1
-        <> pure " "
-        <> sCard2
-        <> sSplitAbilities
+showCard :: Card ot -> EnvM Doc
+showCard = showViaTree showTreeCard
 
-showCardImpl :: (HasCardName name) => Item -> name -> EnvM Items -> EnvM ParenItems
-showCardImpl consName (getCardName -> CardName name) cont = yesParens do
+showCardImpl :: (HasCardName name) => String -> name -> EnvM Doc -> EnvM Doc
+showCardImpl consName (getCardName -> CardName name) cont = do
   depth <- EnvM $ State.gets cardDepth
   EnvM $ State.modify' \st -> st{cardDepth = subtract 1 <$> depth}
-  let sName = pure $ fromString $ show name
   case depth of
-    Just 0 -> pure $ pure consName <> pure " " <> sName <> pure " ..."
+    Just 0 -> pure $ dName $ consName <> " " <> show name <> " ..."
     _ -> cont
 
-showCardCharacteristic :: CardCharacteristic ot -> EnvM ParenItems
-showCardCharacteristic = \case
-  ArtifactCharacteristic colors sups artTypes spec -> yesParens do
-    sColors <- parens <$> showColors colors
-    sSups <- parens <$> showSupertypes sups
-    sArtTypes <- parens <$> showArtifactTypes artTypes
-    sSpec <- dollar <$> showCardSpec spec
-    pure $
-      pure "ArtifactCharacteristic "
-        <> sColors
-        <> pure " "
-        <> sSups
-        <> pure " "
-        <> sArtTypes
-        <> sSpec
-  ArtifactCreatureCharacteristic colors sups artTypes creatTypes power toughness spec ->
-    yesParens do
-      sColors <- parens <$> showColors colors
-      sSups <- parens <$> showSupertypes sups
-      sArtTypes <- parens <$> showArtifactTypes artTypes
-      sCreatTypes <- parens <$> showCreatureTypes creatTypes
-      sPower <- parens <$> showPower power
-      sToughness <- parens <$> showToughness toughness
-      sSpec <- dollar <$> showCardSpec spec
-      pure $
-        pure "ArtifactCreatureCharacteristic "
-          <> sColors
-          <> pure " "
-          <> sSups
-          <> pure " "
-          <> sArtTypes
-          <> pure " "
-          <> sCreatTypes
-          <> pure " "
-          <> sPower
-          <> pure " "
-          <> sToughness
-          <> sSpec
-  ArtifactLandCharacteristic sups artTypes landTypes spec ->
-    yesParens do
-      sSups <- parens <$> showSupertypes sups
-      sArtTypes <- parens <$> showArtifactTypes artTypes
-      sLandTypes <- parens <$> showLandTypes landTypes
-      sSpec <- dollar <$> showCardSpec spec
-      pure $
-        pure "ArtifactLandCharacteristic "
-          <> sSups
-          <> pure " "
-          <> sArtTypes
-          <> pure " "
-          <> sLandTypes
-          <> sSpec
-  BattleCharacteristic colors sups battleTypes defense spec ->
-    yesParens do
-      sColors <- parens <$> showColors colors
-      sSups <- parens <$> showSupertypes sups
-      sBattleTypes <- parens <$> showBattleTypes battleTypes
-      sDefense <- parens <$> showDefense defense
-      sSpec <- dollar <$> showCardSpec spec
-      pure $
-        pure "BattleCharacteristic "
-          <> sColors
-          <> pure " "
-          <> sSups
-          <> pure " "
-          <> sBattleTypes
-          <> pure " "
-          <> sDefense
-          <> sSpec
-  CreatureCharacteristic colors sups creatureTypes power toughness spec ->
-    yesParens do
-      sColors <- parens <$> showColors colors
-      sSups <- parens <$> showSupertypes sups
-      sCreatureTypes <- parens <$> showCreatureTypes creatureTypes
-      sPower <- parens <$> showPower power
-      sToughness <- parens <$> showToughness toughness
-      sSpec <- dollar <$> showCardSpec spec
-      pure $
-        pure "CreatureCharacteristic "
-          <> sColors
-          <> pure " "
-          <> sSups
-          <> pure " "
-          <> sCreatureTypes
-          <> pure " "
-          <> sPower
-          <> pure " "
-          <> sToughness
-          <> sSpec
-  EnchantmentCharacteristic colors sups enchantTypes spec -> yesParens do
-    sColors <- parens <$> showColors colors
-    sSups <- parens <$> showSupertypes sups
-    sEnchantTypes <- parens <$> showEnchantmentTypes enchantTypes
-    sSpec <- dollar <$> showCardSpec spec
-    pure $
-      pure "EnchantmentCharacteristic "
-        <> sColors
-        <> pure " "
-        <> sSups
-        <> pure " "
-        <> sEnchantTypes
-        <> sSpec
-  EnchantmentCreatureCharacteristic colors sups creatTypes enchantTypes power toughness spec ->
-    yesParens do
-      sColors <- parens <$> showColors colors
-      sSups <- parens <$> showSupertypes sups
-      sCreatTypes <- parens <$> showCreatureTypes creatTypes
-      sEnchantTypes <- parens <$> showEnchantmentTypes enchantTypes
-      sPower <- parens <$> showPower power
-      sToughness <- parens <$> showToughness toughness
-      sSpec <- dollar <$> showCardSpec spec
-      pure $
-        pure "EnchantmentCreatureCharacteristic "
-          <> sColors
-          <> pure " "
-          <> sSups
-          <> pure " "
-          <> sCreatTypes
-          <> pure " "
-          <> sEnchantTypes
-          <> pure " "
-          <> sPower
-          <> pure " "
-          <> sToughness
-          <> sSpec
-  InstantCharacteristic colors sups spec -> yesParens do
-    sColors <- parens <$> showColors colors
-    sSups <- parens <$> showSupertypes sups
-    sSpec <- dollar <$> showElect spec
-    pure $
-      pure "InstantCharacteristic "
-        <> sColors
-        <> pure " "
-        <> sSups
-        <> sSpec
-  LandCharacteristic sups landTypes spec -> yesParens do
-    sSups <- parens <$> showSupertypes sups
-    sLandTypes <- parens <$> showLandTypes landTypes
-    sSpec <- dollar <$> showCardSpec spec
-    pure $
-      pure "LandCharacteristic "
-        <> sSups
-        <> pure " "
-        <> sLandTypes
-        <> sSpec
-  PlaneswalkerCharacteristic colors sups spec -> yesParens do
-    sColors <- parens <$> showColors colors
-    sSups <- parens <$> showSupertypes sups
-    sSpec <- dollar <$> showCardSpec spec
-    pure $
-      pure "PlaneswalkerCharacteristic "
-        <> sColors
-        <> pure " "
-        <> sSups
-        <> sSpec
-  SorceryCharacteristic colors sups spec -> yesParens do
-    sColors <- parens <$> showColors colors
-    sSups <- parens <$> showSupertypes sups
-    sSpec <- dollar <$> showElect spec
-    pure $
-      pure "SorceryCharacteristic "
-        <> sColors
-        <> pure " "
-        <> sSups
-        <> sSpec
-
-showCardSpec :: CardSpec ot -> EnvM ParenItems
-showCardSpec = \case
-  ArtifactSpec cost abilities -> yesParens do
-    sCost <- parens <$> showCost cost
-    sAbilities <- dollar <$> showListM (showSomeZone (showWithThisAbility "this")) abilities
-    pure $
-      pure "ArtifactSpec "
-        <> sCost
-        <> sAbilities
-  ArtifactCreatureSpec cost artAbils creatAbils bothAbils ->
-    yesParens do
-      sCost <- parens <$> showCost cost
-      sArtAbils <- parens <$> showListM (showSomeZone (showWithThisAbility "this")) artAbils
-      sCreatAbils <- parens <$> showListM (showSomeZone (showWithThisAbility "this")) creatAbils
-      sBothAbils <- dollar <$> showListM (showSomeZone (showWithThisAbility "this")) bothAbils
-      pure $
-        pure "ArtifactCreatureSpec "
-          <> sCost
-          <> pure " "
-          <> sArtAbils
-          <> pure " "
-          <> sCreatAbils
-          <> sBothAbils
-  ArtifactLandSpec artAbils landAbils bothAbils ->
-    yesParens do
-      sArtAbils <- parens <$> showListM (showSomeZone (showWithThisAbility "this")) artAbils
-      sLandAbils <- parens <$> showListM (showSomeZone (showWithThisAbility "this")) landAbils
-      sBothAbils <- dollar <$> showListM (showSomeZone (showWithThisAbility "this")) bothAbils
-      pure $
-        pure "ArtifactLandSpec "
-          <> sArtAbils
-          <> pure " "
-          <> sLandAbils
-          <> sBothAbils
-  BattleSpec cost abilities -> yesParens do
-    sCost <- parens <$> showCost cost
-    sAbilities <- dollar <$> showListM (showSomeZone (showWithThisAbility "this")) abilities
-    pure $
-      pure "BattleSpec "
-        <> sCost
-        <> sAbilities
-  CreatureSpec cost abilities ->
-    yesParens do
-      sCost <- parens <$> showCost cost
-      sAbilities <- dollar <$> showListM (showSomeZone (showWithThisAbility "this")) abilities
-      pure $
-        pure "CreatureSpec "
-          <> sCost
-          <> sAbilities
-  EnchantmentSpec cost abilities -> yesParens do
-    sCost <- parens <$> showCost cost
-    sAbilities <- dollar <$> showListM (showSomeZone (showWithThisAbility "this")) abilities
-    pure $
-      pure "EnchantmentSpec "
-        <> sCost
-        <> sAbilities
-  EnchantmentCreatureSpec cost creatAbils enchAbils bothAbils ->
-    yesParens do
-      sCost <- parens <$> showCost cost
-      sCreatAbils <- parens <$> showListM (showSomeZone (showWithThisAbility "this")) creatAbils
-      sEnchAbils <- parens <$> showListM (showSomeZone (showWithThisAbility "this")) enchAbils
-      sBothAbils <- dollar <$> showListM (showSomeZone (showWithThisAbility "this")) bothAbils
-      pure $
-        pure "EnchantmentCreatureSpec "
-          <> sCost
-          <> pure " "
-          <> sCreatAbils
-          <> pure " "
-          <> sEnchAbils
-          <> sBothAbils
-  InstantSpec cost abilities oneShot -> yesParens do
-    sCost <- parens <$> showCost cost
-    sAbilities <- parens <$> showListM (showSomeZone (showWithThisAbility "this")) abilities
-    sOneShot <- dollar <$> showWithThis showElect "this" oneShot
-    pure $
-      pure "InstantSpec "
-        <> sCost
-        <> sAbilities
-        <> sOneShot
-  LandSpec abilities -> yesParens do
-    sAbilities <- dollar <$> showListM (showSomeZone (showWithThisAbility "this")) abilities
-    pure $
-      pure "LandSpec"
-        <> sAbilities
-  PlaneswalkerSpec cost loyalty abilities -> yesParens do
-    sCost <- parens <$> showCost cost
-    sLoyalty <- parens <$> showLoyalty loyalty
-    sAbilities <- dollar <$> showListM (showSomeZone (showWithThisAbility "this")) abilities
-    pure $
-      pure "PlaneswalkerSpec "
-        <> sCost
-        <> pure " "
-        <> sLoyalty
-        <> sAbilities
-  SorcerySpec cost abilities oneShot -> yesParens do
-    sCost <- parens <$> showCost cost
-    sAbilities <- parens <$> showListM (showSomeZone (showWithThisAbility "this")) abilities
-    sOneShot <- dollar <$> showWithThis showElect "this" oneShot
-    pure $
-      pure "SorcerySpec "
-        <> sCost
-        <> sAbilities
-        <> sOneShot
-
-showCase :: (x -> EnvM ParenItems) -> Case x -> EnvM ParenItems
-showCase showX = \case
-  CaseFin fin natList -> yesParens do
-    let sFin = pure $ getVarName fin
-    sNatList <- dollar <$> showNatList showX natList
-    pure $ pure "CaseFin " <> sFin <> sNatList
-
-showColor :: Color -> EnvM ParenItems
-showColor = noParens . pure . pure . fromString . show
+showColor :: Color -> EnvM Doc
+showColor = pure . DString . show
 
 class ShowColors colors where
-  showColors :: colors -> EnvM ParenItems
+  showColors :: colors -> EnvM Doc
 
 instance ShowColors [Color] where
-  showColors :: [Color] -> EnvM ParenItems
+  showColors :: [Color] -> EnvM Doc
   showColors = showListM showColor
 
 instance ShowColors Colors where
-  showColors :: Colors -> EnvM ParenItems
-  showColors colors = yesParens do
-    pure $ pure "toColors " <> sOpen <> sSyms <> sClose
+  showColors :: Colors -> EnvM Doc
+  showColors colors = do
+    combinators <- getDataCombinators
+    pure case combinators of
+      NoDataCombinators -> dApp "Colors" [slot w, slot u, slot b, slot r, slot g]
+      LowDataCombinators -> DApp "toColors" [DString arg]
+      HighDataCombinators -> DApp "toColors" [DString arg]
    where
-    syms = case colors of
-      Colors w u b r g ->
-        List.intercalate "," $
-          catMaybes
-            [show <$> w, show <$> u, show <$> b, show <$> r, show <$> g]
-    sSyms = pure $ fromString syms
-    (sOpen, sClose) = case syms of
-      [_] -> (pure "", pure "")
-      _ -> (pure "(", pure ")")
+    Colors w u b r g = colors
+    slot :: (Show sym) => Maybe sym -> Doc
+    slot = \case
+      Nothing -> DString "Nothing"
+      Just sym -> DString $ "Just " <> show sym
+    syms =
+      List.intercalate "," $
+        catMaybes
+          [show <$> w, show <$> u, show <$> b, show <$> r, show <$> g]
+    arg = case syms of
+      [_] -> syms
+      _ -> "(" <> syms <> ")"
 
-showCompleteManaPool :: CompleteManaPool -> EnvM ParenItems
-showCompleteManaPool complete = yesParens do
-  sSnow <- parens <$> showManaPool snow
-  sNonSnow <- dollar <$> showManaPool nonSnow
-  pure $ pure "CompleteManaPool " <> sSnow <> sNonSnow
+showCompleteManaPool :: CompleteManaPool -> EnvM Doc
+showCompleteManaPool complete = do
+  sSnow <- showManaPool snow
+  sNonSnow <- showManaPool nonSnow
+  pure $ DApp "CompleteManaPool" [sSnow, sNonSnow]
  where
   CompleteManaPool
     { poolSnow = snow
     , poolNonSnow = nonSnow
     } = complete
 
-showCondition :: Condition -> EnvM ParenItems
-showCondition = \case
-  CAnd conds -> yesParens do
-    sConds <- parens <$> showConditions conds
-    pure $ pure "CAnd " <> sConds
-  CNot cond -> yesParens do
-    sCond <- parens <$> showCondition cond
-    pure $ pure "CNot " <> sCond
-  COr conds -> yesParens do
-    sConds <- parens <$> showConditions conds
-    pure $ pure "COr " <> sConds
-  Satisfies objN reqs -> yesParens do
-    sObjN <- parens <$> showZoneObject objN
-    sReqs <- dollar <$> showRequirements reqs
-    pure $ pure "Satisfies " <> pure " " <> sObjN <> sReqs
+showCreatureType :: CreatureType -> EnvM Doc
+showCreatureType = pure . DString . show
 
-showConditions :: [Condition] -> EnvM ParenItems
-showConditions = showListM showCondition
-
-showCost :: Cost -> EnvM ParenItems
-showCost = \case
-  AndCosts costs -> yesParens do
-    sCosts <- dollar <$> showListM showCost costs
-    pure $ pure "AndCosts" <> sCosts
-  CostCase case_ -> yesParens do
-    sCase <- dollar <$> showCase showCost case_
-    pure $ pure "CostCase" <> sCase
-  DiscardRandomCost amount -> yesParens do
-    let sAmount = pure $ fromString $ show amount
-    pure $ pure "DiscardRandomCost " <> sAmount
-  ExileCost reqs -> yesParens do
-    sReqs <- dollar <$> showRequirements reqs
-    pure $ pure "ExileCost" <> sReqs
-  LoyaltyCost zoPlaneswalker loyalty -> yesParens do
-    sPlaneswalker <- parens <$> showZoneObject zoPlaneswalker
-    sLoyalty <- dollar <$> showLoyalty loyalty
-    pure $ pure "LoyaltyCost " <> sPlaneswalker <> sLoyalty
-  ManaCost cost -> yesParens do
-    sCost <- dollar <$> showManaCost cost
-    pure $ pure (fromString "ManaCost") <> sCost
-  OrCosts costs -> yesParens do
-    sCosts <- parens <$> showListM showCost costs
-    pure $ pure "OrCosts " <> sCosts
-  PayLife amount -> yesParens do
-    let sAmount = pure $ fromString $ show amount
-    pure $ pure "PayLife " <> sAmount
-  SacrificeCost reqs -> yesParens do
-    sReqs <- dollar <$> showRequirements reqs
-    pure $ pure "SacrificeCost" <> sReqs
-  TapCost reqs -> yesParens do
-    sReqs <- dollar <$> showRequirements reqs
-    pure $ pure "TapCost" <> sReqs
-
-showCreatureType :: CreatureType -> EnvM ParenItems
-showCreatureType = noParens . pure . pure . fromString . show
-
-showCreatureTypes :: [CreatureType] -> EnvM ParenItems
+showCreatureTypes :: [CreatureType] -> EnvM Doc
 showCreatureTypes = showListM showCreatureType
 
-showDamage :: Damage var -> EnvM ParenItems
-showDamage =
-  yesParens . \case
-    Damage n -> do
-      pure $ pure $ fromString $ "Damage " ++ show n
-    VariableDamage var -> do
-      let varName = getVarName var
-      pure $ DList.fromList [fromString "VariableDamage ", varName]
+showDamage :: Damage var -> EnvM Doc
+showDamage = \case
+  Damage n -> pure $ DString $ "Damage " ++ show n
+  VariableDamage var -> pure $ DApp "VariableDamage" [getVarName var]
 
-showDefense :: Defense -> EnvM ParenItems
-showDefense = yesParens . pure . pure . fromString . show
+showDefense :: Defense -> EnvM Doc
+showDefense = pure . DString . show
 
-showEffect :: Effect e -> EnvM ParenItems
-showEffect = \case
-  AddMana player mana -> yesParens do
-    sPlayer <- parens <$> showZoneObject player
-    sMana <- dollar <$> showManaPool mana
-    pure $ pure "AddMana " <> sPlayer <> sMana
-  AddToBattlefield player token -> yesParens do
-    sPlayer <- parens <$> showZoneObject player
-    sCard <- dollar <$> showToken token
-    pure $ pure "AddToBattlefield " <> sPlayer <> sCard
-  CantBeRegenerated creature -> yesParens do
-    sCreature <- dollar <$> showZoneObject creature
-    pure $ pure "CantBeRegenerated" <> sCreature
-  ChangeTo before after -> yesParens do
-    sBefore <- parens <$> showZoneObject before
-    sAfter <- dollar <$> showCard after
-    pure $ pure "ChangeTo " <> sBefore <> sAfter
-  CounterAbility obj -> yesParens do
-    sObj <- dollar <$> showZoneObject obj
-    pure $ pure "CounterAbility" <> sObj
-  CounterSpell obj -> yesParens do
-    sObj <- dollar <$> showZoneObject obj
-    pure $ pure "CounterSpell" <> sObj
-  DealDamage source victim damage -> yesParens do
-    sSource <- parens <$> showZoneObject source
-    sVictim <- parens <$> showZoneObject victim
-    sDamage <- dollar <$> showDamage damage
-    pure $ pure "DealDamage " <> sSource <> pure " " <> sVictim <> sDamage
-  Destroy obj -> yesParens do
-    sObj <- dollar <$> showZoneObject obj
-    pure $ pure "Destroy" <> sObj
-  DrawCards player n -> yesParens do
-    sPlayer <- parens <$> showZoneObject player
-    let amount = fromString $ show n
-    pure $ pure "DrawCards " <> sPlayer <> pure " " <> pure amount
-  EffectCase case_ -> yesParens do
-    sCase <- dollar <$> showCase showEffect case_
-    pure $ pure "EffectCase" <> sCase
-  EffectContinuous effect -> yesParens do
-    sEffect <- dollar <$> showEffect effect
-    pure $ pure "EffectContinuous" <> sEffect
-  EndTheTurn -> yesParens do
-    pure $ pure "EndTheTurn"
-  Exile obj -> yesParens do
-    sObj <- dollar <$> showZoneObject obj
-    pure $ pure "Exile" <> sObj
-  GainAbility obj ability -> yesParens do
-    sObj <- parens <$> showZoneObject obj
-    sAbility <- dollar <$> showWithThisAbility "this" ability
-    pure $ pure "GainAbility " <> sObj <> sAbility
-  GainControl player obj -> yesParens do
-    sPlayer <- parens <$> showZoneObject player
-    sObj <- dollar <$> showZoneObject obj
-    pure $ pure "GainControl " <> sPlayer <> sObj
-  GainLife player n -> yesParens do
-    sPlayer <- parens <$> showZoneObject player
-    let amount = fromString $ show n
-    pure $ pure "GainLife " <> sPlayer <> pure " " <> pure amount
-  LoseAbility obj ability -> yesParens do
-    sObj <- parens <$> showZoneObject obj
-    sAbility <- dollar <$> showWithThisAbility "this" ability
-    pure $ pure "LoseAbility " <> sObj <> sAbility
-  LoseLife player n -> yesParens do
-    sPlayer <- parens <$> showZoneObject player
-    let amount = fromString $ show n
-    pure $ pure "LoseLife " <> sPlayer <> pure " " <> pure amount
-  PutOntoBattlefield player obj -> yesParens do
-    sPlayer <- parens <$> showZoneObject player
-    sCard <- dollar <$> showZoneObject obj
-    pure $ pure "PutOntoBattlefield " <> sPlayer <> sCard
-  Sacrifice player reqs -> yesParens do
-    sPlayer <- parens <$> showZoneObject player
-    sReqs <- dollar <$> showRequirements reqs
-    pure $ pure "Sacrifice " <> sPlayer <> sReqs
-  SearchLibrary searcher searchee withCard -> yesParens do
-    sSearcher <- parens <$> showZoneObject searcher
-    sSearchee <- parens <$> showZoneObject searchee
-    sWithCard <- dollar <$> showWithLinkedObject showElect "card" withCard
-    pure $ pure "SearchLibrary " <> sSearcher <> pure " " <> sSearchee <> sWithCard
-  Sequence effects -> yesParens do
-    sEffects <- dollar <$> showEffects effects
-    pure $ pure "Sequence" <> sEffects
-  ShuffleLibrary player -> yesParens do
-    sPlayer <- dollar <$> showZoneObject player
-    pure $ pure "ShuffleLibrary" <> sPlayer
-  StatDelta creature power toughness -> yesParens do
-    sCreature <- parens <$> showZoneObject creature
-    sPower <- parens <$> showPower power
-    sToughness <- dollar <$> showToughness toughness
-    pure $ pure "StatDelta " <> sCreature <> pure " " <> sPower <> sToughness
-  Tap obj -> yesParens do
-    sObj <- dollar <$> showZoneObject obj
-    pure $ pure "Tap" <> sObj
-  Untap obj -> yesParens do
-    sObj <- dollar <$> showZoneObject obj
-    pure $ pure "Untap" <> sObj
-  Until electEvent effect -> yesParens do
-    sElectEvent <- parens <$> showElect electEvent
-    sEffect <- dollar <$> showEffect effect
-    pure $ pure "Until " <> sElectEvent <> sEffect
-  WithList withList -> yesParens do
-    sWithList <- dollar <$> showWithList showEffect withList
-    pure $ pure "WithList" <> sWithList
-
-showEffects :: [Effect e] -> EnvM ParenItems
-showEffects = showListM showEffect
-
-showElect :: Elect s e ot -> EnvM ParenItems
-showElect = \case
-  ActivePlayer contElect -> yesParens do
-    (active', snap) <- newObjectN @'OTPlayer O1 "active"
-    let active = toZone active'
-        elect = contElect active
-    sActive <- parens <$> showZoneObject active
-    sElect <- dropParens <$> showElect elect
-    restoreObject snap
-    pure $ pure "ActivePlayer $ \\" <> sActive <> pure " -> " <> sElect
-  All withObjects -> yesParens do
-    sWithObjects <- dollar <$> showWithMaskedObjects showElect "obj" withObjects
-    pure $ pure "All" <> sWithObjects
-  Choose player withObject -> yesParens do
-    sPlayer <- parens <$> showZoneObject player
-    sWithObject <- dollar <$> showWithMaskedObject showElect "choose" withObject
-    pure $ pure "Choose " <> sPlayer <> sWithObject
-  ChooseOption player natList varToElect -> yesParens do
-    sPlayer <- parens <$> showZoneObject player
-    sNatList <- parens <$> showNatList showCondition natList
-    discr <- EnvM $ State.gets nextVariableId
-    EnvM $ State.modify' \st -> st{nextVariableId = (1 +) <$> discr}
-    let var = ReifiedVariable discr FZ
-        varName = getVarName var
-        elect = varToElect var
-    sElect <- dropParens <$> showElect elect
-    pure $
-      pure "ChooseOption "
-        <> sPlayer
-        <> pure " "
-        <> sNatList
-        <> pure " $ \\"
-        <> pure varName
-        <> pure " -> "
-        <> sElect
-  Condition cond -> yesParens do
-    sCond <- dollar <$> showCondition cond
-    pure $ pure "Condition" <> sCond
-  ControllerOf zObj contElect -> do
-    goPlayerOf1 "ControllerOf" "controller" zObj contElect
-  Cost cost -> yesParens do
-    sCost <- dollar <$> showCost cost
-    pure $ pure "Cost" <> sCost
-  Effect effect -> yesParens do
-    sEffect <- dollar <$> showEffects effect
-    pure $ pure "Effect" <> sEffect
-  ElectActivated activated -> yesParens do
-    sPost <- dollar <$> showActivatedAbility activated
-    pure $ pure "ElectActivated" <> sPost
-  ElectCardFacet post -> yesParens do
-    sPost <- dollar <$> showCardCharacteristic post
-    pure $ pure "ElectCardFacet" <> sPost
-  ElectCardSpec post -> yesParens do
-    sPost <- dollar <$> showCardSpec post
-    pure $ pure "ElectCardSpec" <> sPost
-  ElectCase case_ -> yesParens do
-    sCase <- dollar <$> showCase showElect case_
-    pure $ pure "ElectCase" <> sCase
-  EndTargets elect -> yesParens do
-    sElect <- dollar <$> showElect elect
-    pure $ pure "EndTargets" <> sElect
-  Event event -> yesParens do
-    sEvent <- dollar <$> showEvent event
-    pure $ pure "Event" <> sEvent
-  If cond then_ else_ -> yesParens do
-    sCond <- parens <$> showCondition cond
-    sThen <- parens <$> showElect then_
-    sElse <- dollar <$> showElse else_
-    pure $ pure "If " <> sCond <> pure " " <> sThen <> sElse
-  Listen listener -> yesParens do
-    sListener <- dollar <$> showEventListener listener
-    pure $ pure "Listen" <> sListener
-  OwnerOf zObj contElect -> do
-    goPlayerOf1 "OwnerOf" "owner" zObj contElect
-  PlayerPays oPlayer cost contElect -> yesParens do
-    discr <- EnvM $ State.gets nextVariableId
-    EnvM $ State.modify' \st -> st{nextVariableId = (1 +) <$> discr}
-    let var = ReifiedVariable discr FZ
-        varName = getVarName var
-        elect = contElect var
-    sPlayer <- parens <$> showZoneObject oPlayer
-    sCost <- dollar <$> showCost cost
-    sElect <- dropParens <$> showElect elect
-    pure $
-      pure "PlayerPays "
-        <> sPlayer
-        <> pure " "
-        <> sCost
-        <> pure " $ \\"
-        <> pure varName
-        <> pure " -> "
-        <> sElect
-  Random withObject -> yesParens do
-    sWithObject <- dollar <$> showWithMaskedObject showElect "rand" withObject
-    pure $ pure "Random" <> sWithObject
-  Target player withObject -> yesParens do
-    sPlayer <- parens <$> showZoneObject player
-    sWithObject <- dollar <$> showWithMaskedObject showElect "target" withObject
-    pure $ pure "Target " <> sPlayer <> sWithObject
-  VariableFromPower creature varToElect -> yesParens do
-    sCreature <- parens <$> showZoneObject creature
-    discr <- EnvM $ State.gets nextVariableId
-    EnvM $ State.modify' \st -> st{nextVariableId = (1 +) <$> discr}
-    let var = ReifiedVariable discr 0
-        varName = getVarName var
-        elect = varToElect var
-    sElect <- dropParens <$> showElect elect
-    pure $
-      pure "VariableFromPower "
-        <> sCreature
-        <> pure " $ \\"
-        <> pure varName
-        <> pure " -> "
-        <> sElect
-  VariableInt contElect -> yesParens do
-    discr <- EnvM $ State.gets nextVariableId
-    EnvM $ State.modify' \st -> st{nextVariableId = (1 +) <$> discr}
-    let var = ReifiedVariable discr 0
-        varName = getVarName var
-        elect = contElect var
-    sElect <- dropParens <$> showElect elect
-    pure $ pure "VariableInt $ \\" <> pure varName <> pure " -> " <> sElect
-  Your contElect -> do
-    goPlayerOf0 "Your" "you" contElect
- where
-  goPlayerOf0 consName varName contElect = yesParens do
-    (player', snap) <- newObjectN @'OTPlayer O1 varName
-    let player = toZone player'
-    sPlayer <- parens <$> showZoneObject player
-    let elect = contElect player
-    sElect <- dropParens <$> showElect elect
-    restoreObject snap
-    pure $
-      pure consName
-        <> pure " $ \\"
-        <> sPlayer
-        <> pure " -> "
-        <> sElect
-  goPlayerOf1 consName varName zObj contElect = yesParens do
-    objPrefix <-
-      getObjectNamePrefix
-        let objN :: ObjectN OTNAny
-            objN = case zObj of
-              ZO _ o -> o
-         in visitObjectN' objectToId objN
-    (player', snap) <-
-      newObjectN @'OTPlayer O1 case objPrefix == "this" of
-        True -> "you"
-        False -> varName
-    let player = toZone player'
-    sPlayer <- parens <$> showZoneObject player
-    sZObj <- parens <$> showZoneObject zObj
-    let elect = contElect player
-    sElect <- dropParens <$> showElect elect
-    restoreObject snap
-    pure $
-      pure consName
-        <> pure " "
-        <> sZObj
-        <> pure " $ \\"
-        <> sPlayer
-        <> pure " -> "
-        <> sElect
-
-showElse :: Else s e ot -> EnvM ParenItems
-showElse = \case
-  ElseCost elect -> yesParens do
-    sElect <- dollar <$> showElect elect
-    pure $ pure "ElseCost" <> sElect
-  ElseEffect elect -> yesParens do
-    sElect <- dollar <$> showElect elect
-    pure $ pure "ElseEffect" <> sElect
-  ElseEvent -> noParens do
-    pure $ pure "ElseEvent"
-
-showEnchant :: Enchant zone ot -> EnvM ParenItems
-showEnchant = \case
-  Enchant withObj -> yesParens do
-    sWithObj <- dollar <$> showWithLinkedObject showElect "enchanted" withObj
-    pure $ pure "Enchant" <> sWithObj
-
-showEnchantmentType :: EnchantmentType ot -> EnvM ParenItems
-showEnchantmentType = \case
-  Aura enchant -> yesParens do
-    sEnchant <- dollar <$> showEnchant enchant
-    pure $ pure "Aura" <> sEnchant
-
-showEnchantmentTypes :: [EnchantmentType ot] -> EnvM ParenItems
-showEnchantmentTypes = showListM showEnchantmentType
-
-showEntersStatic :: EntersStatic zone ot -> EnvM ParenItems
-showEntersStatic = \case
-  EntersTapped -> noParens do
-    pure $ pure "EntersTapped"
-
-showEvent :: Event -> EnvM ParenItems
-showEvent = showEventListener' \Proxy -> noParens $ pure $ pure "Proxy"
-
-showEventListener :: EventListener -> EnvM ParenItems
-showEventListener = showEventListener' showElect
-
-showEventListener' ::
-  (forall ot. x ot -> EnvM ParenItems) ->
-  EventListener' x ->
-  EnvM ParenItems
-showEventListener' showX = \case
-  BecomesTapped withObject -> yesParens do
-    sWithObject <- dollar <$> showWithLinkedObject showX "perm" withObject
-    pure $ pure "BecomesTapped" <> sWithObject
-  EntersBattlefield withObject -> yesParens do
-    sWithObject <- dollar <$> showWithLinkedObject showX "perm" withObject
-    pure $ pure "EntersBattlefield" <> sWithObject
-  EntersNonBattlefield withObject -> yesParens do
-    sWithObject <- dollar <$> showWithLinkedObject showX "perm" withObject
-    pure $ pure "EntersNonBattlefield" <> sWithObject
-  Events listeners -> yesParens do
-    sListeners <- dollar <$> showListM (showEventListener' showX) listeners
-    pure $ pure "Events" <> sListeners
-  SpellIsCast withObject -> yesParens do
-    sWithObject <- dollar <$> showWithLinkedObject showX "spell" withObject
-    pure $ pure "SpellIsCast" <> sWithObject
-  TimePoint timePoint oneShot -> yesParens do
-    sTimePoint <- parens <$> showTimePoint timePoint
-    sOneShot <- dollar <$> showX oneShot
-    pure $ pure "TimePoint " <> sTimePoint <> sOneShot
-
-showLandType :: LandType -> EnvM ParenItems
+showLandType :: LandType -> EnvM Doc
 showLandType landType = case landType of
-  BasicLand basic -> yesParens do
-    sBasic <- dollar <$> showBasicLandType basic
-    pure $ pure "BasicLand" <> sBasic
+  BasicLand basic -> do
+    sBasic <- showBasicLandType basic
+    pure $ DApp "BasicLand" [sBasic]
   Desert -> sLandType
   Gate -> sLandType
   Lair -> sLandType
@@ -1366,28 +1195,169 @@ showLandType landType = case landType of
   Tower -> sLandType
   Urzas -> sLandType
  where
-  sLandType = noParens $ pure $ pure $ fromString $ show landType
+  sLandType = pure $ DString $ show landType
 
-showLandTypes :: [LandType] -> EnvM ParenItems
+showLandTypes :: [LandType] -> EnvM Doc
 showLandTypes = showListM showLandType
 
-showLoyalty :: Loyalty -> EnvM ParenItems
-showLoyalty = yesParens . pure . pure . fromString . show
+showLoyalty :: Loyalty -> EnvM Doc
+showLoyalty = pure . DString . show
 
-showMana :: Mana var snow a -> EnvM ParenItems
-showMana =
-  yesParens . \case
-    Mana x -> pure $ pure $ fromString $ show x
-    VariableMana var -> do
-      let sVar = pure $ getVarName var
-      pure $ pure "VariableMana " <> sVar
-    SumMana x y -> do
-      sX <- parens <$> showMana x
-      sY <- parens <$> showMana y
-      pure $ pure "SumMana " <> sX <> pure " " <> sY
+showMana :: Mana var snow a -> EnvM Doc
+showMana = \case
+  Mana x -> pure $ DString $ show x
+  VariableMana var -> pure $ DApp "VariableMana" [getVarName var]
+  SumMana x y -> do
+    sX <- showMana x
+    sY <- showMana y
+    pure $ DApp "SumMana" [sX, sY]
 
-showPhyrexianManaCost :: PhyrexianManaCost var -> EnvM ParenItems
-showPhyrexianManaCost cost = noParens do
+-- | Like 'showMana', but for (F) 'NoDataCombinators': a literal
+-- renders as the explicit @Mana@ constructor instead of a bare numeral (which
+-- would need the @Num@ instance to type-check).
+showManaRaw :: Mana var snow a -> EnvM Doc
+showManaRaw = \case
+  Mana x -> pure $ DString $ "Mana " <> show x
+  VariableMana var -> pure $ DApp "VariableMana" [getVarName var]
+  SumMana x y -> do
+    sX <- showManaRaw x
+    sY <- showManaRaw y
+    pure $ DApp "SumMana" [sX, sY]
+
+-- | Raw-constructor form of a 'PhyrexianManaCost' for (F)
+-- 'NoDataCombinators': the full record, no @mempty@ shortcut.
+showPhyrexianManaCostRaw :: PhyrexianManaCost var -> EnvM Doc
+showPhyrexianManaCostRaw cost =
+  recD
+    "PhyrexianManaCost"
+    [ ("phyrexianW", showManaRaw w)
+    , ("phyrexianU", showManaRaw u)
+    , ("phyrexianB", showManaRaw b)
+    , ("phyrexianR", showManaRaw r)
+    , ("phyrexianG", showManaRaw g)
+    , ("phyrexianC", showManaRaw c)
+    ]
+ where
+  PhyrexianManaCost
+    { phyrexianW = w
+    , phyrexianU = u
+    , phyrexianB = b
+    , phyrexianR = r
+    , phyrexianG = g
+    , phyrexianC = c
+    } = cost
+
+showHybridManaCostRaw :: HybridManaCost var -> EnvM Doc
+showHybridManaCostRaw cost =
+  recD
+    "HybridManaCost"
+    [ ("hybridWU", showManaRaw wu)
+    , ("hybridUB", showManaRaw ub)
+    , ("hybridBR", showManaRaw br)
+    , ("hybridRG", showManaRaw rg)
+    , ("hybridGW", showManaRaw gw)
+    , ("hybridWB", showManaRaw wb)
+    , ("hybridUR", showManaRaw ur)
+    , ("hybridBG", showManaRaw bg)
+    , ("hybridRW", showManaRaw rw)
+    , ("hybridGU", showManaRaw gu)
+    , ("hybridW2", showManaRaw w2)
+    , ("hybridU2", showManaRaw u2)
+    , ("hybridB2", showManaRaw b2)
+    , ("hybridR2", showManaRaw r2)
+    , ("hybridG2", showManaRaw g2)
+    , ("hybridC2", showManaRaw c2)
+    ]
+ where
+  HybridManaCost
+    { hybridWU = wu
+    , hybridUB = ub
+    , hybridBR = br
+    , hybridRG = rg
+    , hybridGW = gw
+    , hybridWB = wb
+    , hybridUR = ur
+    , hybridBG = bg
+    , hybridRW = rw
+    , hybridGU = gu
+    , hybridW2 = w2
+    , hybridU2 = u2
+    , hybridB2 = b2
+    , hybridR2 = r2
+    , hybridG2 = g2
+    , hybridC2 = c2
+    } = cost
+
+showDynamicManaCostRaw :: DynamicManaCost var -> EnvM Doc
+showDynamicManaCostRaw cost =
+  recD
+    "DynamicManaCost"
+    [ ("costGeneric", showManaRaw x)
+    , ("costSnow", showManaRaw s)
+    , ("costHybrid", showHybridManaCostRaw hy)
+    , ("costPhyrexian", showPhyrexianManaCostRaw phy)
+    ]
+ where
+  DynamicManaCost
+    { costGeneric = x
+    , costSnow = s
+    , costHybrid = hy
+    , costPhyrexian = phy
+    } = cost
+
+-- | Raw-constructor form of a 'ManaCost' for (F)
+-- 'NoDataCombinators': the @ManaCost'@ record replaces the
+-- @manaCost@\/@toManaCost@ combinators.
+showManaCostRaw :: ManaCost var -> EnvM Doc
+showManaCostRaw cost =
+  recD
+    "ManaCost'"
+    [ ("costW", showManaRaw w)
+    , ("costU", showManaRaw u)
+    , ("costB", showManaRaw b)
+    , ("costR", showManaRaw r)
+    , ("costG", showManaRaw g)
+    , ("costC", showManaRaw c)
+    , ("costDynamic", showDynamicManaCostRaw dyn)
+    ]
+ where
+  ManaCost'
+    { costW = w
+    , costU = u
+    , costB = b
+    , costR = r
+    , costG = g
+    , costC = c
+    , costDynamic = dyn
+    } = cost
+
+-- | Raw-constructor form of a 'ManaPool' for (F)
+-- 'NoDataCombinators': the record replaces the @toManaPool@
+-- combinator.
+showManaPoolRaw :: ManaPool snow -> EnvM Doc
+showManaPoolRaw pool =
+  recD
+    "ManaPool"
+    [ ("poolW", showManaRaw w)
+    , ("poolU", showManaRaw u)
+    , ("poolB", showManaRaw b)
+    , ("poolR", showManaRaw r)
+    , ("poolG", showManaRaw g)
+    , ("poolC", showManaRaw c)
+    ]
+ where
+  ManaPool
+    { poolW = w
+    , poolU = u
+    , poolB = b
+    , poolR = r
+    , poolG = g
+    , poolC = c
+    } = pool
+
+showPhyrexianManaCost :: PhyrexianManaCost var -> EnvM Doc
+showPhyrexianManaCost cost = do
+  combinators <- getDataCombinators
   let PhyrexianManaCost
         { phyrexianW = w
         , phyrexianU = u
@@ -1396,1182 +1366,1147 @@ showPhyrexianManaCost cost = noParens do
         , phyrexianG = g
         , phyrexianC = c
         } = cost
-  case cost == mempty of
-    True -> pure $ pure "mempty"
-    False -> do
-      sW <- parens <$> showMana w
-      sU <- parens <$> showMana u
-      sB <- parens <$> showMana b
-      sR <- parens <$> showMana r
-      sG <- parens <$> showMana g
-      sC <- dollar <$> showMana c
-      pure $
-        pure "PhyrexianManaCost "
-          <> sW
-          <> pure " "
-          <> sU
-          <> pure " "
-          <> sB
-          <> pure " "
-          <> sR
-          <> pure " "
-          <> sG
-          <> sC
+  case (combinators, cost == mempty) of
+    (NoDataCombinators, _) -> showPhyrexianManaCostRaw cost
+    (_, True) -> pure $ DString "mempty"
+    (_, False) -> do
+      sW <- showMana w
+      sU <- showMana u
+      sB <- showMana b
+      sR <- showMana r
+      sG <- showMana g
+      sC <- showMana c
+      pure $ DApp "PhyrexianManaCost" [sW, sU, sB, sR, sG, sC]
 
-showHybridManaCost :: HybridManaCost var -> EnvM ParenItems
-showHybridManaCost cost = noParens do
+showHybridManaCost :: HybridManaCost var -> EnvM Doc
+showHybridManaCost cost = do
+  combinators <- getDataCombinators
   let HybridManaCost
         { hybridBG = bg
         } = cost
-  case cost == mempty of
-    True -> pure $ pure "mempty"
-    False -> do
-      sBG <- parens <$> showMana bg
-      pure $ pure "HybridManaCost " <> sBG
+  case (combinators, cost == mempty) of
+    (NoDataCombinators, _) -> showHybridManaCostRaw cost
+    (_, True) -> pure $ DString "mempty"
+    (_, False) -> do
+      sBG <- showMana bg
+      pure $ DApp "HybridManaCost" [sBG]
 
-showDynamicManaCost :: DynamicManaCost var -> EnvM ParenItems
-showDynamicManaCost cost = noParens do
+showDynamicManaCost :: DynamicManaCost var -> EnvM Doc
+showDynamicManaCost cost = do
+  combinators <- getDataCombinators
   let DynamicManaCost
         { costSnow = s
         , costGeneric = x
         , costHybrid = hy
         , costPhyrexian = phy
         } = cost
-  case cost == mempty of
-    True -> pure $ pure "mempty"
-    False -> case isOnlyGeneric cost of
-      True -> dropParens <$> showMana x
-      False -> do
-        sS <- parens <$> showMana s
-        sX <- parens <$> showMana x
-        sHy <- parens <$> showHybridManaCost hy
-        sPhy <- dollar <$> showPhyrexianManaCost phy
-        pure $ pure "DynamicManaCost " <> sS <> pure " " <> sX <> pure " " <> sHy <> sPhy
+  case (combinators, cost == mempty) of
+    (NoDataCombinators, _) -> showDynamicManaCostRaw cost
+    (_, True) -> pure $ DString "mempty"
+    -- Always emit the raw @DynamicManaCost@ constructor: an only-generic
+    -- shortcut to the bare @Mana@ (@showMana x@) does not type-check where a
+    -- @DynamicManaCost@ is expected (e.g. the @costDynamic@ field of a rendered
+    -- @ManaCost'@). Field order is @costGeneric@ then @costSnow@ (see the record).
+    (_, False) -> do
+      sX <- showMana x
+      sS <- showMana s
+      sHy <- showHybridManaCost hy
+      sPhy <- showPhyrexianManaCost phy
+      pure $ DApp "DynamicManaCost" [sX, sS, sHy, sPhy]
 
--- FIXME
-showManaCost :: ManaCost var -> EnvM ParenItems
-showManaCost cost = yesParens do
-  let ManaCost'
-        { costW = w
-        , costU = u
-        , costB = b
-        , costR = r
-        , costG = g
-        , costC = c
-        , costDynamic = dyn
-        } = cost
-      DynamicManaCost
-        { costGeneric = x
-        , costSnow = s
-        , costHybrid = hybrid
-        , costPhyrexian = phyrexian
-        } = dyn
-      HybridManaCost
-        { hybridWU = wu
-        , hybridUB = ub
-        , hybridBR = br
-        , hybridRG = rg
-        , hybridGW = gw
-        , hybridWB = wb
-        , hybridUR = ur
-        , hybridBG = bg
-        , hybridRW = rw
-        , hybridGU = gu
-        , hybridW2 = w2
-        , hybridU2 = u2
-        , hybridB2 = b2
-        , hybridR2 = r2
-        , hybridG2 = g2
-        , hybridC2 = c2
-        } = hybrid
-      PhyrexianManaCost
-        { phyrexianW = pw
-        , phyrexianU = pu
-        , phyrexianB = pb
-        , phyrexianR = pr
-        , phyrexianG = pg
-        , phyrexianC = pc
-        } = phyrexian
-      lits =
-        sequence
-          [ tryLitMana x
-          , tryLitMana w
-          , tryLitMana u
-          , tryLitMana b
-          , tryLitMana r
-          , tryLitMana g
-          , tryLitMana c
-          , tryLitMana s
-          , tryLitMana wu
-          , tryLitMana ub
-          , tryLitMana br
-          , tryLitMana rg
-          , tryLitMana gw
-          , tryLitMana wb
-          , tryLitMana ur
-          , tryLitMana bg
-          , tryLitMana rw
-          , tryLitMana gu
-          , tryLitMana w2
-          , tryLitMana u2
-          , tryLitMana b2
-          , tryLitMana r2
-          , tryLitMana g2
-          , tryLitMana c2
-          , tryLitMana pw
-          , tryLitMana pu
-          , tryLitMana pb
-          , tryLitMana pr
-          , tryLitMana pg
-          , tryLitMana pc
-          ]
-  case lits of
-    Just
-      [ litX
-        , litW
-        , litU
-        , litB
-        , litR
-        , litG
-        , litC
-        , litS
-        , litWU
-        , litUB
-        , litBR
-        , litRG
-        , litGW
-        , litWB
-        , litUR
-        , litBG
-        , litRW
-        , litGU
-        , litW2
-        , litU2
-        , litB2
-        , litR2
-        , litG2
-        , litC2
-        , litPW
-        , litPU
-        , litPB
-        , litPR
-        , litPG
-        , litPC
-        ] -> do
-        let numX = litX
-            numW = (W, litW)
-            numU = (U, litU)
-            numB = (B, litB)
-            numR = (R, litR)
-            numG = (G, litG)
-            numC = (C, litC)
-            numS = (S, litS)
-            numWU = (WU, litWU)
-            numUB = (UB, litUB)
-            numBR = (BR, litBR)
-            numRG = (RG, litRG)
-            numGW = (GW, litGW)
-            numWB = (WB, litWB)
-            numUR = (UR, litUR)
-            numBG = (BG, litBG)
-            numRW = (RW, litRW)
-            numGU = (GU, litGU)
-            numW2 = (W2, litW2)
-            numU2 = (U2, litU2)
-            numB2 = (B2, litB2)
-            numR2 = (R2, litR2)
-            numG2 = (G2, litG2)
-            numC2 = (C2, litC2)
-            numPW = (PW, litPW)
-            numPU = (PU, litPU)
-            numPB = (PB, litPB)
-            numPR = (PR, litPR)
-            numPG = (PG, litPG)
-            numPC = (PC, litPC)
-            go (sym, num)
-              | num == 0 = []
-              | num < 10 = replicate num $ show sym
-              | otherwise = ["(" ++ show sym ++ "," ++ show num ++ ")"]
-            go' num = case num of
-              0 -> []
-              _ -> [show num]
-            manas' =
-              [ go' numX
-              , go numW
-              , go numU
-              , go numB
-              , go numR
-              , go numG
-              , go numC
-              , go numS
-              , go numWU
-              , go numUB
-              , go numBR
-              , go numRG
-              , go numGW
-              , go numWB
-              , go numUR
-              , go numBG
-              , go numRW
-              , go numGU
-              , go numW2
-              , go numU2
-              , go numB2
-              , go numR2
-              , go numG2
-              , go numC2
-              , go numPW
-              , go numPU
-              , go numPB
-              , go numPR
-              , go numPG
-              , go numPC
-              ]
-            manas = M.join manas'
-            sManas = case manas of
-              [] -> "0"
-              [m] -> m
-              _ -> "(" ++ List.intercalate "," manas ++ ")"
-        pure $ pure $ fromString $ "toManaCost " ++ sManas
-    _ -> do
-      sW <- parens <$> showMana w
-      sU <- parens <$> showMana u
-      sB <- parens <$> showMana b
-      sR <- parens <$> showMana r
-      sG <- parens <$> showMana g
-      sC <- parens <$> showMana c
-      sDyn <- dollar <$> showDynamicManaCost dyn
-      pure $
-        pure (fromString "ManaCost' ")
-          <> sW
-          <> pure " "
-          <> sU
-          <> pure " "
-          <> sB
-          <> pure " "
-          <> sR
-          <> pure " "
-          <> sG
-          <> pure " "
-          <> sC
-          <> sDyn
+-- | A bare 'ManaCost' value renders as @toManaCost \<arg\>@ (the 'Show' instance
+-- uses this). Card costs render via @manaCost \<arg\>@; see 'showTreeCost'.
+-- Under (F) 'NoDataCombinators' both render the @ManaCost'@ record instead
+-- ('showManaCostRaw').
+showManaCost :: ManaCost var -> EnvM Doc
+showManaCost cost = do
+  combinators <- getDataCombinators
+  case combinators of
+    NoDataCombinators -> showManaCostRaw cost
+    LowDataCombinators -> pure $ dApp "toManaCost" [showManaCostArg cost]
+    HighDataCombinators -> pure $ dApp "toManaCost" [showManaCostArg cost]
 
-showManaPool :: ManaPool snow -> EnvM ParenItems
-showManaPool pool = yesParens do
-  let ManaPool
-        { poolW = w
-        , poolU = u
-        , poolB = b
-        , poolR = r
-        , poolG = g
-        , poolC = c
-        } = pool
-      lits =
-        ( litMana w
-        , litMana u
-        , litMana b
-        , litMana r
-        , litMana g
-        , litMana c
-        )
-  case lits of
-    (litW, litU, litB, litR, litG, litC) -> do
-      let numW = (W, litW)
-          numU = (U, litU)
-          numB = (B, litB)
-          numR = (R, litR)
-          numG = (G, litG)
-          numC = (C, litC)
-          go (sym, num)
-            | num == 0 = []
-            | num < 10 = replicate num $ show sym
-            | otherwise = ["(" ++ show sym ++ "," ++ show num ++ ")"]
-          manas' = [go numW, go numU, go numB, go numR, go numG, go numC]
-          manas = M.join manas'
-          sManas = case manas of
-            [m] -> m
-            _ -> "(" ++ List.intercalate "," manas ++ ")"
-      pure $ pure $ fromString $ "toManaPool " ++ sManas
+-- | The argument to @manaCost@/@toManaCost@ for a cost: @0@, a lone token like
+-- @G@, or a tuple like @(3, R)@ / @(VariableMana \@'NonSnow \@'Ty1 x, G, G)@.
+-- Literal components render as repeated 'ManaSymbol's (or @(sym, n)@ for large
+-- counts) and the generic slot as a bare count; a variable (non-literal)
+-- component renders as the raw @VariableMana@ constructor with its slot's type
+-- applications -- exactly how the cards are hand-written (see @manaCost@).
+showManaCostArg :: ManaCost var -> Doc
+showManaCostArg cost =
+  case atoms of
+    [] -> DString "0"
+    [a] -> a
+    _ -> "(" <> dintercalate ", " atoms <> ")"
+ where
+  ManaCost'
+    { costW = w
+    , costU = u
+    , costB = b
+    , costR = r
+    , costG = g
+    , costC = c
+    , costDynamic = dyn
+    } = cost
+  DynamicManaCost
+    { costGeneric = x
+    , costSnow = s
+    , costHybrid = hybrid
+    , costPhyrexian = phyrexian
+    } = dyn
+  HybridManaCost
+    { hybridWU = wu
+    , hybridUB = ub
+    , hybridBR = br
+    , hybridRG = rg
+    , hybridGW = gw
+    , hybridWB = wb
+    , hybridUR = ur
+    , hybridBG = bg
+    , hybridRW = rw
+    , hybridGU = gu
+    , hybridW2 = w2
+    , hybridU2 = u2
+    , hybridB2 = b2
+    , hybridR2 = r2
+    , hybridG2 = g2
+    , hybridC2 = c2
+    } = hybrid
+  PhyrexianManaCost
+    { phyrexianW = pw
+    , phyrexianU = pu
+    , phyrexianB = pb
+    , phyrexianR = pr
+    , phyrexianG = pg
+    , phyrexianC = pc
+    } = phyrexian
+  atoms =
+    genericAtoms x
+      ++ symAtoms W w
+      ++ symAtoms U u
+      ++ symAtoms B b
+      ++ symAtoms R r
+      ++ symAtoms G g
+      ++ symAtoms C c
+      ++ symAtoms S s
+      ++ symAtoms WU wu
+      ++ symAtoms UB ub
+      ++ symAtoms BR br
+      ++ symAtoms RG rg
+      ++ symAtoms GW gw
+      ++ symAtoms WB wb
+      ++ symAtoms UR ur
+      ++ symAtoms BG bg
+      ++ symAtoms RW rw
+      ++ symAtoms GU gu
+      ++ symAtoms W2 w2
+      ++ symAtoms U2 u2
+      ++ symAtoms B2 b2
+      ++ symAtoms R2 r2
+      ++ symAtoms G2 g2
+      ++ symAtoms C2 c2
+      ++ symAtoms PW pw
+      ++ symAtoms PU pu
+      ++ symAtoms PB pb
+      ++ symAtoms PR pr
+      ++ symAtoms PG pg
+      ++ symAtoms PC pc
+  -- The generic slot is a bare count (@3@), or -- when variable -- the raw
+  -- @VariableMana \@'NonSnow \@'Ty1@ constructor.
+  genericAtoms :: Mana v sn mt -> [Doc]
+  genericAtoms = \case
+    Mana 0 -> []
+    Mana n -> [DString (show n)]
+    VariableMana var -> [manaVar "'NonSnow" "'Ty1" var]
+    SumMana m1 m2 -> genericAtoms m1 ++ genericAtoms m2
+  -- A colored/snow/hybrid/phyrexian slot is repeated 'ManaSymbol's, or (in the
+  -- unusual case of a variable in such a slot) the raw @VariableMana@ term.
+  symAtoms :: ManaSymbol smt -> Mana v sn mt -> [Doc]
+  symAtoms sym m = case tryLitMana m of
+    Just 0 -> []
+    Just n
+      | n < 10 -> replicate n (DString (show sym))
+      | otherwise -> [DString ("(" ++ show sym ++ ", " ++ show n ++ ")")]
+    Nothing -> variableAtoms m
+  variableAtoms :: Mana v sn mt -> [Doc]
+  variableAtoms = \case
+    Mana _ -> []
+    VariableMana var -> [DApp (DString "VariableMana") [getVarName var]]
+    SumMana m1 m2 -> variableAtoms m1 ++ variableAtoms m2
+  -- Built as a 'DSeq' (not a 'DApp') so the @\@ty@ prefix and the variable atom
+  -- keep their space once flattened: this atom sits inside the tuple 'DSeq',
+  -- which 'layout' does not descend into. The trailing 'DVariable' still gets
+  -- id-remapped.
+  manaVar snow mt var =
+    DString ("VariableMana @" ++ snow ++ " @" ++ mt ++ " ") <> getVarName var
 
-showNatList :: forall u n x. (IsUser u) => (x -> EnvM ParenItems) -> NatList u n x -> EnvM ParenItems
-showNatList showX = \case
-  LZ u x -> yesParens do
-    let sU = pure $ fromString $ show u
-    sX <- dollar <$> showX x
-    pure $ pure "LZ (" <> sU <> pure ")" <> sX
-  LS u x xs -> yesParens do
-    let sU = pure $ fromString $ show u
-    sX <- parens <$> showX x
-    sXs <- dollar <$> showNatList showX xs
-    pure $ pure "LS (" <> sU <> pure ") " <> sX <> sXs
+showManaPool :: ManaPool snow -> EnvM Doc
+showManaPool pool = do
+  combinators <- getDataCombinators
+  case combinators of
+    NoDataCombinators -> showManaPoolRaw pool
+    LowDataCombinators -> showManaPoolCombinator pool
+    HighDataCombinators -> showManaPoolCombinator pool
 
-showO1 ::
-  forall zone a z.
-  (IsZone zone, IsObjectType a) =>
-  (IsOTN (OT1 a)) =>
-  Plurality ->
-  (z -> EnvM ParenItems) ->
-  String ->
-  (ON1 a -> z) ->
-  EnvM ParenItems
-showO1 = showONImpl @zone O1
+-- | The @toManaPool \<arg\>@ rendering of a 'ManaPool' (all but (F)
+-- 'NoDataCombinators').
+showManaPoolCombinator :: ManaPool snow -> EnvM Doc
+showManaPoolCombinator pool = pure $ DString $ "toManaPool " ++ sManas
+ where
+  ManaPool
+    { poolW = w
+    , poolU = u
+    , poolB = b
+    , poolR = r
+    , poolG = g
+    , poolC = c
+    } = pool
+  syms sym mana = case litMana mana of
+    0 -> []
+    n
+      | n < 10 -> replicate n $ show sym
+      | otherwise -> ["(" ++ show sym ++ "," ++ show n ++ ")"]
+  manas = concat [syms W w, syms U u, syms B b, syms R r, syms G g, syms C c]
+  sManas = case manas of
+    [m] -> m
+    -- No 2-tuple @ToManaPool@ instance exists (it is commented out); the
+    -- cards pad a two-mana pool to a 3-tuple with @()@, e.g. @(U, U, ())@.
+    [m1, m2] -> "(" ++ m1 ++ ", " ++ m2 ++ ", ())"
+    _ -> "(" ++ List.intercalate ", " manas ++ ")"
 
-showO2 ::
-  forall zone a b z.
-  (IsZone zone, Inst2 IsObjectType a b) =>
-  Plurality ->
-  (z -> EnvM ParenItems) ->
-  String ->
-  (ON2 a b -> z) ->
-  EnvM ParenItems
-showO2 = showONImpl @zone O2a
-
-showO3 ::
-  forall zone a b c z.
-  (IsZone zone, Inst3 IsObjectType a b c) =>
-  Plurality ->
-  (z -> EnvM ParenItems) ->
-  String ->
-  (ON3 a b c -> z) ->
-  EnvM ParenItems
-showO3 = showONImpl @zone O3a
-
-showO4 ::
-  forall zone a b c d z.
-  (IsZone zone, Inst4 IsObjectType a b c d) =>
-  Plurality ->
-  (z -> EnvM ParenItems) ->
-  String ->
-  (ON4 a b c d -> z) ->
-  EnvM ParenItems
-showO4 = showONImpl @zone O4a
-
-showO5 ::
-  forall zone a b c d e z.
-  (IsZone zone, Inst5 IsObjectType a b c d e) =>
-  Plurality ->
-  (z -> EnvM ParenItems) ->
-  String ->
-  (ON5 a b c d e -> z) ->
-  EnvM ParenItems
-showO5 = showONImpl @zone O5a
-
-showO6 ::
-  forall zone a b c d e f z.
-  (IsZone zone, Inst6 IsObjectType a b c d e f) =>
-  Plurality ->
-  (z -> EnvM ParenItems) ->
-  String ->
-  (ON6 a b c d e f -> z) ->
-  EnvM ParenItems
-showO6 = showONImpl @zone O6a
-
-showO7 ::
-  forall zone a b c d e f g z.
-  (IsZone zone, Inst7 IsObjectType a b c d e f g) =>
-  Plurality ->
-  (z -> EnvM ParenItems) ->
-  String ->
-  (ON7 a b c d e f g -> z) ->
-  EnvM ParenItems
-showO7 = showONImpl @zone O7a
-
-showONImpl ::
-  forall zone z a ot.
-  (IsZone zone, IsOTN ot, IsObjectType a) =>
-  (Object a -> ObjectN ot) ->
-  Plurality ->
-  (z -> EnvM ParenItems) ->
-  String ->
-  (ObjectN ot -> z) ->
-  EnvM ParenItems
-showONImpl fromObject plurality showM memo cont = yesParens do
-  (objN, snap) <- newObjectN @a fromObject memo
-  objName <-
-    parens <$> do
-      let m = showObjectN @zone objN
-      case plurality of
-        Singular -> m
-        Plural -> pluralize m
-  let elect = cont objN
-  sElect <- dropParens <$> showM elect
-  restoreObject snap
-  pure $ pure "\\" <> objName <> pure " -> " <> sElect
-
-showObject :: Object a -> EnvM Items
-showObject = fmap pure . getObjectName
+showObject :: Object a -> EnvM Doc
+showObject = getObjectName
 
 showObjectNImpl ::
-  (IsObjectType a) => TypeRep -> Item -> Object a -> EnvM ParenItems
+  (IsObjectType a) => TypeRep -> Doc -> Object a -> EnvM Doc
 showObjectNImpl objNRef prefix obj = do
   let i = objectToId obj
   sObj <- showObject obj
+  combinators <- getDataCombinators
   EnvM (State.gets $ Map.lookup i . originalObjectRep) >>= \case
-    Nothing -> noParens $ pure sObj -- Object is an unbound variable. Can happen when walking past a variable binding before showing the rest of the tree.
+    Nothing -> pure sObj -- Object is an unbound variable. Can happen when walking past a variable binding before showing the rest of the tree.
     Just originalRep -> case originalRep == objNRef of
-      False -> yesParens $ pure $ pure prefix <> pure " " <> sObj
-      True -> noParens $ pure sObj
+      True -> pure sObj
+      False -> pure case (combinators, sObj) of
+        -- Constructors only (F): rebuild the wider @ObjectN@ from the binder's
+        -- destructured payloads, e.g. @ZO sng3 (ON9a (... objN3))@. The binder
+        -- renders the matching @\@(ZO sng3 objN3)@ as-pattern (see 'objBinder').
+        (NoDataCombinators, DObject i' g)
+          | Just chain <- objectNChain originalRep objNRef ->
+              dApp
+                "ZO"
+                [ DObjectPart ObjectPartSing i' g
+                , foldr (\consName inner -> dApp consName [inner]) (DObjectPart ObjectPartPayload i' g) chain
+                ]
+        _ -> DApp prefix [sObj]
 
-showObject0 ::
-  forall zone.
-  (IsZone zone) =>
-  ON0 ->
-  EnvM ParenItems
-showObject0 objN = yesParens do
-  pure $ pure $ fromString $ "toZO0 " ++ show i
+-- | The @asFoo@ coercions the hand-written cards use for the 'ObjectN' types
+-- that have one, keyed by the type's 'TypeRep'. Types without an entry render
+-- with the positional @toZO\<n\>@ coercion picked by 'showObjectN'.
+objectCoercions :: [(TypeRep, Doc)]
+objectCoercions =
+  [ (objNRep @OTNCreaturePlaneswalker, "asCreaturePlaneswalker")
+  , (objNRep @OTNCreaturePlayer, "asCreaturePlayer")
+  , (objNRep @OTNPlayerPlaneswalker, "asPlayerPlaneswalker")
+  , (objNRep @OTNCreaturePlayerPlaneswalker, "asCreaturePlayerPlaneswalker")
+  , (objNRep @OTNPermanent, "asPermanent")
+  , (objNRep @OTNSpell, "asSpell")
+  , (objNRep @OTNDamageSource, "asDamageSource")
+  , (objNRep @OTNAny, "asAny")
+  ]
  where
-  i = getObjectId objN
+  objNRep :: forall ot. (Typeable (ObjectN ot)) => TypeRep
+  objNRep = typeRep (Proxy @(ObjectN ot))
 
-showObject1 ::
-  forall zone a.
-  (IsZone zone, IsObjectType a) =>
-  ON1 a ->
-  EnvM ParenItems
-showObject1 objN = visitObjectN' visit objN
- where
-  rep = typeOf objN
-  visit :: (IsObjectType x) => Object x -> EnvM ParenItems
-  visit =
-    showObjectNImpl rep $
-      if
-        | otherwise -> "toZO1"
-
-showObject2 ::
-  forall zone a b.
-  (IsZone zone, Inst2 IsObjectType a b) =>
-  ON2 a b ->
-  EnvM ParenItems
-showObject2 objN = visitObjectN' visit objN
- where
-  rep = typeOf objN
-  visit :: (IsObjectType x) => Object x -> EnvM ParenItems
-  visit =
-    showObjectNImpl rep $
-      if
-        | rep == typeRep (Proxy @(ObjectN OTNCreaturePlaneswalker)) ->
-            "asCreaturePlaneswalker"
-        | rep == typeRep (Proxy @(ObjectN OTNCreaturePlayer)) ->
-            "asCreaturePlayer"
-        | rep == typeRep (Proxy @(ObjectN OTNPlayerPlaneswalker)) ->
-            "asPlayerPlaneswalker"
-        | otherwise ->
-            "toZO2"
-
-showObject3 ::
-  forall zone a b c.
-  (IsZone zone, Inst3 IsObjectType a b c) =>
-  ON3 a b c ->
-  EnvM ParenItems
-showObject3 objN = visitObjectN' visit objN
+-- | Render an 'ObjectN' as its object atom behind the coercion the cards
+-- would write: the matching @asFoo@ from 'objectCoercions' when there is one,
+-- the given positional @toZO\<n\>@ otherwise. Under (F) 'NoDataCombinators'
+-- the coercion is instead rebuilt from constructors ('showObjectNImpl'); the
+-- @toZO\<n\>@ prefix computed here survives only as its fallback for sources
+-- no constructor chain can widen (e.g. @OT0@). 'showObjectNImpl' drops the
+-- coercion entirely when the object is used at its original type.
+showObjectNAs :: (Typeable (ObjectN ot)) => String -> ObjectN ot -> EnvM Doc
+showObjectNAs toZO objN = do
+  combinators <- getDataCombinators
+  let prefix = case combinators of
+        NoDataCombinators -> fromString toZO
+        LowDataCombinators -> fromMaybe (fromString toZO) (lookup rep objectCoercions)
+        HighDataCombinators -> fromMaybe (fromString toZO) (lookup rep objectCoercions)
+  visitObjectN' (showObjectNImpl rep prefix) objN
  where
   rep = typeOf objN
-  visit :: (IsObjectType x) => Object x -> EnvM ParenItems
-  visit =
-    showObjectNImpl rep $
-      if
-        | rep == typeRep (Proxy @(ObjectN OTNCreaturePlayerPlaneswalker)) ->
-            "asCreaturePlayerPlaneswalker"
-        | otherwise ->
-            "toZO3"
 
-showObject4 ::
-  forall zone a b c d.
-  (IsZone zone, Inst4 IsObjectType a b c d) =>
-  ON4 a b c d ->
-  EnvM ParenItems
-showObject4 objN = visitObjectN' visit objN
- where
-  rep = typeOf objN
-  visit :: (IsObjectType x) => Object x -> EnvM ParenItems
-  visit =
-    showObjectNImpl rep $
-      if
-        | otherwise -> "toZO4"
-
-showObject5 ::
-  forall zone a b c d e.
-  (IsZone zone, Inst5 IsObjectType a b c d e) =>
-  ON5 a b c d e ->
-  EnvM ParenItems
-showObject5 objN = visitObjectN' visit objN
- where
-  rep = typeOf objN
-  visit :: (IsObjectType x) => Object x -> EnvM ParenItems
-  visit =
-    showObjectNImpl rep $
-      if
-        | rep == typeRep (Proxy @(ObjectN OTNPermanent)) -> "asPermanent"
-        | otherwise -> "toZO5"
-
-showObject6 ::
-  forall zone a b c d e f.
-  (IsZone zone, Inst6 IsObjectType a b c d e f) =>
-  ON6 a b c d e f ->
-  EnvM ParenItems
-showObject6 objN = visitObjectN' visit objN
- where
-  rep = typeOf objN
-  visit :: (IsObjectType x) => Object x -> EnvM ParenItems
-  visit =
-    showObjectNImpl rep $
-      if
-        | rep == typeRep (Proxy @(ObjectN OTNSpell)) -> "asSpell"
-        | otherwise -> "toZO6"
-
-showObject7 ::
-  forall zone a b c d e f g.
-  (IsZone zone, Inst7 IsObjectType a b c d e f g) =>
-  ON7 a b c d e f g ->
-  EnvM ParenItems
-showObject7 objN = visitObjectN' visit objN
- where
-  rep = typeOf objN
-  visit :: (IsObjectType x) => Object x -> EnvM ParenItems
-  visit =
-    showObjectNImpl rep $
-      if
-        | otherwise -> "toZO7"
-
-showObject8 ::
-  forall zone a b c d e f g h.
-  (IsZone zone, Inst8 IsObjectType a b c d e f g h) =>
-  ON8 a b c d e f g h ->
-  EnvM ParenItems
-showObject8 objN = visitObjectN' visit objN
- where
-  rep = typeOf objN
-  visit :: (IsObjectType x) => Object x -> EnvM ParenItems
-  visit =
-    showObjectNImpl rep $
-      if
-        | rep == typeRep (Proxy @(ObjectN OTNDamageSource)) -> "asDamageSource"
-        | otherwise -> "toZO8"
-
-showObject9 ::
-  forall zone a b c d e f g h i.
-  (IsZone zone, Inst9 IsObjectType a b c d e f g h i) =>
-  ON9 a b c d e f g h i ->
-  EnvM ParenItems
-showObject9 objN = visitObjectN' visit objN
- where
-  rep = typeOf objN
-  visit :: (IsObjectType x) => Object x -> EnvM ParenItems
-  visit =
-    showObjectNImpl rep $
-      if
-        | otherwise -> "toZO9"
-
-showObject10 ::
-  forall zone a b c d e f g h i j.
-  (IsZone zone, Inst10 IsObjectType a b c d e f g h i j) =>
-  ON10 a b c d e f g h i j ->
-  EnvM ParenItems
-showObject10 objN = visitObjectN' visit objN
- where
-  rep = typeOf objN
-  visit :: (IsObjectType x) => Object x -> EnvM ParenItems
-  visit =
-    showObjectNImpl rep $
-      if
-        | otherwise -> "toZO10"
-
-showObject11 ::
-  forall zone a b c d e f g h i j k.
-  (IsZone zone, Inst11 IsObjectType a b c d e f g h i j k) =>
-  ON11 a b c d e f g h i j k ->
-  EnvM ParenItems
-showObject11 objN = visitObjectN' visit objN
- where
-  rep = typeOf objN
-  visit :: (IsObjectType x) => Object x -> EnvM ParenItems
-  visit =
-    showObjectNImpl rep $
-      if
-        | otherwise -> "toZO11"
-
-showObject12 ::
-  forall zone a b c d e f g h i j k l.
-  (IsZone zone, Inst12 IsObjectType a b c d e f g h i j k l) =>
-  ON12 a b c d e f g h i j k l ->
-  EnvM ParenItems
-showObject12 objN = visitObjectN' visit objN
- where
-  rep = typeOf objN
-  visit :: (IsObjectType x) => Object x -> EnvM ParenItems
-  visit =
-    showObjectNImpl rep $
-      if
-        | otherwise -> "toZO12"
-
-showObject13 ::
-  forall zone a b c d e f g h i j k l m.
-  (IsZone zone, Inst13 IsObjectType a b c d e f g h i j k l m) =>
-  ON13 a b c d e f g h i j k l m ->
-  EnvM ParenItems
-showObject13 objN = visitObjectN' visit objN
- where
-  rep = typeOf objN
-  visit :: (IsObjectType x) => Object x -> EnvM ParenItems
-  visit =
-    showObjectNImpl rep $
-      if
-        | rep == typeRep (Proxy @(ObjectN OTNAny)) -> "asAny"
-        | otherwise -> "toZO13"
-
-showObjectN :: forall zone ot. (IsZO zone ot) => ObjectN ot -> EnvM ParenItems
+showObjectN :: forall zone ot. (IsZO zone ot) => ObjectN ot -> EnvM Doc
 showObjectN objN' = viewOTN' objN' go
  where
-  go :: ObjectN (OTN otk) -> OTN otk -> EnvM ParenItems
+  go :: ObjectN (OTN otk) -> OTN otk -> EnvM Doc
   go objN = \case
-    OT0 -> showObject0 @zone objN
-    OT1 -> showObject1 @zone objN
-    OT2 -> showObject2 @zone objN
-    OT3 -> showObject3 @zone objN
-    OT4 -> showObject4 @zone objN
-    OT5 -> showObject5 @zone objN
-    OT6 -> showObject6 @zone objN
-    OT7 -> showObject7 @zone objN
-    OT8 -> showObject8 @zone objN
-    OT9 -> showObject9 @zone objN
-    OT10 -> showObject10 @zone objN
-    OT11 -> showObject11 @zone objN
-    OT12 -> showObject12 @zone objN
-    OT13 -> showObject13 @zone objN
+    OT0 -> pure $ DString $ "toZO0 " ++ show (getObjectId objN)
+    OT1 -> showObjectNAs "toZO1" objN
+    OT2 -> showObjectNAs "toZO2" objN
+    OT3 -> showObjectNAs "toZO3" objN
+    OT4 -> showObjectNAs "toZO4" objN
+    OT5 -> showObjectNAs "toZO5" objN
+    OT6 -> showObjectNAs "toZO6" objN
+    OT7 -> showObjectNAs "toZO7" objN
+    OT8 -> showObjectNAs "toZO8" objN
+    OT9 -> showObjectNAs "toZO9" objN
+    OT10 -> showObjectNAs "toZO10" objN
+    OT11 -> showObjectNAs "toZO11" objN
+    OT12 -> showObjectNAs "toZO12" objN
+    OT13 -> showObjectNAs "toZO13" objN
 
-showPower :: Power -> EnvM ParenItems
-showPower = yesParens . pure . pure . fromString . show
+showPower :: Power -> EnvM Doc
+showPower = pure . DString . show
 
-showRequirement :: Requirement zone ot -> EnvM ParenItems
-showRequirement = \case
-  ControlledBy obj -> yesParens do
-    sObj <- dollar <$> showZoneObject obj
-    pure $ pure "ControlledBy" <> sObj
-  ControlsA req -> yesParens do
-    sObj <- dollar <$> showRequirement req
-    pure $ pure "ControlsA" <> sObj
-  HasAbility ability -> yesParens do
-    sAbility <- dollar <$> showSomeZone (showWithThisAbility "this") ability
-    pure $ pure "HasAbility" <> sAbility
-  HasLandType landType -> yesParens do
-    sLandType <- dollar <$> showLandType landType
-    pure $ pure "HasLandType" <> sLandType
-  Is objN -> yesParens do
-    sObjN <- dollar <$> showZoneObject objN
-    pure $ pure "Is" <> sObjN
-  IsOpponentOf player -> yesParens do
-    sPlayer <- dollar <$> showZoneObject player
-    pure $ pure "IsOpponentOf" <> sPlayer
-  IsTapped -> yesParens do
-    pure $ pure "IsTapped"
-  Not req -> yesParens do
-    sReq <- dollar <$> showRequirement req
-    pure $ pure "Not" <> sReq
-  OfColors colors -> yesParens do
-    pure $ pure $ fromString $ "OfColors $ " ++ show colors
-  OwnedBy obj -> yesParens do
-    sObj <- dollar <$> showZoneObject obj
-    pure $ pure "OwnedBy" <> sObj
-  RAnd reqs -> yesParens do
-    sReqs <- dollar <$> showRequirements reqs
-    pure $ pure "RAnd" <> sReqs
-  ROr reqs -> yesParens do
-    sReqs <- dollar <$> showRequirements reqs
-    pure $ pure "ROr" <> sReqs
-  Req2 reqsA reqsB -> yesParens do
-    sReqsA <- parens <$> showRequirements reqsA
-    sReqsB <- dollar <$> showRequirements reqsB
-    pure $ pure "Req2 " <> sReqsA <> sReqsB
-  Req3 reqsA reqsB reqsC -> yesParens do
-    sReqsA <- parens <$> showRequirements reqsA
-    sReqsB <- parens <$> showRequirements reqsB
-    sReqsC <- dollar <$> showRequirements reqsC
-    pure $ pure "Req3 " <> sReqsA <> pure " " <> sReqsB <> sReqsC
-  Req4 reqsA reqsB reqsC reqsD -> yesParens do
-    sReqsA <- parens <$> showRequirements reqsA
-    sReqsB <- parens <$> showRequirements reqsB
-    sReqsC <- parens <$> showRequirements reqsC
-    sReqsD <- dollar <$> showRequirements reqsD
-    pure $
-      pure "Req4 "
-        <> sReqsA
-        <> pure " "
-        <> sReqsB
-        <> pure " "
-        <> sReqsC
-        <> sReqsD
-  Req5 reqsA reqsB reqsC reqsD reqsE -> yesParens do
-    sReqsA <- parens <$> showRequirements reqsA
-    sReqsB <- parens <$> showRequirements reqsB
-    sReqsC <- parens <$> showRequirements reqsC
-    sReqsD <- parens <$> showRequirements reqsD
-    sReqsE <- dollar <$> showRequirements reqsE
-    pure $
-      pure "Req5 "
-        <> sReqsA
-        <> pure " "
-        <> sReqsB
-        <> pure " "
-        <> sReqsC
-        <> pure " "
-        <> sReqsD
-        <> sReqsE
+showSetCard :: SetCard ot -> EnvM Doc
+showSetCard = showViaTree showTreeSetCard
 
-showRequirements :: [Requirement zone ot] -> EnvM ParenItems
-showRequirements = showListM showRequirement
+showSetToken :: SetToken ot -> EnvM Doc
+showSetToken = showViaTree showTreeSetToken
 
-showSetCard :: SetCard ot -> EnvM ParenItems
-showSetCard (SetCard set rarity card) = yesParens do
-  sCard <- dollar <$> showCard card
-  pure $
-    pure (fromString $ "SetCard " ++ show set ++ " " ++ show rarity)
-      <> sCard
-
-showSetToken :: SetToken ot -> EnvM ParenItems
-showSetToken (SetToken set rarity token) = yesParens do
-  sToken <- dollar <$> showToken token
-  pure $
-    pure (fromString $ "SetToken " ++ show set ++ " " ++ show rarity)
-      <> sToken
-
-showSomeZone ::
-  forall liftZOT ot.
-  (forall zone. liftZOT zone ot -> EnvM ParenItems) ->
-  SomeZone liftZOT ot ->
-  EnvM ParenItems
-showSomeZone showM = \case
-  SomeZone x -> yesParens do
-    sX <- dollar <$> showM x
-    pure $ pure "SomeZone" <> sX
-  SomeZone2 x -> yesParens do
-    sX <- dollar <$> showM x
-    pure $ pure "SomeZone2" <> sX
-
-showStaticAbility :: StaticAbility zone ot -> EnvM ParenItems
-showStaticAbility = \case
-  As electListener -> yesParens do
-    sWithObject <- dollar <$> showElect electListener
-    pure $ pure "As" <> sWithObject
-  Bestow cost enchant -> yesParens do
-    sCost <- parens <$> showElect cost
-    sEnchant <- dollar <$> showEnchant enchant
-    pure $ pure "Bestow " <> sCost <> sEnchant
-  CantBlock -> noParens do
-    pure $ pure "CantBlock"
-  Defender -> noParens do
-    pure $ pure "Defender"
-  Enters entersStatic -> yesParens do
-    sEntersStatic <- dollar <$> showEntersStatic entersStatic
-    pure $ pure "Enters" <> sEntersStatic
-  FirstStrike -> noParens do
-    pure $ pure "FirstStrike"
-  Flying -> noParens do
-    pure $ pure "Flying"
-  Fuse -> noParens do
-    pure $ pure "Fuse"
-  Haste -> noParens do
-    pure $ pure "Haste"
-  Landwalk reqs -> yesParens do
-    sReqs <- dollar <$> showRequirements reqs
-    pure $ pure "Landwalk" <> sReqs
-  Phasing -> noParens do
-    pure $ pure "Phasing"
-  StaticContinuous continuous -> yesParens do
-    sContinuous <- dollar <$> showElect continuous
-    pure $ pure "StaticContinuous" <> sContinuous
-  Suspend time cost -> yesParens do
-    let sTime = pure $ fromString $ show time
-    sCost <- dollar <$> showElect cost
-    pure $ pure "Suspend " <> sTime <> sCost
-  Trample -> noParens do
-    pure $ pure "Trample"
-
-showSupertypes :: [Supertype ot] -> EnvM ParenItems
+showSupertypes :: [Supertype ot] -> EnvM Doc
 showSupertypes = showListM showSupertype
 
-showSupertype :: Supertype ot -> EnvM ParenItems
+showSupertype :: Supertype ot -> EnvM Doc
 showSupertype = \case
-  Basic -> noParens do
-    pure $ pure "Basic"
-  Legendary -> noParens do
-    pure $ pure "Legendary"
-  Snow -> noParens do
-    pure $ pure "Snow"
-  Tribal tys -> yesParens do
-    sTys <- dollar <$> showCreatureTypes tys
-    pure $ pure "Tribal" <> sTys
-  World -> noParens do
-    pure $ pure "World"
+  Basic -> pure $ DString "Basic"
+  Legendary -> pure $ DString "Legendary"
+  Snow -> pure $ DString "Snow"
+  Tribal tys -> do
+    sTys <- showCreatureTypes tys
+    pure $ DApp "Tribal" [sTys]
+  World -> pure $ DString "World"
 
-showTimePoint :: TimePoint p -> EnvM ParenItems
-showTimePoint = yesParens . pure . pure . fromString . show
+showTimePoint :: TimePoint p -> EnvM Doc
+showTimePoint = pure . DString . show
 
-showToken :: Token ot -> EnvM ParenItems
-showToken = \case
-  Token card -> yesParens do
-    sCard <- dollar <$> showCard card
-    pure $ pure "Token" <> sCard
+showToken :: Token ot -> EnvM Doc
+showToken = showViaTree showTreeToken
 
-showToughness :: Toughness -> EnvM ParenItems
-showToughness = yesParens . pure . pure . fromString . show
+showToughness :: Toughness -> EnvM Doc
+showToughness = pure . DString . show
 
-showTriggeredAbility :: TriggeredAbility zone ot -> EnvM ParenItems
-showTriggeredAbility = \case
-  When listener -> go "When" listener
- where
-  go consName eventListener = yesParens do
-    sEventListener <- dollar <$> showElect eventListener
-    pure $ pure (fromString consName) <> sEventListener
+showTypeOf :: forall a. (PrettyType a) => Proxy a -> EnvM Doc
+showTypeOf _ = pure $ DString $ prettyType @a
 
-showTypeOf :: forall a. (PrettyType a) => Proxy a -> EnvM ParenItems
-showTypeOf _ = conditionalParens do
-  pure $ pure $ fromString name
- where
-  name = prettyType @a
-  conditionalParens = case ' ' `elem` name of
-    True -> yesParens
-    False -> noParens
-
-showWithLinkedObject ::
-  forall liftOT zone ot.
-  (IsZO zone ot) =>
-  (forall ot'. liftOT ot' -> EnvM ParenItems) ->
-  String ->
-  WithLinkedObject liftOT zone ot ->
-  EnvM ParenItems
-showWithLinkedObject showM memo = \case
-  Linked1 reqs cont ->
-    let ty = getType reqs
-     in go ty reqs $ showO1 @zone p showM memo (cont . toZone)
-  Linked2 reqs cont ->
-    let ty = getType reqs
-     in go ty reqs $ showO2 @zone p showM memo (cont . toZone)
-  Linked3 reqs cont ->
-    let ty = getType reqs
-     in go ty reqs $ showO3 @zone p showM memo (cont . toZone)
-  Linked4 reqs cont ->
-    let ty = getType reqs
-     in go ty reqs $ showO4 @zone p showM memo (cont . toZone)
-  Linked5 reqs cont ->
-    let ty = getType reqs
-     in go ty reqs $ showO5 @zone p showM memo (cont . toZone)
- where
-  p = Singular
-
-  getType :: [Requirement zone ot] -> Proxy ot
-  getType _ = Proxy
-
-  go ty reqs sCont = yesParens do
-    sTy <- parens <$> showTypeOf ty
-    sReqs <- parens <$> showRequirements reqs
-    sCont' <- dollar <$> sCont
-    pure $ pure "linked @" <> sTy <> pure " " <> sReqs <> sCont'
-
-showWithList :: (ret -> EnvM ParenItems) -> WithList ret zone ot -> EnvM ParenItems
-showWithList showRet = \case
-  CountOf zos cont -> yesParens do
-    sZos <- parens <$> showZoneObjects zos
-    discr <- EnvM $ State.gets nextVariableId
-    EnvM $ State.modify' \st -> st{nextVariableId = (1 +) <$> discr}
-    let var = ReifiedVariable discr 0
-        varName = getVarName var
-        ret = cont var
-    sRet <- dropParens <$> showRet ret
-    pure $ pure "CountOf " <> sZos <> pure " $ \\" <> pure varName <> pure " -> " <> sRet
-  Each zos cont -> yesParens do
-    sZos <- parens <$> showZoneObjects zos
-    let zo = lenseList zos
-        ret = cont zo
-    sZo <- parens <$> showZoneObject zo
-    sRet <- dropParens <$> showRet ret
-    pure $ pure "Each " <> sZos <> pure " $ \\" <> sZo <> pure " -> " <> sRet
-  SuchThat reqs withList -> yesParens do
-    sReqs <- parens <$> showRequirements reqs
-    sWithList <- dollar <$> showWithList showRet withList
-    pure $ pure "SuchThat " <> sReqs <> sWithList
-
-showWithMaskedObject ::
-  forall liftOT zone ot.
-  (IsZone zone) =>
-  (liftOT ot -> EnvM ParenItems) ->
-  String ->
-  WithMaskedObject liftOT zone ot ->
-  EnvM ParenItems
-showWithMaskedObject showM memo = \case
-  Masked1 reqs cont ->
-    let ty = getType reqs in go ty reqs $ showO1 @zone p showM memo (cont . toZone)
-  Masked2 reqs cont ->
-    let ty = getType reqs in go ty reqs $ showO2 @zone p showM memo (cont . toZone)
-  Masked3 reqs cont ->
-    let ty = getType reqs in go ty reqs $ showO3 @zone p showM memo (cont . toZone)
-  Masked4 reqs cont ->
-    let ty = getType reqs in go ty reqs $ showO4 @zone p showM memo (cont . toZone)
-  Masked5 reqs cont ->
-    let ty = getType reqs in go ty reqs $ showO5 @zone p showM memo (cont . toZone)
-  Masked6 reqs cont ->
-    let ty = getType reqs in go ty reqs $ showO6 @zone p showM memo (cont . toZone)
-  Masked7 reqs cont ->
-    let ty = getType reqs in go ty reqs $ showO7 @zone p showM memo (cont . toZone)
- where
-  p = Singular
-
-  getType :: [Requirement zone ot'] -> Proxy ot'
-  getType _ = Proxy
-
-  go ty reqs sCont = yesParens do
-    sTy <- parens <$> showTypeOf ty
-    sReqs <- parens <$> showRequirements reqs
-    sCont' <- dollar <$> sCont
-    pure $ pure "masked @" <> sTy <> pure " " <> sReqs <> sCont'
-
-showWithMaskedObjects ::
-  forall liftOT zone ot.
-  (IsZone zone) =>
-  (liftOT ot -> EnvM ParenItems) ->
-  String ->
-  WithMaskedObjects liftOT zone ot ->
-  EnvM ParenItems
-showWithMaskedObjects showM memo = \case
-  Maskeds1 reqs cont ->
-    let ty = getType reqs in go ty reqs $ showO1 @zone p showM memo (cont . pure . toZone)
-  Maskeds2 reqs cont ->
-    let ty = getType reqs in go ty reqs $ showO2 @zone p showM memo (cont . pure . toZone)
-  Maskeds3 reqs cont ->
-    let ty = getType reqs in go ty reqs $ showO3 @zone p showM memo (cont . pure . toZone)
-  Maskeds4 reqs cont ->
-    let ty = getType reqs in go ty reqs $ showO4 @zone p showM memo (cont . pure . toZone)
-  Maskeds5 reqs cont ->
-    let ty = getType reqs in go ty reqs $ showO5 @zone p showM memo (cont . pure . toZone)
-  Maskeds6 reqs cont ->
-    let ty = getType reqs in go ty reqs $ showO6 @zone p showM memo (cont . pure . toZone)
-  Maskeds7 reqs cont ->
-    let ty = getType reqs in go ty reqs $ showO7 @zone p showM memo (cont . pure . toZone)
- where
-  p = Plural
-
-  getType :: [Requirement zone ot'] -> Proxy ot'
-  getType _ = Proxy
-
-  go ty reqs sCont = yesParens do
-    sTy <- parens <$> showTypeOf ty
-    sReqs <- parens <$> showRequirements reqs
-    sCont' <- dollar <$> sCont
-    pure $ pure "maskeds @" <> sTy <> pure " " <> sReqs <> sCont'
-
-showWithThis ::
-  forall liftOT zone ot.
-  (IsZO zone ot) =>
-  (PrettyType (ZO zone ot)) =>
-  (forall ot'. liftOT ot' -> EnvM ParenItems) ->
-  String ->
-  WithThis liftOT zone ot ->
-  EnvM ParenItems
-showWithThis showM memo = \case
-  This1 cont ->
-    let go = yesParens do
-          sTy <- parens <$> showTypeOf (Proxy @ot)
-          sCont <- dollar <$> showO1 @zone Singular showM memo (cont . toZone)
-          pure $ pure "thisObject @" <> sTy <> sCont
-     in go
-  This2 cont ->
-    let go ::
-          forall a b.
-          (IsOTN (OT2 a b), Inst2 IsObjectType a b) =>
-          ((ZO zone (OT1 a), ZO zone (OT1 b)) -> liftOT (OT2 a b)) ->
-          EnvM ParenItems
-        go cont' = yesParens do
-          sTy <- parens <$> showTypeOf (Proxy @ot)
-          (objNa, snap) <- newObjectN @a O1 memo
-          (objNb, _) <- newObjectN @b O1 memo
-          sObjNa <- parens <$> showObjectN @zone objNa
-          sObjNb <- parens <$> showObjectN @zone objNb
-          let elect = cont' (toZone objNa, toZone objNb)
-          sElect <- dropParens <$> showM elect
-          restoreObject snap
-          pure $
-            pure "thisObject @"
-              <> sTy
-              <> pure " $ \\("
-              <> sObjNa
-              <> pure ", "
-              <> sObjNb
-              <> pure ") -> "
-              <> sElect
-     in go cont
-  This3 cont ->
-    let go ::
-          forall a b c.
-          (IsOTN (OT3 a b c), Inst3 IsObjectType a b c) =>
-          ((ZO zone (OT1 a), ZO zone (OT1 b), ZO zone (OT1 c)) -> liftOT (OT3 a b c)) ->
-          EnvM ParenItems
-        go cont' = yesParens do
-          sTy <- parens <$> showTypeOf (Proxy @ot)
-          (objNa, snap) <- newObjectN @a O1 memo
-          (objNb, _) <- newObjectN @b O1 memo
-          (objNc, _) <- newObjectN @c O1 memo
-          sObjNa <- parens <$> showObjectN @zone objNa
-          sObjNb <- parens <$> showObjectN @zone objNb
-          sObjNc <- parens <$> showObjectN @zone objNc
-          let elect = cont' (toZone objNa, toZone objNb, toZone objNc)
-          sElect <- dropParens <$> showM elect
-          restoreObject snap
-          pure $
-            pure "thisObject @"
-              <> sTy
-              <> pure " $ \\("
-              <> sObjNa
-              <> pure ", "
-              <> sObjNb
-              <> pure ", "
-              <> sObjNc
-              <> pure ") -> "
-              <> sElect
-     in go cont
-  This4 cont ->
-    let go ::
-          forall a b c d.
-          (IsOTN (OT4 a b c d), Inst4 IsObjectType a b c d) =>
-          ((ZO zone (OT1 a), ZO zone (OT1 b), ZO zone (OT1 c), ZO zone (OT1 d)) -> liftOT (OT4 a b c d)) ->
-          EnvM ParenItems
-        go cont' = yesParens do
-          sTy <- parens <$> showTypeOf (Proxy @ot)
-          (objNa, snap) <- newObjectN @a O1 memo
-          (objNb, _) <- newObjectN @b O1 memo
-          (objNc, _) <- newObjectN @c O1 memo
-          (objNd, _) <- newObjectN @d O1 memo
-          sObjNa <- parens <$> showObjectN @zone objNa
-          sObjNb <- parens <$> showObjectN @zone objNb
-          sObjNc <- parens <$> showObjectN @zone objNc
-          sObjNd <- parens <$> showObjectN @zone objNd
-          let elect = cont' (toZone objNa, toZone objNb, toZone objNc, toZone objNd)
-          sElect <- dropParens <$> showM elect
-          restoreObject snap
-          pure $
-            pure "thisObject @"
-              <> sTy
-              <> pure " $ \\("
-              <> sObjNa
-              <> pure ", "
-              <> sObjNb
-              <> pure ", "
-              <> sObjNc
-              <> pure ", "
-              <> sObjNd
-              <> pure ") -> "
-              <> sElect
-     in go cont
-  This5 cont ->
-    let go ::
-          forall a b c d e.
-          (IsOTN (OT5 a b c d e), Inst5 IsObjectType a b c d e) =>
-          ((ZO zone (OT1 a), ZO zone (OT1 b), ZO zone (OT1 c), ZO zone (OT1 d), ZO zone (OT1 e)) -> liftOT (OT5 a b c d e)) ->
-          EnvM ParenItems
-        go cont' = yesParens do
-          sTy <- parens <$> showTypeOf (Proxy @ot)
-          (objNa, snap) <- newObjectN @a O1 memo
-          (objNb, _) <- newObjectN @b O1 memo
-          (objNc, _) <- newObjectN @c O1 memo
-          (objNd, _) <- newObjectN @d O1 memo
-          (objNe, _) <- newObjectN @e O1 memo
-          sObjNa <- parens <$> showObjectN @zone objNa
-          sObjNb <- parens <$> showObjectN @zone objNb
-          sObjNc <- parens <$> showObjectN @zone objNc
-          sObjNd <- parens <$> showObjectN @zone objNd
-          sObjNe <- parens <$> showObjectN @zone objNe
-          let elect = cont' (toZone objNa, toZone objNb, toZone objNc, toZone objNd, toZone objNe)
-          sElect <- dropParens <$> showM elect
-          restoreObject snap
-          pure $
-            pure "thisObject @"
-              <> sTy
-              <> pure " $ \\("
-              <> sObjNa
-              <> pure ", "
-              <> sObjNb
-              <> pure ", "
-              <> sObjNc
-              <> pure ", "
-              <> sObjNd
-              <> pure ", "
-              <> sObjNe
-              <> pure ") -> "
-              <> sElect
-     in go cont
-  This6 cont ->
-    let go ::
-          forall a b c d e f.
-          (IsOTN (OT6 a b c d e f), Inst6 IsObjectType a b c d e f) =>
-          ((ZO zone (OT1 a), ZO zone (OT1 b), ZO zone (OT1 c), ZO zone (OT1 d), ZO zone (OT1 e), ZO zone (OT1 f)) -> liftOT (OT6 a b c d e f)) ->
-          EnvM ParenItems
-        go cont' = yesParens do
-          sTy <- parens <$> showTypeOf (Proxy @ot)
-          (objNa, snap) <- newObjectN @a O1 memo
-          (objNb, _) <- newObjectN @b O1 memo
-          (objNc, _) <- newObjectN @c O1 memo
-          (objNd, _) <- newObjectN @d O1 memo
-          (objNe, _) <- newObjectN @e O1 memo
-          (objNf, _) <- newObjectN @f O1 memo
-          sObjNa <- parens <$> showObjectN @zone objNa
-          sObjNb <- parens <$> showObjectN @zone objNb
-          sObjNc <- parens <$> showObjectN @zone objNc
-          sObjNd <- parens <$> showObjectN @zone objNd
-          sObjNe <- parens <$> showObjectN @zone objNe
-          sObjNf <- parens <$> showObjectN @zone objNf
-          let elect = cont' (toZone objNa, toZone objNb, toZone objNc, toZone objNd, toZone objNe, toZone objNf)
-          sElect <- dropParens <$> showM elect
-          restoreObject snap
-          pure $
-            pure "thisObject @"
-              <> sTy
-              <> pure " $ \\("
-              <> sObjNa
-              <> pure ", "
-              <> sObjNb
-              <> pure ", "
-              <> sObjNc
-              <> pure ", "
-              <> sObjNd
-              <> pure ", "
-              <> sObjNe
-              <> pure ", "
-              <> sObjNf
-              <> pure ") -> "
-              <> sElect
-     in go cont
-
-showWithThisAbility ::
-  forall zone ot.
-  String ->
-  WithThisAbility zone ot ->
-  EnvM ParenItems
-showWithThisAbility memo = \case
-  WithThisActivated withThis -> yesParens do
-    sWithThis <- dollar <$> showWithThis (showElect . unElectOT) memo withThis
-    pure $ pure "WithThisActivated" <> sWithThis
-  WithThisStatic withThis -> yesParens do
-    sWithThis <- dollar <$> showWithThis showStaticAbility memo withThis
-    pure $ pure "WithThisStatic" <> sWithThis
-  WithThisTriggered withThis -> yesParens do
-    sWithThis <- dollar <$> showWithThis showTriggeredAbility memo withThis
-    pure $ pure "WithThisTriggered" <> sWithThis
-
-showWithThisZ ::
-  forall liftZOT zone ot.
-  (forall ot'. liftZOT zone ot' -> EnvM ParenItems) ->
-  String ->
-  WithThisZ liftZOT zone ot ->
-  EnvM ParenItems
-showWithThisZ showM memo = \case
-  WithThisZ withThis -> yesParens do
-    sWithThis <- dollar <$> showWithThis showM memo withThis
-    pure $ pure "WithThisZ" <> sWithThis
-
-showZoneObject :: forall zone ot. (IsZO zone ot) => ZO zone ot -> EnvM ParenItems
+showZoneObject :: forall zone ot. (IsZO zone ot) => ZO zone ot -> EnvM Doc
 showZoneObject = \case
   ZO _ objN -> showObjectN @zone objN
 
--- showZoneObject0 :: forall zone. IsZone zone => ZO zone OT0 -> EnvM ParenItems
--- showZoneObject0 = \case
---   ZO _ objN -> showObject0 @zone objN
-
-showZoneObjects :: forall zone ot. (IsZO zone ot) => List (ZO zone ot) -> EnvM ParenItems
+showZoneObjects :: forall zone ot. (IsZO zone ot) => List (ZO zone ot) -> EnvM Doc
 showZoneObjects (lenseList -> zo) = pluralize $ showZoneObject zo
+
+----------------------------------------
+-- Tree renderers (build `Doc`s; see `layout`).
+--
+-- These walk the first-order `Tree` produced by `buildTree` instead of the
+-- continuation-based DSL. Bound objects are read from `TreeZO` nodes (and
+-- registered via 'registerTreeObject' so their names/generations resolve)
+-- rather than minted with 'newObjectN'; the ids already match because
+-- `Tree`'s builder numbers objects from 1 like the old walker did. Leaf values
+-- (mana, colors, types, ...) are stored raw in the `Tree`, so the existing leaf
+-- renderers above are reused directly.
+
+-- | Application whose argument docs are produced in 'EnvM'.
+app :: String -> [EnvM Doc] -> EnvM Doc
+app hd ms = dApp hd <$> sequence ms
+
+-- | Application with a computed (Doc) head, e.g. @SetCard s r@.
+appI :: EnvM Doc -> [EnvM Doc] -> EnvM Doc
+appI hdM ms = DApp <$> hdM <*> sequence ms
+
+-- | Record constructor whose field values are produced in 'EnvM'.
+recD :: String -> [(String, EnvM Doc)] -> EnvM Doc
+recD hd fields = DRec (fromString hd) <$> traverse (\(n, m) -> (,) n <$> m) fields
+
+-- | Register a binder object and return its binder 'Doc' (no backslash).
+bindObj :: (IsZO zone ot) => String -> ZO zone ot -> EnvM Doc
+bindObj memo zo = do
+  registerTreeObject memo zo
+  objBinder zo
+
+-- | The binder 'Doc' for an already-registered object: its name, plus --
+-- under (F) 'NoDataCombinators' -- the @\@(ZO sng\<n\> objN\<n\>)@ as-pattern
+-- exposing the payloads that coerced use-sites rebuild with constructors
+-- ('showObjectNImpl'). The as-pattern atom renders as the empty string when no
+-- use-site coerces this binder, so undestructured binders stay bare names.
+objBinder :: (IsZO zone ot) => ZO zone ot -> EnvM Doc
+objBinder zo = do
+  nm <- showZoneObject zo
+  combinators <- getDataCombinators
+  pure case (combinators, nm) of
+    (NoDataCombinators, DObject i g) -> nm <> DObjectPart ObjectPartPattern i g
+    _ -> nm
+
+treeVarName :: Tree (Variable a) -> Doc
+treeVarName = \case
+  TreeVariable _ vid -> DVariable vid
+
+treeCardName :: Tree (Card ot) -> CardName
+treeCardName = \case
+  TreeCard name _ -> name
+  TreeDoubleSidedCard c1 c2 -> treeCardName c1 <> " // " <> treeCardName c2
+  TreeSplitCard c1 c2 _ -> treeCardName c1 <> " // " <> treeCardName c2
+
+showTreeList :: (Tree a -> EnvM Doc) -> Tree [a] -> EnvM Doc
+showTreeList f = \case
+  TreeList xs -> DList <$> mapM f xs
+
+proxyOfZo :: Tree (ZO zone ot) -> Proxy ot
+proxyOfZo _ = Proxy
+
+proxyOfReqs :: Tree [Requirement zone ot] -> Proxy ot
+proxyOfReqs _ = Proxy
+
+-- | The rendered @ZO zone ot@ type of a binder, used by (F) below
+-- 'HighDataCombinators' as a 'dAnnBinder' annotation.
+zoTypeOf :: forall zone ot. (IsZO zone ot) => Tree (ZO zone ot) -> Doc
+zoTypeOf _ = DString $ prettyType @(ZO zone ot)
+
+-- | Like 'zoTypeOf' but for a plural (@maskeds@-style) binder of type
+-- @List (ZO zone ot)@.
+listZoTypeOf :: forall zone ot. (IsZO zone ot) => Tree (ZO zone ot) -> Doc
+listZoTypeOf _ = DString $ "List (" <> prettyType @(ZO zone ot) <> ")"
+
+showTreeZoneObject :: (IsZO zone ot) => Tree (ZO zone ot) -> EnvM Doc
+showTreeZoneObject = \case
+  TreeZO zo -> showZoneObject zo
+
+showTreeAbility :: Tree (Ability zone ot) -> EnvM Doc
+showTreeAbility = \case
+  TreeActivated ability -> app "Activated" [showTreeElect ability]
+  TreeStatic ability -> app "Static" [showTreeStaticAbility ability]
+  TreeTriggered ability -> app "Triggered" [showTreeTriggeredAbility ability]
+
+showTreeAnyCard :: Tree AnyCard -> EnvM Doc
+showTreeAnyCard = \case
+  TreeAnyCard1 card -> app "AnyCard1" [showTreeCard card]
+  TreeAnyCard2 card -> app "AnyCard2" [showTreeCard card]
+
+showTreeAnyToken :: Tree AnyToken -> EnvM Doc
+showTreeAnyToken = \case
+  TreeAnyToken token -> app "AnyToken" [showTreeToken token]
+
+showTreeActivatedAbility :: Tree (ActivatedAbility zone ot) -> EnvM Doc
+showTreeActivatedAbility = \case
+  TreeAbility cost effect ->
+    recD
+      "Ability"
+      [ ("activated_cost", showTreeCost cost)
+      , ("activated_effect", showTreeElect effect)
+      ]
+  TreeCycling cost -> app "Cycling" [showTreeCost cost]
+
+showTreeBattleType :: Tree BattleType -> EnvM Doc
+showTreeBattleType = \case
+  TreeSeige -> pure $ dName "Seige"
+
+showTreeCard :: Tree (Card ot) -> EnvM Doc
+showTreeCard tree = case tree of
+  TreeCard name elect ->
+    showCardImpl "Card" name $ app "Card" [pure $ dName $ show name, showTreeElect elect]
+  TreeDoubleSidedCard card1 card2 ->
+    showCardImpl "DoubleSidedCard" (treeCardName tree) $
+      app "DoubleSidedCard" [showTreeCard card1, showTreeCard card2]
+  TreeSplitCard card1 card2 splitAbilities ->
+    showCardImpl "SplitCard" (treeCardName tree) $
+      app
+        "SplitCard"
+        [ showTreeCard card1
+        , showTreeCard card2
+        , showTreeList (showTreeSomeZone showTreeAbility) splitAbilities
+        ]
+
+showTreeCardCharacteristic :: Tree (CardCharacteristic ot) -> EnvM Doc
+showTreeCardCharacteristic = \case
+  TreeArtifactCharacteristic colors sups artTypes spec ->
+    recD
+      "ArtifactCharacteristic"
+      [ ("artifact_colors", showColors colors)
+      , ("artifact_supertypes", showSupertypes sups)
+      , ("artifact_artifactTypes", showArtifactTypes artTypes)
+      , ("artifact_spec", showTreeCardSpec spec)
+      ]
+  TreeArtifactCreatureCharacteristic colors sups artTypes creatTypes power toughness spec ->
+    recD
+      "ArtifactCreatureCharacteristic"
+      [ ("artifactCreature_colors", showColors colors)
+      , ("artifactCreature_supertypes", showSupertypes sups)
+      , ("artifactCreature_artifactTypes", showArtifactTypes artTypes)
+      , ("artifactCreature_creatureTypes", showCreatureTypes creatTypes)
+      , ("artifactCreature_power", showPower power)
+      , ("artifactCreature_toughness", showToughness toughness)
+      , ("artifactCreature_spec", showTreeCardSpec spec)
+      ]
+  TreeArtifactLandCharacteristic sups artTypes landTypes spec ->
+    recD
+      "ArtifactLandCharacteristic"
+      [ ("artifactLand_supertypes", showSupertypes sups)
+      , ("artifactLand_artifactTypes", showArtifactTypes artTypes)
+      , ("artifactLand_landTypes", showLandTypes landTypes)
+      , ("artifactLand_spec", showTreeCardSpec spec)
+      ]
+  TreeBattleCharacteristic colors sups battleTypes defense spec ->
+    recD
+      "BattleCharacteristic"
+      [ ("battle_colors", showColors colors)
+      , ("battle_supertypes", showSupertypes sups)
+      , ("battle_battleTypes", showBattleTypes battleTypes)
+      , ("battle_defense", showDefense defense)
+      , ("battle_spec", showTreeCardSpec spec)
+      ]
+  TreeCreatureCharacteristic colors sups creatureTypes power toughness spec ->
+    recD
+      "CreatureCharacteristic"
+      [ ("creature_colors", showColors colors)
+      , ("creature_supertypes", showSupertypes sups)
+      , ("creature_creatureTypes", showCreatureTypes creatureTypes)
+      , ("creature_power", showPower power)
+      , ("creature_toughness", showToughness toughness)
+      , ("creature_spec", showTreeCardSpec spec)
+      ]
+  TreeEnchantmentCharacteristic colors sups enchTypes spec ->
+    recD
+      "EnchantmentCharacteristic"
+      [ ("enchantment_colors", showColors colors)
+      , ("enchantment_supertypes", showSupertypes sups)
+      , ("enchantment_enchantmentTypes", showTreeEnchantmentTypes enchTypes)
+      , ("enchantment_spec", showTreeCardSpec spec)
+      ]
+  TreeEnchantmentCreatureCharacteristic colors sups creatTypes enchTypes power toughness spec ->
+    recD
+      "EnchantmentCreatureCharacteristic"
+      [ ("enchantmentCreature_colors", showColors colors)
+      , ("enchantmentCreature_supertypes", showSupertypes sups)
+      , ("enchantmentCreature_creatureTypes", showCreatureTypes creatTypes)
+      , ("enchantmentCreature_enchantmentTypes", showTreeEnchantmentTypes enchTypes)
+      , ("enchantmentCreature_power", showPower power)
+      , ("enchantmentCreature_toughness", showToughness toughness)
+      , ("enchantmentCreature_spec", showTreeCardSpec spec)
+      ]
+  TreeInstantCharacteristic colors sups spec ->
+    recD
+      "InstantCharacteristic"
+      [ ("instant_colors", showColors colors)
+      , ("instant_supertypes", showSupertypes sups)
+      , ("instant_spec", showTreeElect spec)
+      ]
+  TreeLandCharacteristic sups landTypes spec ->
+    recD
+      "LandCharacteristic"
+      [ ("land_supertypes", showSupertypes sups)
+      , ("land_landTypes", showLandTypes landTypes)
+      , ("land_spec", showTreeCardSpec spec)
+      ]
+  TreePlaneswalkerCharacteristic colors sups spec ->
+    recD
+      "PlaneswalkerCharacteristic"
+      [ ("planeswalker_colors", showColors colors)
+      , ("planeswalker_supertypes", showSupertypes sups)
+      , ("planeswalker_spec", showTreeCardSpec spec)
+      ]
+  TreeSorceryCharacteristic colors sups spec ->
+    recD
+      "SorceryCharacteristic"
+      [ ("sorcery_colors", showColors colors)
+      , ("sorcery_supertypes", showSupertypes sups)
+      , ("sorcery_spec", showTreeElect spec)
+      ]
+
+showTreeCardSpec :: Tree (CardSpec ot) -> EnvM Doc
+showTreeCardSpec = \case
+  TreeArtifactSpec cost abilities ->
+    recD
+      "ArtifactSpec"
+      [ ("artifact_cost", showTreeCost cost)
+      , ("artifact_abilities", abils abilities)
+      ]
+  TreeArtifactCreatureSpec cost artAbils creatAbils bothAbils ->
+    recD
+      "ArtifactCreatureSpec"
+      [ ("artifactCreature_cost", showTreeCost cost)
+      , ("artifactCreature_artifactAbilities", abils artAbils)
+      , ("artifactCreature_creatureAbilities", abils creatAbils)
+      , ("artifactCreature_artifactCreatureAbilities", abils bothAbils)
+      ]
+  TreeArtifactLandSpec artAbils landAbils bothAbils ->
+    recD
+      "ArtifactLandSpec"
+      [ ("artifactLand_artifactAbilities", abils artAbils)
+      , ("artifactLand_landAbilities", abils landAbils)
+      , ("artifactLand_artifactLandAbilities", abils bothAbils)
+      ]
+  TreeBattleSpec cost abilities ->
+    recD "BattleSpec" [("battle_cost", showTreeCost cost), ("battle_abilities", abils abilities)]
+  TreeCreatureSpec cost abilities ->
+    recD "CreatureSpec" [("creature_cost", showTreeCost cost), ("creature_abilities", abils abilities)]
+  TreeEnchantmentSpec cost abilities ->
+    recD
+      "EnchantmentSpec"
+      [("enchantment_cost", showTreeCost cost), ("enchantment_abilities", abils abilities)]
+  TreeEnchantmentCreatureSpec cost creatAbils enchAbils bothAbils ->
+    recD
+      "EnchantmentCreatureSpec"
+      [ ("enchantmentCreature_cost", showTreeCost cost)
+      , ("enchantmentCreature_creatureAbilities", abils creatAbils)
+      , ("enchantmentCreature_enchantmentAbilities", abils enchAbils)
+      , ("enchantmentCreature_enchantmentCreatureAbilities", abils bothAbils)
+      ]
+  TreeInstantSpec cost abilities oneShot ->
+    recD
+      "InstantSpec"
+      [ ("instant_cost", showTreeCost cost)
+      , ("instant_abilities", abils abilities)
+      , ("instant_effect", showTreeWithThis showTreeElect "this" oneShot)
+      ]
+  TreeLandSpec abilities -> recD "LandSpec" [("land_abilities", abils abilities)]
+  TreePlaneswalkerSpec cost loyalty abilities ->
+    recD
+      "PlaneswalkerSpec"
+      [ ("planeswalker_cost", showTreeCost cost)
+      , ("planeswalker_loyalty", showLoyalty loyalty)
+      , ("planeswalker_abilities", abils abilities)
+      ]
+  TreeSorcerySpec cost abilities oneShot ->
+    recD
+      "SorcerySpec"
+      [ ("sorcery_cost", showTreeCost cost)
+      , ("sorcery_abilities", abils abilities)
+      , ("sorcery_effect", showTreeWithThis showTreeElect "this" oneShot)
+      ]
+ where
+  abils :: (IsOTN ot') => Tree [SomeZone WithThisAbility ot'] -> EnvM Doc
+  abils = showTreeList (showTreeSomeZoneWithThisAbility "this")
+
+showTreeCase :: (Tree x -> EnvM Doc) -> Tree (Case x) -> EnvM Doc
+showTreeCase showX = \case
+  TreeCaseFin fin natList ->
+    recD
+      "CaseFin"
+      [ ("caseFin", pure $ treeVarName fin)
+      , ("ofFin", showTreeNatList showX natList)
+      ]
+
+showTreeCondition :: Tree Condition -> EnvM Doc
+showTreeCondition = \case
+  TreeCAnd conds -> app "CAnd" [showTreeConditions conds]
+  TreeCNot cond -> app "CNot" [showTreeCondition cond]
+  TreeCOr conds -> app "COr" [showTreeConditions conds]
+  TreeSatisfies objN reqs ->
+    -- XXX: Keeps the historical double space after "Satisfies".
+    appI (pure "Satisfies ") [showTreeZoneObject objN, showTreeRequirements reqs]
+
+showTreeConditions :: Tree [Condition] -> EnvM Doc
+showTreeConditions = showTreeList showTreeCondition
+
+showTreeCost :: Tree Cost -> EnvM Doc
+showTreeCost = \case
+  TreeAndCosts costs -> app "AndCosts" [showTreeList showTreeCost costs]
+  TreeCostCase case_ -> app "CostCase" [showTreeCase showTreeCost case_]
+  TreeDiscardRandomCost amount -> app "DiscardRandomCost" [pure $ dName $ show amount]
+  TreeExileCost reqs -> app "ExileCost" [showTreeRequirements reqs]
+  TreeLoyaltyCost zoPlaneswalker loyalty ->
+    app "LoyaltyCost" [showTreeZoneObject zoPlaneswalker, showLoyalty loyalty]
+  TreeManaCost cost -> do
+    combinators <- getDataCombinators
+    case combinators of
+      NoDataCombinators -> app "ManaCost" [showManaCostRaw cost]
+      LowDataCombinators -> pure $ dApp "manaCost" [showManaCostArg cost]
+      HighDataCombinators -> pure $ dApp "manaCost" [showManaCostArg cost]
+  TreeOrCosts costs -> app "OrCosts" [showTreeList showTreeCost costs]
+  TreePayLife amount -> app "PayLife" [pure $ dName $ show amount]
+  TreeSacrificeCost reqs -> do
+    sTy <- showTypeOf (proxyOfReqs reqs)
+    reqsDoc <- showTreeRequirements reqs
+    pure $ dTypeApp "SacrificeCost" sTy [reqsDoc]
+  TreeTapCost reqs -> app "TapCost" [showTreeRequirements reqs]
+
+showTreeEffect :: Tree (Effect e) -> EnvM Doc
+showTreeEffect = \case
+  TreeAddMana player mana -> app "AddMana" [showTreeZoneObject player, showManaPool mana]
+  TreeAddToBattlefield player token ->
+    app "AddToBattlefield" [showTreeZoneObject player, showTreeToken token]
+  TreeCantBeRegenerated creature -> app "CantBeRegenerated" [showTreeZoneObject creature]
+  TreeChangeTo before after -> app "ChangeTo" [showTreeZoneObject before, showTreeCard after]
+  TreeCounterAbility obj -> app "CounterAbility" [showTreeZoneObject obj]
+  TreeCounterSpell obj -> app "CounterSpell" [showTreeZoneObject obj]
+  TreeDealDamage source victim damage ->
+    app
+      "DealDamage"
+      [showTreeZoneObject source, showTreeZoneObject victim, showDamage damage]
+  TreeDestroy obj -> app "Destroy" [showTreeZoneObject obj]
+  TreeDrawCards player n -> app "DrawCards" [showTreeZoneObject player, pure $ dName $ show n]
+  TreeEffectCase case_ -> app "EffectCase" [showTreeCase showTreeEffect case_]
+  TreeEffectContinuous effect -> app "EffectContinuous" [showTreeEffect effect]
+  TreeEndTheTurn -> pure $ dName "EndTheTurn"
+  TreeExile obj -> app "Exile" [showTreeZoneObject obj]
+  TreeGainAbility obj ability ->
+    app "GainAbility" [showTreeZoneObject obj, showTreeWithThisAbility "this" ability]
+  TreeGainControl player obj ->
+    app "GainControl" [showTreeZoneObject player, showTreeZoneObject obj]
+  TreeGainLife player n -> app "GainLife" [showTreeZoneObject player, pure $ dName $ show n]
+  TreeLoseAbility obj ability ->
+    app "LoseAbility" [showTreeZoneObject obj, showTreeWithThisAbility "this" ability]
+  TreeLoseLife player n -> app "LoseLife" [showTreeZoneObject player, pure $ dName $ show n]
+  TreePutOntoBattlefield player obj ->
+    app "PutOntoBattlefield" [showTreeZoneObject player, showTreeZoneObject obj]
+  TreeSacrifice player reqs ->
+    app "Sacrifice" [showTreeZoneObject player, showTreeRequirements reqs]
+  TreeSearchLibrary searcher searchee withCard ->
+    app
+      "SearchLibrary"
+      [ showTreeZoneObject searcher
+      , showTreeZoneObject searchee
+      , showTreeWithLinkedObject showTreeElect "card" withCard
+      ]
+  TreeSequence effects -> app "Sequence" [showTreeEffects effects]
+  TreeShuffleLibrary player -> app "ShuffleLibrary" [showTreeZoneObject player]
+  TreeStatDelta creature power toughness ->
+    app
+      "StatDelta"
+      [showTreeZoneObject creature, showPower power, showToughness toughness]
+  TreeTap obj -> app "Tap" [showTreeZoneObject obj]
+  TreeUntap obj -> app "Untap" [showTreeZoneObject obj]
+  TreeUntil electEvent effect -> app "Until" [showTreeElect electEvent, showTreeEffect effect]
+  TreeWithList withList -> app "WithList" [showTreeWithList showTreeEffect withList]
+
+showTreeEffects :: Tree [Effect e] -> EnvM Doc
+showTreeEffects = showTreeList showTreeEffect
+
+showTreeElse :: Tree (Else s e ot) -> EnvM Doc
+showTreeElse = \case
+  TreeElseCost elect -> app "ElseCost" [showTreeElect elect]
+  TreeElseEffect elect -> app "ElseEffect" [showTreeElect elect]
+  TreeElseEvent -> pure $ dName "ElseEvent"
+
+showTreeEnchant :: Tree (Enchant zone ot) -> EnvM Doc
+showTreeEnchant = \case
+  TreeEnchant withObj -> app "Enchant" [showTreeWithLinkedObject showTreeElect "enchanted" withObj]
+
+showTreeEnchantmentType :: Tree (EnchantmentType ot) -> EnvM Doc
+showTreeEnchantmentType = \case
+  TreeAura enchant -> app "Aura" [showTreeEnchant enchant]
+
+showTreeEnchantmentTypes :: Tree [EnchantmentType ot] -> EnvM Doc
+showTreeEnchantmentTypes = showTreeList showTreeEnchantmentType
+
+showTreeEntersStatic :: Tree (EntersStatic zone ot) -> EnvM Doc
+showTreeEntersStatic = \case
+  TreeEntersTapped -> pure $ dName "EntersTapped"
+
+showTreeEvent :: Tree Event -> EnvM Doc
+showTreeEvent = showTreeEventListener' \case TreeProxy -> pure $ dName "Proxy"
+
+showTreeEventListener :: Tree EventListener -> EnvM Doc
+showTreeEventListener = showTreeEventListener' showTreeElect
+
+showTreeEventListener' ::
+  (forall ot. Tree (x ot) -> EnvM Doc) ->
+  Tree (EventListener' x) ->
+  EnvM Doc
+showTreeEventListener' showX = \case
+  TreeBecomesTapped withObject ->
+    app "BecomesTapped" [showTreeWithLinkedObject showX "perm" withObject]
+  TreeEntersBattlefield withObject ->
+    app "EntersBattlefield" [showTreeWithLinkedObject showX "perm" withObject]
+  TreeEntersNonBattlefield withObject ->
+    app "EntersNonBattlefield" [showTreeWithLinkedObject showX "perm" withObject]
+  TreeEvents listeners -> app "Events" [showTreeList (showTreeEventListener' showX) listeners]
+  TreeSpellIsCast withObject ->
+    app "SpellIsCast" [showTreeWithLinkedObject showX "spell" withObject]
+  TreeTimePoint timePoint oneShot ->
+    app "TimePoint" [showTimePoint timePoint, showX oneShot]
+
+showTreeElect :: Tree (Elect s el ot) -> EnvM Doc
+showTreeElect = \case
+  TreeActivePlayer (TreeZO player) treeBody -> do
+    nm <- bindObj "active" player
+    body <- showTreeElect treeBody
+    pure $ dApp "ActivePlayer" [dLam nm body]
+  TreeAll withObjects ->
+    app "All" [showTreeWithMaskedObjects showTreeElect "obj" withObjects]
+  TreeChoose treePlayer withObject ->
+    app
+      "Choose"
+      [showTreeZoneObject treePlayer, showTreeWithMaskedObject showTreeElect "choose" withObject]
+  TreeChooseOption treePlayer natList treeVar treeBody -> do
+    playerDoc <- showTreeZoneObject treePlayer
+    natListDoc <- showTreeNatList showTreeCondition natList
+    body <- showTreeElect treeBody
+    pure $ dApp "ChooseOption" [playerDoc, natListDoc, dLam (treeVarName treeVar) body]
+  TreeElectCondition cond -> app "Condition" [showTreeCondition cond]
+  TreeControllerOf treeZObj treePlayer treeBody ->
+    goTreePlayerOf1 "ControllerOf" "controller" treeZObj treePlayer treeBody
+  TreeElectCost cost -> app "Cost" [showTreeCost cost]
+  TreeElectEffect effect -> app "Effect" [showTreeEffects effect]
+  TreeElectActivated activated -> app "ElectActivated" [showTreeActivatedAbility activated]
+  TreeElectCardFacet post -> app "ElectCardFacet" [showTreeCardCharacteristic post]
+  TreeElectCardSpec post -> app "ElectCardSpec" [showTreeCardSpec post]
+  TreeElectCase case_ -> app "ElectCase" [showTreeCase showTreeElect case_]
+  TreeEndTargets elect -> app "EndTargets" [showTreeElect elect]
+  TreeElectEvent event -> app "Event" [showTreeEvent event]
+  TreeIf cond then_ else_ ->
+    app "If" [showTreeCondition cond, showTreeElect then_, showTreeElse else_]
+  TreeListen listener -> app "Listen" [showTreeEventListener listener]
+  TreeOwnerOf treeZObj treePlayer treeBody ->
+    goTreePlayerOf1 "OwnerOf" "owner" treeZObj treePlayer treeBody
+  TreePlayerPays treePlayer cost treeVar treeBody -> do
+    playerDoc <- showTreeZoneObject treePlayer
+    costDoc <- showTreeCost cost
+    body <- showTreeElect treeBody
+    pure $ dApp "PlayerPays" [playerDoc, costDoc, dLam (treeVarName treeVar) body]
+  TreeRandom withObject ->
+    app "Random" [showTreeWithMaskedObject showTreeElect "rand" withObject]
+  TreeTarget treePlayer withObject ->
+    app
+      "Target"
+      [showTreeZoneObject treePlayer, showTreeWithMaskedObject showTreeElect "target" withObject]
+  TreeVariableFromPower treeCreature treeVar treeBody -> do
+    creatureDoc <- showTreeZoneObject treeCreature
+    body <- showTreeElect treeBody
+    pure $ dApp "VariableFromPower" [creatureDoc, dLam (treeVarName treeVar) body]
+  TreeVariableInt treeVar treeBody -> do
+    body <- showTreeElect treeBody
+    pure $ dApp "VariableInt" [dLam (treeVarName treeVar) body]
+  TreeYour (TreeZO player) treeBody -> do
+    nm <- bindObj "you" player
+    body <- showTreeElect treeBody
+    pure $ dApp "Your" [dLam nm body]
+ where
+  goTreePlayerOf1 ::
+    (IsZO zone OTNAny) =>
+    String ->
+    String ->
+    Tree (ZO zone OTNAny) ->
+    Tree (ZO 'ZBattlefield OTNPlayer) ->
+    Tree (Elect s el ot) ->
+    EnvM Doc
+  goTreePlayerOf1 consName varName treeZObj (TreeZO player) treeBody = do
+    let objId = case treeZObj of TreeZO z -> getObjectId z
+    objPrefix <- getObjectNamePrefix objId
+    nm <- bindObj (case objPrefix == "this" of True -> "you"; False -> varName) player
+    zObjDoc <- showTreeZoneObject treeZObj
+    body <- showTreeElect treeBody
+    pure $ dApp consName [zObjDoc, dLam nm body]
+
+showTreeNatList ::
+  forall u n x.
+  (IsUser u) => (Tree x -> EnvM Doc) -> Tree (NatList u n x) -> EnvM Doc
+showTreeNatList showX = \case
+  TreeLZ u x -> appI (pure $ fromString $ "LZ (" <> show u <> ")") [showX x]
+  TreeLS u x xs ->
+    appI (pure $ fromString $ "LS (" <> show u <> ")") [showX x, showTreeNatList showX xs]
+
+showTreeRequirement :: Tree (Requirement zone ot) -> EnvM Doc
+showTreeRequirement = \case
+  TreeControlledBy obj -> app "ControlledBy" [showTreeZoneObject obj]
+  TreeControlsA req -> app "ControlsA" [showTreeRequirement req]
+  TreeHasAbility ability ->
+    app "HasAbility" [showTreeSomeZoneWithThisAbility "this" ability]
+  TreeHasLandType landType -> app "HasLandType" [showLandType landType]
+  TreeIs objN -> app "Is" [showTreeZoneObject objN]
+  TreeIsOpponentOf player -> app "IsOpponentOf" [showTreeZoneObject player]
+  TreeIsTapped -> pure $ dName "IsTapped"
+  TreeNot req -> app "Not" [showTreeRequirement req]
+  TreeOfColors colors -> app "OfColors" [showColors colors]
+  TreeOwnedBy obj -> app "OwnedBy" [showTreeZoneObject obj]
+  TreeRAnd reqs -> app "RAnd" [showTreeRequirements reqs]
+  TreeROr reqs -> app "ROr" [showTreeRequirements reqs]
+  TreeReq2 reqsA reqsB -> app "Req2" [showTreeRequirements reqsA, showTreeRequirements reqsB]
+  TreeReq3 reqsA reqsB reqsC ->
+    app "Req3" [showTreeRequirements reqsA, showTreeRequirements reqsB, showTreeRequirements reqsC]
+  TreeReq4 reqsA reqsB reqsC reqsD ->
+    app
+      "Req4"
+      [ showTreeRequirements reqsA
+      , showTreeRequirements reqsB
+      , showTreeRequirements reqsC
+      , showTreeRequirements reqsD
+      ]
+  TreeReq5 reqsA reqsB reqsC reqsD reqsE ->
+    app
+      "Req5"
+      [ showTreeRequirements reqsA
+      , showTreeRequirements reqsB
+      , showTreeRequirements reqsC
+      , showTreeRequirements reqsD
+      , showTreeRequirements reqsE
+      ]
+
+showTreeRequirements :: Tree [Requirement zone ot] -> EnvM Doc
+showTreeRequirements = showTreeList showTreeRequirement
+
+showTreeSetCard :: Tree (SetCard ot) -> EnvM Doc
+showTreeSetCard = \case
+  TreeSetCard set rarity card ->
+    appI (pure $ fromString $ "SetCard " <> show set <> " " <> show rarity) [showTreeCard card]
+
+showTreeSetToken :: Tree (SetToken ot) -> EnvM Doc
+showTreeSetToken = \case
+  TreeSetToken set rarity token ->
+    appI
+      (pure $ fromString $ "SetToken " <> show set <> " " <> show rarity)
+      [showTreeToken token]
+
+showTreeSomeZone ::
+  forall liftZOT ot.
+  (forall zone. Tree (liftZOT zone ot) -> EnvM Doc) ->
+  Tree (SomeZone liftZOT ot) ->
+  EnvM Doc
+showTreeSomeZone showM = \case
+  TreeSomeZone x -> app "SomeZone" [showM x]
+  TreeSomeZone2 x -> app "SomeZone2" [showM x]
+
+showTreeStaticAbility :: Tree (StaticAbility zone ot) -> EnvM Doc
+showTreeStaticAbility = \case
+  TreeAs electListener -> app "As" [showTreeElect electListener]
+  TreeBestow cost enchant -> app "Bestow" [showTreeElect cost, showTreeEnchant enchant]
+  TreeCantBlock -> pure $ dName "CantBlock"
+  TreeDefender -> pure $ dName "Defender"
+  TreeEnters entersStatic -> app "Enters" [showTreeEntersStatic entersStatic]
+  TreeFirstStrike -> pure $ dName "FirstStrike"
+  TreeFlying -> pure $ dName "Flying"
+  TreeFuse -> pure $ dName "Fuse"
+  TreeHaste -> pure $ dName "Haste"
+  TreeLandwalk reqs -> app "Landwalk" [showTreeRequirements reqs]
+  TreePhasing -> pure $ dName "Phasing"
+  TreeStaticContinuous continuous -> app "StaticContinuous" [showTreeElect continuous]
+  TreeSuspend time cost -> app "Suspend" [pure $ dName $ show time, showTreeElect cost]
+  TreeTrample -> pure $ dName "Trample"
+
+showTreeToken :: Tree (Token ot) -> EnvM Doc
+showTreeToken = \case
+  TreeToken card -> app "Token" [showTreeCard card]
+
+showTreeTriggeredAbility :: Tree (TriggeredAbility zone ot) -> EnvM Doc
+showTreeTriggeredAbility = \case
+  TreeWhen listener -> app "When" [showTreeElect listener]
+
+showTreeWithLinkedObject ::
+  forall liftOT zone ot.
+  (IsZO zone ot) =>
+  (forall ot'. Tree (liftOT ot') -> EnvM Doc) ->
+  String ->
+  Tree (WithLinkedObject liftOT zone ot) ->
+  EnvM Doc
+showTreeWithLinkedObject showM memo = \case
+  TreeLinked1 reqs treeZo body -> go "Linked1" reqs treeZo body
+  TreeLinked2 reqs treeZo body -> go "Linked2" reqs treeZo body
+  TreeLinked3 reqs treeZo body -> go "Linked3" reqs treeZo body
+  TreeLinked4 reqs treeZo body -> go "Linked4" reqs treeZo body
+  TreeLinked5 reqs treeZo body -> go "Linked5" reqs treeZo body
+ where
+  go ::
+    (IsZO zone ot) =>
+    String ->
+    Tree [Requirement zone ot] ->
+    Tree (ZO zone ot) ->
+    Tree (liftOT ot) ->
+    EnvM Doc
+  go consName reqs treeZo@(TreeZO zo) body = do
+    combinators <- getDataCombinators
+    sTy <- showTypeOf (proxyOfZo treeZo)
+    reqsDoc <- showTreeRequirements reqs
+    nm <- bindObj memo zo
+    bodyDoc <- showM body
+    pure case combinators of
+      HighDataCombinators -> dTypeApp "linked" sTy [reqsDoc, dLam nm bodyDoc]
+      _ -> dApp consName [reqsDoc, dLam (dAnnBinder nm (zoTypeOf treeZo)) bodyDoc]
+
+showTreeWithList ::
+  (Tree ret -> EnvM Doc) -> Tree (WithList ret zone ot) -> EnvM Doc
+showTreeWithList showRet = \case
+  TreeCountOf zos treeVar treeRet -> do
+    zosDoc <- showZoneObjects zos
+    retDoc <- showRet treeRet
+    pure $ dApp "CountOf" [zosDoc, dLam (treeVarName treeVar) retDoc]
+  TreeEach zos treeZo treeRet -> do
+    zosDoc <- showZoneObjects zos
+    nm <- case treeZo of TreeZO zo -> objBinder zo
+    retDoc <- showRet treeRet
+    pure $ dApp "Each" [zosDoc, dLam nm retDoc]
+  TreeSuchThat reqs withList ->
+    app "SuchThat" [showTreeRequirements reqs, showTreeWithList showRet withList]
+
+showTreeWithMaskedObject ::
+  forall liftOT zone ot.
+  (IsZone zone) =>
+  (Tree (liftOT ot) -> EnvM Doc) ->
+  String ->
+  Tree (WithMaskedObject liftOT zone ot) ->
+  EnvM Doc
+showTreeWithMaskedObject showM memo = \case
+  TreeMasked1 reqs treeZo body -> go "Masked1" reqs treeZo body
+  TreeMasked2 reqs treeZo body -> go "Masked2" reqs treeZo body
+  TreeMasked3 reqs treeZo body -> go "Masked3" reqs treeZo body
+  TreeMasked4 reqs treeZo body -> go "Masked4" reqs treeZo body
+  TreeMasked5 reqs treeZo body -> go "Masked5" reqs treeZo body
+  TreeMasked6 reqs treeZo body -> go "Masked6" reqs treeZo body
+  TreeMasked7 reqs treeZo body -> go "Masked7" reqs treeZo body
+ where
+  go ::
+    (IsZO zone ot') =>
+    String ->
+    Tree [Requirement zone ot'] ->
+    Tree (ZO zone ot') ->
+    Tree (liftOT ot) ->
+    EnvM Doc
+  go consName reqs treeZo@(TreeZO zo) body = do
+    combinators <- getDataCombinators
+    sTy <- showTypeOf (proxyOfZo treeZo)
+    reqsDoc <- showTreeRequirements reqs
+    nm <- bindObj memo zo
+    bodyDoc <- showM body
+    pure case combinators of
+      HighDataCombinators -> dTypeApps "masked" (sTy : zoneTypeArgs @zone) [reqsDoc, dLam nm bodyDoc]
+      _ -> dApp consName [reqsDoc, dLam (dAnnBinder nm (zoTypeOf treeZo)) bodyDoc]
+
+showTreeWithMaskedObjects ::
+  forall liftOT zone ot.
+  (IsZone zone) =>
+  (Tree (liftOT ot) -> EnvM Doc) ->
+  String ->
+  Tree (WithMaskedObjects liftOT zone ot) ->
+  EnvM Doc
+showTreeWithMaskedObjects showM memo = \case
+  TreeMaskeds1 reqs treeZo body -> go "Maskeds1" reqs treeZo body
+  TreeMaskeds2 reqs treeZo body -> go "Maskeds2" reqs treeZo body
+  TreeMaskeds3 reqs treeZo body -> go "Maskeds3" reqs treeZo body
+  TreeMaskeds4 reqs treeZo body -> go "Maskeds4" reqs treeZo body
+  TreeMaskeds5 reqs treeZo body -> go "Maskeds5" reqs treeZo body
+  TreeMaskeds6 reqs treeZo body -> go "Maskeds6" reqs treeZo body
+  TreeMaskeds7 reqs treeZo body -> go "Maskeds7" reqs treeZo body
+ where
+  go ::
+    (IsZO zone ot') =>
+    String ->
+    Tree [Requirement zone ot'] ->
+    Tree (ZO zone ot') ->
+    Tree (liftOT ot) ->
+    EnvM Doc
+  go consName reqs treeZo@(TreeZO zo) body = do
+    combinators <- getDataCombinators
+    sTy <- showTypeOf (proxyOfZo treeZo)
+    reqsDoc <- showTreeRequirements reqs
+    registerTreeObject memo zo
+    nm <- pluralize (showZoneObject zo)
+    bodyDoc <- showM body
+    pure case combinators of
+      HighDataCombinators -> dTypeApps "maskeds" (sTy : zoneTypeArgs @zone) [reqsDoc, dLam nm bodyDoc]
+      _ -> dApp consName [reqsDoc, dLam (dAnnBinder nm (listZoTypeOf treeZo)) bodyDoc]
+
+-- | @thisObject \\binder -> body@ (binder is one name, or a tuple). No @\@ot@
+-- type application: 'thisObject'\'s first visible type parameter is the @zone@
+-- (from @class AsWithThis zone ot@), so annotating @ot@ there would not
+-- type-check. The hand-written cards likewise leave @ot@ to be inferred.
+showTreeWithThis ::
+  forall liftOT zone ot.
+  (IsZO zone ot) =>
+  (forall ot'. Tree (liftOT ot') -> EnvM Doc) ->
+  String ->
+  Tree (WithThis liftOT zone ot) ->
+  EnvM Doc
+showTreeWithThis = showTreeWithThisWrapped (\lam -> dApp "thisObject" [lam])
+
+-- | 'showTreeWithThis' generalized over the head that wraps the
+-- @\\binder -> body@ lambda: 'showTreeWithThis' uses @thisObject@; the ability
+-- combinators use @activated \@zone@ / @static \@zone@ / @triggered \@zone@ (see
+-- 'showTreeSomeZoneWithThisAbility'). Under (F) below 'HighDataCombinators'
+-- the wrap head is ignored and the raw @ThisN@ constructor is emitted instead,
+-- with each binder 'dAnnBinder'-annotated so the existential @zone@ (which the
+-- combinators pin with @\@zone@) is pinned by the binder types.
+showTreeWithThisWrapped ::
+  forall liftOT zone ot.
+  (IsZO zone ot) =>
+  (Doc -> Doc) ->
+  (forall ot'. Tree (liftOT ot') -> EnvM Doc) ->
+  String ->
+  Tree (WithThis liftOT zone ot) ->
+  EnvM Doc
+showTreeWithThisWrapped wrap showM memo tree = do
+  combinators <- getDataCombinators
+  let bind :: (IsZO zone ot'') => Tree (ZO zone ot'') -> EnvM Doc
+      bind treeZo@(TreeZO zo) = do
+        nm <- bindObj memo zo
+        pure case combinators of
+          HighDataCombinators -> nm
+          _ -> dAnnBinder nm (zoTypeOf treeZo)
+      withTy :: String -> [EnvM Doc] -> Tree (liftOT ot) -> EnvM Doc
+      withTy consName binders body = do
+        names <- sequence binders
+        bodyDoc <- showM body
+        let lam = dLam (dTuple names) bodyDoc
+        pure case combinators of
+          HighDataCombinators -> wrap lam
+          _ -> dApp consName [lam]
+  case tree of
+    TreeThis1 a body -> withTy "This1" [bind a] body
+    TreeThis2 a b body -> withTy "This2" [bind a, bind b] body
+    TreeThis3 a b c body -> withTy "This3" [bind a, bind b, bind c] body
+    TreeThis4 a b c d body -> withTy "This4" [bind a, bind b, bind c, bind d] body
+    TreeThis5 a b c d e body -> withTy "This5" [bind a, bind b, bind c, bind d, bind e] body
+    TreeThis6 a b c d e f body -> withTy "This6" [bind a, bind b, bind c, bind d, bind e, bind f] body
+ where
+  dTuple :: [Doc] -> Doc
+  dTuple = \case
+    [one] -> one
+    many -> "(" <> dintercalate ", " many <> ")"
+
+showTreeWithThisAbility ::
+  String -> Tree (WithThisAbility zone ot) -> EnvM Doc
+showTreeWithThisAbility memo = \case
+  TreeWithThisActivated withThis ->
+    -- The @WithThisActivated@ body is an @ElectOT@-wrapped @Elect@ (see
+    -- @activated'@); emit the @ElectOT@ constructor rather than hiding it, so the
+    -- rendered @thisObject \\this -> ElectOT $ ...@ type-checks.
+    app "WithThisActivated" [showTreeWithThis (\case TreeElectOT e -> fmap (\d -> dApp "ElectOT" [d]) (showTreeElect e)) memo withThis]
+  TreeWithThisStatic withThis ->
+    app "WithThisStatic" [showTreeWithThis showTreeStaticAbility memo withThis]
+  TreeWithThisTriggered withThis ->
+    app "WithThisTriggered" [showTreeWithThis showTreeTriggeredAbility memo withThis]
+
+-- | Render @SomeZone (WithThisAbility ...)@ as the authoring combinator it came
+-- from: @activated \@zone@ / @static \@zone@ / @triggered \@zone@ (see
+-- 'MtgPure.Model.Combinators'). The @SomeZone@ + @thisObject@ + (for activated)
+-- @ElectOT@ desugaring is folded away to match how the cards are written. The
+-- @\@zone@ is always emitted: an ability's zone is frequently not inferable
+-- (e.g. an ability with no target to pin it, like a mana ability). (The tuple
+-- @SomeZone2@ form cannot hold a @WithThisAbility@, so it does not arise here.)
+--
+-- Under (F) below 'HighDataCombinators' the desugaring is spelled out
+-- instead: @SomeZone (WithThisActivated (This1 \\(this :: ZO ...) -> ...))@,
+-- with the zone pinned by the annotated 'This1' binder rather than @\@zone@.
+showTreeSomeZoneWithThisAbility ::
+  forall ot.
+  String ->
+  Tree (SomeZone WithThisAbility ot) ->
+  EnvM Doc
+showTreeSomeZoneWithThisAbility memo tree = do
+  combinators <- getDataCombinators
+  case tree of
+    TreeSomeZone x -> case combinators of
+      HighDataCombinators -> ability x
+      _ -> app "SomeZone" [showTreeWithThisAbility memo x]
+ where
+  ability :: forall zone. (IsZO zone ot) => Tree (WithThisAbility zone ot) -> EnvM Doc
+  ability = \case
+    TreeWithThisActivated withThis ->
+      -- @activated@ wraps the body in @ElectOT@ itself, so show the inner @Elect@.
+      showTreeWithThisWrapped (comb "activated") (\case TreeElectOT e -> showTreeElect e) memo withThis
+    TreeWithThisStatic withThis ->
+      showTreeWithThisWrapped (comb "static") showTreeStaticAbility memo withThis
+    TreeWithThisTriggered withThis ->
+      showTreeWithThisWrapped (comb "triggered") showTreeTriggeredAbility memo withThis
+   where
+    comb :: String -> Doc -> Doc
+    comb name lam = dTypeApps name [DString ('\'' : show (litZone @zone))] [lam]
+
+showTreeWithThisZ ::
+  forall liftZOT zone ot.
+  (forall ot'. Tree (liftZOT zone ot') -> EnvM Doc) ->
+  String ->
+  Tree (WithThisZ liftZOT zone ot) ->
+  EnvM Doc
+showTreeWithThisZ showM memo = \case
+  TreeWithThisZ withThis -> app "WithThisZ" [showTreeWithThis showM memo withThis]

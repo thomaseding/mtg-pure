@@ -150,6 +150,7 @@ library
         MtgPure.Model.Object.ObjectId
         MtgPure.Model.Object.ObjectN
         MtgPure.Model.Object.OT
+        MtgPure.Model.Object.OTKAliases
         MtgPure.Model.Object.OTKN
         MtgPure.Model.Object.OTN
         MtgPure.Model.Object.OTNAliases
@@ -307,6 +308,17 @@ library
         Test.Game.RagingGoblin
         Test.Game.Shock
         Test.Game.StoneRain
+        Test.Render.CardOracleAll
+        Test.Render.CardOracleBlockArguments
+        Test.Render.CardOracleDefault
+        Test.Render.CardOracleDefaultHighDataCombinators
+        Test.Render.CardOracleDefaultLowDataCombinators
+        Test.Render.CardOracleDefaultNoDataCombinators
+        Test.Render.CardOracleGen
+        Test.Render.CardOracleMultiline
+        Test.Render.CardOracleSmartAliasing
+        Test.Render.CardOracleWildcardUnusedVars
+        Test.Render.ShowCompiles
 
     default-extensions:
         AllowAmbiguousTypes,

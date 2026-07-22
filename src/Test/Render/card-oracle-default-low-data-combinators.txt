@@ -1,0 +1,1783 @@
+==== Acceptable Losses ====
+AnyCard1 $ Card "Acceptable Losses" $ Your \you1 ->
+  ElectCardFacet SorceryCharacteristic
+    { sorcery_colors = toColors R
+    , sorcery_supertypes = []
+    , sorcery_spec = Target you1 $ Masked1 [] \(target2 :: ZO 'ZBattlefield (OT1 'OTCreature)) ->
+        ElectCardSpec SorcerySpec
+          { sorcery_cost = AndCosts [manaCost (3, R), DiscardRandomCost 1]
+          , sorcery_abilities = []
+          , sorcery_effect = This1 \(this3 :: ZO 'ZStack (OT1 'OTSorcery)) ->
+              Effect [DealDamage (asDamageSource this3) (asCreaturePlayerPlaneswalker target2) $ Damage 5]
+          }
+    }
+
+==== All Is Dust ====
+AnyCard1 $ Card "All Is Dust" $ ElectCardFacet SorceryCharacteristic
+  { sorcery_colors = toColors ()
+  , sorcery_supertypes = [Tribal [Eldrazi]]
+  , sorcery_spec = ElectCardSpec SorcerySpec
+      { sorcery_cost = manaCost 7
+      , sorcery_abilities = []
+      , sorcery_effect = This1 \(_ :: ZO 'ZStack (OT1 'OTSorcery)) ->
+          All $ Maskeds1 [] \(obj1s :: List (ZO 'ZBattlefield (OT1 'OTPlayer))) ->
+            All $ Maskeds6 [ROr [OfColors $ toColors W, OfColors $ toColors U, OfColors $ toColors B, OfColors $ toColors R, OfColors $ toColors G]] \(obj2s :: List (ZO 'ZBattlefield OTNPermanent)) ->
+              Effect
+              [ WithList $ Each obj1s \obj1 ->
+                  WithList $ SuchThat [ControlledBy obj1] $ Each obj2s \obj2 ->
+                    Sacrifice obj1 [Is obj2]
+              ]
+      }
+  }
+
+==== Alpine Meadow ====
+AnyCard1 $ Card "Alpine Meadow" $ ElectCardFacet LandCharacteristic
+  { land_supertypes = [Snow]
+  , land_landTypes = [BasicLand Mountain, BasicLand Plains]
+  , land_spec = LandSpec
+      { land_abilities =
+        [ SomeZone $ WithThisStatic $ This1 \(_ :: ZO 'ZBattlefield (OT1 'OTLand)) ->
+            Enters EntersTapped
+        ]
+      }
+  }
+
+==== Ancestral Recall ====
+AnyCard1 $ Card "Ancestral Recall" $ Your \you1 ->
+  ElectCardFacet InstantCharacteristic
+    { instant_colors = toColors U
+    , instant_supertypes = []
+    , instant_spec = ElectCardSpec InstantSpec
+        { instant_cost = OrCosts []
+        , instant_abilities = []
+        , instant_effect = This1 \(_ :: ZO 'ZStack (OT1 'OTInstant)) ->
+            Effect [DrawCards you1 3]
+        }
+    }
+
+==== Ancestral Vision ====
+AnyCard1 $ Card "Ancestral Vision" $ Your \you1 ->
+  ElectCardFacet SorceryCharacteristic
+    { sorcery_colors = toColors U
+    , sorcery_supertypes = []
+    , sorcery_spec = Target you1 $ Masked1 [] \(target2 :: ZO 'ZBattlefield (OT1 'OTPlayer)) ->
+        ElectCardSpec SorcerySpec
+          { sorcery_cost = OrCosts []
+          , sorcery_abilities =
+            [ SomeZone $ WithThisStatic $ This1 \(_ :: ZO 'ZBattlefield (OT1 'OTSorcery)) ->
+                Suspend 4 $ Cost $ manaCost U
+            ]
+          , sorcery_effect = This1 \(_ :: ZO 'ZStack (OT1 'OTSorcery)) ->
+              Effect [DrawCards target2 3]
+          }
+    }
+
+==== Arctic Flats ====
+AnyCard1 $ Card "Arctic Flats" $ ElectCardFacet LandCharacteristic
+  { land_supertypes = [Snow]
+  , land_landTypes = []
+  , land_spec = LandSpec
+      { land_abilities =
+        [ SomeZone $ WithThisActivated $ This1 \(this1 :: ZO 'ZBattlefield (OT1 'OTLand)) ->
+            ElectOT $ ControllerOf (asAny this1) \you2 ->
+              ElectActivated Ability
+                { activated_cost = TapCost [Is this1]
+                , activated_effect = Effect [AddMana you2 $ toManaPool G]
+                }
+        , SomeZone $ WithThisActivated $ This1 \(this3 :: ZO 'ZBattlefield (OT1 'OTLand)) ->
+            ElectOT $ ControllerOf (asAny this3) \you4 ->
+              ElectActivated Ability
+                { activated_cost = TapCost [Is this3]
+                , activated_effect = Effect [AddMana you4 $ toManaPool W]
+                }
+        ]
+      }
+  }
+
+==== Arctic Treeline ====
+AnyCard1 $ Card "Arctic Treeline" $ ElectCardFacet LandCharacteristic
+  { land_supertypes = [Snow]
+  , land_landTypes = [BasicLand Forest, BasicLand Plains]
+  , land_spec = LandSpec
+      { land_abilities =
+        [ SomeZone $ WithThisStatic $ This1 \(_ :: ZO 'ZBattlefield (OT1 'OTLand)) ->
+            Enters EntersTapped
+        ]
+      }
+  }
+
+==== Backlash ====
+AnyCard1 $ Card "Backlash" $ Your \you1 ->
+  ElectCardFacet InstantCharacteristic
+    { instant_colors = toColors (B,R)
+    , instant_supertypes = []
+    , instant_spec = Target you1 $ Masked1 [Not IsTapped] \(target2 :: ZO 'ZBattlefield (OT1 'OTCreature)) ->
+        ElectCardSpec InstantSpec
+          { instant_cost = manaCost (1, B, R)
+          , instant_abilities = []
+          , instant_effect = This1 \(_ :: ZO 'ZStack (OT1 'OTInstant)) ->
+              ControllerOf (asAny target2) \controller3 ->
+                VariableFromPower target2 \x ->
+                  Effect [DealDamage (asDamageSource target2) (asCreaturePlayerPlaneswalker controller3) $ VariableDamage x]
+          }
+    }
+
+==== Bayou ====
+AnyCard1 $ Card "Bayou" $ ElectCardFacet LandCharacteristic
+  { land_supertypes = []
+  , land_landTypes = [BasicLand Forest, BasicLand Swamp]
+  , land_spec = LandSpec
+      { land_abilities = []
+      }
+  }
+
+==== Birds of Paradise ====
+AnyCard1 $ Card "Birds of Paradise" $ ElectCardFacet CreatureCharacteristic
+  { creature_colors = toColors G
+  , creature_supertypes = []
+  , creature_creatureTypes = [Bird]
+  , creature_power = Power 0
+  , creature_toughness = Toughness 1
+  , creature_spec = CreatureSpec
+      { creature_cost = manaCost G
+      , creature_abilities =
+        [ SomeZone $ WithThisActivated $ This1 \(this1 :: ZO 'ZBattlefield (OT1 'OTCreature)) ->
+            ElectOT $ ControllerOf (asAny this1) \you2 ->
+              ElectActivated Ability
+                { activated_cost = TapCost [Is this1]
+                , activated_effect = ChooseOption you2 (LS (White) (CAnd []) $ LS (Blue) (CAnd []) $ LS (Black) (CAnd []) $ LS (Red) (CAnd []) $ LZ (Green) $ CAnd []) \x ->
+                    Effect
+                    [ EffectCase CaseFin
+                        { caseFin = x
+                        , ofFin = LS (()) (AddMana you2 $ toManaPool W) $ LS (()) (AddMana you2 $ toManaPool U) $ LS (()) (AddMana you2 $ toManaPool B) $ LS (()) (AddMana you2 $ toManaPool R) $ LZ (()) $ AddMana you2 $ toManaPool G
+                        }
+                    ]
+                }
+        ]
+      }
+  }
+
+==== Black Lotus ====
+AnyCard1 $ Card "Black Lotus" $ ElectCardFacet ArtifactCharacteristic
+  { artifact_colors = toColors ()
+  , artifact_supertypes = []
+  , artifact_artifactTypes = []
+  , artifact_spec = ArtifactSpec
+      { artifact_cost = manaCost 0
+      , artifact_abilities =
+        [ SomeZone $ WithThisActivated $ This1 \(this1 :: ZO 'ZBattlefield (OT1 'OTArtifact)) ->
+            ElectOT $ ControllerOf (asAny this1) \you2 ->
+              ElectActivated Ability
+                { activated_cost = AndCosts [TapCost [Is this1], SacrificeCost @(OT1 'OTArtifact) [Is this1]]
+                , activated_effect = ChooseOption you2 (LS (White) (CAnd []) $ LS (Blue) (CAnd []) $ LS (Black) (CAnd []) $ LS (Red) (CAnd []) $ LZ (Green) $ CAnd []) \x ->
+                    Effect
+                    [ EffectCase CaseFin
+                        { caseFin = x
+                        , ofFin = LS (()) (AddMana you2 $ toManaPool (W, W, W)) $ LS (()) (AddMana you2 $ toManaPool (U, U, U)) $ LS (()) (AddMana you2 $ toManaPool (B, B, B)) $ LS (()) (AddMana you2 $ toManaPool (R, R, R)) $ LZ (()) $ AddMana you2 $ toManaPool (G, G, G)
+                        }
+                    ]
+                }
+        ]
+      }
+  }
+
+==== Blaze ====
+AnyCard1 $ Card "Blaze" $ Your \you1 ->
+  ElectCardFacet SorceryCharacteristic
+    { sorcery_colors = toColors R
+    , sorcery_supertypes = []
+    , sorcery_spec = VariableInt \x ->
+        Target you1 $ Masked3 [] \(target2 :: ZO 'ZBattlefield OTNCreaturePlayerPlaneswalker) ->
+          ElectCardSpec SorcerySpec
+            { sorcery_cost = manaCost (VariableMana @'NonSnow @'Ty1 x, R)
+            , sorcery_abilities = []
+            , sorcery_effect = This1 \(this3 :: ZO 'ZStack (OT1 'OTSorcery)) ->
+                Effect [DealDamage (asDamageSource this3) target2 $ VariableDamage x]
+            }
+    }
+
+==== Blood Moon ====
+AnyCard1 $ Card "Blood Moon" $ ElectCardFacet EnchantmentCharacteristic
+  { enchantment_colors = toColors R
+  , enchantment_supertypes = []
+  , enchantment_enchantmentTypes = []
+  , enchantment_spec = EnchantmentSpec
+      { enchantment_cost = manaCost (2, R)
+      , enchantment_abilities =
+        [ SomeZone $ WithThisStatic $ This1 \(_ :: ZO 'ZBattlefield (OT1 'OTEnchantment)) ->
+            StaticContinuous $ All $ Maskeds1 [RAnd [Not $ HasLandType $ BasicLand Forest, Not $ HasLandType $ BasicLand Island, Not $ HasLandType $ BasicLand Mountain, Not $ HasLandType $ BasicLand Plains, Not $ HasLandType $ BasicLand Swamp]] \(obj1s :: List (ZO 'ZBattlefield (OT1 'OTLand))) ->
+              Effect
+              [ WithList $ Each obj1s \obj1 ->
+                  ChangeTo (asPermanent obj1) $ Card "Mountain" $ ElectCardFacet LandCharacteristic
+                    { land_supertypes = []
+                    , land_landTypes = [BasicLand Mountain]
+                    , land_spec = LandSpec
+                        { land_abilities = []
+                        }
+                    }
+              ]
+        ]
+      }
+  }
+
+==== Boreal Druid ====
+AnyCard1 $ Card "Boreal Druid" $ ElectCardFacet CreatureCharacteristic
+  { creature_colors = toColors G
+  , creature_supertypes = [Snow]
+  , creature_creatureTypes = [Elf, Druid]
+  , creature_power = Power 1
+  , creature_toughness = Toughness 1
+  , creature_spec = CreatureSpec
+      { creature_cost = manaCost G
+      , creature_abilities =
+        [ SomeZone $ WithThisActivated $ This1 \(this1 :: ZO 'ZBattlefield (OT1 'OTCreature)) ->
+            ElectOT $ ControllerOf (asAny this1) \you2 ->
+              ElectActivated Ability
+                { activated_cost = TapCost [Is this1]
+                , activated_effect = Effect [AddMana you2 $ toManaPool C]
+                }
+        ]
+      }
+  }
+
+==== Boreal Shelf ====
+AnyCard1 $ Card "Boreal Shelf" $ ElectCardFacet LandCharacteristic
+  { land_supertypes = [Snow]
+  , land_landTypes = []
+  , land_spec = LandSpec
+      { land_abilities =
+        [ SomeZone $ WithThisActivated $ This1 \(this1 :: ZO 'ZBattlefield (OT1 'OTLand)) ->
+            ElectOT $ ControllerOf (asAny this1) \you2 ->
+              ElectActivated Ability
+                { activated_cost = TapCost [Is this1]
+                , activated_effect = Effect [AddMana you2 $ toManaPool W]
+                }
+        , SomeZone $ WithThisActivated $ This1 \(this3 :: ZO 'ZBattlefield (OT1 'OTLand)) ->
+            ElectOT $ ControllerOf (asAny this3) \you4 ->
+              ElectActivated Ability
+                { activated_cost = TapCost [Is this3]
+                , activated_effect = Effect [AddMana you4 $ toManaPool U]
+                }
+        ]
+      }
+  }
+
+==== Braidwood Cup ====
+AnyCard1 $ Card "Braidwood Cup" $ ElectCardFacet ArtifactCharacteristic
+  { artifact_colors = toColors ()
+  , artifact_supertypes = []
+  , artifact_artifactTypes = []
+  , artifact_spec = ArtifactSpec
+      { artifact_cost = manaCost 3
+      , artifact_abilities =
+        [ SomeZone $ WithThisActivated $ This1 \(this1 :: ZO 'ZBattlefield (OT1 'OTArtifact)) ->
+            ElectOT $ ControllerOf (asAny this1) \you2 ->
+              ElectActivated Ability
+                { activated_cost = TapCost [Is this1]
+                , activated_effect = Effect [GainLife you2 1]
+                }
+        ]
+      }
+  }
+
+==== City of Brass ====
+AnyCard1 $ Card "City of Brass" $ ElectCardFacet LandCharacteristic
+  { land_supertypes = []
+  , land_landTypes = []
+  , land_spec = LandSpec
+      { land_abilities =
+        [ SomeZone $ WithThisTriggered $ This1 \(this1 :: ZO 'ZBattlefield (OT1 'OTLand)) ->
+            When $ Listen $ BecomesTapped $ Linked1 [Is this1] \(_ :: ZO 'ZBattlefield (OT1 'OTLand)) ->
+              ControllerOf (asAny this1) \you2 ->
+                Effect [DealDamage (asDamageSource this1) (asCreaturePlayerPlaneswalker you2) $ Damage 1]
+        , SomeZone $ WithThisActivated $ This1 \(this3 :: ZO 'ZBattlefield (OT1 'OTLand)) ->
+            ElectOT $ ControllerOf (asAny this3) \you4 ->
+              ElectActivated Ability
+                { activated_cost = TapCost [Is this3]
+                , activated_effect = ChooseOption you4 (LS (White) (CAnd []) $ LS (Blue) (CAnd []) $ LS (Black) (CAnd []) $ LS (Red) (CAnd []) $ LZ (Green) $ CAnd []) \x ->
+                    Effect
+                    [ EffectCase CaseFin
+                        { caseFin = x
+                        , ofFin = LS (()) (AddMana you4 $ toManaPool W) $ LS (()) (AddMana you4 $ toManaPool U) $ LS (()) (AddMana you4 $ toManaPool B) $ LS (()) (AddMana you4 $ toManaPool R) $ LZ (()) $ AddMana you4 $ toManaPool G
+                        }
+                    ]
+                }
+        ]
+      }
+  }
+
+==== Cleanse ====
+AnyCard1 $ Card "Cleanse" $ ElectCardFacet SorceryCharacteristic
+  { sorcery_colors = toColors W
+  , sorcery_supertypes = []
+  , sorcery_spec = ElectCardSpec SorcerySpec
+      { sorcery_cost = manaCost (2, W, W)
+      , sorcery_abilities = []
+      , sorcery_effect = This1 \(_ :: ZO 'ZStack (OT1 'OTSorcery)) ->
+          All $ Maskeds1 [OfColors $ toColors B] \(obj1s :: List (ZO 'ZBattlefield (OT1 'OTCreature))) ->
+            Effect
+            [ WithList $ Each obj1s \obj1 ->
+                Destroy $ asPermanent obj1
+            ]
+      }
+  }
+
+==== Conversion ====
+AnyCard1 $ Card "Conversion" $ ElectCardFacet EnchantmentCharacteristic
+  { enchantment_colors = toColors W
+  , enchantment_supertypes = []
+  , enchantment_enchantmentTypes = []
+  , enchantment_spec = EnchantmentSpec
+      { enchantment_cost = manaCost (2, W, W)
+      , enchantment_abilities =
+        [ SomeZone $ WithThisTriggered $ This1 \(this1 :: ZO 'ZBattlefield (OT1 'OTEnchantment)) ->
+            When $ ActivePlayer \active2 ->
+              ControllerOf (asAny this1) \you3 ->
+                If (Satisfies  you3 [Is active2]) (Listen $ TimePoint (StepBegin UpkeepStep) $ PlayerPays you3 (manaCost (W, W)) \x ->
+                  Effect
+                  [ EffectCase CaseFin
+                      { caseFin = x
+                      , ofFin = LS (()) (Sequence []) $ LZ (()) $ Sacrifice you3 [Is this1]
+                      }
+                  ]) ElseEvent
+        , SomeZone $ WithThisStatic $ This1 \(_ :: ZO 'ZBattlefield (OT1 'OTEnchantment)) ->
+            StaticContinuous $ All $ Maskeds1 [HasLandType $ BasicLand Mountain] \(obj4s :: List (ZO 'ZBattlefield (OT1 'OTLand))) ->
+              Effect
+              [ WithList $ Each obj4s \obj4 ->
+                  ChangeTo (asPermanent obj4) $ Card "Plains" $ ElectCardFacet LandCharacteristic
+                    { land_supertypes = []
+                    , land_landTypes = [BasicLand Plains]
+                    , land_spec = LandSpec
+                        { land_abilities = []
+                        }
+                    }
+              ]
+        ]
+      }
+  }
+
+==== Corrosive Gale ====
+AnyCard1 $ Card "Corrosive Gale" $ ElectCardFacet SorceryCharacteristic
+  { sorcery_colors = toColors G
+  , sorcery_supertypes = []
+  , sorcery_spec = VariableInt \x ->
+      ElectCardSpec SorcerySpec
+        { sorcery_cost = manaCost (VariableMana @'NonSnow @'Ty1 x, PG)
+        , sorcery_abilities = []
+        , sorcery_effect = This1 \(this1 :: ZO 'ZStack (OT1 'OTSorcery)) ->
+            All $ Maskeds1
+            [ HasAbility $ SomeZone $ WithThisStatic $ This1 \(_ :: ZO 'ZBattlefield (OT1 'OTCreature)) ->
+                Flying
+            ] \(obj2s :: List (ZO 'ZBattlefield (OT1 'OTCreature))) ->
+              Effect
+              [ WithList $ Each obj2s \obj2 ->
+                  DealDamage (asDamageSource this1) (asCreaturePlayerPlaneswalker obj2) $ VariableDamage x
+              ]
+        }
+  }
+
+==== Counterspell ====
+AnyCard1 $ Card "Counterspell" $ Your \you1 ->
+  ElectCardFacet InstantCharacteristic
+    { instant_colors = toColors U
+    , instant_supertypes = []
+    , instant_spec = Target you1 $ Masked7 [] \(target2 :: ZO 'ZStack OTNSpell) ->
+        ElectCardSpec InstantSpec
+          { instant_cost = manaCost (U, U)
+          , instant_abilities = []
+          , instant_effect = This1 \(_ :: ZO 'ZStack (OT1 'OTInstant)) ->
+              Effect [CounterSpell target2]
+          }
+    }
+
+==== Damnation ====
+AnyCard1 $ Card "Damnation" $ ElectCardFacet SorceryCharacteristic
+  { sorcery_colors = toColors B
+  , sorcery_supertypes = []
+  , sorcery_spec = ElectCardSpec SorcerySpec
+      { sorcery_cost = manaCost (2, B, B)
+      , sorcery_abilities = []
+      , sorcery_effect = This1 \(_ :: ZO 'ZStack (OT1 'OTSorcery)) ->
+          All $ Maskeds1 [] \(obj1s :: List (ZO 'ZBattlefield (OT1 'OTCreature))) ->
+            Effect
+            [ WithList $ Each obj1s \obj1 ->
+                Sequence [Destroy $ asPermanent obj1, EffectContinuous $ CantBeRegenerated obj1]
+            ]
+      }
+  }
+
+==== Dark Ritual ====
+AnyCard1 $ Card "Dark Ritual" $ Your \you1 ->
+  ElectCardFacet InstantCharacteristic
+    { instant_colors = toColors B
+    , instant_supertypes = []
+    , instant_spec = ElectCardSpec InstantSpec
+        { instant_cost = manaCost B
+        , instant_abilities = []
+        , instant_effect = This1 \(_ :: ZO 'ZStack (OT1 'OTInstant)) ->
+            Effect [AddMana you1 $ toManaPool (B, B, B)]
+        }
+    }
+
+==== Deathrite Shaman ====
+AnyCard1 $ Card "Deathrite Shaman" $ ElectCardFacet CreatureCharacteristic
+  { creature_colors = toColors (B,G)
+  , creature_supertypes = []
+  , creature_creatureTypes = [Elf, Shaman]
+  , creature_power = Power 1
+  , creature_toughness = Toughness 2
+  , creature_spec = CreatureSpec
+      { creature_cost = manaCost BG
+      , creature_abilities =
+        [ SomeZone $ WithThisActivated $ This1 \(this1 :: ZO 'ZBattlefield (OT1 'OTCreature)) ->
+            ElectOT $ ControllerOf (asAny this1) \you2 ->
+              Target you2 $ Masked1 [] \(target3 :: ZO 'ZGraveyard (OT1 'OTLand)) ->
+                ElectActivated Ability
+                  { activated_cost = AndCosts [TapCost [Is this1], ExileCost [Is target3]]
+                  , activated_effect = ChooseOption you2 (LS (White) (CAnd []) $ LS (Blue) (CAnd []) $ LS (Black) (CAnd []) $ LS (Red) (CAnd []) $ LZ (Green) $ CAnd []) \x ->
+                      Effect
+                      [ EffectCase CaseFin
+                          { caseFin = x
+                          , ofFin = LS (()) (AddMana you2 $ toManaPool W) $ LS (()) (AddMana you2 $ toManaPool U) $ LS (()) (AddMana you2 $ toManaPool B) $ LS (()) (AddMana you2 $ toManaPool R) $ LZ (()) $ AddMana you2 $ toManaPool G
+                          }
+                      ]
+                  }
+        , SomeZone $ WithThisActivated $ This1 \(this4 :: ZO 'ZBattlefield (OT1 'OTCreature)) ->
+            ElectOT $ ControllerOf (asAny this4) \you5 ->
+              Target you5 $ Masked2 [] \(target6 :: ZO 'ZGraveyard (OT2 'OTInstant 'OTSorcery)) ->
+                ElectActivated Ability
+                  { activated_cost = AndCosts [manaCost B, TapCost [Is this4], ExileCost [Is target6]]
+                  , activated_effect = All $ Maskeds1 [IsOpponentOf you5] \(obj7s :: List (ZO 'ZBattlefield (OT1 'OTPlayer))) ->
+                      Effect
+                      [ WithList $ Each obj7s \obj7 ->
+                          LoseLife obj7 2
+                      ]
+                  }
+        , SomeZone $ WithThisActivated $ This1 \(this8 :: ZO 'ZBattlefield (OT1 'OTCreature)) ->
+            ElectOT $ ControllerOf (asAny this8) \you9 ->
+              Target you9 $ Masked1 [] \(target10 :: ZO 'ZGraveyard (OT1 'OTCreature)) ->
+                ElectActivated Ability
+                  { activated_cost = AndCosts [manaCost G, TapCost [Is this8], ExileCost [Is target10]]
+                  , activated_effect = Effect [GainLife you9 2]
+                  }
+        ]
+      }
+  }
+
+==== Dismember ====
+AnyCard1 $ Card "Dismember" $ Your \you1 ->
+  ElectCardFacet InstantCharacteristic
+    { instant_colors = toColors B
+    , instant_supertypes = []
+    , instant_spec = Target you1 $ Masked1 [] \(target2 :: ZO 'ZBattlefield (OT1 'OTCreature)) ->
+        ElectCardSpec InstantSpec
+          { instant_cost = manaCost (1, PB, PB)
+          , instant_abilities = []
+          , instant_effect = This1 \(_ :: ZO 'ZStack (OT1 'OTInstant)) ->
+              Effect
+              [ EffectContinuous $ Until (Event $ TimePoint (StepBegin CleanupStep) Proxy) $ GainAbility target2 $ WithThisStatic $ This1 \(_ :: ZO 'ZBattlefield (OT1 'OTCreature)) ->
+                  StaticContinuous $ Effect [StatDelta target2 (Power (-5)) $ Toughness (-5)]
+              ]
+          }
+    }
+
+==== Divination ====
+AnyCard1 $ Card "Divination" $ Your \you1 ->
+  ElectCardFacet SorceryCharacteristic
+    { sorcery_colors = toColors U
+    , sorcery_supertypes = []
+    , sorcery_spec = ElectCardSpec SorcerySpec
+        { sorcery_cost = manaCost (2, U)
+        , sorcery_abilities = []
+        , sorcery_effect = This1 \(_ :: ZO 'ZStack (OT1 'OTSorcery)) ->
+            Effect [DrawCards you1 2]
+        }
+    }
+
+==== Elvish Hexhunter ====
+AnyCard1 $ Card "Elvish Hexhunter" $ ElectCardFacet CreatureCharacteristic
+  { creature_colors = toColors (W,G)
+  , creature_supertypes = []
+  , creature_creatureTypes = [Elf, Shaman]
+  , creature_power = Power 1
+  , creature_toughness = Toughness 1
+  , creature_spec = CreatureSpec
+      { creature_cost = manaCost GW
+      , creature_abilities =
+        [ SomeZone $ WithThisActivated $ This1 \(this1 :: ZO 'ZBattlefield (OT1 'OTCreature)) ->
+            ElectOT $ ControllerOf (asAny this1) \you2 ->
+              Target you2 $ Masked1 [] \(target3 :: ZO 'ZBattlefield (OT1 'OTEnchantment)) ->
+                ElectActivated Ability
+                  { activated_cost = AndCosts [manaCost GW, TapCost [Is this1], SacrificeCost @(OT1 'OTCreature) [Is this1]]
+                  , activated_effect = Effect [Destroy $ asPermanent target3]
+                  }
+        ]
+      }
+  }
+
+==== Fling ====
+AnyCard1 $ Card "Fling" $ Your \you1 ->
+  ElectCardFacet InstantCharacteristic
+    { instant_colors = toColors R
+    , instant_supertypes = []
+    , instant_spec = Choose you1 $ Masked1 [ControlledBy you1] \(choose2 :: ZO 'ZBattlefield (OT1 'OTCreature)) ->
+        Target you1 $ Masked2 [] \(target3 :: ZO 'ZBattlefield OTNCreaturePlayer) ->
+          ElectCardSpec InstantSpec
+            { instant_cost = AndCosts [manaCost (1, R), SacrificeCost @(OT1 'OTCreature) [Is choose2]]
+            , instant_abilities = []
+            , instant_effect = This1 \(_ :: ZO 'ZStack (OT1 'OTInstant)) ->
+                VariableFromPower choose2 \x ->
+                  Effect [DealDamage (asDamageSource choose2) (asCreaturePlayerPlaneswalker target3) $ VariableDamage x]
+            }
+    }
+
+==== Forest ====
+AnyCard1 $ Card "Forest" $ ElectCardFacet LandCharacteristic
+  { land_supertypes = []
+  , land_landTypes = [BasicLand Forest]
+  , land_spec = LandSpec
+      { land_abilities = []
+      }
+  }
+
+==== Fulminator Mage ====
+AnyCard1 $ Card "Fulminator Mage" $ ElectCardFacet CreatureCharacteristic
+  { creature_colors = toColors (B,R)
+  , creature_supertypes = []
+  , creature_creatureTypes = [Elemental, Shaman]
+  , creature_power = Power 2
+  , creature_toughness = Toughness 2
+  , creature_spec = CreatureSpec
+      { creature_cost = manaCost (1, BR, BR)
+      , creature_abilities =
+        [ SomeZone $ WithThisActivated $ This1 \(this1 :: ZO 'ZBattlefield (OT1 'OTCreature)) ->
+            ElectOT $ ControllerOf (asAny this1) \you2 ->
+              Target you2 $ Masked1 [RAnd [Not $ HasLandType $ BasicLand Forest, Not $ HasLandType $ BasicLand Island, Not $ HasLandType $ BasicLand Mountain, Not $ HasLandType $ BasicLand Plains, Not $ HasLandType $ BasicLand Swamp]] \(target3 :: ZO 'ZBattlefield (OT1 'OTLand)) ->
+                ElectActivated Ability
+                  { activated_cost = SacrificeCost @(OT1 'OTCreature) [Is this1]
+                  , activated_effect = Effect [Destroy $ asPermanent target3]
+                  }
+        ]
+      }
+  }
+
+==== Frost Marsh ====
+AnyCard1 $ Card "Frost Marsh" $ ElectCardFacet LandCharacteristic
+  { land_supertypes = [Snow]
+  , land_landTypes = []
+  , land_spec = LandSpec
+      { land_abilities =
+        [ SomeZone $ WithThisActivated $ This1 \(this1 :: ZO 'ZBattlefield (OT1 'OTLand)) ->
+            ElectOT $ ControllerOf (asAny this1) \you2 ->
+              ElectActivated Ability
+                { activated_cost = TapCost [Is this1]
+                , activated_effect = Effect [AddMana you2 $ toManaPool U]
+                }
+        , SomeZone $ WithThisActivated $ This1 \(this3 :: ZO 'ZBattlefield (OT1 'OTLand)) ->
+            ElectOT $ ControllerOf (asAny this3) \you4 ->
+              ElectActivated Ability
+                { activated_cost = TapCost [Is this3]
+                , activated_effect = Effect [AddMana you4 $ toManaPool B]
+                }
+        ]
+      }
+  }
+
+==== Giant Growth ====
+AnyCard1 $ Card "Giant Growth" $ Your \you1 ->
+  ElectCardFacet InstantCharacteristic
+    { instant_colors = toColors G
+    , instant_supertypes = []
+    , instant_spec = Target you1 $ Masked1 [] \(target2 :: ZO 'ZBattlefield (OT1 'OTCreature)) ->
+        ElectCardSpec InstantSpec
+          { instant_cost = manaCost G
+          , instant_abilities = []
+          , instant_effect = This1 \(_ :: ZO 'ZStack (OT1 'OTInstant)) ->
+              Effect
+              [ EffectContinuous $ Until (Event $ TimePoint (StepBegin CleanupStep) Proxy) $ GainAbility target2 $ WithThisStatic $ This1 \(_ :: ZO 'ZBattlefield (OT1 'OTCreature)) ->
+                  StaticContinuous $ Effect [StatDelta target2 (Power 3) $ Toughness 3]
+              ]
+          }
+    }
+
+==== Glacial Floodplain ====
+AnyCard1 $ Card "Glacial Floodplain" $ ElectCardFacet LandCharacteristic
+  { land_supertypes = [Snow]
+  , land_landTypes = [BasicLand Plains, BasicLand Island]
+  , land_spec = LandSpec
+      { land_abilities =
+        [ SomeZone $ WithThisStatic $ This1 \(_ :: ZO 'ZBattlefield (OT1 'OTLand)) ->
+            Enters EntersTapped
+        ]
+      }
+  }
+
+==== Grizzly Bears ====
+AnyCard1 $ Card "Grizzly Bears" $ ElectCardFacet CreatureCharacteristic
+  { creature_colors = toColors G
+  , creature_supertypes = []
+  , creature_creatureTypes = [Bear]
+  , creature_power = Power 2
+  , creature_toughness = Toughness 2
+  , creature_spec = CreatureSpec
+      { creature_cost = manaCost (1, G)
+      , creature_abilities = []
+      }
+  }
+
+==== Gutless Ghoul ====
+AnyCard1 $ Card "Gutless Ghoul" $ ElectCardFacet CreatureCharacteristic
+  { creature_colors = toColors B
+  , creature_supertypes = [Snow]
+  , creature_creatureTypes = [Zombie]
+  , creature_power = Power 2
+  , creature_toughness = Toughness 2
+  , creature_spec = CreatureSpec
+      { creature_cost = manaCost (2, B)
+      , creature_abilities =
+        [ SomeZone $ WithThisActivated $ This1 \(this1 :: ZO 'ZBattlefield (OT1 'OTCreature)) ->
+            ElectOT $ ControllerOf (asAny this1) \you2 ->
+              ElectActivated Ability
+                { activated_cost = AndCosts [manaCost 1, SacrificeCost @(OT1 'OTCreature) []]
+                , activated_effect = Effect [GainLife you2 2]
+                }
+        ]
+      }
+  }
+
+==== Gut Shot ====
+AnyCard1 $ Card "Gut Shot" $ Your \you1 ->
+  ElectCardFacet InstantCharacteristic
+    { instant_colors = toColors R
+    , instant_supertypes = []
+    , instant_spec = Target you1 $ Masked2 [] \(target2 :: ZO 'ZBattlefield OTNCreaturePlayer) ->
+        ElectCardSpec InstantSpec
+          { instant_cost = manaCost PR
+          , instant_abilities = []
+          , instant_effect = This1 \(this3 :: ZO 'ZStack (OT1 'OTInstant)) ->
+              Effect [DealDamage (asDamageSource this3) (asCreaturePlayerPlaneswalker target2) $ Damage 1]
+          }
+    }
+
+==== Highland Forest ====
+AnyCard1 $ Card "Highland Forest" $ ElectCardFacet LandCharacteristic
+  { land_supertypes = [Snow]
+  , land_landTypes = [BasicLand Mountain, BasicLand Forest]
+  , land_spec = LandSpec
+      { land_abilities =
+        [ SomeZone $ WithThisStatic $ This1 \(_ :: ZO 'ZBattlefield (OT1 'OTLand)) ->
+            Enters EntersTapped
+        ]
+      }
+  }
+
+==== Highland Weald ====
+AnyCard1 $ Card "Highland Weald" $ ElectCardFacet LandCharacteristic
+  { land_supertypes = [Snow]
+  , land_landTypes = []
+  , land_spec = LandSpec
+      { land_abilities =
+        [ SomeZone $ WithThisActivated $ This1 \(this1 :: ZO 'ZBattlefield (OT1 'OTLand)) ->
+            ElectOT $ ControllerOf (asAny this1) \you2 ->
+              ElectActivated Ability
+                { activated_cost = TapCost [Is this1]
+                , activated_effect = Effect [AddMana you2 $ toManaPool R]
+                }
+        , SomeZone $ WithThisActivated $ This1 \(this3 :: ZO 'ZBattlefield (OT1 'OTLand)) ->
+            ElectOT $ ControllerOf (asAny this3) \you4 ->
+              ElectActivated Ability
+                { activated_cost = TapCost [Is this3]
+                , activated_effect = Effect [AddMana you4 $ toManaPool G]
+                }
+        ]
+      }
+  }
+
+==== Icehide Golem ====
+AnyCard1 $ Card "Icehide Golem" $ ElectCardFacet ArtifactCreatureCharacteristic
+  { artifactCreature_colors = toColors ()
+  , artifactCreature_supertypes = [Snow]
+  , artifactCreature_artifactTypes = []
+  , artifactCreature_creatureTypes = []
+  , artifactCreature_power = Power 2
+  , artifactCreature_toughness = Toughness 2
+  , artifactCreature_spec = ArtifactCreatureSpec
+      { artifactCreature_cost = manaCost 1
+      , artifactCreature_artifactAbilities = []
+      , artifactCreature_creatureAbilities = []
+      , artifactCreature_artifactCreatureAbilities = []
+      }
+  }
+
+==== Ice Tunnel ====
+AnyCard1 $ Card "Ice Tunnel" $ ElectCardFacet LandCharacteristic
+  { land_supertypes = [Snow]
+  , land_landTypes = [BasicLand Island, BasicLand Swamp]
+  , land_spec = LandSpec
+      { land_abilities =
+        [ SomeZone $ WithThisStatic $ This1 \(_ :: ZO 'ZBattlefield (OT1 'OTLand)) ->
+            Enters EntersTapped
+        ]
+      }
+  }
+
+==== Holy Strength ====
+AnyCard1 $ Card "Holy Strength" $ ElectCardFacet EnchantmentCharacteristic
+  { enchantment_colors = toColors W
+  , enchantment_supertypes = []
+  , enchantment_enchantmentTypes =
+    [ Aura $ Enchant $ Linked1 [] \(enchanted1 :: ZO 'ZBattlefield (OT1 'OTCreature)) ->
+        Effect [StatDelta enchanted1 (Power 1) $ Toughness 2]
+    ]
+  , enchantment_spec = EnchantmentSpec
+      { enchantment_cost = manaCost W
+      , enchantment_abilities = []
+      }
+  }
+
+==== Island ====
+AnyCard1 $ Card "Island" $ ElectCardFacet LandCharacteristic
+  { land_supertypes = []
+  , land_landTypes = [BasicLand Island]
+  , land_spec = LandSpec
+      { land_abilities = []
+      }
+  }
+
+==== Lava Axe ====
+AnyCard1 $ Card "Lava Axe" $ Your \you1 ->
+  ElectCardFacet SorceryCharacteristic
+    { sorcery_colors = toColors R
+    , sorcery_supertypes = []
+    , sorcery_spec = Target you1 $ Masked2 [] \(target2 :: ZO 'ZBattlefield OTNPlayerPlaneswalker) ->
+        ElectCardSpec SorcerySpec
+          { sorcery_cost = manaCost (4, R)
+          , sorcery_abilities = []
+          , sorcery_effect = This1 \(this3 :: ZO 'ZStack (OT1 'OTSorcery)) ->
+              Effect [DealDamage (asDamageSource this3) (asCreaturePlayerPlaneswalker target2) $ Damage 5]
+          }
+    }
+
+==== Lightning Bolt ====
+AnyCard1 $ Card "Lightning Bolt" $ Your \you1 ->
+  ElectCardFacet InstantCharacteristic
+    { instant_colors = toColors R
+    , instant_supertypes = []
+    , instant_spec = Target you1 $ Masked3 [] \(target2 :: ZO 'ZBattlefield OTNCreaturePlayerPlaneswalker) ->
+        ElectCardSpec InstantSpec
+          { instant_cost = manaCost R
+          , instant_abilities = []
+          , instant_effect = This1 \(this3 :: ZO 'ZStack (OT1 'OTInstant)) ->
+              Effect [DealDamage (asDamageSource this3) target2 $ Damage 3]
+          }
+    }
+
+==== Llanowar Elves ====
+AnyCard1 $ Card "Llanowar Elves" $ ElectCardFacet CreatureCharacteristic
+  { creature_colors = toColors G
+  , creature_supertypes = []
+  , creature_creatureTypes = [Elf]
+  , creature_power = Power 1
+  , creature_toughness = Toughness 1
+  , creature_spec = CreatureSpec
+      { creature_cost = manaCost G
+      , creature_abilities =
+        [ SomeZone $ WithThisActivated $ This1 \(this1 :: ZO 'ZBattlefield (OT1 'OTCreature)) ->
+            ElectOT $ ControllerOf (asAny this1) \you2 ->
+              ElectActivated Ability
+                { activated_cost = TapCost [Is this1]
+                , activated_effect = Effect [AddMana you2 $ toManaPool G]
+                }
+        ]
+      }
+  }
+
+==== Mana Leak ====
+AnyCard1 $ Card "Mana Leak" $ Your \you1 ->
+  ElectCardFacet InstantCharacteristic
+    { instant_colors = toColors U
+    , instant_supertypes = []
+    , instant_spec = Target you1 $ Masked7 [] \(target2 :: ZO 'ZStack OTNSpell) ->
+        ElectCardSpec InstantSpec
+          { instant_cost = manaCost (1, U)
+          , instant_abilities = []
+          , instant_effect = This1 \(_ :: ZO 'ZStack (OT1 'OTInstant)) ->
+              ControllerOf (asAny target2) \controller3 ->
+                PlayerPays controller3 (manaCost 3) \x ->
+                  Effect
+                  [ EffectCase CaseFin
+                      { caseFin = x
+                      , ofFin = LS (()) (Sequence []) $ LZ (()) $ CounterSpell target2
+                      }
+                  ]
+          }
+    }
+
+==== Moltensteel Dragon ====
+AnyCard1 $ Card "Moltensteel Dragon" $ ElectCardFacet ArtifactCreatureCharacteristic
+  { artifactCreature_colors = toColors R
+  , artifactCreature_supertypes = []
+  , artifactCreature_artifactTypes = []
+  , artifactCreature_creatureTypes = [Dragon]
+  , artifactCreature_power = Power 4
+  , artifactCreature_toughness = Toughness 4
+  , artifactCreature_spec = ArtifactCreatureSpec
+      { artifactCreature_cost = manaCost (4, PR, PR)
+      , artifactCreature_artifactAbilities = []
+      , artifactCreature_creatureAbilities =
+        [ SomeZone $ WithThisStatic $ This1 \(_ :: ZO 'ZBattlefield (OT1 'OTCreature)) ->
+            Flying
+        , SomeZone $ WithThisActivated $ This1 \(this1 :: ZO 'ZBattlefield (OT1 'OTCreature)) ->
+            ElectOT $ ElectActivated Ability
+              { activated_cost = manaCost PR
+              , activated_effect = Effect
+                [ EffectContinuous $ Until (Event $ TimePoint (StepBegin CleanupStep) Proxy) $ GainAbility this1 $ WithThisStatic $ This1 \(_ :: ZO 'ZBattlefield (OT1 'OTCreature)) ->
+                    StaticContinuous $ Effect [StatDelta this1 (Power 1) $ Toughness 0]
+                ]
+              }
+        ]
+      , artifactCreature_artifactCreatureAbilities = []
+      }
+  }
+
+==== Mouth of Ronom ====
+AnyCard1 $ Card "Mouth of Ronom" $ ElectCardFacet LandCharacteristic
+  { land_supertypes = [Snow]
+  , land_landTypes = []
+  , land_spec = LandSpec
+      { land_abilities =
+        [ SomeZone $ WithThisActivated $ This1 \(this1 :: ZO 'ZBattlefield (OT1 'OTLand)) ->
+            ElectOT $ ControllerOf (asAny this1) \you2 ->
+              ElectActivated Ability
+                { activated_cost = TapCost [Is this1]
+                , activated_effect = Effect [AddMana you2 $ toManaPool C]
+                }
+        , SomeZone $ WithThisActivated $ This1 \(this3 :: ZO 'ZBattlefield (OT1 'OTLand)) ->
+            ElectOT $ ControllerOf (asAny this3) \you4 ->
+              Target you4 $ Masked1 [] \(target5 :: ZO 'ZBattlefield (OT1 'OTCreature)) ->
+                ElectActivated Ability
+                  { activated_cost = AndCosts [manaCost (4, S), TapCost [Is this3], SacrificeCost @(OT1 'OTLand) [Is this3]]
+                  , activated_effect = Effect [DealDamage (asDamageSource this3) (asCreaturePlayerPlaneswalker target5) $ Damage 4]
+                  }
+        ]
+      }
+  }
+
+==== Mountain ====
+AnyCard1 $ Card "Mountain" $ ElectCardFacet LandCharacteristic
+  { land_supertypes = []
+  , land_landTypes = [BasicLand Mountain]
+  , land_spec = LandSpec
+      { land_abilities = []
+      }
+  }
+
+==== Mox Emerald ====
+AnyCard1 $ Card "Mox Emerald" $ ElectCardFacet ArtifactCharacteristic
+  { artifact_colors = toColors ()
+  , artifact_supertypes = []
+  , artifact_artifactTypes = []
+  , artifact_spec = ArtifactSpec
+      { artifact_cost = manaCost 0
+      , artifact_abilities =
+        [ SomeZone $ WithThisActivated $ This1 \(this1 :: ZO 'ZBattlefield (OT1 'OTArtifact)) ->
+            ElectOT $ ControllerOf (asAny this1) \you2 ->
+              ElectActivated Ability
+                { activated_cost = TapCost [Is this1]
+                , activated_effect = Effect [AddMana you2 $ toManaPool G]
+                }
+        ]
+      }
+  }
+
+==== Mox Jet ====
+AnyCard1 $ Card "Mox Jet" $ ElectCardFacet ArtifactCharacteristic
+  { artifact_colors = toColors ()
+  , artifact_supertypes = []
+  , artifact_artifactTypes = []
+  , artifact_spec = ArtifactSpec
+      { artifact_cost = manaCost 0
+      , artifact_abilities =
+        [ SomeZone $ WithThisActivated $ This1 \(this1 :: ZO 'ZBattlefield (OT1 'OTArtifact)) ->
+            ElectOT $ ControllerOf (asAny this1) \you2 ->
+              ElectActivated Ability
+                { activated_cost = TapCost [Is this1]
+                , activated_effect = Effect [AddMana you2 $ toManaPool B]
+                }
+        ]
+      }
+  }
+
+==== Mox Pearl ====
+AnyCard1 $ Card "Mox Pearl" $ ElectCardFacet ArtifactCharacteristic
+  { artifact_colors = toColors ()
+  , artifact_supertypes = []
+  , artifact_artifactTypes = []
+  , artifact_spec = ArtifactSpec
+      { artifact_cost = manaCost 0
+      , artifact_abilities =
+        [ SomeZone $ WithThisActivated $ This1 \(this1 :: ZO 'ZBattlefield (OT1 'OTArtifact)) ->
+            ElectOT $ ControllerOf (asAny this1) \you2 ->
+              ElectActivated Ability
+                { activated_cost = TapCost [Is this1]
+                , activated_effect = Effect [AddMana you2 $ toManaPool W]
+                }
+        ]
+      }
+  }
+
+==== Mox Ruby ====
+AnyCard1 $ Card "Mox Ruby" $ ElectCardFacet ArtifactCharacteristic
+  { artifact_colors = toColors ()
+  , artifact_supertypes = []
+  , artifact_artifactTypes = []
+  , artifact_spec = ArtifactSpec
+      { artifact_cost = manaCost 0
+      , artifact_abilities =
+        [ SomeZone $ WithThisActivated $ This1 \(this1 :: ZO 'ZBattlefield (OT1 'OTArtifact)) ->
+            ElectOT $ ControllerOf (asAny this1) \you2 ->
+              ElectActivated Ability
+                { activated_cost = TapCost [Is this1]
+                , activated_effect = Effect [AddMana you2 $ toManaPool R]
+                }
+        ]
+      }
+  }
+
+==== Mox Sapphire ====
+AnyCard1 $ Card "Mox Sapphire" $ ElectCardFacet ArtifactCharacteristic
+  { artifact_colors = toColors ()
+  , artifact_supertypes = []
+  , artifact_artifactTypes = []
+  , artifact_spec = ArtifactSpec
+      { artifact_cost = manaCost 0
+      , artifact_abilities =
+        [ SomeZone $ WithThisActivated $ This1 \(this1 :: ZO 'ZBattlefield (OT1 'OTArtifact)) ->
+            ElectOT $ ControllerOf (asAny this1) \you2 ->
+              ElectActivated Ability
+                { activated_cost = TapCost [Is this1]
+                , activated_effect = Effect [AddMana you2 $ toManaPool U]
+                }
+        ]
+      }
+  }
+
+==== Mutagenic Growth ====
+AnyCard1 $ Card "Mutagenic Growth" $ Your \you1 ->
+  ElectCardFacet InstantCharacteristic
+    { instant_colors = toColors G
+    , instant_supertypes = []
+    , instant_spec = Target you1 $ Masked1 [] \(target2 :: ZO 'ZBattlefield (OT1 'OTCreature)) ->
+        ElectCardSpec InstantSpec
+          { instant_cost = manaCost PG
+          , instant_abilities = []
+          , instant_effect = This1 \(_ :: ZO 'ZStack (OT1 'OTInstant)) ->
+              Effect
+              [ EffectContinuous $ Until (Event $ TimePoint (StepBegin CleanupStep) Proxy) $ GainAbility target2 $ WithThisStatic $ This1 \(_ :: ZO 'ZBattlefield (OT1 'OTCreature)) ->
+                  StaticContinuous $ Effect [StatDelta target2 (Power 2) $ Toughness 2]
+              ]
+          }
+    }
+
+==== Nyxborn Rollicker ====
+AnyCard1 $ Card "Nyxborn Rollicker" $ ElectCardFacet EnchantmentCreatureCharacteristic
+  { enchantmentCreature_colors = toColors R
+  , enchantmentCreature_supertypes = []
+  , enchantmentCreature_creatureTypes = [Satyr]
+  , enchantmentCreature_enchantmentTypes = []
+  , enchantmentCreature_power = Power 1
+  , enchantmentCreature_toughness = Toughness 1
+  , enchantmentCreature_spec = EnchantmentCreatureSpec
+      { enchantmentCreature_cost = manaCost R
+      , enchantmentCreature_creatureAbilities = []
+      , enchantmentCreature_enchantmentAbilities = []
+      , enchantmentCreature_enchantmentCreatureAbilities =
+        [ SomeZone $ WithThisStatic $ This2 \((_ :: ZO 'ZBattlefield (OT1 'OTCreature)), (_ :: ZO 'ZBattlefield (OT1 'OTEnchantment))) ->
+            Bestow (Cost $ manaCost (1, R)) $ Enchant $ Linked1 [] \(enchanted1 :: ZO 'ZBattlefield (OT1 'OTCreature)) ->
+              Effect [StatDelta enchanted1 (Power 1) $ Toughness 1]
+        ]
+      }
+  }
+
+==== Ornithopter ====
+AnyCard1 $ Card "Ornithopter" $ ElectCardFacet ArtifactCreatureCharacteristic
+  { artifactCreature_colors = toColors ()
+  , artifactCreature_supertypes = []
+  , artifactCreature_artifactTypes = []
+  , artifactCreature_creatureTypes = []
+  , artifactCreature_power = Power 0
+  , artifactCreature_toughness = Toughness 2
+  , artifactCreature_spec = ArtifactCreatureSpec
+      { artifactCreature_cost = manaCost 0
+      , artifactCreature_artifactAbilities = []
+      , artifactCreature_creatureAbilities =
+        [ SomeZone $ WithThisStatic $ This1 \(_ :: ZO 'ZBattlefield (OT1 'OTCreature)) ->
+            Flying
+        ]
+      , artifactCreature_artifactCreatureAbilities = []
+      }
+  }
+
+==== Porcelain Legionnaire ====
+AnyCard1 $ Card "Porcelain Legionnaire" $ ElectCardFacet ArtifactCreatureCharacteristic
+  { artifactCreature_colors = toColors W
+  , artifactCreature_supertypes = []
+  , artifactCreature_artifactTypes = []
+  , artifactCreature_creatureTypes = [Soldier]
+  , artifactCreature_power = Power 3
+  , artifactCreature_toughness = Toughness 1
+  , artifactCreature_spec = ArtifactCreatureSpec
+      { artifactCreature_cost = manaCost (2, PW)
+      , artifactCreature_artifactAbilities = []
+      , artifactCreature_creatureAbilities =
+        [ SomeZone $ WithThisStatic $ This1 \(_ :: ZO 'ZBattlefield (OT1 'OTCreature)) ->
+            FirstStrike
+        ]
+      , artifactCreature_artifactCreatureAbilities = []
+      }
+  }
+
+==== Raging Goblin ====
+AnyCard1 $ Card "Raging Goblin" $ ElectCardFacet CreatureCharacteristic
+  { creature_colors = toColors R
+  , creature_supertypes = []
+  , creature_creatureTypes = [Goblin]
+  , creature_power = Power 1
+  , creature_toughness = Toughness 1
+  , creature_spec = CreatureSpec
+      { creature_cost = manaCost R
+      , creature_abilities =
+        [ SomeZone $ WithThisStatic $ This1 \(_ :: ZO 'ZBattlefield (OT1 'OTCreature)) ->
+            Haste
+        ]
+      }
+  }
+
+==== Plains ====
+AnyCard1 $ Card "Plains" $ ElectCardFacet LandCharacteristic
+  { land_supertypes = []
+  , land_landTypes = [BasicLand Plains]
+  , land_spec = LandSpec
+      { land_abilities = []
+      }
+  }
+
+==== Plummet ====
+AnyCard1 $ Card "Plummet" $ Your \you1 ->
+  ElectCardFacet InstantCharacteristic
+    { instant_colors = toColors G
+    , instant_supertypes = []
+    , instant_spec = Target you1 $ Masked1
+      [ HasAbility $ SomeZone $ WithThisStatic $ This1 \(_ :: ZO 'ZBattlefield (OT1 'OTCreature)) ->
+          Flying
+      ] \(target2 :: ZO 'ZBattlefield (OT1 'OTCreature)) ->
+        ElectCardSpec InstantSpec
+          { instant_cost = manaCost (1, G)
+          , instant_abilities = []
+          , instant_effect = This1 \(_ :: ZO 'ZStack (OT1 'OTInstant)) ->
+              Effect [Destroy $ asPermanent target2]
+          }
+    }
+
+==== Polluted Delta ====
+AnyCard1 $ Card "Polluted Delta" $ ElectCardFacet LandCharacteristic
+  { land_supertypes = []
+  , land_landTypes = []
+  , land_spec = LandSpec
+      { land_abilities =
+        [ SomeZone $ WithThisActivated $ This1 \(this1 :: ZO 'ZBattlefield (OT1 'OTLand)) ->
+            ElectOT $ ControllerOf (asAny this1) \you2 ->
+              ElectActivated Ability
+                { activated_cost = AndCosts [TapCost [Is this1], PayLife 1, SacrificeCost @(OT1 'OTLand) [Is this1]]
+                , activated_effect = Effect
+                  [ SearchLibrary you2 you2 $ Linked1 [ROr [HasLandType $ BasicLand Island, HasLandType $ BasicLand Swamp]] \(card3 :: ZO 'ZLibrary (OT1 'OTLand)) ->
+                      Effect [PutOntoBattlefield you2 card3]
+                  ]
+                }
+        ]
+      }
+  }
+
+==== Pradesh Gypsies ====
+AnyCard1 $ Card "Pradesh Gypsies" $ ElectCardFacet CreatureCharacteristic
+  { creature_colors = toColors G
+  , creature_supertypes = []
+  , creature_creatureTypes = [Human, Nomad]
+  , creature_power = Power 1
+  , creature_toughness = Toughness 1
+  , creature_spec = CreatureSpec
+      { creature_cost = manaCost (2, G)
+      , creature_abilities =
+        [ SomeZone $ WithThisActivated $ This1 \(this1 :: ZO 'ZBattlefield (OT1 'OTCreature)) ->
+            ElectOT $ ControllerOf (asAny this1) \you2 ->
+              Target you2 $ Masked1 [] \(target3 :: ZO 'ZBattlefield (OT1 'OTCreature)) ->
+                ElectActivated Ability
+                  { activated_cost = AndCosts [manaCost (1, G), TapCost [Is this1]]
+                  , activated_effect = Effect
+                    [ EffectContinuous $ Until (Event $ TimePoint (StepBegin CleanupStep) Proxy) $ GainAbility target3 $ WithThisStatic $ This1 \(_ :: ZO 'ZBattlefield (OT1 'OTCreature)) ->
+                        StaticContinuous $ Effect [StatDelta target3 (Power (-2)) $ Toughness 0]
+                    ]
+                  }
+        ]
+      }
+  }
+
+==== Rimewood Falls ====
+AnyCard1 $ Card "Rimewood Falls" $ ElectCardFacet LandCharacteristic
+  { land_supertypes = [Snow]
+  , land_landTypes = [BasicLand Forest, BasicLand Island]
+  , land_spec = LandSpec
+      { land_abilities =
+        [ SomeZone $ WithThisStatic $ This1 \(_ :: ZO 'ZBattlefield (OT1 'OTLand)) ->
+            Enters EntersTapped
+        ]
+      }
+  }
+
+==== Shatter ====
+AnyCard1 $ Card "Shatter" $ Your \you1 ->
+  ElectCardFacet InstantCharacteristic
+    { instant_colors = toColors R
+    , instant_supertypes = []
+    , instant_spec = Target you1 $ Masked1 [] \(target2 :: ZO 'ZBattlefield (OT1 'OTArtifact)) ->
+        ElectCardSpec InstantSpec
+          { instant_cost = manaCost (1, R)
+          , instant_abilities = []
+          , instant_effect = This1 \(_ :: ZO 'ZStack (OT1 'OTInstant)) ->
+              Effect [Destroy $ asPermanent target2]
+          }
+    }
+
+==== Shock ====
+AnyCard1 $ Card "Shock" $ Your \you1 ->
+  ElectCardFacet InstantCharacteristic
+    { instant_colors = toColors R
+    , instant_supertypes = []
+    , instant_spec = Target you1 $ Masked3 [] \(target2 :: ZO 'ZBattlefield OTNCreaturePlayerPlaneswalker) ->
+        ElectCardSpec InstantSpec
+          { instant_cost = manaCost R
+          , instant_abilities = []
+          , instant_effect = This1 \(this3 :: ZO 'ZStack (OT1 'OTInstant)) ->
+              Effect [DealDamage (asDamageSource this3) target2 $ Damage 2]
+          }
+    }
+
+==== Sinkhole ====
+AnyCard1 $ Card "Sinkhole" $ Your \you1 ->
+  ElectCardFacet SorceryCharacteristic
+    { sorcery_colors = toColors B
+    , sorcery_supertypes = []
+    , sorcery_spec = Target you1 $ Masked1 [] \(target2 :: ZO 'ZBattlefield (OT1 'OTLand)) ->
+        ElectCardSpec SorcerySpec
+          { sorcery_cost = manaCost (B, B)
+          , sorcery_abilities = []
+          , sorcery_effect = This1 \(_ :: ZO 'ZStack (OT1 'OTSorcery)) ->
+              Effect [Destroy $ asPermanent target2]
+          }
+    }
+
+==== Slash Panther ====
+AnyCard1 $ Card "Slash Panther" $ ElectCardFacet ArtifactCreatureCharacteristic
+  { artifactCreature_colors = toColors R
+  , artifactCreature_supertypes = []
+  , artifactCreature_artifactTypes = []
+  , artifactCreature_creatureTypes = [Cat]
+  , artifactCreature_power = Power 4
+  , artifactCreature_toughness = Toughness 2
+  , artifactCreature_spec = ArtifactCreatureSpec
+      { artifactCreature_cost = manaCost (4, PR)
+      , artifactCreature_artifactAbilities = []
+      , artifactCreature_creatureAbilities =
+        [ SomeZone $ WithThisStatic $ This1 \(_ :: ZO 'ZBattlefield (OT1 'OTCreature)) ->
+            Haste
+        ]
+      , artifactCreature_artifactCreatureAbilities = []
+      }
+  }
+
+==== Snow-Covered Forest ====
+AnyCard1 $ Card "Snow-Covered Forest" $ ElectCardFacet LandCharacteristic
+  { land_supertypes = [Snow]
+  , land_landTypes = [BasicLand Forest]
+  , land_spec = LandSpec
+      { land_abilities = []
+      }
+  }
+
+==== Snow-Covered Island ====
+AnyCard1 $ Card "Snow-Covered Island" $ ElectCardFacet LandCharacteristic
+  { land_supertypes = [Snow]
+  , land_landTypes = [BasicLand Island]
+  , land_spec = LandSpec
+      { land_abilities = []
+      }
+  }
+
+==== Snow-Covered Mountain ====
+AnyCard1 $ Card "Snow-Covered Mountain" $ ElectCardFacet LandCharacteristic
+  { land_supertypes = [Snow]
+  , land_landTypes = [BasicLand Mountain]
+  , land_spec = LandSpec
+      { land_abilities = []
+      }
+  }
+
+==== Snow-Covered Plains ====
+AnyCard1 $ Card "Snow-Covered Plains" $ ElectCardFacet LandCharacteristic
+  { land_supertypes = [Snow]
+  , land_landTypes = [BasicLand Plains]
+  , land_spec = LandSpec
+      { land_abilities = []
+      }
+  }
+
+==== Snow-Covered Swamp ====
+AnyCard1 $ Card "Snow-Covered Swamp" $ ElectCardFacet LandCharacteristic
+  { land_supertypes = [Snow]
+  , land_landTypes = [BasicLand Swamp]
+  , land_spec = LandSpec
+      { land_abilities = []
+      }
+  }
+
+==== Snowfield Sinkhole ====
+AnyCard1 $ Card "Snowfield Sinkhole" $ ElectCardFacet LandCharacteristic
+  { land_supertypes = [Snow]
+  , land_landTypes = [BasicLand Plains, BasicLand Swamp]
+  , land_spec = LandSpec
+      { land_abilities =
+        [ SomeZone $ WithThisStatic $ This1 \(_ :: ZO 'ZBattlefield (OT1 'OTLand)) ->
+            Enters EntersTapped
+        ]
+      }
+  }
+
+==== Snuff Out ====
+AnyCard1 $ Card "Snuff Out" $ Your \you1 ->
+  ElectCardFacet InstantCharacteristic
+    { instant_colors = toColors B
+    , instant_supertypes = []
+    , instant_spec = ChooseOption you1 (LS ("pay mana") (CAnd []) $ LZ ("pay life") $ Satisfies  you1 [ControlsA $ HasLandType $ BasicLand Swamp]) \x ->
+        Target you1 $ Masked1 [Not $ OfColors $ toColors B] \(target2 :: ZO 'ZBattlefield (OT1 'OTCreature)) ->
+          ElectCardSpec InstantSpec
+            { instant_cost = CostCase CaseFin
+                { caseFin = x
+                , ofFin = LS (()) (manaCost (3, B)) $ LZ (()) $ PayLife 4
+                }
+            , instant_abilities = []
+            , instant_effect = This1 \(_ :: ZO 'ZStack (OT1 'OTInstant)) ->
+                Effect [Destroy $ asPermanent target2, EffectContinuous $ CantBeRegenerated target2]
+            }
+    }
+
+==== Spined Thopter ====
+AnyCard1 $ Card "Spined Thopter" $ ElectCardFacet ArtifactCreatureCharacteristic
+  { artifactCreature_colors = toColors U
+  , artifactCreature_supertypes = []
+  , artifactCreature_artifactTypes = []
+  , artifactCreature_creatureTypes = [Thopter]
+  , artifactCreature_power = Power 2
+  , artifactCreature_toughness = Toughness 1
+  , artifactCreature_spec = ArtifactCreatureSpec
+      { artifactCreature_cost = manaCost (2, PU)
+      , artifactCreature_artifactAbilities = []
+      , artifactCreature_creatureAbilities =
+        [ SomeZone $ WithThisStatic $ This1 \(_ :: ZO 'ZBattlefield (OT1 'OTCreature)) ->
+            Flying
+        ]
+      , artifactCreature_artifactCreatureAbilities = []
+      }
+  }
+
+==== Squall Drifter ====
+AnyCard1 $ Card "Squall Drifter" $ ElectCardFacet CreatureCharacteristic
+  { creature_colors = toColors W
+  , creature_supertypes = [Snow]
+  , creature_creatureTypes = [Elemental]
+  , creature_power = Power 1
+  , creature_toughness = Toughness 1
+  , creature_spec = CreatureSpec
+      { creature_cost = manaCost (1, W)
+      , creature_abilities =
+        [ SomeZone $ WithThisStatic $ This1 \(_ :: ZO 'ZBattlefield (OT1 'OTCreature)) ->
+            Flying
+        , SomeZone $ WithThisActivated $ This1 \(this1 :: ZO 'ZBattlefield (OT1 'OTCreature)) ->
+            ElectOT $ ControllerOf (asAny this1) \you2 ->
+              Target you2 $ Masked1 [] \(target3 :: ZO 'ZBattlefield (OT1 'OTCreature)) ->
+                ElectActivated Ability
+                  { activated_cost = AndCosts [manaCost W, TapCost [Is this1]]
+                  , activated_effect = Effect [Tap target3]
+                  }
+        ]
+      }
+  }
+
+==== Squall Line ====
+AnyCard1 $ Card "Squall Line" $ ElectCardFacet InstantCharacteristic
+  { instant_colors = toColors G
+  , instant_supertypes = []
+  , instant_spec = VariableInt \x ->
+      ElectCardSpec InstantSpec
+        { instant_cost = manaCost (VariableMana @'NonSnow @'Ty1 x, G, G)
+        , instant_abilities = []
+        , instant_effect = This1 \(this1 :: ZO 'ZStack (OT1 'OTInstant)) ->
+            All $ Maskeds1
+            [ HasAbility $ SomeZone $ WithThisStatic $ This1 \(_ :: ZO 'ZBattlefield (OT1 'OTCreature)) ->
+                Flying
+            ] \(obj2s :: List (ZO 'ZBattlefield (OT1 'OTCreature))) ->
+              All $ Maskeds1 [] \(obj3s :: List (ZO 'ZBattlefield (OT1 'OTPlayer))) ->
+                Effect
+                [ WithList $ Each obj2s \obj2 ->
+                    DealDamage (asDamageSource this1) (asCreaturePlayerPlaneswalker obj2) $ VariableDamage x
+                , WithList $ Each obj3s \obj3 ->
+                    DealDamage (asDamageSource this1) (asCreaturePlayerPlaneswalker obj3) $ VariableDamage x
+                ]
+        }
+  }
+
+==== Stifle ====
+AnyCard1 $ Card "Stifle" $ Your \you1 ->
+  ElectCardFacet InstantCharacteristic
+    { instant_colors = toColors U
+    , instant_supertypes = []
+    , instant_spec = Target you1 $ Masked2 [] \(target2 :: ZO 'ZStack (OT2 'OTActivatedAbility 'OTTriggeredAbility)) ->
+        ElectCardSpec InstantSpec
+          { instant_cost = manaCost U
+          , instant_abilities = []
+          , instant_effect = This1 \(_ :: ZO 'ZStack (OT1 'OTInstant)) ->
+              Effect [CounterAbility target2]
+          }
+    }
+
+==== Stone Rain ====
+AnyCard1 $ Card "Stone Rain" $ Your \you1 ->
+  ElectCardFacet SorceryCharacteristic
+    { sorcery_colors = toColors R
+    , sorcery_supertypes = []
+    , sorcery_spec = Target you1 $ Masked1 [] \(target2 :: ZO 'ZBattlefield (OT1 'OTLand)) ->
+        ElectCardSpec SorcerySpec
+          { sorcery_cost = manaCost (2, R)
+          , sorcery_abilities = []
+          , sorcery_effect = This1 \(_ :: ZO 'ZStack (OT1 'OTSorcery)) ->
+              Effect [Destroy $ asPermanent target2]
+          }
+    }
+
+==== Stone-Throwing Devils ====
+AnyCard1 $ Card "Stone-Throwing Devils" $ ElectCardFacet CreatureCharacteristic
+  { creature_colors = toColors B
+  , creature_supertypes = []
+  , creature_creatureTypes = [Devil]
+  , creature_power = Power 1
+  , creature_toughness = Toughness 1
+  , creature_spec = CreatureSpec
+      { creature_cost = manaCost B
+      , creature_abilities =
+        [ SomeZone $ WithThisStatic $ This1 \(_ :: ZO 'ZBattlefield (OT1 'OTCreature)) ->
+            FirstStrike
+        ]
+      }
+  }
+
+==== Strip Mine ====
+AnyCard1 $ Card "Strip Mine" $ ElectCardFacet LandCharacteristic
+  { land_supertypes = []
+  , land_landTypes = []
+  , land_spec = LandSpec
+      { land_abilities =
+        [ SomeZone $ WithThisActivated $ This1 \(this1 :: ZO 'ZBattlefield (OT1 'OTLand)) ->
+            ElectOT $ ControllerOf (asAny this1) \you2 ->
+              ElectActivated Ability
+                { activated_cost = TapCost [Is this1]
+                , activated_effect = Effect [AddMana you2 $ toManaPool C]
+                }
+        , SomeZone $ WithThisActivated $ This1 \(this3 :: ZO 'ZBattlefield (OT1 'OTLand)) ->
+            ElectOT $ ControllerOf (asAny this3) \you4 ->
+              Target you4 $ Masked1 [] \(target5 :: ZO 'ZBattlefield (OT1 'OTLand)) ->
+                ElectActivated Ability
+                  { activated_cost = AndCosts [TapCost [Is this3], SacrificeCost @(OT1 'OTLand) [Is this3]]
+                  , activated_effect = Effect [Destroy $ asPermanent target5]
+                  }
+        ]
+      }
+  }
+
+==== Sulfurous Mire ====
+AnyCard1 $ Card "Sulfurous Mire" $ ElectCardFacet LandCharacteristic
+  { land_supertypes = [Snow]
+  , land_landTypes = [BasicLand Swamp, BasicLand Mountain]
+  , land_spec = LandSpec
+      { land_abilities =
+        [ SomeZone $ WithThisStatic $ This1 \(_ :: ZO 'ZBattlefield (OT1 'OTLand)) ->
+            Enters EntersTapped
+        ]
+      }
+  }
+
+==== Sunken Ruins ====
+AnyCard1 $ Card "Sunken Ruins" $ ElectCardFacet LandCharacteristic
+  { land_supertypes = []
+  , land_landTypes = []
+  , land_spec = LandSpec
+      { land_abilities =
+        [ SomeZone $ WithThisActivated $ This1 \(this1 :: ZO 'ZBattlefield (OT1 'OTLand)) ->
+            ElectOT $ ControllerOf (asAny this1) \you2 ->
+              ElectActivated Ability
+                { activated_cost = AndCosts [manaCost UB, TapCost [Is this1]]
+                , activated_effect = ChooseOption you2 (LS ("UU") (CAnd []) $ LS ("UB") (CAnd []) $ LZ ("BB") $ CAnd []) \x ->
+                    Effect
+                    [ EffectCase CaseFin
+                        { caseFin = x
+                        , ofFin = LS (()) (AddMana you2 $ toManaPool (U, U, ())) $ LS (()) (AddMana you2 $ toManaPool (U, B, ())) $ LZ (()) $ AddMana you2 $ toManaPool (B, B, ())
+                        }
+                    ]
+                }
+        ]
+      }
+  }
+
+==== Swamp ====
+AnyCard1 $ Card "Swamp" $ ElectCardFacet LandCharacteristic
+  { land_supertypes = []
+  , land_landTypes = [BasicLand Swamp]
+  , land_spec = LandSpec
+      { land_abilities = []
+      }
+  }
+
+==== Swan Song ====
+AnyCard1 $ Card "Swan Song" $ Your \you1 ->
+  ElectCardFacet InstantCharacteristic
+    { instant_colors = toColors U
+    , instant_supertypes = []
+    , instant_spec = Target you1 $ Masked3 [] \(target2 :: ZO 'ZStack (OT3 'OTEnchantment 'OTInstant 'OTSorcery)) ->
+        ControllerOf (asAny target2) \controller3 ->
+          ElectCardSpec InstantSpec
+            { instant_cost = manaCost U
+            , instant_abilities = []
+            , instant_effect = This1 \(_ :: ZO 'ZStack (OT1 'OTInstant)) ->
+                Effect
+                [ CounterSpell $ asSpell target2
+                , AddToBattlefield controller3 $ Token $ Card "Bird Token" $ ElectCardFacet CreatureCharacteristic
+                    { creature_colors = toColors U
+                    , creature_supertypes = []
+                    , creature_creatureTypes = [Bird]
+                    , creature_power = Power 2
+                    , creature_toughness = Toughness 2
+                    , creature_spec = CreatureSpec
+                        { creature_cost = OrCosts []
+                        , creature_abilities =
+                          [ SomeZone $ WithThisStatic $ This1 \(_ :: ZO 'ZBattlefield (OT1 'OTCreature)) ->
+                              Flying
+                          ]
+                        }
+                    }
+                ]
+            }
+    }
+
+==== Teferi's Isle ====
+AnyCard1 $ Card "Teferi's Isle" $ ElectCardFacet LandCharacteristic
+  { land_supertypes = [Legendary]
+  , land_landTypes = []
+  , land_spec = LandSpec
+      { land_abilities =
+        [ SomeZone $ WithThisStatic $ This1 \(_ :: ZO 'ZBattlefield (OT1 'OTLand)) ->
+            Phasing
+        , SomeZone $ WithThisStatic $ This1 \(_ :: ZO 'ZBattlefield (OT1 'OTLand)) ->
+            Enters EntersTapped
+        , SomeZone $ WithThisActivated $ This1 \(this1 :: ZO 'ZBattlefield (OT1 'OTLand)) ->
+            ElectOT $ ControllerOf (asAny this1) \you2 ->
+              ElectActivated Ability
+                { activated_cost = TapCost [Is this1]
+                , activated_effect = Effect [AddMana you2 $ toManaPool (U, U, ())]
+                }
+        ]
+      }
+  }
+
+==== Thermopod ====
+AnyCard1 $ Card "Thermopod" $ ElectCardFacet CreatureCharacteristic
+  { creature_colors = toColors R
+  , creature_supertypes = [Snow]
+  , creature_creatureTypes = [Slug]
+  , creature_power = Power 4
+  , creature_toughness = Toughness 3
+  , creature_spec = CreatureSpec
+      { creature_cost = manaCost (1, R)
+      , creature_abilities =
+        [ SomeZone $ WithThisActivated $ This1 \(this1 :: ZO 'ZBattlefield (OT1 'OTCreature)) ->
+            ElectOT $ ElectActivated Ability
+              { activated_cost = manaCost S
+              , activated_effect = Effect
+                [ EffectContinuous $ Until (Event $ TimePoint (StepBegin CleanupStep) Proxy) $ GainAbility this1 $ WithThisStatic $ This1 \(_ :: ZO 'ZBattlefield (OT1 'OTCreature)) ->
+                    Haste
+                ]
+              }
+        , SomeZone $ WithThisActivated $ This1 \(this2 :: ZO 'ZBattlefield (OT1 'OTCreature)) ->
+            ElectOT $ ControllerOf (asAny this2) \you3 ->
+              ElectActivated Ability
+                { activated_cost = SacrificeCost @(OT1 'OTCreature) []
+                , activated_effect = Effect [AddMana you3 $ toManaPool R]
+                }
+        ]
+      }
+  }
+
+==== Thundering Tanadon ====
+AnyCard1 $ Card "Thundering Tanadon" $ ElectCardFacet ArtifactCreatureCharacteristic
+  { artifactCreature_colors = toColors G
+  , artifactCreature_supertypes = []
+  , artifactCreature_artifactTypes = []
+  , artifactCreature_creatureTypes = [Beast]
+  , artifactCreature_power = Power 5
+  , artifactCreature_toughness = Toughness 4
+  , artifactCreature_spec = ArtifactCreatureSpec
+      { artifactCreature_cost = manaCost (4, PG, PG)
+      , artifactCreature_artifactAbilities = []
+      , artifactCreature_creatureAbilities =
+        [ SomeZone $ WithThisStatic $ This1 \(_ :: ZO 'ZBattlefield (OT1 'OTCreature)) ->
+            Trample
+        ]
+      , artifactCreature_artifactCreatureAbilities = []
+      }
+  }
+
+==== Tresserhorn Sinks ====
+AnyCard1 $ Card "Tresserhorn Sinks" $ ElectCardFacet LandCharacteristic
+  { land_supertypes = [Snow]
+  , land_landTypes = []
+  , land_spec = LandSpec
+      { land_abilities =
+        [ SomeZone $ WithThisActivated $ This1 \(this1 :: ZO 'ZBattlefield (OT1 'OTLand)) ->
+            ElectOT $ ControllerOf (asAny this1) \you2 ->
+              ElectActivated Ability
+                { activated_cost = TapCost [Is this1]
+                , activated_effect = Effect [AddMana you2 $ toManaPool B]
+                }
+        , SomeZone $ WithThisActivated $ This1 \(this3 :: ZO 'ZBattlefield (OT1 'OTLand)) ->
+            ElectOT $ ControllerOf (asAny this3) \you4 ->
+              ElectActivated Ability
+                { activated_cost = TapCost [Is this3]
+                , activated_effect = Effect [AddMana you4 $ toManaPool R]
+                }
+        ]
+      }
+  }
+
+==== Unholy Strength ====
+AnyCard1 $ Card "Unholy Strength" $ ElectCardFacet EnchantmentCharacteristic
+  { enchantment_colors = toColors B
+  , enchantment_supertypes = []
+  , enchantment_enchantmentTypes =
+    [ Aura $ Enchant $ Linked1 [] \(enchanted1 :: ZO 'ZBattlefield (OT1 'OTCreature)) ->
+        Effect [StatDelta enchanted1 (Power 2) $ Toughness 1]
+    ]
+  , enchantment_spec = EnchantmentSpec
+      { enchantment_cost = manaCost B
+      , enchantment_abilities = []
+      }
+  }
+
+==== Vindicate ====
+AnyCard1 $ Card "Vindicate" $ Your \you1 ->
+  ElectCardFacet SorceryCharacteristic
+    { sorcery_colors = toColors (W,B)
+    , sorcery_supertypes = []
+    , sorcery_spec = Target you1 $ Masked6 [] \(target2 :: ZO 'ZBattlefield OTNPermanent) ->
+        ElectCardSpec SorcerySpec
+          { sorcery_cost = manaCost (1, W, B)
+          , sorcery_abilities = []
+          , sorcery_effect = This1 \(_ :: ZO 'ZStack (OT1 'OTSorcery)) ->
+              Effect [Destroy target2]
+          }
+    }
+
+==== Volatile Fjord ====
+AnyCard1 $ Card "Volatile Fjord" $ ElectCardFacet LandCharacteristic
+  { land_supertypes = [Snow]
+  , land_landTypes = [BasicLand Island, BasicLand Mountain]
+  , land_spec = LandSpec
+      { land_abilities =
+        [ SomeZone $ WithThisStatic $ This1 \(_ :: ZO 'ZBattlefield (OT1 'OTLand)) ->
+            Enters EntersTapped
+        ]
+      }
+  }
+
+==== Wall of Earth ====
+AnyCard1 $ Card "Wall of Earth" $ ElectCardFacet CreatureCharacteristic
+  { creature_colors = toColors R
+  , creature_supertypes = []
+  , creature_creatureTypes = [Wall]
+  , creature_power = Power 0
+  , creature_toughness = Toughness 6
+  , creature_spec = CreatureSpec
+      { creature_cost = manaCost (1, R)
+      , creature_abilities =
+        [ SomeZone $ WithThisStatic $ This1 \(_ :: ZO 'ZBattlefield (OT1 'OTCreature)) ->
+            Defender
+        ]
+      }
+  }
+
+==== Wasp Lancer ====
+AnyCard1 $ Card "Wasp Lancer" $ ElectCardFacet CreatureCharacteristic
+  { creature_colors = toColors (U,B)
+  , creature_supertypes = []
+  , creature_creatureTypes = [Faerie, Soldier]
+  , creature_power = Power 3
+  , creature_toughness = Toughness 2
+  , creature_spec = CreatureSpec
+      { creature_cost = manaCost (UB, UB, UB)
+      , creature_abilities =
+        [ SomeZone $ WithThisStatic $ This1 \(_ :: ZO 'ZBattlefield (OT1 'OTCreature)) ->
+            Flying
+        ]
+      }
+  }
+
+==== Wasteland ====
+AnyCard1 $ Card "Wasteland" $ ElectCardFacet LandCharacteristic
+  { land_supertypes = []
+  , land_landTypes = []
+  , land_spec = LandSpec
+      { land_abilities =
+        [ SomeZone $ WithThisActivated $ This1 \(this1 :: ZO 'ZBattlefield (OT1 'OTLand)) ->
+            ElectOT $ ControllerOf (asAny this1) \you2 ->
+              ElectActivated Ability
+                { activated_cost = TapCost [Is this1]
+                , activated_effect = Effect [AddMana you2 $ toManaPool C]
+                }
+        , SomeZone $ WithThisActivated $ This1 \(this3 :: ZO 'ZBattlefield (OT1 'OTLand)) ->
+            ElectOT $ ControllerOf (asAny this3) \you4 ->
+              Target you4 $ Masked1 [RAnd [Not $ HasLandType $ BasicLand Forest, Not $ HasLandType $ BasicLand Island, Not $ HasLandType $ BasicLand Mountain, Not $ HasLandType $ BasicLand Plains, Not $ HasLandType $ BasicLand Swamp]] \(target5 :: ZO 'ZBattlefield (OT1 'OTLand)) ->
+                ElectActivated Ability
+                  { activated_cost = AndCosts [TapCost [Is this3], SacrificeCost @(OT1 'OTLand) [Is this3]]
+                  , activated_effect = Effect [Destroy $ asPermanent target5]
+                  }
+        ]
+      }
+  }
+
+==== Wastes ====
+AnyCard1 $ Card "Wastes" $ ElectCardFacet LandCharacteristic
+  { land_supertypes = [Basic]
+  , land_landTypes = []
+  , land_spec = LandSpec
+      { land_abilities =
+        [ SomeZone $ WithThisActivated $ This1 \(this1 :: ZO 'ZBattlefield (OT1 'OTLand)) ->
+            ElectOT $ ControllerOf (asAny this1) \you2 ->
+              ElectActivated Ability
+                { activated_cost = TapCost [Is this1]
+                , activated_effect = Effect [AddMana you2 $ toManaPool C]
+                }
+        ]
+      }
+  }
+
+==== Wear // Tear ====
+AnyCard2 $ SplitCard (Card "Wear" $ Your \you1 ->
+  ElectCardFacet InstantCharacteristic
+    { instant_colors = toColors R
+    , instant_supertypes = []
+    , instant_spec = Target you1 $ Masked1 [] \(target2 :: ZO 'ZBattlefield (OT1 'OTArtifact)) ->
+        ElectCardSpec InstantSpec
+          { instant_cost = manaCost (1, R)
+          , instant_abilities = []
+          , instant_effect = This1 \(_ :: ZO 'ZStack (OT1 'OTInstant)) ->
+              Effect [Destroy $ asPermanent target2]
+          }
+    }) (Card "Tear" $ Your \you3 ->
+  ElectCardFacet InstantCharacteristic
+    { instant_colors = toColors W
+    , instant_supertypes = []
+    , instant_spec = Target you3 $ Masked1 [] \(target4 :: ZO 'ZBattlefield (OT1 'OTEnchantment)) ->
+        ElectCardSpec InstantSpec
+          { instant_cost = manaCost W
+          , instant_abilities = []
+          , instant_effect = This1 \(_ :: ZO 'ZStack (OT1 'OTInstant)) ->
+              Effect [Destroy $ asPermanent target4]
+          }
+    }) [SomeZone2 $ Static Fuse]
+
+==== Witch Engine ====
+AnyCard1 $ Card "Witch Engine" $ ElectCardFacet CreatureCharacteristic
+  { creature_colors = toColors B
+  , creature_supertypes = []
+  , creature_creatureTypes = [Horror]
+  , creature_power = Power 4
+  , creature_toughness = Toughness 4
+  , creature_spec = CreatureSpec
+      { creature_cost = manaCost (5, B)
+      , creature_abilities =
+        [ SomeZone $ WithThisStatic $ This1 \(_ :: ZO 'ZBattlefield (OT1 'OTCreature)) ->
+            Landwalk [HasLandType $ BasicLand Swamp]
+        , SomeZone $ WithThisActivated $ This1 \(this1 :: ZO 'ZBattlefield (OT1 'OTCreature)) ->
+            ElectOT $ ControllerOf (asAny this1) \you2 ->
+              Target you2 $ Masked1 [IsOpponentOf you2] \(target3 :: ZO 'ZBattlefield (OT1 'OTPlayer)) ->
+                ElectActivated Ability
+                  { activated_cost = AndCosts [TapCost [Is this1]]
+                  , activated_effect = Effect [AddMana you2 $ toManaPool (B, B, B, B), EffectContinuous $ GainControl target3 this1]
+                  }
+        ]
+      }
+  }
+
+==== Woodland Chasm ====
+AnyCard1 $ Card "Woodland Chasm" $ ElectCardFacet LandCharacteristic
+  { land_supertypes = [Snow]
+  , land_landTypes = [BasicLand Swamp, BasicLand Forest]
+  , land_spec = LandSpec
+      { land_abilities =
+        [ SomeZone $ WithThisStatic $ This1 \(_ :: ZO 'ZBattlefield (OT1 'OTLand)) ->
+            Enters EntersTapped
+        ]
+      }
+  }
+
+==== Wrath of God ====
+AnyCard1 $ Card "Wrath of God" $ ElectCardFacet SorceryCharacteristic
+  { sorcery_colors = toColors W
+  , sorcery_supertypes = []
+  , sorcery_spec = ElectCardSpec SorcerySpec
+      { sorcery_cost = manaCost (2, W, W)
+      , sorcery_abilities = []
+      , sorcery_effect = This1 \(_ :: ZO 'ZStack (OT1 'OTSorcery)) ->
+          All $ Maskeds1 [] \(obj1s :: List (ZO 'ZBattlefield (OT1 'OTCreature))) ->
+            Effect
+            [ WithList $ Each obj1s \obj1 ->
+                Sequence [Destroy $ asPermanent obj1, EffectContinuous $ CantBeRegenerated obj1]
+            ]
+      }
+  }
+
+==== token: Bird Token ====
+AnyToken $ Token $ Card "Bird Token" $ ElectCardFacet CreatureCharacteristic
+  { creature_colors = toColors U
+  , creature_supertypes = []
+  , creature_creatureTypes = [Bird]
+  , creature_power = Power 2
+  , creature_toughness = Toughness 2
+  , creature_spec = CreatureSpec
+      { creature_cost = OrCosts []
+      , creature_abilities =
+        [ SomeZone $ WithThisStatic $ This1 \(_ :: ZO 'ZBattlefield (OT1 'OTCreature)) ->
+            Flying
+        ]
+      }
+  }
+
+==== token: Soldier Token ====
+AnyToken $ Token $ Card "Soldier Token" $ ElectCardFacet CreatureCharacteristic
+  { creature_colors = toColors W
+  , creature_supertypes = []
+  , creature_creatureTypes = [Soldier]
+  , creature_power = Power 1
+  , creature_toughness = Toughness 1
+  , creature_spec = CreatureSpec
+      { creature_cost = OrCosts []
+      , creature_abilities = []
+      }
+  }
+
