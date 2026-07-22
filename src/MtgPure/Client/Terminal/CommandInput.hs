@@ -19,10 +19,12 @@ module MtgPure.Client.Terminal.CommandInput (
   validateCommandAliases,
   unValidatedCommandAliases,
   CommandAbilityIndex (..),
-  CIPriorityAction (..),
+  CIPriorityAction,
+  CIPriorityAction' (..),
   CIAttack (..),
   CIBlock (..),
   CIChoice (..),
+  traverseCIPriorityAction,
   runParseCIPriorityAction,
   runParseCIAttack,
   runParseCIBlock,
@@ -73,17 +75,36 @@ instance Show CommandAbilityIndex where
     CIManaAbility Nothing -> "C"
     CIInferManaAbility -> "*"
 
-data CIPriorityAction :: Type where
-  CIActivateAbility :: ObjectId -> CommandAbilityIndex -> [ObjectId] -> CIPriorityAction
-  CIAskAgain :: CIPriorityAction
-  CICastSpell :: ObjectId -> [ObjectId] -> CIPriorityAction
-  CIConcede :: CIPriorityAction
-  CIExamineAbility :: ObjectId -> CommandAbilityIndex -> CIPriorityAction
-  CIExamineObject :: ObjectId -> CIPriorityAction
-  CIHelp :: Maybe String -> CIPriorityAction
-  CIPass :: CIPriorityAction -- TODO: Augment this to allow passing to a phase or step.
-  CIPlayLand :: ObjectId -> [ObjectId] -> CIPriorityAction
-  CIQuit :: CIPriorityAction
+-- | Parameterized over how objects are named, so clients can substitute richer
+-- references than raw ids (e.g. the headless replay's name+zone refs).
+data CIPriorityAction' :: Type -> Type where
+  CIActivateAbility :: oid -> CommandAbilityIndex -> [oid] -> CIPriorityAction' oid
+  CIAskAgain :: CIPriorityAction' oid
+  CICastSpell :: oid -> [oid] -> CIPriorityAction' oid
+  CIConcede :: CIPriorityAction' oid
+  CIExamineAbility :: oid -> CommandAbilityIndex -> CIPriorityAction' oid
+  CIExamineObject :: oid -> CIPriorityAction' oid
+  CIHelp :: Maybe String -> CIPriorityAction' oid
+  CIPass :: CIPriorityAction' oid -- TODO: Augment this to allow passing to a phase or step.
+  CIPlayLand :: oid -> [oid] -> CIPriorityAction' oid
+  CIQuit :: CIPriorityAction' oid
+
+type CIPriorityAction = CIPriorityAction' ObjectId
+
+traverseCIPriorityAction ::
+  (Applicative f) => (a -> f b) -> CIPriorityAction' a -> f (CIPriorityAction' b)
+traverseCIPriorityAction f = \case
+  CIActivateAbility objId abilityIndex extras ->
+    CIActivateAbility <$> f objId <*> pure abilityIndex <*> traverse f extras
+  CIAskAgain -> pure CIAskAgain
+  CICastSpell spellId extras -> CICastSpell <$> f spellId <*> traverse f extras
+  CIConcede -> pure CIConcede
+  CIExamineAbility objId abilityIndex -> CIExamineAbility <$> f objId <*> pure abilityIndex
+  CIExamineObject objId -> CIExamineObject <$> f objId
+  CIHelp topic -> pure $ CIHelp topic
+  CIPass -> pure CIPass
+  CIPlayLand landId extras -> CIPlayLand <$> f landId <*> traverse f extras
+  CIQuit -> pure CIQuit
 
 data CIAttack :: Type where
   CIAttack :: [ObjectId] -> CIAttack
@@ -97,8 +118,10 @@ data CIChoice :: Type where
   CIChoice :: Int -> CIChoice
   deriving (Show)
 
-instance Show CIPriorityAction where
-  show :: CIPriorityAction -> String
+-- | Renders the terminal command syntax that 'runParseCIPriorityAction' parses
+-- (round-trips through terminal replay logs), hence @ObjectId@ only.
+instance Show (CIPriorityAction' ObjectId) where
+  show :: CIPriorityAction' ObjectId -> String
   show = \case
     CIActivateAbility objectId abilityIndex extras -> activateAbility ++ " " ++ showId objectId ++ " " ++ show abilityIndex ++ showExtras extras
     CIAskAgain -> askAgain

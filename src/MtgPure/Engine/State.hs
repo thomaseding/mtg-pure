@@ -36,7 +36,8 @@ module MtgPure.Engine.State (
   TargetId,
   AnyRequirement (..),
   --
-  withHeadlessPrompt,
+  dumbHeadlessPrompt,
+  withDumbHeadlessPrompt,
   --
   logCall,
   logCallRec,
@@ -327,8 +328,12 @@ runMagicCont = runMagicCont' envLogCall
 
 type Continuation v rw bail m = MagicCont v rw bail m bail
 
-headlessPrompt :: (Monad m) => Prompt m
-headlessPrompt =
+-- | A no-op \"auto-pilot\" prompt: it always passes priority, picks the first
+-- option, declares no attackers/blockers, etc. Useful as a base to override
+-- with a smarter policy (see @replayHeadlessPrompt@ in the Headless client) or
+-- for exercising engine plumbing without any decision-making.
+dumbHeadlessPrompt :: (Monad m) => Prompt m
+dumbHeadlessPrompt =
   Prompt
     { exceptionCantBeginGameWithoutPlayers = pure ()
     , exceptionInvalidCastSpell = \_ _ _ -> pure ()
@@ -351,12 +356,12 @@ headlessPrompt =
     , promptShuffle = \_ (CardCount count) _ -> pure $ map CardIndex [0 .. count - 1]
     }
 
-withHeadlessPrompt :: (Monad m) => GameState m -> GameState m
-withHeadlessPrompt st =
+withDumbHeadlessPrompt :: (Monad m) => GameState m -> GameState m
+withDumbHeadlessPrompt st =
   let prompt = magicPrompt st
    in st
         { magicPrompt =
-            headlessPrompt
+            dumbHeadlessPrompt
               { promptDebugMessage = promptDebugMessage prompt
               , promptLogCallPop = promptLogCallPop prompt
               , promptLogCallPush = promptLogCallPush prompt

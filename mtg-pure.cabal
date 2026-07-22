@@ -64,6 +64,10 @@ library
         MtgPure
         MtgPure.AllCards
         MtgPure.Cards
+        MtgPure.Client.Headless.Monad
+        MtgPure.Client.Headless.Replay
+        MtgPure.Client.Headless.Script
+        MtgPure.Client.Query
         MtgPure.Client.Terminal.CommandInput
         MtgPure.Client.Terminal.Fwd.Api
         MtgPure.Client.Terminal.Fwd.Impl
