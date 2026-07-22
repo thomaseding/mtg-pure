@@ -39,7 +39,8 @@ Purely functional Haskell "Magic: The Gathering" card model and game engine.
 
 ### Quickstart Interesting Files For Engine
 
-- [`src/MtgPure/Client/Terminal.hs`](src/MtgPure/Client/Terminal.hs)
+- [`src/MtgPure/Client/Terminal/Monad.hs`](src/MtgPure/Client/Terminal/Monad.hs)
+- [`src/MtgPure/Client/Terminal/PriorityAction.hs`](src/MtgPure/Client/Terminal/PriorityAction.hs)
 - [`src/MtgPure/Engine/Fwd/Api.hs`](src/MtgPure/Engine/Fwd/Api.hs)
 - [`src/MtgPure/Engine/Fwd/Impl.hs`](src/MtgPure/Engine/Fwd/Impl.hs)
 - [`src/MtgPure/Engine/State.hs`](src/MtgPure/Engine/State.hs)
@@ -54,7 +55,7 @@ $ cd src
 $ runhaskell MtgPure/Model/Object/ToObjectN/CodeGen.hs
 $ cd ..
 $ cabal build
-$ cabal repl
+$ cabal repl --repl-options=-fobject-code
 ghci> :m +MtgPure MtgPure.AllCards MtgPure.Cards MtgPure.Model.BasicLandType MtgPure.Model.LandType MtgPure.Model.Recursive
 ghci> :i allCards
 allCards :: [AnyCard]   -- Defined in `MtgPure.AllCards'
@@ -72,8 +73,8 @@ ghci> mainDemoGameplay -- runs Demo.MtgPure.Gameplay
 ```
 Notes:
  - Setting `-Wno-type-defaults` so the `Show` instances for cards don't need to constantly specify `Num` types when `Integer` is good enough for authoring. (Too much noise adding annotations for `Integer` or even `Int` or an alias `I`.)
- - `src/MtgPure/Model/Object/ToObjectN/Instances.hs` imports large generated files and will take a while to compile, hence the `-fobject-code` flag to cache the result inside the `ghci-compiled.bat` script.
-- Using `-fobject-code` with `ghci` seems to require quitting and reentering `ghci` in order to get it to pick up the right runtime behavior after making code changes.
+ - `src/MtgPure/Model/Object/ToObjectN/Instances.hs` imports large generated files and will take a while to compile, hence the `--repl-options=-fobject-code` flag passed to `cabal repl` to cache the result as object code.
+- Using `-fobject-code` with `ghci` seems to require quitting and reentering the repl in order to get it to pick up the right runtime behavior after making code changes.
 ---
 
 ### Screenshots:
