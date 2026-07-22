@@ -14,6 +14,8 @@ module Test.Engine.Unit.MagicCont (
 
 import safe Control.Monad.Access (ReadWrite (..), Visibility (..))
 import safe Control.Monad.Trans (MonadIO (liftIO))
+import safe Data.IORef (newIORef, readIORef, writeIORef)
+import safe GHC.Stack (HasCallStack)
 import safe MtgPure.Engine.Monad (
   EnvLogCall (..),
   HasEnvLogCall (..),
@@ -25,11 +27,11 @@ import safe MtgPure.Engine.Monad (
   runMagicRW,
  )
 
-main :: IO ()
+main :: (HasCallStack) => IO ()
 main = mainUnitMagicCont
 
 data Ex = Ex
-  deriving (Show)
+  deriving (Eq, Show)
 
 data St = St
   { st_ :: ()
@@ -62,34 +64,42 @@ runUnitCont f action = runMagicRW st $ f <$> runMagicCont' envLogCall action
       , stMsgs = []
       }
 
-mainUnitMagicCont :: IO ()
+mainUnitMagicCont :: (HasCallStack) => IO ()
 mainUnitMagicCont = do
-  putStrLn "\nunitCont1"
   unitCont1
-  putStrLn "\nunitCont2"
   unitCont2
-  putStrLn "\nunitCont3"
   unitCont3
-  putStrLn ""
 
-unitCont1 :: IO ()
+expectEq :: (HasCallStack, Eq a, Show a) => String -> a -> a -> IO ()
+expectEq name expected actual =
+  case actual == expected of
+    True -> pure ()
+    False -> error $ name <> ": expected " <> show expected <> " but got " <> show actual
+
+unitCont1 :: (HasCallStack) => IO ()
 unitCont1 = do
+  resumedRef <- newIORef False
   result <- runUnitCont id do
     _ <- magicContBail $ pure 666
-    liftIO $ putStrLn "if this prints, then the test failed"
+    liftIO $ writeIORef resumedRef True
     pure "failure"
-  print (result :: Either Ex (Either Int String))
+  expectEq "unitCont1 result" (Right $ Left 666) (result :: Either Ex (Either Int String))
+  resumed <- readIORef resumedRef
+  expectEq "unitCont1 resumed after bail" False resumed
 
-unitCont2 :: IO ()
+unitCont2 :: (HasCallStack) => IO ()
 unitCont2 = do
+  resumedRef <- newIORef False
   result <- runUnitCont id do
     () <- liftCont $ magicThrow Ex
-    liftIO $ putStrLn "if this prints, then the test failed"
+    liftIO $ writeIORef resumedRef True
     pure "failure"
-  print (result :: Either Ex (Either Int String))
+  expectEq "unitCont2 result" (Left Ex) (result :: Either Ex (Either Int String))
+  resumed <- readIORef resumedRef
+  expectEq "unitCont2 resumed after throw" False resumed
 
-unitCont3 :: IO ()
+unitCont3 :: (HasCallStack) => IO ()
 unitCont3 = do
   result <- runUnitCont id do
     pure "success"
-  print (result :: Either Ex (Either Int String))
+  expectEq "unitCont3 result" (Right $ Right "success") (result :: Either Ex (Either Int String))

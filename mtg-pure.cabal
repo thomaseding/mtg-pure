@@ -307,11 +307,19 @@ library
         System.Keyboard
         Test.Engine.Unit.MagicCont
         Test.Engine.Unit.PayMana
-        Test.Game.Hybrid
-        Test.Game.ManaAbility
-        Test.Game.RagingGoblin
-        Test.Game.Shock
-        Test.Game.StoneRain
+        Test.Game.Headless.Hybrid
+        Test.Game.Headless.ManaAbility
+        Test.Game.Headless.RagingGoblin
+        Test.Game.Headless.Shock
+        Test.Game.Headless.StoneRain
+        Test.Game.Headless.Util
+        Test.Game.Play.Hybrid
+        Test.Game.Play.ManaAbility
+        Test.Game.Play.RagingGoblin
+        Test.Game.Play.Shock
+        Test.Game.Play.StoneRain
+        Test.Game.Play.Util
+        Test.Game.Resume.Replay
         Test.Render.CardOracleAll
         Test.Render.CardOracleBlockArguments
         Test.Render.CardOracleDefault
@@ -395,4 +403,25 @@ library
        vector ^>=0.13.0.0
 
     hs-source-dirs:   src
+    default-language: Haskell2010
+
+executable run-tests
+    main-is:          RunTests.hs
+    hs-source-dirs:   src/Tests
+    ghc-options:      -Wall -Werror -Wno-type-defaults
+    build-depends:
+       base ^>=4.20,
+       mtg-pure
+    default-language: Haskell2010
+
+-- | Scratch launcher for the interactive Test.Game.Play.* games. Edit
+-- src/Test/Game/Play/Main.hs to choose which game runs, then `cabal run play`.
+-- Run it as this compiled exe, not from GHCi (see src/Test/Game/Play/README.md).
+executable play
+    main-is:          Main.hs
+    hs-source-dirs:   src/Test/Game/Play
+    ghc-options:      -Wall -Werror -Wno-type-defaults
+    build-depends:
+       base ^>=4.20,
+       mtg-pure
     default-language: Haskell2010
