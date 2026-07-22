@@ -64,7 +64,7 @@ import safe MtgPure.Model.Object.OTNAliases (
 class (Typeable ty) => PrettyType ty where
   prettyType :: String
 
-instance (IsObjectType a) => PrettyType a where
+instance (IsObjectType a, Typeable a) => PrettyType a where
   prettyType :: (IsObjectType a) => String
   prettyType = show (litObjectType @a)
 

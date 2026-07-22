@@ -28,7 +28,7 @@ import safe Ansi.AnsiString (
  )
 import safe Control.Exception (assert)
 import safe qualified Control.Monad.State.Strict as State
-import safe Data.List (foldl', sortBy)
+import safe Data.List (sortBy)
 import safe qualified Data.Map.Strict as Map
 import safe Data.Ord (comparing)
 

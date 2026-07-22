@@ -28,6 +28,7 @@ import safe qualified Control.Monad.Access as A
 import safe qualified Control.Monad.Trans as M
 import safe Control.Monad.Util (untilJust)
 import safe qualified Data.List as List
+import safe qualified Data.List.NonEmpty as NonEmpty
 import safe Data.Monoid (First (..))
 import safe GHC.Stack (HasCallStack)
 import safe MtgPure.Engine.Fwd.Api (findPlayer, getPlayer, setPlayer)
@@ -202,9 +203,9 @@ possiblePaymentsPhyrexian sym (Mana n) = case n <= 0 of
   False -> do
     p <-
       [ PartialManaPayment mempty{paymentLife = 2} 0
-        , toPayment $ mempty{poolNonSnow = toManaPool sym}
-        , toPayment $ mempty{poolSnow = mapManaPool freezeMana $ toManaPool sym}
-        ]
+      , toPayment $ mempty{poolNonSnow = toManaPool sym}
+      , toPayment $ mempty{poolSnow = mapManaPool freezeMana $ toManaPool sym}
+      ]
     q <- possiblePaymentsPhyrexian sym $ Mana $ n - 1
     pure $ p <> q
 
@@ -213,7 +214,7 @@ class PossiblePayments cost where
   possiblePaymentsImpl :: (HasCallStack) => cost -> [PartialManaPayment]
 
 possiblePayments :: (HasCallStack) => (PossiblePayments cost) => cost -> [PartialManaPayment]
-possiblePayments = map head . List.group . List.sort . possiblePaymentsImpl
+possiblePayments = map NonEmpty.head . NonEmpty.group . List.sort . possiblePaymentsImpl
 
 instance PossiblePayments (Mana 'NoVar 'NonSnow 'TyWU) where
   possiblePaymentsImpl :: (HasCallStack) => Mana 'NoVar 'NonSnow 'TyWU -> [PartialManaPayment]
@@ -423,8 +424,8 @@ data CanPayManaCost where
 getUniqueElem :: (Eq a) => [a] -> Maybe a
 getUniqueElem = \case
   [] -> Nothing
-  xs -> case all (== head xs) xs of
-    True -> Just $ head xs
+  x : xs -> case all (== x) xs of
+    True -> Just x
     False -> Nothing
 
 -- NOTE: This code would be a lot simpler if generic mana was included in the generated payments.

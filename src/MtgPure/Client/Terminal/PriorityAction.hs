@@ -24,7 +24,6 @@ import safe qualified Control.Monad.Trans as M
 import safe Control.Monad.Util (Attempt, Attempt' (..), untilJust)
 import safe qualified Data.Char as Char
 import safe Data.Functor ((<&>))
-import safe Data.List (foldl')
 import safe qualified Data.List as List
 import safe Data.List.NonEmpty (NonEmpty (..))
 import safe qualified Data.List.NonEmpty as NonEmpty

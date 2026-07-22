@@ -230,7 +230,10 @@ spinToLetter :: Char -> Gallery ()
 spinToLetter c = do
   let c' = Char.toLower c
   names <- Gallery $ State.gets $ map cardName . carToList . galleryCards
-  let cs = map (Char.toLower . head) names
+  let firstLetter = \case
+        ch : _ -> Char.toLower ch
+        [] -> error "Impossible by spinToLetter construction"
+  let cs = map firstLetter names
   case c' `elem` cs of
     False -> pure ()
     True -> spinToLetter' c'
@@ -238,7 +241,9 @@ spinToLetter c = do
 spinToLetter' :: Char -> Gallery ()
 spinToLetter' c = do
   currName <- Gallery $ State.gets $ cardName . carCursor . galleryCards
-  let firstLetter = Char.toLower $ head currName
+  let firstLetter = case currName of
+        c' : _ -> Char.toLower c'
+        [] -> error "Impossible by spinToLetter construction"
   case compare c firstLetter of
     LT -> spinLeft >> spinToLetter' c
     EQ -> pure ()

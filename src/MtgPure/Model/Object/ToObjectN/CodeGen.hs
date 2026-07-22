@@ -413,7 +413,9 @@ generateObjectMToObjectN desc symsM symsN =
 telescopeToObjectN :: SymDesc -> [Sym] -> [Sym] -> String
 telescopeToObjectN desc symsM symsN = "toObject" ++ show n ++ " x = " ++ toN
  where
-  newSym = head $ symsN \\ symsM
+  newSym = case symsN \\ symsM of
+    sym : _ -> sym
+    [] -> error "telescopeToObjectN: expected exactly one new symbol"
   symsSucc = sort $ newSym : symsM
   m = length symsM + 1
   n = length symsN

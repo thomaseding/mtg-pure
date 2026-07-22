@@ -131,9 +131,9 @@ jsonNumber = do
 jsonInt :: Parsec String () String
 jsonInt = do
   int <- many1 digit
-  if head int == '0' && length int > 1
-    then fail "leading zero"
-    else pure int
+  case int of
+    '0' : _ : _ -> fail "leading zero"
+    _ -> pure int
 
 jsonFrac :: Parsec String () String
 jsonFrac = do
