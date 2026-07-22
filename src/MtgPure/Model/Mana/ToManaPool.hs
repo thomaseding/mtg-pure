@@ -21,6 +21,21 @@ import safe MtgPure.Model.Variable (Var (..))
 
 ----------------------------------------
 
+-- | Convert an authoring-friendly value to a 'ManaPool'. The instances in this
+-- module accept exactly these @mana@ syntaxes (nothing else is supported):
+--
+--   * @()@ -- the empty pool.
+--   * A bare color symbol: @W@ @U@ @B@ @R@ @G@ @C@ (non-snow) or @SW@ @SU@ @SB@
+--     @SR@ @SG@ @SC@ (snow) -- one mana of that color.
+--   * A color symbol paired with a count, @(sym, n)@, where @n@ is an @Int@ or
+--     @Integer@, e.g. @(U, 2)@ -- @n@ mana of that color. Covers the same
+--     non-snow and snow symbols as above.
+--   * A single-color @Mana \'NoVar snow mt@ value.
+--   * A 3-, 4-, 5-, or 6-tuple of any of the above, combined, e.g.
+--     @(W, U, ())@ or @(R, R, R)@.
+--
+-- Note there is deliberately __no 2-tuple__ instance (and no @Color@ instance):
+-- pad a two-mana pool to a 3-tuple with @()@, e.g. @(U, U, ())@.
 class ToManaPool (snow :: Snow) (mana :: Type) | mana -> snow where
   toManaPool :: mana -> ManaPool snow
 
