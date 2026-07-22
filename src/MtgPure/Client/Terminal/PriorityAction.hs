@@ -187,8 +187,8 @@ parsePriorityAction = \case
 
 help :: Magic 'Public 'RO Terminal (PriorityAction ())
 help = M.liftIO do
-  setCursorPosition 0 0
   clearScreenWithoutPaging
+  setCursorPosition 0 0
   putStrLn "Help for REPL Commands:"
   putStrLn ""
   putStrLn "Commands:"
@@ -253,6 +253,7 @@ help = M.liftIO do
   putStrLn "> 1.7* # Activates the unique simple mana ability of the permanent with ID 7."
   putStrLn "> 1.7-1 # Activates the \"T: Add W\" ability of the permanent with ID 7."
   putStrLn "> 1.7w # Activates the \"T: Add W\" ability of the permanent with ID 7."
+  hFlush stdout
   M.void getLine
   pure $ AskPriorityActionAgain $ Just $ Attempt 0
 
